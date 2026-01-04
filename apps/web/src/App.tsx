@@ -621,35 +621,43 @@ export default function App() {
           }
           break;
         case 'o':
-          // O = Toggle orientation (landscape/portrait)
+          // O = Toggle orientation (landscape/portrait) + auto-adjust zoom
           if (!isCmd) {
             e.preventDefault();
             const currentOrientation = useBoardStore.getState().getPitchSettings()?.orientation ?? 'landscape';
             const newOrientation = currentOrientation === 'landscape' ? 'portrait' : 'landscape';
             useBoardStore.getState().updatePitchSettings({ orientation: newOrientation });
-            showToast(newOrientation === 'portrait' ? 'Portrait mode' : 'Landscape mode');
+            // Auto-adjust zoom for portrait (75%) to fit tall pitch on screen
+            if (newOrientation === 'portrait') {
+              useUIStore.getState().setZoom(0.75);
+            } else {
+              useUIStore.getState().setZoom(1.0);
+            }
+            showToast(newOrientation === 'portrait' ? 'Portrait mode (75%)' : 'Landscape mode');
           }
           break;
         case 'w':
-          // W = Toggle print friendly (white pitch with black lines)
+          // W = Toggle print friendly (white pitch, black lines, NO stripes)
           if (!isCmd) {
             e.preventDefault();
             const currentSettings = useBoardStore.getState().getPitchSettings();
             const isPrintFriendly = currentSettings?.primaryColor === '#ffffff' && currentSettings?.lineColor === '#000000';
             if (isPrintFriendly) {
-              // Back to default green
+              // Back to default green with stripes
               useBoardStore.getState().updatePitchSettings({ 
                 primaryColor: '#4ade80',
                 stripeColor: '#22c55e', 
-                lineColor: '#ffffff'
+                lineColor: '#ffffff',
+                showStripes: true
               });
               showToast('Normal colors');
             } else {
-              // Set print friendly
+              // Set print friendly - white, black lines, NO stripes
               useBoardStore.getState().updatePitchSettings({ 
                 primaryColor: '#ffffff',
-                stripeColor: '#f3f4f6', 
-                lineColor: '#000000'
+                stripeColor: '#ffffff', // Same as primary for pure white
+                lineColor: '#000000',
+                showStripes: false
               });
               showToast('Print Friendly mode');
             }
