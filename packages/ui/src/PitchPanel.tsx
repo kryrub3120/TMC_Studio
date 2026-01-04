@@ -133,6 +133,26 @@ export function PitchPanel({ pitchSettings, onUpdatePitch }: PitchPanelProps) {
         </button>
       </div>
 
+      {/* Print Friendly Button */}
+      <button
+        type="button"
+        onClick={() => onUpdatePitch({
+          theme: 'custom',
+          primaryColor: '#ffffff',
+          stripeColor: '#f5f5f5',
+          lineColor: '#000000',
+          showStripes: false,
+        })}
+        className="w-full px-3 py-2.5 mt-2 flex items-center justify-center gap-2 bg-white text-gray-900 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="6 9 6 2 18 2 18 9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect x="6" y="14" width="12" height="8" />
+        </svg>
+        Print Friendly
+      </button>
+
       {/* Custom colors section */}
       <div className="space-y-3 pt-3 border-t border-border">
         <div className="text-xs text-muted">Custom Colors</div>
