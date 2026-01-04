@@ -1092,8 +1092,14 @@ export const useBoardStore = create<BoardState>((set, get) => {
       let transformedElements = elements;
       if (settings.orientation && settings.orientation !== currentSettings.orientation) {
         const padding = DEFAULT_PITCH_CONFIG.padding;
-        const pitchWidth = DEFAULT_PITCH_CONFIG.width;
-        const pitchHeight = DEFAULT_PITCH_CONFIG.height;
+        // Use CURRENT orientation's dimensions for the transformation
+        // Landscape: 1050x680, Portrait: 680x1050
+        const currentWidth = currentSettings.orientation === 'portrait' 
+          ? DEFAULT_PITCH_CONFIG.height // Portrait width = landscape height
+          : DEFAULT_PITCH_CONFIG.width;  // Landscape width
+        const currentHeight = currentSettings.orientation === 'portrait'
+          ? DEFAULT_PITCH_CONFIG.width  // Portrait height = landscape width
+          : DEFAULT_PITCH_CONFIG.height; // Landscape height
         
         transformedElements = elements.map((el) => {
           // Transform elements with position property
@@ -1107,11 +1113,13 @@ export const useBoardStore = create<BoardState>((set, get) => {
             
             if (settings.orientation === 'portrait') {
               // Landscape → Portrait: rotate 90° clockwise
+              // newX = y, newY = width - x
               newRelX = relY;
-              newRelY = pitchWidth - relX;
+              newRelY = currentWidth - relX;
             } else {
-              // Portrait → Landscape: rotate 90° counter-clockwise
-              newRelX = pitchHeight - relY;
+              // Portrait → Landscape: rotate 90° counter-clockwise  
+              // newX = height - y, newY = x
+              newRelX = currentHeight - relY;
               newRelY = relX;
             }
             
@@ -1131,9 +1139,9 @@ export const useBoardStore = create<BoardState>((set, get) => {
               const relY = p.y - padding;
               
               if (settings.orientation === 'portrait') {
-                return { x: relY + padding, y: pitchWidth - relX + padding };
+                return { x: relY + padding, y: currentWidth - relX + padding };
               } else {
-                return { x: pitchHeight - relY + padding, y: relX + padding };
+                return { x: currentHeight - relY + padding, y: relX + padding };
               }
             };
             
