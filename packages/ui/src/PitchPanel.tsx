@@ -187,6 +187,35 @@ export function PitchPanel({ pitchSettings, onUpdatePitch }: PitchPanelProps) {
         </div>
       </div>
 
+      {/* Orientation toggle */}
+      <div className="space-y-2 pt-3 border-t border-border">
+        <div className="text-xs text-muted">Orientation</div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onUpdatePitch({ orientation: 'landscape' })}
+            className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+              pitchSettings.orientation === 'landscape'
+                ? 'bg-accent text-white'
+                : 'bg-surface2 text-text hover:bg-surface2/80'
+            }`}
+          >
+            ↔ Landscape
+          </button>
+          <button
+            type="button"
+            onClick={() => onUpdatePitch({ orientation: 'portrait' })}
+            className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+              pitchSettings.orientation === 'portrait'
+                ? 'bg-accent text-white'
+                : 'bg-surface2 text-text hover:bg-surface2/80'
+            }`}
+          >
+            ↕ Portrait
+          </button>
+        </div>
+      </div>
+
       {/* Help text */}
       <div className="text-xs text-muted pt-2 border-t border-border">
         Choose a preset theme or customize individual colors.

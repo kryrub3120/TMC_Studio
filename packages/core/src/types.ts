@@ -123,12 +123,15 @@ export const DEFAULT_TEAM_SETTINGS: TeamSettings = {
 export type PitchTheme = 'grass' | 'indoor' | 'chalk' | 'futsal' | 'custom';
 
 /** Pitch visual settings */
+export type PitchOrientation = 'landscape' | 'portrait';
+
 export interface PitchSettings {
   theme: PitchTheme;
-  primaryColor: string;   // Main grass/floor color
-  stripeColor: string;    // Stripe color (for grass themes)
-  lineColor: string;      // Line markings color
-  showStripes: boolean;   // Whether to show stripes
+  primaryColor: string;
+  stripeColor: string;
+  lineColor: string;
+  showStripes: boolean;
+  orientation: PitchOrientation;
 }
 
 /** Pitch theme definitions */
@@ -138,30 +141,35 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
     stripeColor: '#268735',
     lineColor: 'rgba(255, 255, 255, 0.85)',
     showStripes: true,
+    orientation: 'landscape',
   },
   indoor: {
     primaryColor: '#c4a35a',
     stripeColor: '#b8974d',
     lineColor: 'rgba(255, 255, 255, 0.9)',
     showStripes: false,
+    orientation: 'landscape',
   },
   chalk: {
     primaryColor: '#3b5249',
     stripeColor: '#334944',
     lineColor: 'rgba(255, 255, 255, 0.95)',
     showStripes: true,
+    orientation: 'landscape',
   },
   futsal: {
     primaryColor: '#2563eb',
     stripeColor: '#1d4ed8',
     lineColor: 'rgba(255, 255, 255, 0.9)',
     showStripes: false,
+    orientation: 'landscape',
   },
   custom: {
     primaryColor: '#2d8a3e',
     stripeColor: '#268735',
     lineColor: 'rgba(255, 255, 255, 0.85)',
     showStripes: true,
+    orientation: 'landscape',
   },
 };
 

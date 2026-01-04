@@ -1,53 +1,64 @@
-# S4.3 Pitch Variants (Optional Polish)
+# S4.4 Performance & Polish
 
 ## Goal
-Add support for different pitch appearances and customization options.
+Optimize bundle size and improve mobile/touch support for production-ready app.
 
-## S4.2 Completed ✅
-- TeamSettings types in core (name, primaryColor, secondaryColor)
-- DEFAULT_TEAM_SETTINGS: red (#ef4444) + blue (#3b82f6)
-- PlayerNode uses teamSettings prop with getTeamColors()
-- Store: updateTeamSettings() + getTeamSettings()
-- TeamsPanel component with color pickers + presets
-- RightInspector "Teams" tab integration
-- Full wiring in App.tsx
+## Current State
+- Sprint 4 core features complete (Export, Teams, Pitch)
+- Bundle size: 542KB (warning at 500KB)
+- No touch/mobile support yet
+- No accessibility improvements
 
-## Next Sprint Options
+## Deliverables
+- [ ] Code splitting for smaller bundles
+  - [ ] Lazy load CommandPaletteModal
+  - [ ] Lazy load CheatSheetOverlay
+  - [ ] Split vendor chunks (react, konva, zustand)
+- [ ] Touch/mobile support
+  - [ ] Pinch-zoom gesture
+  - [ ] Pan gesture
+  - [ ] Touch drag elements
+- [ ] Accessibility improvements
+  - [ ] Keyboard navigation focus indicators
+  - [ ] ARIA labels for buttons
+  - [ ] Screen reader announcements
 
-### Option A: S4.3 Pitch Variants (~2h)
-- Add pitch theme selector (grass, indoor, futsal)
-- Line color customization
-- Pitch size presets (11v11, 7v7, 5v5)
+## Step-by-step Plan
 
-### Option B: S5 Selection & Multi-edit (~3h)
-- Improve multi-select experience
-- Bulk property editing in Props tab
-- Selection info display
+1. **Code Splitting**
+   ```typescript
+   // Lazy load modals
+   const CommandPaletteModal = lazy(() => import('./CommandPaletteModal'));
+   const CheatSheetOverlay = lazy(() => import('./CheatSheetOverlay'));
+   ```
 
-### Option C: S6 Import/Export Enhancements (~2h)
-- Export to SVG format
-- Import formations from JSON
-- Template saving/loading
+2. **Vendor Chunks (vite.config.ts)**
+   ```typescript
+   build: {
+     rollupOptions: {
+       output: {
+         manualChunks: {
+           'vendor-react': ['react', 'react-dom'],
+           'vendor-konva': ['konva', 'react-konva'],
+           'vendor-zustand': ['zustand'],
+         }
+       }
+     }
+   }
+   ```
 
-### Option D: S7 Undo/Redo Improvements (~1h)
-- Show undo/redo history
-- Named history steps
-- History navigation
+3. **Touch Events**
+   - Add touch event handlers to Stage
+   - Implement pinch-zoom with gesture recognition
+   - Pan canvas on two-finger drag
+
+## Files to edit
+- `apps/web/vite.config.ts` - manual chunks
+- `apps/web/src/App.tsx` - lazy imports, touch handlers
+- `packages/ui/src/index.ts` - export lazy-loadable components
 
 ## Commands
 ```bash
-pnpm dev  # test in browser
-pnpm build  # verify build
+pnpm build  # Check bundle sizes
+pnpm dev    # Test locally
 ```
-
-## Files Modified in S4.2
-- `packages/core/src/types.ts` - TeamSetting, TeamSettings
-- `packages/core/src/board.ts` - DEFAULT_TEAM_SETTINGS, createDocument, migrateDocument
-- `packages/core/src/index.ts` - exports
-- `packages/board/src/PlayerNode.tsx` - teamSettings prop, getTeamColors()
-- `packages/ui/src/TeamsPanel.tsx` - NEW
-- `packages/ui/src/RightInspector.tsx` - Teams tab
-- `packages/ui/src/index.ts` - export TeamsPanel
-- `packages/ui/package.json` - @tmc/core dependency
-- `apps/web/src/store/useBoardStore.ts` - updateTeamSettings, getTeamSettings
-- `apps/web/src/App.tsx` - Pass teamSettings + onUpdateTeam

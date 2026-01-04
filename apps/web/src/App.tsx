@@ -6,7 +6,7 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_CONFIG, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_CONFIG, DEFAULT_PITCH_SETTINGS, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox } from '@tmc/board';
 import { useState } from 'react';
@@ -1337,7 +1337,7 @@ export default function App() {
             onQuickAction={handleQuickAction}
             teamSettings={teamSettings}
             onUpdateTeam={updateTeamSettings}
-            pitchSettings={pitchSettings}
+            pitchSettings={pitchSettings ?? DEFAULT_PITCH_SETTINGS}
             onUpdatePitch={updatePitchSettings}
           />
         )}

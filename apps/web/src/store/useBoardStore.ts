@@ -1080,6 +1080,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
         stripeColor: '#268735',
         lineColor: 'rgba(255, 255, 255, 0.85)',
         showStripes: true,
+        orientation: 'landscape' as const,
       };
       
       const updatedPitchSettings = {
