@@ -1073,7 +1073,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
 
     // Pitch settings actions
     updatePitchSettings: (settings) => {
-      const { document } = get();
+      const { document, elements } = get();
       const currentSettings = document.pitchSettings ?? {
         theme: 'grass',
         primaryColor: '#2d8a3e',
@@ -1088,13 +1088,79 @@ export const useBoardStore = create<BoardState>((set, get) => {
         ...settings,
       };
       
+      // Check if orientation changed - transform element positions
+      let transformedElements = elements;
+      if (settings.orientation && settings.orientation !== currentSettings.orientation) {
+        const padding = DEFAULT_PITCH_CONFIG.padding;
+        const pitchWidth = DEFAULT_PITCH_CONFIG.width;
+        const pitchHeight = DEFAULT_PITCH_CONFIG.height;
+        
+        transformedElements = elements.map((el) => {
+          // Transform elements with position property
+          if ('position' in el && el.position) {
+            const pos = el.position as Position;
+            // Adjust for padding to get position relative to pitch
+            const relX = pos.x - padding;
+            const relY = pos.y - padding;
+            
+            let newRelX: number, newRelY: number;
+            
+            if (settings.orientation === 'portrait') {
+              // Landscape → Portrait: rotate 90° clockwise
+              newRelX = relY;
+              newRelY = pitchWidth - relX;
+            } else {
+              // Portrait → Landscape: rotate 90° counter-clockwise
+              newRelX = pitchHeight - relY;
+              newRelY = relX;
+            }
+            
+            return {
+              ...el,
+              position: {
+                x: newRelX + padding,
+                y: newRelY + padding,
+              },
+            };
+          }
+          
+          // Transform arrows (startPoint/endPoint)
+          if (isArrowElement(el)) {
+            const transformPoint = (p: Position): Position => {
+              const relX = p.x - padding;
+              const relY = p.y - padding;
+              
+              if (settings.orientation === 'portrait') {
+                return { x: relY + padding, y: pitchWidth - relX + padding };
+              } else {
+                return { x: pitchHeight - relY + padding, y: relX + padding };
+              }
+            };
+            
+            return {
+              ...el,
+              startPoint: transformPoint(el.startPoint),
+              endPoint: transformPoint(el.endPoint),
+            };
+          }
+          
+          return el;
+        });
+      }
+      
       set({
+        elements: transformedElements,
         document: {
           ...document,
           pitchSettings: updatedPitchSettings,
           updatedAt: new Date().toISOString(),
         },
       });
+      
+      // If elements were transformed, update history
+      if (transformedElements !== elements) {
+        get().pushHistory();
+      }
     },
 
     getPitchSettings: () => get().document.pitchSettings,
