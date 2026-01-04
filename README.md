@@ -33,7 +33,9 @@ Open http://localhost:5173
 | Add Ball | `B` |
 | Add Pass Arrow | `A` (then drag) |
 | Add Run Arrow | `R` (then drag) |
-| Add Zone | `Z` (then drag) |
+| Add Rect Zone | `Z` (then drag) |
+| Add Ellipse Zone | `Shift+Z` (then drag) |
+| Add Text Label | `T` |
 | **Selection** |  |
 | Select All | `Cmd/Ctrl+A` |
 | Clear Selection | `Escape` |
@@ -44,56 +46,94 @@ Open http://localhost:5173
 | Delete | `Delete` / `Backspace` |
 | Undo | `Cmd/Ctrl+Z` |
 | Redo | `Shift+Cmd/Ctrl+Z` |
+| Cycle Player Shape | `S` |
+| Cycle Zone Shape | `E` |
 | **Groups** |  |
-| Create Group | `Ctrl+G` |
-| Ungroup | `Ctrl+Shift+G` |
-| **View** |  |
+| Create Group | `Cmd/Ctrl+G` |
+| Ungroup | `Cmd/Ctrl+Shift+G` |
+| **View & Pitch** |  |
 | Toggle Inspector | `I` |
 | Focus Mode | `F` |
 | Show Shortcuts | `?` |
+| Toggle Orientation | `O` (landscape/portrait) |
+| Print Friendly Mode | `W` (white pitch) |
 | Zoom In | `Cmd/Ctrl++` |
 | Zoom Out | `Cmd/Ctrl+-` |
-| Zoom Fit | `Shift+1` |
 | **Move Elements** |  |
 | Nudge 5px | `Arrow keys` |
 | Nudge 1px | `Shift+Arrow keys` |
 | Cycle Color | `Alt+Up/Down` |
 | Stroke Width | `Alt+Left/Right` |
+| **Steps & Playback** |  |
+| Previous Step | `←` (when nothing selected) |
+| Next Step | `→` (when nothing selected) |
+| Add Step | `N` |
+| Delete Step | `X` |
+| Play/Pause | `Space` |
+| Toggle Loop | `L` |
+| **Formations** |  |
+| Apply Home Formation | `1-6` |
+| Apply Away Formation | `Shift+1-6` |
+| **Export** |  |
+| Export PNG | `Cmd/Ctrl+E` |
+| Export All Steps PNG | `Shift+Cmd/Ctrl+E` |
+| Export Animated GIF | `Shift+Cmd/Ctrl+G` |
+| Export PDF | `Shift+Cmd/Ctrl+P` |
+| Export SVG | via Command Palette |
 | **Other** |  |
 | Command Palette | `Cmd/Ctrl+K` |
 | Save | `Cmd/Ctrl+S` |
-| Export PNG | `Cmd/Ctrl+E` |
 
 ### Features
 
 #### 🎯 Elements
-- **Players**: Home (red) and Away (blue) with jersey numbers
+- **Players**: Home and Away teams with customizable colors
 - **Ball**: Standard football
-- **Arrows**: Pass (dashed white) and Run (solid blue) arrows
-- **Zones**: Rectangular highlight areas
+- **Arrows**: Pass (red dashed) and Run (blue solid) arrows
+- **Zones**: Rectangular and elliptical highlight areas
+- **Text**: Labels with customizable font size, bold, italic, background
 
 #### 📐 Drawing Tools
-- Click `A`, `R`, or `Z` to activate tool
+- Click `A`, `R`, `Z`, or `Shift+Z` to activate tool
 - Click and drag on pitch to draw
 - Tool auto-deactivates after drawing
 
 #### 🎨 Inspector Panel (press `I`)
-- **Props tab**: Edit selected element properties
+- **Props tab**: Edit selected element properties + quick actions
 - **Layers tab**: Toggle visibility by category + manage groups
 - **Objects tab**: Search and select elements
+- **Teams tab**: Customize team names and colors
+- **Pitch tab**: Customize pitch colors, stripes, and theme
 
 #### 📦 Groups
-- Select multiple elements → `Ctrl+G` to group
+- Select multiple elements → `Cmd/Ctrl+G` to group
 - Groups appear in Layers tab
 - Double-click group name to rename
 - Click eye icon to hide/show all group members
-- Click lock icon to lock group (coming soon)
-- `Ctrl+Shift+G` to ungroup
+- `Cmd/Ctrl+Shift+G` to ungroup
+
+#### 🎬 Animation System
+- **Steps**: Multiple animation frames (press `N` to add)
+- **Playback**: Play/Pause with Space, loop with `L`
+- **Smooth interpolation**: Elements animate between steps
+- **Duration**: Adjustable per-step timing
+
+#### ⚽ Formations
+- Quick-apply preset formations with number keys 1-6
+- Supports: 4-3-3, 4-4-2, 4-4-2♦, 4-2-3-1, 3-5-2, 5-3-2
+- Use Shift+1-6 for away team formations
+
+#### 📤 Export Options
+- **PNG**: Single frame export
+- **All PNGs**: Export each step as separate PNG
+- **GIF**: Animated GIF of all steps
+- **PDF**: Multi-page PDF (one step per page)
+- **SVG**: Vector export of current view
 
 #### 🔍 Zoom
 - Use widget in bottom-right corner
 - `Cmd/Ctrl++` / `Cmd/Ctrl+-`
-- `Shift+1` to fit to screen
+- Portrait mode auto-zooms to 75%
 
 #### 🎬 Focus Mode
 - Press `F` to hide all UI
@@ -113,7 +153,7 @@ TMC Studio/
 │   ├── core/             # Data models, serialization
 │   ├── board/            # Konva canvas components
 │   ├── ui/               # UI components (TopBar, Inspector, etc.)
-│   └── presets/          # Formations, templates (WIP)
+│   └── presets/          # Formations, templates
 ├── docs/                 # Documentation
 └── tasks/                # Development tasks
 ```
@@ -125,6 +165,7 @@ TMC Studio/
 - **Styling**: Tailwind CSS
 - **Build**: pnpm + Turborepo
 - **Language**: TypeScript (strict mode)
+- **Export**: gifenc, jsPDF
 
 ### Data Model
 
@@ -146,7 +187,7 @@ interface Step {
 }
 
 // Elements
-type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement;
+type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement | TextElement;
 ```
 
 ---

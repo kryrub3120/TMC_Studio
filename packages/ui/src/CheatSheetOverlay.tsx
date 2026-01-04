@@ -28,7 +28,7 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'R', description: 'Run Arrow' },
       { key: 'Z', description: 'Rect Zone' },
       { key: '⇧Z', description: 'Ellipse Zone' },
-      { key: 'T', description: 'Text' },
+      { key: 'T', description: 'Text Label' },
     ],
   },
   {
@@ -45,21 +45,40 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
     ],
   },
   {
-    title: 'View',
+    title: 'View & Pitch',
     items: [
       { key: '⌘K', description: 'Command Palette' },
       { key: 'F', description: 'Focus Mode' },
       { key: 'I', description: 'Toggle Inspector' },
-      { key: 'G', description: 'Toggle Grid' },
+      { key: 'O', description: 'Toggle Orientation' },
+      { key: 'W', description: 'Print Friendly Mode' },
       { key: '?', description: 'Toggle Shortcuts' },
     ],
   },
   {
-    title: 'Steps',
+    title: 'Steps & Playback',
     items: [
       { key: '←/→', description: 'Prev/Next Step' },
       { key: 'Space', description: 'Play/Pause' },
       { key: 'N', description: 'Add Step' },
+      { key: 'X', description: 'Delete Step' },
+      { key: 'L', description: 'Toggle Loop' },
+    ],
+  },
+  {
+    title: 'Export',
+    items: [
+      { key: '⌘E', description: 'Export PNG' },
+      { key: '⇧⌘E', description: 'Export All PNGs' },
+      { key: '⇧⌘G', description: 'Export GIF' },
+      { key: '⇧⌘P', description: 'Export PDF' },
+    ],
+  },
+  {
+    title: 'Formations',
+    items: [
+      { key: '1-6', description: 'Apply Home Formation' },
+      { key: '⇧1-6', description: 'Apply Away Formation' },
     ],
   },
 ];

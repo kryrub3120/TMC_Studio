@@ -129,9 +129,11 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 ## ✅ Sprint 4 — Export & Customization (COMPLETED)
 
 ### S4.1 Export Features ✓
+- [x] Export single PNG (Cmd+E)
 - [x] Export all steps as PNGs (Shift+Cmd+E)
-- [ ] Export GIF animation (future)
-- [ ] Export video (MP4/WebM) (future)
+- [x] Export animated GIF (Shift+Cmd+G) - using gifenc
+- [x] Export multi-page PDF (Shift+Cmd+P) - one step per page
+- [x] Export SVG (via Command Palette)
 
 ### S4.2 Team Customization ✓
 - [x] Team name/color customization
@@ -139,56 +141,97 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 - [x] Inspector "Teams" tab
 
 ### S4.3 Pitch Variants ✓
-- [x] Pitch theme presets (grass/indoor/chalk/futsal)
+- [x] Portrait/Landscape orientation (O key)
+- [x] Print Friendly mode (W key) - white pitch, black lines
 - [x] Custom pitch colors
 - [x] Show/hide stripes toggle
 - [x] Inspector "Pitch" tab
 
-### S4.4 Performance & Polish
-- [ ] Code splitting for smaller bundles
-- [ ] Touch/mobile support (pinch-zoom, pan)
-- [ ] Accessibility improvements
+### S4.4 Performance & Polish ✓
+- [x] Keyboard shortcuts for all exports
+- [x] Updated CheatSheet with all shortcuts
+- [x] Updated README documentation
+- [x] gifenc library (no Web Worker issues)
 
 ---
 
-## 🔮 Sprint 5 — Desktop & Cloud (FUTURE)
+## 🚀 Sprint 5 — Quality & UX (NEXT)
 
-### S5.1 Tauri Desktop App
-- [ ] Lightweight native app
-- [ ] Native file save/open
-- [ ] Offline-first
+### S5.1 Performance Optimization
+- [ ] Code splitting for smaller bundles
+- [ ] Lazy load heavy components (jsPDF, gifenc)
+- [ ] Virtual scrolling for large element lists
+- [ ] Memoization audit
 
-### S5.2 Cloud Sync
-- [ ] User accounts
-- [ ] Project sync
+### S5.2 Mobile & Touch Support
+- [ ] Touch/mobile viewport support
+- [ ] Pinch-to-zoom
+- [ ] Touch pan/drag
+- [ ] Responsive Inspector panel
+
+### S5.3 Step Thumbnails
+- [ ] Generate mini previews for each step
+- [ ] Show thumbnails in BottomStepsBar
+- [ ] Thumbnail caching
+
+### S5.4 Drag Reorder Steps
+- [ ] Drag steps to reorder
+- [ ] Visual feedback during drag
+
+### S5.5 Onion Skin Preview
+- [ ] Ghost overlay showing previous/next step
+- [ ] Toggle on/off
+- [ ] Opacity control
+
+---
+
+## 🔮 Sprint 6 — Desktop & Cloud (FUTURE)
+
+### S6.1 Tauri Desktop App
+- [ ] Lightweight native app wrapper
+- [ ] Native file save/open dialogs
+- [ ] Offline-first architecture
+
+### S6.2 Cloud Features
+- [ ] User accounts (auth)
+- [ ] Project cloud sync
 - [ ] Team collaboration
+- [ ] Share links
 
-### S5.3 Advanced Analysis
-- [ ] Heat maps
-- [ ] Pass networks
+### S6.3 Advanced Analysis
+- [ ] Heat maps overlay
+- [ ] Pass networks visualization
 - [ ] Statistical overlays
+- [ ] xG data integration
+
+### S6.4 Video Export
+- [ ] Export MP4 video
+- [ ] Export WebM video
+- [ ] Custom framerate
+- [ ] Audio support
 
 ---
 
 ## 📊 Technical Debt Queue
 
-- [ ] Performance optimization for large boards
-- [ ] Code splitting for smaller bundles
-- [ ] Unit tests for core logic
+- [ ] Unit tests for core logic (Vitest)
 - [ ] E2E tests with Playwright
 - [ ] Accessibility audit (a11y)
-- [ ] Mobile viewport support
+- [ ] Performance profiling
+- [ ] Bundle size optimization
+- [ ] Error boundaries
 
 ---
 
 ## 🏁 Release Milestones
 
-| Version | Features | Target |
+| Version | Features | Status |
 |---------|----------|--------|
 | **0.1** | MVP Core (Sprint 1) | ✅ Done |
 | **0.2** | Animation System (Sprint 2) | ✅ Done |
 | **0.3** | Pro Features (Sprint 3) | ✅ Done |
-| **0.4** | Export & Customization (Sprint 4) | In Progress |
+| **0.4** | Export & Customization (Sprint 4) | ✅ Done |
+| **0.5** | Quality & UX (Sprint 5) | 🔄 Next |
 | **1.0** | Public Release | TBD |
 
 ---

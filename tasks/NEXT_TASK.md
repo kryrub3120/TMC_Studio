@@ -1,66 +1,98 @@
-# S4.4 Export Options - COMPLETED ✅
+# Sprint 5 — Quality & UX (Next Session)
 
-## Summary
-Fixed GIF export by replacing `gif.js` (which had Web Worker issues in Vite) with `gifenc` - a lightweight, synchronous GIF encoder that works perfectly in bundled builds.
+## Goal
+Improve performance, add mobile support, and enhance UX with step thumbnails.
 
-## Completed
-- ✅ PNG export (Cmd+E)
-- ✅ PDF export (Cmd+Shift+P) - **NEW SHORTCUT**
-- ✅ SVG export (via Command Palette)
-- ✅ GIF export (Cmd+Shift+G) - **FIXED + NEW SHORTCUT**
-- ✅ Export All Steps PNG (Cmd+Shift+E)
+## Priority Order
 
-## Changes Made
+### 1. S5.1 Performance Optimization (High Priority)
+Code splitting and lazy loading to reduce initial bundle size.
 
-### 1. Replaced gif.js with gifenc
-- **Before**: `gif.js` required Web Workers which failed in Vite bundled builds
-- **After**: `gifenc` is synchronous, zero-dependency, works in all environments
+**Tasks:**
+- [ ] Lazy load jsPDF (`const { jsPDF } = await import('jspdf')`)
+- [ ] Lazy load gifenc for GIF export
+- [ ] Split export utils into dynamic import
+- [ ] Audit bundle size with `vite-plugin-visualizer`
+- [ ] Add loading states for async exports
 
-### 2. New Keyboard Shortcuts
-- `⌘+⇧+G` (Cmd+Shift+G) → Export Animated GIF
-- `⌘+⇧+P` (Cmd+Shift+P) → Export PDF
+**Files to Edit:**
+- `apps/web/src/utils/exportUtils.ts` - Dynamic imports
+- `apps/web/vite.config.ts` - Add bundle visualizer
+- `apps/web/src/App.tsx` - Loading states
 
-### 3. Files Modified
-- `apps/web/package.json` - Replaced gif.js with gifenc dependency
-- `apps/web/src/utils/exportUtils.ts` - Rewritten exportGIF using gifenc
-- `apps/web/src/types/gifenc.d.ts` - New TypeScript declarations
-- `apps/web/src/App.tsx` - Added keyboard shortcuts for GIF/PDF
-- `apps/web/src/types/gif.js.d.ts` - Removed (obsolete)
+### 2. S5.3 Step Thumbnails (Medium Priority)
+Visual previews for each step in the timeline.
 
-## Technical Details
+**Tasks:**
+- [ ] Generate thumbnail on step change
+- [ ] Store as data URL in step data
+- [ ] Display in BottomStepsBar
+- [ ] Add loading skeleton
+- [ ] Cache thumbnails in memory
 
-### gifenc vs gif.js
-| Feature | gif.js | gifenc |
-|---------|--------|--------|
-| Web Workers | Required | None needed |
-| Vite compatibility | Issues | Perfect |
-| Bundle size | Large | ~10KB |
-| API | Async/events | Sync |
-| Quality | Good | Good |
+**Files to Edit:**
+- `packages/core/src/step.ts` - Add thumbnail field
+- `packages/ui/src/BottomStepsBar.tsx` - Display thumbnails
+- `apps/web/src/store/useBoardStore.ts` - Generate thumbnails
 
-### Export Flow (GIF)
-1. Capture all frames as PNG data URLs
-2. Convert each to ImageData (RGBA pixels)
-3. Quantize colors to 256-color palette per frame
-4. Apply palette to get indexed pixels
-5. Encode with gifenc
-6. Download as blob
+### 3. S5.2 Touch Support (Medium Priority)
+Basic mobile/touch support.
 
-## Build Status
-✅ 5/5 packages built successfully
+**Tasks:**
+- [ ] Pinch-to-zoom gesture
+- [ ] Touch pan/drag
+- [ ] Responsive Inspector panel
+- [ ] Larger touch targets
 
-## Test Commands
-```bash
-# Start dev server
-cd "/Users/krystianrubajczyk/Documents/PROGRAMOWANIE/TMC Studio"
-pnpm dev
+**Files to Edit:**
+- `apps/web/src/App.tsx` - Touch event handlers
+- `packages/ui/src/RightInspector.tsx` - Mobile layout
 
-# Test shortcuts:
-# 1. Create at least 2 steps (press N to add step)
-# 2. Press Cmd+Shift+G to export GIF
-# 3. Press Cmd+Shift+P to export PDF
+---
+
+## Quick Wins for Next Session
+
+1. **Bundle Visualizer** - See what's large
+2. **Lazy jsPDF** - Only load when exporting PDF
+3. **Lazy gifenc** - Only load when exporting GIF
+4. **Step thumbnail POC** - Basic implementation
+
+---
+
+## Session Summary (2026-01-04)
+
+### Completed Today:
+✅ **Sprint 4 — Export & Customization** fully completed!
+
+- Fixed GIF export (gif.js → gifenc)
+- Added keyboard shortcuts: ⇧⌘G (GIF), ⇧⌘P (PDF)
+- Updated CheatSheetOverlay with all shortcuts
+- Updated README with full documentation
+- Updated ROADMAP with Sprint 5 plan
+- Build: 5/5 ✅
+
+### Commits Today:
+1. `63cb4d3` - fix(S4.4): Replace gif.js with gifenc for working GIF export
+
+### Shortcuts Reference:
+```
+Export PNG:       ⌘E
+Export All PNGs:  ⇧⌘E
+Export GIF:       ⇧⌘G
+Export PDF:       ⇧⌘P
+Export SVG:       via Command Palette (⌘K)
 ```
 
-## Commits
-- Previous session: `8a3bd32`, `ceddcc6`, `7dc1084`
-- This session: Pending commit for gifenc migration
+---
+
+## Commands
+```bash
+# Start dev
+pnpm dev
+
+# Build
+pnpm build
+
+# Analyze bundle (after adding visualizer)
+pnpm build --analyze
+```
