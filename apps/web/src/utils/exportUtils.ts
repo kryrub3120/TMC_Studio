@@ -6,9 +6,6 @@
 import GIF from 'gif.js';
 import { jsPDF } from 'jspdf';
 
-// GIF.js worker URL - use CDN
-const GIF_WORKER_URL = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js';
-
 export interface ExportOptions {
   filename: string;
   pixelRatio?: number;
@@ -62,10 +59,9 @@ export async function exportGIF(
         return;
       }
       
-      // Create GIF
+      // Create GIF - use single worker for compatibility
       const gif = new GIF({
-        workers: 2,
-        workerScript: GIF_WORKER_URL,
+        workers: 1,
         quality: 10,
         width: frames[0].width,
         height: frames[0].height,
