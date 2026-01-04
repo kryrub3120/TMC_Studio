@@ -45,6 +45,7 @@ export default function App() {
   const elements = useBoardStore((s) => s.elements);
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const boardDoc = useBoardStore((s) => s.document);
+  const teamSettings = useBoardStore((s) => s.getTeamSettings());
   
   // Board store actions
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
@@ -1175,6 +1176,7 @@ export default function App() {
                         key={player.id}
                         player={animatedPlayer}
                         pitchConfig={DEFAULT_PITCH_CONFIG}
+                        teamSettings={teamSettings}
                         isSelected={!isPlaying && selectedIds.includes(player.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}
