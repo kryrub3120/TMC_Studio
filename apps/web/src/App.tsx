@@ -250,20 +250,13 @@ export default function App() {
     getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
     [pitchSettings?.orientation]
   );
-  const isPortrait = pitchSettings?.orientation === 'portrait';
 
   // Canvas dimensions (dynamic based on orientation)
   const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
   const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
 
-  // Auto-adjust zoom for portrait to fit screen better
-  const effectiveZoom = useMemo(() => {
-    if (isPortrait) {
-      // Portrait pitch is tall - reduce zoom to fit
-      return Math.min(zoom, 0.65);
-    }
-    return zoom;
-  }, [zoom, isPortrait]);
+  // Use zoom directly - no limit for portrait (user controls zoom)
+  const effectiveZoom = zoom;
 
   // Export single PNG handler
   const handleExport = useCallback(() => {
@@ -625,6 +618,41 @@ export default function App() {
             e.preventDefault();
             addStep();
             showToast('New step added');
+          }
+          break;
+        case 'o':
+          // O = Toggle orientation (landscape/portrait)
+          if (!isCmd) {
+            e.preventDefault();
+            const currentOrientation = useBoardStore.getState().getPitchSettings()?.orientation ?? 'landscape';
+            const newOrientation = currentOrientation === 'landscape' ? 'portrait' : 'landscape';
+            useBoardStore.getState().updatePitchSettings({ orientation: newOrientation });
+            showToast(newOrientation === 'portrait' ? 'Portrait mode' : 'Landscape mode');
+          }
+          break;
+        case 'w':
+          // W = Toggle print friendly (white pitch with black lines)
+          if (!isCmd) {
+            e.preventDefault();
+            const currentSettings = useBoardStore.getState().getPitchSettings();
+            const isPrintFriendly = currentSettings?.primaryColor === '#ffffff' && currentSettings?.lineColor === '#000000';
+            if (isPrintFriendly) {
+              // Back to default green
+              useBoardStore.getState().updatePitchSettings({ 
+                primaryColor: '#4ade80',
+                stripeColor: '#22c55e', 
+                lineColor: '#ffffff'
+              });
+              showToast('Normal colors');
+            } else {
+              // Set print friendly
+              useBoardStore.getState().updatePitchSettings({ 
+                primaryColor: '#ffffff',
+                stripeColor: '#f3f4f6', 
+                lineColor: '#000000'
+              });
+              showToast('Print Friendly mode');
+            }
           }
           break;
         case 'x':
