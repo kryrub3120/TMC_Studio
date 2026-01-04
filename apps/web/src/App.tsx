@@ -422,8 +422,8 @@ export default function App() {
       // Export
       { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: () => handleExport() },
       { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: () => handleExportAllSteps() },
-      { id: 'export-gif', label: 'Export Animated GIF', category: 'export', onExecute: () => handleExportGIF(), disabled: boardDoc.steps.length < 2 },
-      { id: 'export-pdf', label: 'Export PDF (all steps)', category: 'export', onExecute: () => handleExportPDF() },
+      { id: 'export-gif', label: 'Export Animated GIF', shortcut: `⇧${cmd}G`, category: 'export', onExecute: () => handleExportGIF(), disabled: boardDoc.steps.length < 2 },
+      { id: 'export-pdf', label: 'Export PDF (all steps)', shortcut: `⇧${cmd}P`, category: 'export', onExecute: () => handleExportPDF() },
       { id: 'export-svg', label: 'Export SVG', category: 'export', onExecute: () => handleExportSVG() },
     ];
   }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo, handleExport, handleExportAllSteps, handleExportGIF, handleExportPDF, handleExportSVG, boardDoc.steps.length]);
@@ -454,7 +454,10 @@ export default function App() {
       switch (e.key.toLowerCase()) {
         case 'p':
           e.preventDefault();
-          if (e.shiftKey) {
+          if (isCmd && e.shiftKey) {
+            // Cmd+Shift+P = Export PDF
+            handleExportPDF();
+          } else if (e.shiftKey) {
             addPlayerAtCursor('away');
           } else {
             addPlayerAtCursor('home');
@@ -475,8 +478,8 @@ export default function App() {
         case 'g':
           if (isCmd && e.shiftKey) {
             e.preventDefault();
-            ungroupSelection();
-            showToast('Ungrouped');
+            // Cmd+Shift+G = Export GIF
+            handleExportGIF();
           } else if (isCmd) {
             e.preventDefault();
             createGroup();

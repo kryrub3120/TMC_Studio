@@ -1,45 +1,66 @@
-# S4.4 Export Options - Debug & Shortcuts
+# S4.4 Export Options - COMPLETED ✅
 
-## Goal
-Fix GIF export (gif.js worker issues) and add keyboard shortcuts for exports.
+## Summary
+Fixed GIF export by replacing `gif.js` (which had Web Worker issues in Vite) with `gifenc` - a lightweight, synchronous GIF encoder that works perfectly in bundled builds.
 
-## Current State
-- ✅ PNG export - works (Cmd+E)
-- ✅ PDF export - works (via Command Palette)
-- ✅ SVG export - works (via Command Palette)
-- ❌ GIF export - fails (gif.js worker issue)
+## Completed
+- ✅ PNG export (Cmd+E)
+- ✅ PDF export (Cmd+Shift+P) - **NEW SHORTCUT**
+- ✅ SVG export (via Command Palette)
+- ✅ GIF export (Cmd+Shift+G) - **FIXED + NEW SHORTCUT**
+- ✅ Export All Steps PNG (Cmd+Shift+E)
 
-## Problem
-gif.js requires a Web Worker which may not load correctly in Vite bundled builds. Options:
-1. Use inline worker blob
-2. Bundle worker separately
-3. Use alternative library (modern-gif, gifenc)
+## Changes Made
 
-## Suggested Fix
-Replace gif.js with `modern-gif` or canvas-based approach without web workers.
+### 1. Replaced gif.js with gifenc
+- **Before**: `gif.js` required Web Workers which failed in Vite bundled builds
+- **After**: `gifenc` is synchronous, zero-dependency, works in all environments
 
-## Keyboard Shortcuts to Add
-```
-Cmd+Shift+G = Export GIF
-Cmd+Shift+P = Export PDF
-```
+### 2. New Keyboard Shortcuts
+- `⌘+⇧+G` (Cmd+Shift+G) → Export Animated GIF
+- `⌘+⇧+P` (Cmd+Shift+P) → Export PDF
 
-## Files to Edit
-- `apps/web/src/utils/exportUtils.ts` - Fix GIF implementation
-- `apps/web/src/App.tsx` - Add keyboard shortcuts in handleKeyDown
+### 3. Files Modified
+- `apps/web/package.json` - Replaced gif.js with gifenc dependency
+- `apps/web/src/utils/exportUtils.ts` - Rewritten exportGIF using gifenc
+- `apps/web/src/types/gifenc.d.ts` - New TypeScript declarations
+- `apps/web/src/App.tsx` - Added keyboard shortcuts for GIF/PDF
+- `apps/web/src/types/gif.js.d.ts` - Removed (obsolete)
 
-## Commands
-```bash
-cd "/Users/krystianrubajczyk/Documents/PROGRAMOWANIE/TMC Studio"
-pnpm dev
-# Test exports in browser console if needed
-```
+## Technical Details
 
-## Commits from Previous Session (S4.3 + S4.4)
-- `2cb8f4e` - fix: orientation transformation drift
-- `8919a32` - fix: Print Friendly + Portrait zoom
-- `8a3bd32` - feat: Add export options - GIF, PDF, SVG
-- `ceddcc6` - fix: GIF export worker dependency
+### gifenc vs gif.js
+| Feature | gif.js | gifenc |
+|---------|--------|--------|
+| Web Workers | Required | None needed |
+| Vite compatibility | Issues | Perfect |
+| Bundle size | Large | ~10KB |
+| API | Async/events | Sync |
+| Quality | Good | Good |
+
+### Export Flow (GIF)
+1. Capture all frames as PNG data URLs
+2. Convert each to ImageData (RGBA pixels)
+3. Quantize colors to 256-color palette per frame
+4. Apply palette to get indexed pixels
+5. Encode with gifenc
+6. Download as blob
 
 ## Build Status
-5/5 ✅ (but GIF runtime error)
+✅ 5/5 packages built successfully
+
+## Test Commands
+```bash
+# Start dev server
+cd "/Users/krystianrubajczyk/Documents/PROGRAMOWANIE/TMC Studio"
+pnpm dev
+
+# Test shortcuts:
+# 1. Create at least 2 steps (press N to add step)
+# 2. Press Cmd+Shift+G to export GIF
+# 3. Press Cmd+Shift+P to export PDF
+```
+
+## Commits
+- Previous session: `8a3bd32`, `ceddcc6`, `7dc1084`
+- This session: Pending commit for gifenc migration

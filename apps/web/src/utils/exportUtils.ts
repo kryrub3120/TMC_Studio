@@ -3,7 +3,7 @@
  * Supports: PNG, GIF, PDF, SVG
  */
 
-import GIF from 'gif.js';
+import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { jsPDF } from 'jspdf';
 
 export interface ExportOptions {
@@ -27,71 +27,107 @@ export function exportPNG(
 }
 
 /**
- * Export all steps as animated GIF
+ * Get image data from data URL
+ */
+async function getImageData(dataUrl: string): Promise<{ data: Uint8ClampedArray; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      resolve({
+        data: imageData.data,
+        width: canvas.width,
+        height: canvas.height,
+      });
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Export all steps as animated GIF using gifenc (synchronous, no workers)
  */
 export async function exportGIF(
-  captureFrame: () => Promise<string>, // Returns data URL for current frame
+  captureFrame: () => Promise<string>,
   goToStep: (index: number) => void,
   totalSteps: number,
   options: ExportOptions,
   onProgress?: (percent: number) => void
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const processFrames = async () => {
-      const frames: HTMLImageElement[] = [];
-      
-      // Capture all frames
-      for (let i = 0; i < totalSteps; i++) {
-        goToStep(i);
-        await new Promise((r) => setTimeout(r, 100)); // Wait for render
-        
-        const dataUrl = await captureFrame();
-        const frameImg = new Image();
-        frameImg.src = dataUrl;
-        await new Promise((r) => { frameImg.onload = r; });
-        frames.push(frameImg);
-        
-        onProgress?.((i + 1) / totalSteps * 50); // 0-50% for capture
-      }
-      
-      if (frames.length === 0) {
-        reject(new Error('No frames to export'));
-        return;
-      }
-      
-      // Create GIF - use single worker for compatibility
-      const gif = new GIF({
-        workers: 1,
-        quality: 10,
-        width: frames[0].width,
-        height: frames[0].height,
-      });
-      
-      // Add frames
-      const delayMs = (options.stepDuration ?? 0.8) * 1000;
-      frames.forEach((frame) => {
-        gif.addFrame(frame, { delay: delayMs });
-      });
-      
-      gif.on('progress', (p: number) => {
-        onProgress?.(50 + p * 50); // 50-100% for encoding
-      });
-      
-      gif.on('finished', (blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `${options.filename}.gif`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-        resolve();
-      });
-      
-      gif.render();
-    };
+  if (totalSteps < 2) {
+    throw new Error('Need at least 2 steps for GIF');
+  }
+
+  // Capture all frames first
+  const frames: { data: Uint8ClampedArray; width: number; height: number }[] = [];
+  
+  for (let i = 0; i < totalSteps; i++) {
+    goToStep(i);
+    await new Promise((r) => setTimeout(r, 100)); // Wait for render
     
-    processFrames().catch(reject);
-  });
+    const dataUrl = await captureFrame();
+    const frameData = await getImageData(dataUrl);
+    frames.push(frameData);
+    
+    onProgress?.((i + 1) / totalSteps * 50); // 0-50% for capture
+  }
+
+  if (frames.length === 0) {
+    throw new Error('No frames to export');
+  }
+
+  const { width, height } = frames[0];
+  const delayMs = Math.round((options.stepDuration ?? 0.8) * 1000);
+  
+  // Create GIF encoder
+  const gif = GIFEncoder();
+
+  // Process each frame
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i];
+    
+    // Convert RGBA to RGB array for quantize
+    const rgba = frame.data;
+    
+    // Quantize colors (reduce to 256 color palette)
+    const palette = quantize(rgba, 256);
+    
+    // Apply palette to get indexed pixels
+    const indexed = applyPalette(rgba, palette);
+    
+    // Write frame (delay in centiseconds)
+    gif.writeFrame(indexed, width, height, {
+      palette,
+      delay: Math.round(delayMs / 10), // gifenc uses centiseconds
+    });
+    
+    onProgress?.(50 + (i + 1) / frames.length * 50); // 50-100% for encoding
+  }
+
+  // Finish and download
+  gif.finish();
+  
+  const output = gif.bytes();
+  // Create blob from the Uint8Array (copy to ensure clean ArrayBuffer)
+  const blob = new Blob([new Uint8Array(output)], { type: 'image/gif' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.download = `${options.filename}.gif`;
+  link.href = url;
+  link.click();
+  
+  URL.revokeObjectURL(url);
 }
 
 /**
