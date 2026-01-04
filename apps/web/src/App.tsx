@@ -250,10 +250,20 @@ export default function App() {
     getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
     [pitchSettings?.orientation]
   );
+  const isPortrait = pitchSettings?.orientation === 'portrait';
 
   // Canvas dimensions (dynamic based on orientation)
   const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
   const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
+
+  // Auto-adjust zoom for portrait to fit screen better
+  const effectiveZoom = useMemo(() => {
+    if (isPortrait) {
+      // Portrait pitch is tall - reduce zoom to fit
+      return Math.min(zoom, 0.65);
+    }
+    return zoom;
+  }, [zoom, isPortrait]);
 
   // Export single PNG handler
   const handleExport = useCallback(() => {
@@ -1088,7 +1098,7 @@ export default function App() {
           {/* Canvas container - premium pitch card with zoom */}
           <div 
             className="shadow-canvas rounded-[20px] overflow-hidden border border-border/50 p-3 bg-surface/50 backdrop-blur-sm transition-transform"
-            style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}
+            style={{ transform: `scale(${effectiveZoom})`, transformOrigin: 'center' }}
           >
             <Stage
               ref={stageRef}

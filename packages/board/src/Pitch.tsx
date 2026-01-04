@@ -1,5 +1,6 @@
 /**
  * Football pitch rendering component
+ * Supports both landscape and portrait orientations
  */
 
 import React from 'react';
@@ -18,30 +19,41 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
   
   // Use provided settings or defaults
   const settings = pitchSettings ?? DEFAULT_PITCH_SETTINGS;
-  
-  // Pitch dimensions (all relative to pitch size)
-  const penaltyAreaWidth = width * 0.16;
-  const penaltyAreaHeight = height * 0.62;
-  const goalAreaWidth = width * 0.055;
-  const goalAreaHeight = height * 0.31;
-  const centerCircleRadius = height * 0.14;
-  const penaltySpotDistance = width * 0.105;
-  const cornerRadius = 8;
-  const lineWidth = 2;
+  const isPortrait = settings.orientation === 'portrait';
   
   // Use theme colors
   const lineColor = settings.lineColor;
   const grassColor = settings.primaryColor;
   const grassStripeColor = settings.stripeColor;
   const showStripes = settings.showStripes;
+  const lineWidth = 2;
+  const cornerRadius = 8;
 
-  // Calculate positions
-  const penaltyAreaY = (height - penaltyAreaHeight) / 2;
-  const goalAreaY = (height - goalAreaHeight) / 2;
+  // For portrait: goals are at TOP and BOTTOM
+  // For landscape: goals are at LEFT and RIGHT
+  
+  // The "long" dimension is where the goal area extends
+  // In landscape: width is long, penalty areas on left/right
+  // In portrait: height is long, penalty areas on top/bottom
+  
+  const longDim = isPortrait ? height : width;
+  const shortDim = isPortrait ? width : height;
+  
+  // Pitch dimensions relative to the long dimension
+  const penaltyAreaDepth = longDim * 0.16;      // How far into pitch
+  const penaltyAreaWidth = shortDim * 0.62;     // Width across pitch
+  const goalAreaDepth = longDim * 0.055;
+  const goalAreaWidth = shortDim * 0.31;
+  const centerCircleRadius = shortDim * 0.14;
+  const penaltySpotDistance = longDim * 0.105;
+
+  // Calculate positions for penalty/goal areas (centered on short dimension)
+  const penaltyAreaOffset = (shortDim - penaltyAreaWidth) / 2;
+  const goalAreaOffset = (shortDim - goalAreaWidth) / 2;
 
   return (
     <Group x={padding} y={padding}>
-      {/* Grass background with stripes */}
+      {/* Grass background */}
       <Rect
         name="pitch-background"
         x={0}
@@ -52,19 +64,36 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
         cornerRadius={4}
       />
       
-      {/* Grass stripes - only if showStripes enabled */}
-      {showStripes && Array.from({ length: 10 }).map((_, i) => (
-        i % 2 === 0 ? (
-          <Rect
-            key={`stripe-${i}`}
-            x={(width / 10) * i}
-            y={0}
-            width={width / 10}
-            height={height}
-            fill={grassStripeColor}
-          />
-        ) : null
-      ))}
+      {/* Grass stripes */}
+      {showStripes && Array.from({ length: 10 }).map((_, i) => {
+        if (i % 2 !== 0) return null;
+        
+        if (isPortrait) {
+          // Portrait: HORIZONTAL stripes
+          return (
+            <Rect
+              key={`stripe-${i}`}
+              x={0}
+              y={(height / 10) * i}
+              width={width}
+              height={height / 10}
+              fill={grassStripeColor}
+            />
+          );
+        } else {
+          // Landscape: VERTICAL stripes
+          return (
+            <Rect
+              key={`stripe-${i}`}
+              x={(width / 10) * i}
+              y={0}
+              width={width / 10}
+              height={height}
+              fill={grassStripeColor}
+            />
+          );
+        }
+      })}
 
       {/* Pitch outline */}
       <Rect
@@ -79,11 +108,21 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
       />
 
       {/* Center line */}
-      <Line
-        points={[width / 2, 0, width / 2, height]}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-      />
+      {isPortrait ? (
+        // Portrait: HORIZONTAL center line
+        <Line
+          points={[0, height / 2, width, height / 2]}
+          stroke={lineColor}
+          strokeWidth={lineWidth}
+        />
+      ) : (
+        // Landscape: VERTICAL center line
+        <Line
+          points={[width / 2, 0, width / 2, height]}
+          stroke={lineColor}
+          strokeWidth={lineWidth}
+        />
+      )}
 
       {/* Center circle */}
       <Circle
@@ -103,93 +142,189 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
         fill={lineColor}
       />
 
-      {/* Left penalty area */}
-      <Rect
-        x={0}
-        y={penaltyAreaY}
-        width={penaltyAreaWidth}
-        height={penaltyAreaHeight}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-        fill="transparent"
-      />
+      {isPortrait ? (
+        // ========== PORTRAIT MODE ==========
+        // Goals at TOP and BOTTOM
+        <>
+          {/* TOP penalty area */}
+          <Rect
+            x={penaltyAreaOffset}
+            y={0}
+            width={penaltyAreaWidth}
+            height={penaltyAreaDepth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
 
-      {/* Left goal area */}
-      <Rect
-        x={0}
-        y={goalAreaY}
-        width={goalAreaWidth}
-        height={goalAreaHeight}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-        fill="transparent"
-      />
+          {/* TOP goal area */}
+          <Rect
+            x={goalAreaOffset}
+            y={0}
+            width={goalAreaWidth}
+            height={goalAreaDepth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
 
-      {/* Left penalty spot */}
-      <Circle
-        x={penaltySpotDistance}
-        y={height / 2}
-        radius={4}
-        fill={lineColor}
-      />
+          {/* TOP penalty spot */}
+          <Circle
+            x={width / 2}
+            y={penaltySpotDistance}
+            radius={4}
+            fill={lineColor}
+          />
 
-      {/* Left penalty arc */}
-      <Arc
-        x={penaltySpotDistance}
-        y={height / 2}
-        innerRadius={centerCircleRadius}
-        outerRadius={centerCircleRadius}
-        angle={106}
-        rotation={-53}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-        fill="transparent"
-      />
+          {/* TOP penalty arc */}
+          <Arc
+            x={width / 2}
+            y={penaltySpotDistance}
+            innerRadius={centerCircleRadius}
+            outerRadius={centerCircleRadius}
+            angle={106}
+            rotation={37}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
 
-      {/* Right penalty area */}
-      <Rect
-        x={width - penaltyAreaWidth}
-        y={penaltyAreaY}
-        width={penaltyAreaWidth}
-        height={penaltyAreaHeight}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-        fill="transparent"
-      />
+          {/* BOTTOM penalty area */}
+          <Rect
+            x={penaltyAreaOffset}
+            y={height - penaltyAreaDepth}
+            width={penaltyAreaWidth}
+            height={penaltyAreaDepth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
 
-      {/* Right goal area */}
-      <Rect
-        x={width - goalAreaWidth}
-        y={goalAreaY}
-        width={goalAreaWidth}
-        height={goalAreaHeight}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-        fill="transparent"
-      />
+          {/* BOTTOM goal area */}
+          <Rect
+            x={goalAreaOffset}
+            y={height - goalAreaDepth}
+            width={goalAreaWidth}
+            height={goalAreaDepth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
 
-      {/* Right penalty spot */}
-      <Circle
-        x={width - penaltySpotDistance}
-        y={height / 2}
-        radius={4}
-        fill={lineColor}
-      />
+          {/* BOTTOM penalty spot */}
+          <Circle
+            x={width / 2}
+            y={height - penaltySpotDistance}
+            radius={4}
+            fill={lineColor}
+          />
 
-      {/* Right penalty arc */}
-      <Arc
-        x={width - penaltySpotDistance}
-        y={height / 2}
-        innerRadius={centerCircleRadius}
-        outerRadius={centerCircleRadius}
-        angle={106}
-        rotation={127}
-        stroke={lineColor}
-        strokeWidth={lineWidth}
-        fill="transparent"
-      />
+          {/* BOTTOM penalty arc */}
+          <Arc
+            x={width / 2}
+            y={height - penaltySpotDistance}
+            innerRadius={centerCircleRadius}
+            outerRadius={centerCircleRadius}
+            angle={106}
+            rotation={217}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
+        </>
+      ) : (
+        // ========== LANDSCAPE MODE ==========
+        // Goals at LEFT and RIGHT
+        <>
+          {/* LEFT penalty area */}
+          <Rect
+            x={0}
+            y={penaltyAreaOffset}
+            width={penaltyAreaDepth}
+            height={penaltyAreaWidth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
 
-      {/* Corner arcs */}
+          {/* LEFT goal area */}
+          <Rect
+            x={0}
+            y={goalAreaOffset}
+            width={goalAreaDepth}
+            height={goalAreaWidth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
+
+          {/* LEFT penalty spot */}
+          <Circle
+            x={penaltySpotDistance}
+            y={height / 2}
+            radius={4}
+            fill={lineColor}
+          />
+
+          {/* LEFT penalty arc */}
+          <Arc
+            x={penaltySpotDistance}
+            y={height / 2}
+            innerRadius={centerCircleRadius}
+            outerRadius={centerCircleRadius}
+            angle={106}
+            rotation={-53}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
+
+          {/* RIGHT penalty area */}
+          <Rect
+            x={width - penaltyAreaDepth}
+            y={penaltyAreaOffset}
+            width={penaltyAreaDepth}
+            height={penaltyAreaWidth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
+
+          {/* RIGHT goal area */}
+          <Rect
+            x={width - goalAreaDepth}
+            y={goalAreaOffset}
+            width={goalAreaDepth}
+            height={goalAreaWidth}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
+
+          {/* RIGHT penalty spot */}
+          <Circle
+            x={width - penaltySpotDistance}
+            y={height / 2}
+            radius={4}
+            fill={lineColor}
+          />
+
+          {/* RIGHT penalty arc */}
+          <Arc
+            x={width - penaltySpotDistance}
+            y={height / 2}
+            innerRadius={centerCircleRadius}
+            outerRadius={centerCircleRadius}
+            angle={106}
+            rotation={127}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            fill="transparent"
+          />
+        </>
+      )}
+
+      {/* Corner arcs - same for both orientations */}
       <Arc
         x={0}
         y={0}
