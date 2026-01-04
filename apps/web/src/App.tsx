@@ -6,7 +6,7 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_CONFIG, DEFAULT_PITCH_SETTINGS, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox } from '@tmc/board';
 import { useState } from 'react';
@@ -245,9 +245,15 @@ export default function App() {
     }));
   }, [getSteps, boardDoc.steps]); // Re-compute when steps change
 
-  // Canvas dimensions
-  const canvasWidth = DEFAULT_PITCH_CONFIG.width + DEFAULT_PITCH_CONFIG.padding * 2;
-  const canvasHeight = DEFAULT_PITCH_CONFIG.height + DEFAULT_PITCH_CONFIG.padding * 2;
+  // Dynamic pitch config based on orientation
+  const pitchConfig = useMemo(() => 
+    getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
+    [pitchSettings?.orientation]
+  );
+
+  // Canvas dimensions (dynamic based on orientation)
+  const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
+  const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
 
   // Export single PNG handler
   const handleExport = useCallback(() => {
@@ -1098,7 +1104,7 @@ export default function App() {
               onTouchMove={handleStageMouseMove}
             >
               <Layer>
-                <Pitch config={DEFAULT_PITCH_CONFIG} pitchSettings={pitchSettings} />
+                <Pitch config={pitchConfig} pitchSettings={pitchSettings} />
 
                 {/* Zones (lowest z-order) - filtered by layer visibility */}
                 {layerVisibility.zones && elements
@@ -1120,7 +1126,7 @@ export default function App() {
                       <ZoneNode
                         key={zone.id}
                         zone={animatedZone}
-                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(zone.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}
@@ -1148,7 +1154,7 @@ export default function App() {
                       <ArrowNode
                         key={arrow.id}
                         arrow={animatedArrow}
-                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(arrow.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}
@@ -1178,7 +1184,7 @@ export default function App() {
                       <PlayerNode
                         key={player.id}
                         player={animatedPlayer}
-                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        pitchConfig={pitchConfig}
                         teamSettings={teamSettings}
                         isSelected={!isPlaying && selectedIds.includes(player.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
@@ -1202,7 +1208,7 @@ export default function App() {
                       <BallNode
                         key={ball.id}
                         ball={animatedBall}
-                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(ball.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}
@@ -1225,7 +1231,7 @@ export default function App() {
                       <TextNode
                         key={textEl.id}
                         text={animatedText}
-                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(textEl.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}

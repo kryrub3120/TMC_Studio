@@ -100,6 +100,19 @@ export const DEFAULT_PITCH_CONFIG: PitchConfig = {
   gridSize: 10,
 };
 
+/** Get pitch dimensions based on orientation */
+export function getPitchDimensions(orientation: PitchOrientation): PitchConfig {
+  if (orientation === 'portrait') {
+    return {
+      width: DEFAULT_PITCH_CONFIG.height, // Swap width and height
+      height: DEFAULT_PITCH_CONFIG.width,
+      padding: DEFAULT_PITCH_CONFIG.padding,
+      gridSize: DEFAULT_PITCH_CONFIG.gridSize,
+    };
+  }
+  return DEFAULT_PITCH_CONFIG;
+}
+
 /** Team settings for customization */
 export interface TeamSetting {
   name: string;
