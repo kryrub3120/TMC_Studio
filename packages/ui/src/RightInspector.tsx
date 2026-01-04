@@ -544,13 +544,13 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
       {/* Content */}
       {isOpen && (
         <>
-          {/* Tab Headers - Pills Style */}
-          <div className="flex gap-1 p-2 border-b border-border">
+          {/* Tab Headers - Two-row grid for 5 tabs */}
+          <div className="grid grid-cols-3 gap-1 p-2 border-b border-border">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   activeTab === tab.id
                     ? 'bg-accent/10 text-accent'
                     : 'text-muted hover:text-text hover:bg-surface2'
