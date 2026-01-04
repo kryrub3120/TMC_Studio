@@ -12,6 +12,8 @@ import type {
   PlayerElement,
   ArrowType,
   ZoneShape,
+  TeamSettings,
+  TeamSetting,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
@@ -143,6 +145,10 @@ interface BoardState {
   
   // Formation actions
   applyFormation: (formationId: string, team: Team) => void;
+  
+  // Team settings actions
+  updateTeamSettings: (team: Team, settings: Partial<TeamSetting>) => void;
+  getTeamSettings: () => TeamSettings | undefined;
   
   // Computed
   getSelectedElements: () => BoardElement[];
@@ -1034,5 +1040,32 @@ export const useBoardStore = create<BoardState>((set, get) => {
     },
 
     getTotalSteps: () => get().document.steps.length,
+
+    // Team settings actions
+    updateTeamSettings: (team, settings) => {
+      const { document } = get();
+      const currentSettings = document.teamSettings ?? {
+        home: { name: 'Home', primaryColor: '#ef4444', secondaryColor: '#ffffff' },
+        away: { name: 'Away', primaryColor: '#3b82f6', secondaryColor: '#ffffff' },
+      };
+      
+      const updatedTeamSettings = {
+        ...currentSettings,
+        [team]: {
+          ...currentSettings[team],
+          ...settings,
+        },
+      };
+      
+      set({
+        document: {
+          ...document,
+          teamSettings: updatedTeamSettings,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    },
+
+    getTeamSettings: () => get().document.teamSettings,
   };
 });
