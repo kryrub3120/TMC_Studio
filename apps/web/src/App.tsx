@@ -85,6 +85,7 @@ export default function App() {
   const toggleGroupVisibility = useBoardStore((s) => s.toggleGroupVisibility);
   const renameGroup = useBoardStore((s) => s.renameGroup);
   const applyFormation = useBoardStore((s) => s.applyFormation);
+  const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   
   // Step actions
   const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
@@ -1332,6 +1333,8 @@ export default function App() {
             onToggleGroupVisibility={toggleGroupVisibility}
             onRenameGroup={renameGroup}
             onQuickAction={handleQuickAction}
+            teamSettings={teamSettings}
+            onUpdateTeam={updateTeamSettings}
           />
         )}
       </div>

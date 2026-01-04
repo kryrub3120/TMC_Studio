@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import type { TeamSettings, TeamSetting } from '@tmc/core';
+import { TeamsPanel } from './TeamsPanel.js';
 
 export interface InspectorElement {
   id: string;
@@ -57,9 +59,11 @@ export interface RightInspectorProps {
   onToggleGroupVisibility?: (groupId: string) => void;
   onRenameGroup?: (groupId: string, name: string) => void;
   onQuickAction?: (action: string) => void;
+  teamSettings?: TeamSettings;
+  onUpdateTeam?: (team: 'home' | 'away', settings: Partial<TeamSetting>) => void;
 }
 
-type TabType = 'props' | 'layers' | 'objects';
+type TabType = 'props' | 'layers' | 'objects' | 'teams';
 
 /** Icons */
 const CollapseIcon: React.FC<{ className?: string; collapsed?: boolean }> = ({ className, collapsed }) => (
@@ -508,6 +512,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onToggleGroupVisibility,
   onRenameGroup,
   onQuickAction,
+  teamSettings,
+  onUpdateTeam,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
 
@@ -515,6 +521,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     { id: 'props', label: 'Props' },
     { id: 'layers', label: 'Layers' },
     { id: 'objects', label: 'Objects' },
+    { id: 'teams', label: 'Teams' },
   ];
 
   return (
@@ -575,6 +582,12 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                 selectedElement={selectedElement}
                 layerVisibility={layerVisibility}
                 onSelectElement={onSelectElement}
+              />
+            )}
+            {activeTab === 'teams' && teamSettings && onUpdateTeam && (
+              <TeamsPanel
+                teamSettings={teamSettings}
+                onUpdateTeam={onUpdateTeam}
               />
             )}
           </div>

@@ -37,3 +37,6 @@ export type { SelectionToolbarProps } from './SelectionToolbar.js';
 
 export { ZoomWidget } from './ZoomWidget.js';
 export type { ZoomWidgetProps } from './ZoomWidget.js';
+
+export { TeamsPanel } from './TeamsPanel.js';
+export type { TeamsPanelProps } from './TeamsPanel.js';
