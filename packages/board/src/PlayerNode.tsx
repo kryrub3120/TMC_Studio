@@ -1,8 +1,9 @@
 /**
  * Player node component for the tactical board
+ * Performance optimized with React.memo
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, memo } from 'react';
 import { Group, Circle, Text } from 'react-konva';
 import type Konva from 'konva';
 import type { PlayerElement, Position, PitchConfig } from '@tmc/core';
@@ -35,7 +36,7 @@ const SELECTED_STROKE_WIDTH = 3;
 const NORMAL_STROKE_WIDTH = 2;
 
 /** Draggable player circle with number */
-export const PlayerNode: React.FC<PlayerNodeProps> = ({
+const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   player,
   pitchConfig,
   isSelected,
@@ -43,6 +44,7 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
   onDragEnd,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const colors = TEAM_COLORS[player.team];
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -52,6 +54,7 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
   };
 
   const handleDragStart = () => {
+    setIsDragging(true);
     // Visual feedback during drag
     if (groupRef.current) {
       groupRef.current.moveToTop();
@@ -59,6 +62,7 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    setIsDragging(false);
     const node = e.target;
     const rawPosition: Position = { x: node.x(), y: node.y() };
     
@@ -94,10 +98,11 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
           strokeWidth={2}
           dash={[4, 2]}
           fill="transparent"
+          perfectDrawEnabled={false}
         />
       )}
       
-      {/* Player circle */}
+      {/* Player circle - disable shadow during drag for performance */}
       <Circle
         x={0}
         y={0}
@@ -105,9 +110,11 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
         fill={colors.fill}
         stroke={isSelected ? '#ffd60a' : colors.stroke}
         strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
-        shadowColor="rgba(0,0,0,0.3)"
-        shadowBlur={4}
-        shadowOffset={{ x: 2, y: 2 }}
+        shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
+        shadowBlur={isDragging ? 0 : 3}
+        shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
+        shadowEnabled={!isDragging}
+        perfectDrawEnabled={false}
       />
       
       {/* Player number */}
@@ -123,6 +130,7 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
         align="center"
         verticalAlign="middle"
         listening={false}
+        perfectDrawEnabled={false}
       />
       
       {/* Player label (if exists) */}
@@ -137,10 +145,24 @@ export const PlayerNode: React.FC<PlayerNodeProps> = ({
           fill="#ffffff"
           align="center"
           listening={false}
+          perfectDrawEnabled={false}
         />
       )}
     </Group>
   );
 };
+
+/** Memoized PlayerNode - only re-renders when props actually change */
+export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.player.id === nextProps.player.id &&
+    prevProps.player.position.x === nextProps.player.position.x &&
+    prevProps.player.position.y === nextProps.player.position.y &&
+    prevProps.player.number === nextProps.player.number &&
+    prevProps.player.team === nextProps.player.team &&
+    prevProps.player.label === nextProps.player.label &&
+    prevProps.isSelected === nextProps.isSelected
+  );
+});
 
 export default PlayerNode;

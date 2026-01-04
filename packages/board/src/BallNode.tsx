@@ -1,9 +1,11 @@
 /**
  * Ball node component for the tactical board
+ * Professional vector ball with pentagon pattern
+ * Performance optimized with React.memo
  */
 
-import React, { useRef } from 'react';
-import { Group, Circle } from 'react-konva';
+import React, { useRef, useState, memo } from 'react';
+import { Group, Circle, RegularPolygon, Ellipse } from 'react-konva';
 import type Konva from 'konva';
 import type { BallElement, Position, PitchConfig } from '@tmc/core';
 import { snapToGrid, clampToBounds } from '@tmc/core';
@@ -16,15 +18,10 @@ export interface BallNodeProps {
   onDragEnd: (id: string, position: Position) => void;
 }
 
-const BALL_RADIUS = 10;
-const BALL_COLORS = {
-  fill: '#ffffff',
-  stroke: '#1a1a1a',
-  pattern: '#1a1a1a',
-};
+const BALL_RADIUS = 11;
 
-/** Draggable ball element */
-export const BallNode: React.FC<BallNodeProps> = ({
+/** Professional vector ball component */
+const BallNodeComponent: React.FC<BallNodeProps> = ({
   ball,
   pitchConfig,
   isSelected,
@@ -32,6 +29,7 @@ export const BallNode: React.FC<BallNodeProps> = ({
   onDragEnd,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
@@ -40,12 +38,14 @@ export const BallNode: React.FC<BallNodeProps> = ({
   };
 
   const handleDragStart = () => {
+    setIsDragging(true);
     if (groupRef.current) {
       groupRef.current.moveToTop();
     }
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    setIsDragging(false);
     const node = e.target;
     const rawPosition: Position = { x: node.x(), y: node.y() };
     
@@ -58,6 +58,15 @@ export const BallNode: React.FC<BallNodeProps> = ({
     
     onDragEnd(ball.id, clamped);
   };
+
+  // Pentagon positions for ball pattern (5 around center)
+  const pentagonPositions = [
+    { x: 0, y: -5 },      // top
+    { x: 4.8, y: -1.5 },  // top-right
+    { x: 3, y: 4 },       // bottom-right
+    { x: -3, y: 4 },      // bottom-left
+    { x: -4.8, y: -1.5 }, // top-left
+  ];
 
   return (
     <Group
@@ -75,37 +84,89 @@ export const BallNode: React.FC<BallNodeProps> = ({
         <Circle
           x={0}
           y={0}
-          radius={BALL_RADIUS + 4}
+          radius={BALL_RADIUS + 5}
           stroke="#ffd60a"
           strokeWidth={2}
           dash={[4, 2]}
           fill="transparent"
+          perfectDrawEnabled={false}
         />
       )}
       
-      {/* Ball base */}
+      {/* Ball shadow - disabled during drag */}
+      {!isDragging && (
+        <Ellipse
+          x={1}
+          y={2}
+          radiusX={BALL_RADIUS - 1}
+          radiusY={BALL_RADIUS - 2}
+          fill="rgba(0,0,0,0.2)"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      )}
+      
+      {/* Ball base - white circle */}
       <Circle
         x={0}
         y={0}
         radius={BALL_RADIUS}
-        fill={BALL_COLORS.fill}
-        stroke={isSelected ? '#ffd60a' : BALL_COLORS.stroke}
-        strokeWidth={isSelected ? 3 : 2}
-        shadowColor="rgba(0,0,0,0.3)"
-        shadowBlur={4}
-        shadowOffset={{ x: 2, y: 2 }}
+        fill="#ffffff"
+        stroke={isSelected ? '#ffd60a' : '#1a1a1a'}
+        strokeWidth={isSelected ? 2.5 : 2}
+        perfectDrawEnabled={false}
       />
       
-      {/* Simple ball pattern - pentagon shapes */}
-      <Circle
+      {/* Center pentagon - black */}
+      <RegularPolygon
         x={0}
         y={0}
+        sides={5}
         radius={4}
-        fill={BALL_COLORS.pattern}
+        rotation={-18}
+        fill="#1a1a1a"
         listening={false}
+        perfectDrawEnabled={false}
+      />
+      
+      {/* Outer pentagon patches - gray */}
+      {pentagonPositions.map((pos, i) => (
+        <RegularPolygon
+          key={i}
+          x={pos.x}
+          y={pos.y}
+          sides={5}
+          radius={2.5}
+          rotation={(i * 72) - 18}
+          fill="#4a4a4a"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ))}
+      
+      {/* Highlight reflection - top left */}
+      <Ellipse
+        x={-3}
+        y={-4}
+        radiusX={2.5}
+        radiusY={1.5}
+        rotation={-30}
+        fill="rgba(255,255,255,0.6)"
+        listening={false}
+        perfectDrawEnabled={false}
       />
     </Group>
   );
 };
+
+/** Memoized BallNode - only re-renders when props actually change */
+export const BallNode = memo(BallNodeComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.ball.id === nextProps.ball.id &&
+    prevProps.ball.position.x === nextProps.ball.position.x &&
+    prevProps.ball.position.y === nextProps.ball.position.y &&
+    prevProps.isSelected === nextProps.isSelected
+  );
+});
 
 export default BallNode;

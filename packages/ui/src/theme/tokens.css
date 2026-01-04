@@ -1,0 +1,140 @@
+/**
+ * TMC Studio Design Tokens
+ * Light theme default, dark theme via .dark class on <html>
+ */
+
+:root {
+  /* Light Theme (Default) */
+  --color-bg: #F6F8FC;
+  --color-surface: #FFFFFF;
+  --color-surface2: #F1F4FA;
+  --color-border: #D7DFEA;
+  --color-text: #0B1220;
+  --color-muted: #516079;
+  --color-accent: #12CFA0;
+  --color-accent-hover: #0FB58C;
+  
+  /* Pitch colors - slightly desaturated for light mode */
+  --color-pitch: #3d9c5a;
+  --color-pitch-lines: rgba(255, 255, 255, 0.85);
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(11, 18, 32, 0.08), 0 2px 4px -1px rgba(11, 18, 32, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(11, 18, 32, 0.1), 0 4px 6px -2px rgba(11, 18, 32, 0.05);
+  --shadow-canvas: 0 0 0 1px rgba(11, 18, 32, 0.06), 0 8px 32px rgba(11, 18, 32, 0.12), 0 20px 48px rgba(11, 18, 32, 0.08);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  
+  /* Z-index layers */
+  --z-canvas: 1;
+  --z-inspector: 10;
+  --z-topbar: 20;
+  --z-bottombar: 20;
+  --z-cheatsheet: 30;
+  --z-toast: 40;
+  --z-modal: 50;
+  --z-palette: 60;
+}
+
+.dark {
+  /* Dark Theme */
+  --color-bg: #0B1220;
+  --color-surface: #111B2E;
+  --color-surface2: #182338;
+  --color-border: #22314D;
+  --color-text: #E8EEF9;
+  --color-muted: #A7B3C9;
+  --color-accent: #2EE6A6;
+  --color-accent-hover: #12CFA0;
+  
+  /* Pitch colors - vibrant for dark mode */
+  --color-pitch: #2d8a3e;
+  --color-pitch-lines: rgba(255, 255, 255, 0.9);
+  
+  /* Shadows - more subtle in dark mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-canvas: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 32px rgba(0, 0, 0, 0.35), 0 20px 48px rgba(0, 0, 0, 0.25);
+}
+
+/* Utility classes */
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease;
+}
+
+.animate-slide-up {
+  animation: slideUp var(--transition-normal) ease;
+}
+
+.animate-slide-down {
+  animation: slideDown var(--transition-normal) ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from { 
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Toast animation */
+@keyframes toastSlide {
+  0% { 
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  10% { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90% { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% { 
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.animate-toast {
+  animation: toastSlide 1.2s ease forwards;
+}

@@ -193,9 +193,19 @@ export const useBoardStore = create<BoardState>((set, get) => {
       const selectedElements = filterElementsByIds(elements, selectedIds);
       const duplicated = duplicateElements(selectedElements);
       
+      // Offset duplicated elements by +12px for immediate visual feedback
+      const DUPLICATE_OFFSET = 12;
+      const offsetDuplicates = duplicated.map((el) => ({
+        ...el,
+        position: {
+          x: el.position.x + DUPLICATE_OFFSET,
+          y: el.position.y + DUPLICATE_OFFSET,
+        },
+      }));
+      
       set((state) => ({
-        elements: [...state.elements, ...duplicated],
-        selectedIds: duplicated.map((el) => el.id),
+        elements: [...state.elements, ...offsetDuplicates],
+        selectedIds: offsetDuplicates.map((el) => el.id),
       }));
       get().pushHistory();
     },

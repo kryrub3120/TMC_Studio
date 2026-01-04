@@ -17,17 +17,43 @@ Ultra-fast football tactics board with step-based animation for analysts.
 
 ## ⌨️ Keyboard Shortcuts
 
+### Command Palette
+| Key | Action |
+|-----|--------|
+| `Cmd/Ctrl + K` | Open command palette (search any action) |
+
+### Elements
 | Key | Action |
 |-----|--------|
 | `P` | Add Home player at cursor |
+| `Shift + P` | Add Away player at cursor |
 | `B` | Add ball at cursor |
-| `Ctrl/Cmd + D` | Duplicate selection |
-| `Ctrl/Cmd + Z` | Undo |
-| `Shift + Ctrl/Cmd + Z` | Redo |
-| `Ctrl/Cmd + S` | Save to localStorage |
-| `Ctrl/Cmd + A` | Select all |
+
+### Edit
+| Key | Action |
+|-----|--------|
+| `Cmd/Ctrl + D` | Duplicate selection |
+| `Cmd/Ctrl + Z` | Undo |
+| `Shift + Cmd/Ctrl + Z` | Redo |
+| `Cmd/Ctrl + A` | Select all |
+| `Cmd/Ctrl + S` | Save to localStorage |
 | `Delete/Backspace` | Delete selection |
 | `Escape` | Clear selection |
+
+### View
+| Key | Action |
+|-----|--------|
+| `F` | Toggle Focus Mode (hide UI) |
+| `I` | Toggle Inspector Panel |
+| `?` | Toggle Keyboard Shortcuts |
+
+### Steps & Animation
+| Key | Action |
+|-----|--------|
+| `N` | Add new step |
+| `←` / `→` | Previous / Next step |
+| `Space` | Play / Pause |
+| `L` | Toggle Loop |
 
 ## 🚀 Quick Start
 
@@ -212,6 +238,10 @@ pnpm --filter @tmc/core build
 
 ## 🎨 Design System
 
+### Theme Support
+
+TMC Studio supports both **Light** and **Dark** themes, with automatic persistence of your preference.
+
 ### Colors
 
 - **Home Team**: Red (`#e63946`)
@@ -219,13 +249,26 @@ pnpm --filter @tmc/core build
 - **Ball**: White (`#ffffff`)
 - **Selection**: Yellow (`#ffd60a`)
 - **Pitch**: Green (`#2d8a3e`)
+- **Accent**: Emerald (`#12CFA0`)
 
-### UI Theme
+### UI Components
 
-- Dark mode interface
-- Inter font family
-- Rounded corners (lg)
-- Subtle shadows and borders
+The UI package (`@tmc/ui`) provides:
+
+| Component | Description |
+|-----------|-------------|
+| `TopBar` | Header with logo, project name, theme toggle, and actions |
+| `RightInspector` | Collapsible properties panel with Props/Layers tabs |
+| `BottomStepsBar` | Animation timeline with step chips and playback controls |
+| `CommandPaletteModal` | VS Code-style command search (Cmd/Ctrl+K) |
+| `CheatSheetOverlay` | Keyboard shortcuts reference card |
+| `ToastHint` | Brief notification for tool activations |
+
+### UI Architecture
+
+- **Focus Mode**: Press `F` to hide all UI and focus on the canvas
+- **Command Palette First**: Access any action via `Cmd/Ctrl + K`
+- **Responsive Inspector**: Toggle with `I` key or collapse button
 
 ## 📝 License
 
