@@ -1,53 +1,54 @@
-# S4.2 Team Customization - Part 2
+# S4.2 Team Customization - Part 3: Teams Panel
 
 ## Goal
-Complete team color customization: wire App.tsx to pass teamSettings to PlayerNode, add "Teams" tab in RightInspector with color pickers.
+Add "Teams" tab in RightInspector with color pickers to customize team colors.
 
 ## Current State (Completed)
 - ✅ `TeamSetting` + `TeamSettings` types in `packages/core/src/types.ts`
 - ✅ `DEFAULT_TEAM_SETTINGS` exported from core
 - ✅ `BoardDocument.teamSettings` optional field
-- ✅ `createDocument()` + `migrateDocument()` handle teamSettings
+- ✅ `createDocument()` + `migrateDocument()` handle teamSettings  
 - ✅ `PlayerNode` accepts `teamSettings` prop, uses `getTeamColors()`
 - ✅ Store: `updateTeamSettings()` action + `getTeamSettings()` selector
+- ✅ App.tsx passes `teamSettings` to `PlayerNode`
 
 ## Remaining Tasks
 
-### 1. App.tsx Integration (~5 min)
-Pass `teamSettings` from store to `PlayerNode`:
+### 1. Create TeamsPanel Component (~20 min)
+**File:** `packages/ui/src/TeamsPanel.tsx`
 
 ```tsx
-// In App.tsx, inside render loop for players:
-const teamSettings = useBoardStore((s) => s.getTeamSettings());
-
-<PlayerNode
-  key={player.id}
-  player={player}
-  pitchConfig={doc.pitchConfig}
-  teamSettings={teamSettings}  // <-- ADD THIS
-  isSelected={selectedIds.includes(player.id)}
-  ...
-/>
-```
-
-### 2. RightInspector "Teams" Tab (~30 min)
-Add new tab in `packages/ui/src/RightInspector.tsx`:
-- Tab selector: Element | Teams
-- "Teams" panel shows:
-  - Home Team: Color picker + name input
-  - Away Team: Color picker + name input
-- Color picker: reuse existing HEX input pattern
-
-```tsx
-// New component: TeamsPanel.tsx
 interface TeamsPanelProps {
   teamSettings: TeamSettings;
   onUpdateTeam: (team: 'home' | 'away', settings: Partial<TeamSetting>) => void;
 }
 
+// Features:
+// - Home Team section: name input + primaryColor picker
+// - Away Team section: name input + primaryColor picker
+// - Color presets grid (9 colors)
+// - HEX input for custom colors
+```
+
+### 2. Add Teams Tab to RightInspector (~15 min)
+**File:** `packages/ui/src/RightInspector.tsx`
+
+- Add "Teams" tab button next to existing tabs
+- Pass teamSettings + onUpdateTeam props
+- Render TeamsPanel when Teams tab active
+
+### 3. Wire Up in App.tsx (~5 min)
+- Get `updateTeamSettings` action from store
+- Pass to RightInspector
+
+### 4. Export TeamsPanel (~2 min)
+**File:** `packages/ui/src/index.ts`
+
+## Color Presets
+```typescript
 const COLOR_PRESETS = [
   '#ef4444', // red
-  '#f97316', // orange
+  '#f97316', // orange  
   '#eab308', // yellow
   '#22c55e', // green
   '#3b82f6', // blue
@@ -58,13 +59,11 @@ const COLOR_PRESETS = [
 ];
 ```
 
-### 3. CheatSheetOverlay Update (~5 min)
-No new shortcuts needed for S4.2.
-
-## Files to Edit
-- `apps/web/src/App.tsx` - pass teamSettings to PlayerNode
-- `packages/ui/src/RightInspector.tsx` - add Teams tab
+## Files to Edit/Create
 - `packages/ui/src/TeamsPanel.tsx` - NEW: teams configuration panel
+- `packages/ui/src/RightInspector.tsx` - add Teams tab
+- `packages/ui/src/index.ts` - export TeamsPanel
+- `apps/web/src/App.tsx` - pass updateTeamSettings to RightInspector
 
 ## Commands
 ```bash
@@ -73,8 +72,7 @@ pnpm build  # verify build
 ```
 
 ## Acceptance Criteria
-- [ ] Players render with colors from `boardDoc.teamSettings`
 - [ ] RightInspector has "Teams" tab visible
-- [ ] Changing color in Teams tab immediately updates players
-- [ ] Team colors persist in localStorage (document save)
-- [ ] Formation shortcuts (1-6, Shift+1-6) use team colors
+- [ ] TeamsPanel shows Home/Away sections with color pickers
+- [ ] Changing color immediately updates players on canvas
+- [ ] Team colors persist in localStorage after save
