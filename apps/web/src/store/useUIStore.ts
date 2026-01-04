@@ -14,6 +14,7 @@ export type ActiveTool =
   | 'arrow-pass'
   | 'arrow-run'
   | 'zone'
+  | 'zone-ellipse'
   | 'text'
   | null;
 
@@ -72,6 +73,14 @@ interface UIState {
   // Zoom
   zoom: number;
   
+  // Playback state
+  isPlaying: boolean;
+  isLooping: boolean;
+  stepDuration: number;
+  
+  // Animation state (0 = at currentStep, 1 = at nextStep)
+  animationProgress: number;
+  
   // Actions - Theme
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -107,6 +116,13 @@ interface UIState {
   zoomOut: () => void;
   zoomFit: () => void;
   setZoom: (zoom: number) => void;
+  
+  // Actions - Playback
+  play: () => void;
+  pause: () => void;
+  toggleLoop: () => void;
+  setStepDuration: (duration: number) => void;
+  setAnimationProgress: (progress: number) => void;
 }
 
 /** Generate unique ID for toasts */
@@ -147,6 +163,10 @@ export const useUIStore = create<UIState>()(
       activeTool: null,
       activeToast: null,
       zoom: 1,
+      isPlaying: false,
+      isLooping: false,
+      stepDuration: 0.8,
+      animationProgress: 0,
 
       // Theme actions
       toggleTheme: () => {
@@ -275,6 +295,13 @@ export const useUIStore = create<UIState>()(
         const clampedZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
         set({ zoom: clampedZoom });
       },
+      
+      // Playback actions
+      play: () => set({ isPlaying: true, animationProgress: 0 }),
+      pause: () => set({ isPlaying: false }),
+      toggleLoop: () => set((s) => ({ isLooping: !s.isLooping })),
+      setStepDuration: (duration) => set({ stepDuration: Math.max(0.1, Math.min(5, duration)) }),
+      setAnimationProgress: (progress) => set({ animationProgress: Math.max(0, Math.min(1, progress)) }),
     }),
     {
       name: 'tmc-ui-settings',

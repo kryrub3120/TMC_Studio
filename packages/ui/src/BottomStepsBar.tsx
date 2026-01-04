@@ -18,16 +18,17 @@ export interface BottomStepsBarProps {
   currentStepIndex: number;
   isPlaying: boolean;
   isLooping: boolean;
-  duration: Duration;
+  duration: number;
   onStepSelect: (index: number) => void;
   onAddStep: () => void;
   onDeleteStep: (index: number) => void;
+  onRenameStep?: (index: number, newName: string) => void;
   onPlay: () => void;
   onPause: () => void;
   onPrevStep: () => void;
   onNextStep: () => void;
   onToggleLoop: () => void;
-  onDurationChange: (duration: Duration) => void;
+  onDurationChange: (duration: number) => void;
 }
 
 /** Play icon */
@@ -79,6 +80,14 @@ const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+/** X close icon */
+const XIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 /** Duration options */
 const durationOptions: { value: Duration; label: string }[] = [
   { value: 0.6, label: '0.6s' },
@@ -95,6 +104,8 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
   duration,
   onStepSelect,
   onAddStep,
+  onDeleteStep,
+  onRenameStep,
   onPlay,
   onPause,
   onPrevStep,
@@ -103,6 +114,34 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
   onDurationChange,
 }) => {
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+  
+  // Handle double-click to start editing
+  const handleDoubleClick = (index: number, currentLabel: string) => {
+    if (!onRenameStep) return;
+    setEditingIndex(index);
+    setEditValue(currentLabel || `Step ${index + 1}`);
+  };
+  
+  // Handle blur or Enter to finish editing
+  const finishEditing = () => {
+    if (editingIndex !== null && onRenameStep && editValue.trim()) {
+      onRenameStep(editingIndex, editValue.trim());
+    }
+    setEditingIndex(null);
+    setEditValue('');
+  };
+  
+  // Handle keyboard in edit input
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      finishEditing();
+    } else if (e.key === 'Escape') {
+      setEditingIndex(null);
+      setEditValue('');
+    }
+  };
 
   return (
     <footer className="h-14 px-4 flex items-center justify-between bg-surface border-t border-border z-bottombar">
@@ -195,19 +234,66 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
       {/* Center: Step Chips */}
       <div className="flex items-center gap-2 flex-1 justify-center overflow-x-auto px-4">
         {steps.map((step, index) => (
-          <button
+          <div 
             key={step.id}
-            onClick={() => onStepSelect(index)}
-            className={`
-              flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium
-              transition-all duration-fast
-              ${index === currentStepIndex
-                ? 'bg-accent text-white shadow-sm'
-                : 'bg-surface2 text-muted hover:text-text hover:bg-border'}
-            `}
+            className="group relative flex-shrink-0"
           >
-            {step.label || `Step ${index + 1}`}
-          </button>
+            {editingIndex === index ? (
+              // Editing mode - inline input
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={finishEditing}
+                onKeyDown={handleEditKeyDown}
+                autoFocus
+                className={`
+                  px-3 py-1 rounded-full text-xs font-medium
+                  bg-surface border border-accent outline-none
+                  text-text min-w-[60px] max-w-[120px]
+                `}
+              />
+            ) : (
+              // Normal mode - chip button
+              <button
+                onClick={() => onStepSelect(index)}
+                onDoubleClick={() => handleDoubleClick(index, step.label)}
+                className={`
+                  px-3 py-1.5 rounded-full text-xs font-medium
+                  transition-all duration-fast pr-6 group-hover:pr-7
+                  ${index === currentStepIndex
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'bg-surface2 text-muted hover:text-text hover:bg-border'}
+                `}
+                title={onRenameStep ? 'Double-click to rename' : undefined}
+              >
+                {step.label || `Step ${index + 1}`}
+              </button>
+            )}
+            
+            {/* Delete button - only show if more than 1 step and not editing */}
+            {steps.length > 1 && editingIndex !== index && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteStep(index);
+                }}
+                className={`
+                  absolute right-1 top-1/2 -translate-y-1/2
+                  w-4 h-4 rounded-full
+                  flex items-center justify-center
+                  opacity-0 group-hover:opacity-100
+                  transition-opacity duration-fast
+                  ${index === currentStepIndex
+                    ? 'text-white/70 hover:text-white hover:bg-white/20'
+                    : 'text-muted hover:text-red-400 hover:bg-red-500/10'}
+                `}
+                title="Delete step (X)"
+              >
+                <XIcon className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
         ))}
         
         {/* Add Step Button */}

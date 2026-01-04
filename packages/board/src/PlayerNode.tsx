@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState, memo } from 'react';
-import { Group, Circle, Text } from 'react-konva';
+import { Group, Circle, Rect, RegularPolygon, Text } from 'react-konva';
 import type Konva from 'konva';
 import type { PlayerElement, Position, PitchConfig } from '@tmc/core';
 import { snapToGrid, clampToBounds } from '@tmc/core';
@@ -130,20 +130,80 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         />
       )}
       
-      {/* Player circle - disable shadow during drag for performance */}
-      <Circle
-        x={0}
-        y={0}
-        radius={PLAYER_RADIUS}
-        fill={colors.fill}
-        stroke={isSelected ? '#ffd60a' : colors.stroke}
-        strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
-        shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
-        shadowBlur={isDragging ? 0 : 3}
-        shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
-        shadowEnabled={!isDragging}
-        perfectDrawEnabled={false}
-      />
+      {/* Player shape - circle (default) */}
+      {(!player.shape || player.shape === 'circle') && (
+        <Circle
+          x={0}
+          y={0}
+          radius={PLAYER_RADIUS}
+          fill={colors.fill}
+          stroke={isSelected ? '#ffd60a' : colors.stroke}
+          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
+          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
+          shadowBlur={isDragging ? 0 : 3}
+          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
+          shadowEnabled={!isDragging}
+          perfectDrawEnabled={false}
+        />
+      )}
+      
+      {/* Player shape - square */}
+      {player.shape === 'square' && (
+        <Rect
+          x={-PLAYER_RADIUS}
+          y={-PLAYER_RADIUS}
+          width={PLAYER_RADIUS * 2}
+          height={PLAYER_RADIUS * 2}
+          cornerRadius={4}
+          fill={colors.fill}
+          stroke={isSelected ? '#ffd60a' : colors.stroke}
+          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
+          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
+          shadowBlur={isDragging ? 0 : 3}
+          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
+          shadowEnabled={!isDragging}
+          perfectDrawEnabled={false}
+        />
+      )}
+      
+      {/* Player shape - triangle (pointing up) */}
+      {player.shape === 'triangle' && (
+        <RegularPolygon
+          x={0}
+          y={0}
+          sides={3}
+          radius={PLAYER_RADIUS + 2}
+          fill={colors.fill}
+          stroke={isSelected ? '#ffd60a' : colors.stroke}
+          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
+          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
+          shadowBlur={isDragging ? 0 : 3}
+          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
+          shadowEnabled={!isDragging}
+          perfectDrawEnabled={false}
+        />
+      )}
+      
+      {/* Player shape - diamond (rotated square) */}
+      {player.shape === 'diamond' && (
+        <Rect
+          x={-PLAYER_RADIUS}
+          y={-PLAYER_RADIUS}
+          width={PLAYER_RADIUS * 2}
+          height={PLAYER_RADIUS * 2}
+          rotation={45}
+          offsetX={-PLAYER_RADIUS}
+          offsetY={-PLAYER_RADIUS}
+          fill={colors.fill}
+          stroke={isSelected ? '#ffd60a' : colors.stroke}
+          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
+          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
+          shadowBlur={isDragging ? 0 : 3}
+          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
+          shadowEnabled={!isDragging}
+          perfectDrawEnabled={false}
+        />
+      )}
       
       {/* Player number */}
       <Text
@@ -189,6 +249,7 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.number === nextProps.player.number &&
     prevProps.player.team === nextProps.player.team &&
     prevProps.player.label === nextProps.player.label &&
+    prevProps.player.shape === nextProps.player.shape &&
     prevProps.isSelected === nextProps.isSelected
   );
 });

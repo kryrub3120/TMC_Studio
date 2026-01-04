@@ -26,7 +26,8 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'B', description: 'Add Ball' },
       { key: 'A', description: 'Pass Arrow' },
       { key: 'R', description: 'Run Arrow' },
-      { key: 'Z', description: 'Zone' },
+      { key: 'Z', description: 'Rect Zone' },
+      { key: '⇧Z', description: 'Ellipse Zone' },
       { key: 'T', description: 'Text' },
     ],
   },
@@ -39,6 +40,8 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: '⇧⌘Z', description: 'Redo' },
       { key: '⌘A', description: 'Select All' },
       { key: 'Esc', description: 'Clear Selection' },
+      { key: 'S', description: 'Cycle Player Shape' },
+      { key: 'E', description: 'Cycle Zone Shape' },
     ],
   },
   {

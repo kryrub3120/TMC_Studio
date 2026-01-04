@@ -6,9 +6,9 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_CONFIG, isPlayerElement, isBallElement, isArrowElement, isZoneElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_CONFIG, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
-import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, ArrowPreview, ZonePreview, SelectionBox } from '@tmc/board';
+import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox } from '@tmc/board';
 import { useState } from 'react';
 import {
   TopBar,
@@ -24,6 +24,7 @@ import {
 } from '@tmc/ui';
 import { useBoardStore } from './store/useBoardStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
+import { formations } from '@tmc/presets';
 
 /** Main App component */
 export default function App() {
@@ -50,6 +51,8 @@ export default function App() {
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
   const addArrowAtCursor = useBoardStore((s) => s.addArrowAtCursor);
   const addZoneAtCursor = useBoardStore((s) => s.addZoneAtCursor);
+  const addTextAtCursor = useBoardStore((s) => s.addTextAtCursor);
+  const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const moveElementById = useBoardStore((s) => s.moveElementById);
   const resizeZone = useBoardStore((s) => s.resizeZone);
   const selectElement = useBoardStore((s) => s.selectElement);
@@ -69,6 +72,8 @@ export default function App() {
   const nudgeSelected = useBoardStore((s) => s.nudgeSelected);
   const adjustSelectedStrokeWidth = useBoardStore((s) => s.adjustSelectedStrokeWidth);
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
+  const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
+  const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
   const selectElementsInRect = useBoardStore((s) => s.selectElementsInRect);
   const updateArrowEndpoint = useBoardStore((s) => s.updateArrowEndpoint);
   const createGroup = useBoardStore((s) => s.createGroup);
@@ -78,6 +83,17 @@ export default function App() {
   const toggleGroupLock = useBoardStore((s) => s.toggleGroupLock);
   const toggleGroupVisibility = useBoardStore((s) => s.toggleGroupVisibility);
   const renameGroup = useBoardStore((s) => s.renameGroup);
+  const applyFormation = useBoardStore((s) => s.applyFormation);
+  
+  // Step actions
+  const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
+  const addStep = useBoardStore((s) => s.addStep);
+  const removeStep = useBoardStore((s) => s.removeStep);
+  const renameStep = useBoardStore((s) => s.renameStep);
+  const goToStep = useBoardStore((s) => s.goToStep);
+  const nextStep = useBoardStore((s) => s.nextStep);
+  const prevStep = useBoardStore((s) => s.prevStep);
+  const getSteps = useBoardStore((s) => s.getSteps);
   
   // Get IDs of elements hidden by groups
   const hiddenByGroup = useMemo(() => {
@@ -93,6 +109,11 @@ export default function App() {
   // Marquee selection state
   const [marqueeStart, setMarqueeStart] = useState<Position | null>(null);
   const [marqueeEnd, setMarqueeEnd] = useState<Position | null>(null);
+  
+  // Text editing state
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingTextValue, setEditingTextValue] = useState<string>('');
+  const updateTextContent = useBoardStore((s) => s.updateTextContent);
 
   // UI store state
   const theme = useUIStore((s) => s.theme);
@@ -118,6 +139,17 @@ export default function App() {
   const zoomFit = useUIStore((s) => s.zoomFit);
   const setActiveTool = useUIStore((s) => s.setActiveTool);
   const activeTool = useUIStore((s) => s.activeTool);
+  
+  // Playback state
+  const isPlaying = useUIStore((s) => s.isPlaying);
+  const isLooping = useUIStore((s) => s.isLooping);
+  const stepDuration = useUIStore((s) => s.stepDuration);
+  const animationProgress = useUIStore((s) => s.animationProgress);
+  const play = useUIStore((s) => s.play);
+  const pause = useUIStore((s) => s.pause);
+  const toggleLoop = useUIStore((s) => s.toggleLoop);
+  const setStepDuration = useUIStore((s) => s.setStepDuration);
+  const setAnimationProgress = useUIStore((s) => s.setAnimationProgress);
 
   // Derived state
   const selectedElement = getSelectedElement();
@@ -180,10 +212,16 @@ export default function App() {
         addBallAtCursor();
         break;
       case 'add-pass-arrow':
-        showToast('Pass arrows coming soon');
+        addArrowAtCursor('pass');
+        break;
+      case 'add-run-arrow':
+        addArrowAtCursor('run');
         break;
       case 'add-zone':
-        showToast('Zones coming soon');
+        addZoneAtCursor();
+        break;
+      case 'add-text':
+        addTextAtCursor();
         break;
       case 'open-palette':
         openCommandPalette();
@@ -191,12 +229,17 @@ export default function App() {
       default:
         break;
     }
-  }, [addPlayerAtCursor, addBallAtCursor, showToast, openCommandPalette]);
+  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, addTextAtCursor, openCommandPalette]);
 
-  // Steps data (placeholder for now)
-  const steps = useMemo(() => [
-    { id: 'step-1', label: 'Step 1', index: 0 },
-  ], []);
+  // Steps data from store
+  const stepsData = useMemo(() => {
+    const stepsList = getSteps();
+    return stepsList.map((s) => ({
+      id: s.id,
+      label: s.name,
+      index: s.index,
+    }));
+  }, [getSteps, boardDoc.steps]); // Re-compute when steps change
 
   // Canvas dimensions
   const canvasWidth = DEFAULT_PITCH_CONFIG.width + DEFAULT_PITCH_CONFIG.padding * 2;
@@ -215,7 +258,7 @@ export default function App() {
       { id: 'add-pass-arrow', label: 'Add Pass Arrow', shortcut: 'A', category: 'elements', onExecute: () => addArrowAtCursor('pass') },
       { id: 'add-run-arrow', label: 'Add Run Arrow', shortcut: 'R', category: 'elements', onExecute: () => addArrowAtCursor('run') },
       { id: 'add-zone', label: 'Add Zone', shortcut: 'Z', category: 'elements', onExecute: () => addZoneAtCursor() },
-      { id: 'add-text', label: 'Add Text', shortcut: 'T', category: 'elements', onExecute: () => showToast('Text coming soon') },
+      { id: 'add-text', label: 'Add Text', shortcut: 'T', category: 'elements', onExecute: () => addTextAtCursor() },
 
       // Edit
       { id: 'duplicate', label: 'Duplicate Selection', shortcut: `${cmd}D`, category: 'edit', onExecute: duplicateSelected, disabled: selectedIds.length === 0 },
@@ -321,7 +364,19 @@ export default function App() {
             undo();
           } else {
             e.preventDefault();
-            setActiveTool('zone');
+            // Z = rect zone tool, Shift+Z = ellipse zone tool
+            setActiveTool(e.shiftKey ? 'zone-ellipse' : 'zone');
+          }
+          break;
+        case 'e':
+          // E key = cycle zone shape when zone selected
+          if (!isCmd && selectedIds.length > 0) {
+            const hasZone = elements.some((el) => selectedIds.includes(el.id) && isZoneElement(el));
+            if (hasZone) {
+              e.preventDefault();
+              cycleZoneShape();
+              showToast('Zone shape changed');
+            }
           }
           break;
         case 's':
@@ -329,6 +384,14 @@ export default function App() {
             e.preventDefault();
             saveDocument();
             showToast('Saved to localStorage');
+          } else if (selectedIds.length > 0) {
+            // S key = cycle player shape
+            const hasPlayer = elements.some((el) => selectedIds.includes(el.id) && isPlayerElement(el));
+            if (hasPlayer) {
+              e.preventDefault();
+              cyclePlayerShape();
+              showToast('Shape changed');
+            }
           }
           break;
         case 'a':
@@ -344,6 +407,12 @@ export default function App() {
           if (!isCmd) {
             e.preventDefault();
             setActiveTool('arrow-run');
+          }
+          break;
+        case 't':
+          if (!isCmd) {
+            e.preventDefault();
+            addTextAtCursor();
           }
           break;
         case 'i':
@@ -370,8 +439,40 @@ export default function App() {
         case 'escape':
           clearSelection();
           break;
+        case 'enter':
+          // Enter on selected text = start editing
+          if (selectedIds.length === 1) {
+            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
+            if (sel && isTextElement(sel)) {
+              e.preventDefault();
+              setEditingTextId(sel.id);
+              setEditingTextValue(sel.content);
+            }
+          }
+          break;
         case 'arrowup':
           e.preventDefault();
+          // Check if selected element is text - adjust properties
+          if (selectedIds.length === 1) {
+            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
+            if (sel && isTextElement(sel)) {
+              if (e.shiftKey) {
+                // Shift+Up = cycle background color
+                const BG_COLORS = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#3b82f6', '#1f2937'];
+                const currentBg = sel.backgroundColor;
+                const currentIndex = currentBg ? BG_COLORS.indexOf(currentBg) : -1;
+                const newBg = BG_COLORS[(currentIndex + 1) % BG_COLORS.length];
+                updateTextProperties(sel.id, { backgroundColor: newBg });
+                showToast(`Background: ${newBg}`);
+              } else {
+                // Up = increase font size
+                const newSize = Math.min(72, (sel.fontSize || 18) + 2);
+                updateTextProperties(sel.id, { fontSize: newSize });
+                showToast(`Font size: ${newSize}px`);
+              }
+              break;
+            }
+          }
           if (e.altKey) {
             cycleSelectedColor(-1);
             showToast('Previous color');
@@ -381,6 +482,23 @@ export default function App() {
           break;
         case 'arrowdown':
           e.preventDefault();
+          // Check if selected element is text - adjust properties
+          if (selectedIds.length === 1) {
+            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
+            if (sel && isTextElement(sel)) {
+              if (e.shiftKey) {
+                // Shift+Down = remove background
+                updateTextProperties(sel.id, { backgroundColor: undefined });
+                showToast('Background removed');
+              } else {
+                // Down = decrease font size
+                const newSize = Math.max(8, (sel.fontSize || 18) - 2);
+                updateTextProperties(sel.id, { fontSize: newSize });
+                showToast(`Font size: ${newSize}px`);
+              }
+              break;
+            }
+          }
           if (e.altKey) {
             cycleSelectedColor(1);
             showToast('Next color');
@@ -390,20 +508,78 @@ export default function App() {
           break;
         case 'arrowleft':
           e.preventDefault();
+          // Check if selected element is text - toggle bold
+          if (selectedIds.length === 1) {
+            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
+            if (sel && isTextElement(sel)) {
+              updateTextProperties(sel.id, { bold: !sel.bold });
+              showToast(sel.bold ? 'Normal' : 'Bold');
+              break;
+            }
+          }
           if (e.altKey) {
             adjustSelectedStrokeWidth(-1);
             showToast('Thinner stroke');
+          } else if (!isCmd && selectedIds.length === 0) {
+            // Arrow keys navigate steps when nothing selected
+            prevStep();
           } else {
             nudgeSelected(e.shiftKey ? -1 : -5, 0);
           }
           break;
         case 'arrowright':
           e.preventDefault();
+          // Check if selected element is text - toggle italic
+          if (selectedIds.length === 1) {
+            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
+            if (sel && isTextElement(sel)) {
+              updateTextProperties(sel.id, { italic: !sel.italic });
+              showToast(sel.italic ? 'Normal' : 'Italic');
+              break;
+            }
+          }
           if (e.altKey) {
             adjustSelectedStrokeWidth(1);
             showToast('Thicker stroke');
+          } else if (!isCmd && selectedIds.length === 0) {
+            // Arrow keys navigate steps when nothing selected
+            nextStep();
           } else {
             nudgeSelected(e.shiftKey ? 1 : 5, 0);
+          }
+          break;
+        case ' ':
+          // Space = Play/Pause
+          e.preventDefault();
+          if (isPlaying) {
+            pause();
+          } else {
+            play();
+          }
+          break;
+        case 'l':
+          // L = Toggle loop
+          if (!isCmd) {
+            e.preventDefault();
+            toggleLoop();
+            showToast(useUIStore.getState().isLooping ? 'Loop enabled' : 'Loop disabled');
+          }
+          break;
+        case 'n':
+          // N = New step
+          if (!isCmd) {
+            e.preventDefault();
+            addStep();
+            showToast('New step added');
+          }
+          break;
+        case 'x':
+          // X = Delete current step (only if more than 1 step)
+          if (!isCmd && useBoardStore.getState().document.steps.length > 1) {
+            e.preventDefault();
+            const current = useBoardStore.getState().currentStepIndex;
+            removeStep(current);
+            showToast('Step deleted');
           }
           break;
         case '=':
@@ -419,21 +595,175 @@ export default function App() {
             zoomOut();
           }
           break;
-        case '1':
-          if (e.shiftKey) {
-            e.preventDefault();
-            zoomFit();
-          }
-          break;
+      }
+      
+      // Formation shortcuts using e.code (works with Shift)
+      // 1-6 = Home team, Shift+1-6 = Away team (using e.code for reliability)
+      if (!isCmd && !e.altKey) {
+        const formationIndex = {
+          'Digit1': 0, 'Numpad1': 0,
+          'Digit2': 1, 'Numpad2': 1,
+          'Digit3': 2, 'Numpad3': 2,
+          'Digit4': 3, 'Numpad4': 3,
+          'Digit5': 4, 'Numpad5': 4,
+          'Digit6': 5, 'Numpad6': 5,
+        }[e.code];
+        
+        if (formationIndex !== undefined && formations[formationIndex]) {
+          e.preventDefault();
+          const team = e.shiftKey ? 'away' : 'home';
+          applyFormation(formations[formationIndex].id, team);
+          showToast(`${formations[formationIndex].shortName} applied (${team})`);
+        }
       }
     },
-    [commandPaletteOpen, closeCommandPalette, openCommandPalette, addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, undo, redo, saveDocument, selectAll, toggleInspector, toggleFocusMode, toggleCheatSheet, deleteSelected, clearSelection, showToast, zoomIn, zoomOut, zoomFit, setActiveTool, nudgeSelected, adjustSelectedStrokeWidth, cycleSelectedColor, createGroup, ungroupSelection]
+    [commandPaletteOpen, closeCommandPalette, openCommandPalette, addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, addTextAtCursor, updateTextProperties, duplicateSelected, undo, redo, saveDocument, selectAll, toggleInspector, toggleFocusMode, toggleCheatSheet, deleteSelected, clearSelection, showToast, zoomIn, zoomOut, zoomFit, setActiveTool, nudgeSelected, adjustSelectedStrokeWidth, cycleSelectedColor, cyclePlayerShape, createGroup, ungroupSelection, selectedIds, elements, prevStep, nextStep, isPlaying, pause, play, toggleLoop, addStep, removeStep, applyFormation]
   );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  // Smooth animation playback effect using requestAnimationFrame
+  useEffect(() => {
+    if (!isPlaying) {
+      setAnimationProgress(0);
+      return;
+    }
+    
+    const totalSteps = stepsData.length;
+    if (totalSteps <= 1) {
+      pause();
+      return;
+    }
+    
+    let startTime: number | null = null;
+    let animationFrameId: number;
+    
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      
+      const elapsed = timestamp - startTime;
+      const durationMs = stepDuration * 1000;
+      const progress = Math.min(elapsed / durationMs, 1);
+      
+      // Ease-in-out cubic
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      setAnimationProgress(eased);
+      
+      if (progress >= 1) {
+        // Animation complete for this step
+        const current = useBoardStore.getState().currentStepIndex;
+        const total = useBoardStore.getState().document.steps.length;
+        
+        if (current >= total - 1) {
+          if (isLooping) {
+            goToStep(0);
+            startTime = null;
+            setAnimationProgress(0);
+            animationFrameId = requestAnimationFrame(animate);
+          } else {
+            pause();
+            setAnimationProgress(0);
+          }
+        } else {
+          nextStep();
+          startTime = null;
+          setAnimationProgress(0);
+          animationFrameId = requestAnimationFrame(animate);
+        }
+      } else {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      setAnimationProgress(0);
+    };
+  }, [isPlaying, isLooping, stepDuration, stepsData.length, pause, goToStep, nextStep, setAnimationProgress]);
+  
+  // Get next step elements for interpolation
+  const nextStepElements = useMemo(() => {
+    const nextIndex = currentStepIndex + 1;
+    if (nextIndex >= boardDoc.steps.length) return null;
+    return boardDoc.steps[nextIndex]?.elements ?? null;
+  }, [boardDoc.steps, currentStepIndex]);
+  
+  // Helper to interpolate position between current and next step
+  const getInterpolatedPosition = useCallback((elementId: string, currentPos: Position): Position => {
+    if (!isPlaying || animationProgress === 0 || !nextStepElements) {
+      return currentPos;
+    }
+    
+    // Find this element in next step
+    const nextEl = nextStepElements.find((e) => e.id === elementId);
+    if (!nextEl || !hasPosition(nextEl)) {
+      return currentPos;
+    }
+    
+    const nextPos = nextEl.position;
+    
+    // Lerp between positions
+    return {
+      x: currentPos.x + (nextPos.x - currentPos.x) * animationProgress,
+      y: currentPos.y + (nextPos.y - currentPos.y) * animationProgress,
+    };
+  }, [isPlaying, animationProgress, nextStepElements]);
+  
+  // Helper to interpolate zone (position + size)
+  const getInterpolatedZone = useCallback((elementId: string, currentPos: Position, currentWidth: number, currentHeight: number): { position: Position; width: number; height: number } => {
+    if (!isPlaying || animationProgress === 0 || !nextStepElements) {
+      return { position: currentPos, width: currentWidth, height: currentHeight };
+    }
+    
+    // Find this zone in next step
+    const nextEl = nextStepElements.find((e) => e.id === elementId);
+    if (!nextEl || !isZoneElement(nextEl)) {
+      return { position: currentPos, width: currentWidth, height: currentHeight };
+    }
+    
+    // Lerp position and size
+    return {
+      position: {
+        x: currentPos.x + (nextEl.position.x - currentPos.x) * animationProgress,
+        y: currentPos.y + (nextEl.position.y - currentPos.y) * animationProgress,
+      },
+      width: currentWidth + (nextEl.width - currentWidth) * animationProgress,
+      height: currentHeight + (nextEl.height - currentHeight) * animationProgress,
+    };
+  }, [isPlaying, animationProgress, nextStepElements]);
+  
+  // Helper to interpolate arrow endpoints
+  const getInterpolatedArrowEndpoints = useCallback((elementId: string, currentStart: Position, currentEnd: Position): { start: Position; end: Position } => {
+    if (!isPlaying || animationProgress === 0 || !nextStepElements) {
+      return { start: currentStart, end: currentEnd };
+    }
+    
+    // Find this arrow in next step
+    const nextEl = nextStepElements.find((e) => e.id === elementId);
+    if (!nextEl || !isArrowElement(nextEl)) {
+      return { start: currentStart, end: currentEnd };
+    }
+    
+    // Lerp both endpoints
+    return {
+      start: {
+        x: currentStart.x + (nextEl.startPoint.x - currentStart.x) * animationProgress,
+        y: currentStart.y + (nextEl.startPoint.y - currentStart.y) * animationProgress,
+      },
+      end: {
+        x: currentEnd.x + (nextEl.endPoint.x - currentEnd.x) * animationProgress,
+        y: currentEnd.y + (nextEl.endPoint.y - currentEnd.y) * animationProgress,
+      },
+    };
+  }, [isPlaying, animationProgress, nextStepElements]);
 
   // Multi-drag window event handlers
   useEffect(() => {
@@ -543,7 +873,7 @@ export default function App() {
       if (!pos) return;
       
       // If a tool is active, start drawing
-      if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'zone') {
+      if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'zone' || activeTool === 'zone-ellipse') {
         startDrawing(pos);
       } else if (!activeTool) {
         // Check if we clicked on an interactive element (they have id starting with specific prefixes)
@@ -604,6 +934,9 @@ export default function App() {
         } else if (activeTool === 'zone') {
           finishZoneDrawing('rect');
           clearActiveTool();
+        } else if (activeTool === 'zone-ellipse') {
+          finishZoneDrawing('ellipse');
+          clearActiveTool();
         }
       }
       
@@ -655,6 +988,38 @@ export default function App() {
     [updateSelectedElement]
   );
 
+  // Text editing handlers
+  const handleTextDoubleClick = useCallback((id: string) => {
+    const textEl = elements.find((el) => el.id === id);
+    if (textEl && isTextElement(textEl)) {
+      setEditingTextId(id);
+      setEditingTextValue(textEl.content);
+    }
+  }, [elements]);
+
+  const handleTextEditSave = useCallback(() => {
+    if (editingTextId && editingTextValue.trim()) {
+      updateTextContent(editingTextId, editingTextValue.trim());
+    }
+    setEditingTextId(null);
+    setEditingTextValue('');
+  }, [editingTextId, editingTextValue, updateTextContent]);
+
+  const handleTextEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTextEditSave();
+    } else if (e.key === 'Escape') {
+      setEditingTextId(null);
+      setEditingTextValue('');
+    }
+  }, [handleTextEditSave]);
+
+  // Get editing text element for overlay positioning
+  const editingTextElement = editingTextId 
+    ? elements.find((el) => el.id === editingTextId && isTextElement(el))
+    : null;
+
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* Top Bar - hidden in focus mode */}
@@ -700,35 +1065,62 @@ export default function App() {
                 {/* Zones (lowest z-order) - filtered by layer visibility */}
                 {layerVisibility.zones && elements
                   .filter(isZoneElement)
-                  .map((zone) => (
-                    <ZoneNode
-                      key={zone.id}
-                      zone={zone}
-                      pitchConfig={DEFAULT_PITCH_CONFIG}
-                      isSelected={selectedIds.includes(zone.id)}
-                      onSelect={handleElementSelect}
-                      onDragEnd={handleElementDragEnd}
-                      onResize={resizeZone}
-                    />
-                  ))}
+                  .map((zone) => {
+                    // During animation, interpolate position and size
+                    const interpolated = isPlaying && animationProgress > 0 && nextStepElements
+                      ? getInterpolatedZone(zone.id, zone.position, zone.width, zone.height)
+                      : { position: zone.position, width: zone.width, height: zone.height };
+                    
+                    const animatedZone = {
+                      ...zone,
+                      position: interpolated.position,
+                      width: interpolated.width,
+                      height: interpolated.height,
+                    };
+                    
+                    return (
+                      <ZoneNode
+                        key={zone.id}
+                        zone={animatedZone}
+                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        isSelected={!isPlaying && selectedIds.includes(zone.id)}
+                        onSelect={isPlaying ? () => {} : handleElementSelect}
+                        onDragEnd={handleElementDragEnd}
+                        onResize={resizeZone}
+                      />
+                    );
+                  })}
 
                 {/* Arrows - filtered by layer visibility */}
                 {layerVisibility.arrows && elements
                   .filter(isArrowElement)
-                  .map((arrow) => (
-                    <ArrowNode
-                      key={arrow.id}
-                      arrow={arrow}
-                      pitchConfig={DEFAULT_PITCH_CONFIG}
-                      isSelected={selectedIds.includes(arrow.id)}
-                      onSelect={handleElementSelect}
-                      onDragEnd={handleElementDragEnd}
-                      onEndpointDrag={(id, endpoint, pos) => {
-                        updateArrowEndpoint(id, endpoint, pos);
-                        pushHistory();
-                      }}
-                    />
-                  ))}
+                  .map((arrow) => {
+                    // During animation, interpolate endpoints
+                    const endpoints = isPlaying && animationProgress > 0 && nextStepElements
+                      ? getInterpolatedArrowEndpoints(arrow.id, arrow.startPoint, arrow.endPoint)
+                      : { start: arrow.startPoint, end: arrow.endPoint };
+                    
+                    const animatedArrow = {
+                      ...arrow,
+                      startPoint: endpoints.start,
+                      endPoint: endpoints.end,
+                    };
+                    
+                    return (
+                      <ArrowNode
+                        key={arrow.id}
+                        arrow={animatedArrow}
+                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        isSelected={!isPlaying && selectedIds.includes(arrow.id)}
+                        onSelect={isPlaying ? () => {} : handleElementSelect}
+                        onDragEnd={handleElementDragEnd}
+                        onEndpointDrag={(id, endpoint, pos) => {
+                          updateArrowEndpoint(id, endpoint, pos);
+                          pushHistory();
+                        }}
+                      />
+                    );
+                  })}
 
                 {/* Players - filtered by team visibility and group visibility */}
                 {elements
@@ -738,33 +1130,71 @@ export default function App() {
                     (player.team === 'home' && layerVisibility.homePlayers) ||
                     (player.team === 'away' && layerVisibility.awayPlayers)
                   )
-                  .map((player) => (
-                    <PlayerNode
-                      key={player.id}
-                      player={player}
-                      pitchConfig={DEFAULT_PITCH_CONFIG}
-                      isSelected={selectedIds.includes(player.id)}
-                      onSelect={handleElementSelect}
-                      onDragEnd={handleElementDragEnd}
-                      onDragStart={startMultiDrag}
-                    />
-                  ))}
+                  .map((player) => {
+                    // During animation, interpolate position
+                    const animatedPlayer = isPlaying && animationProgress > 0 && nextStepElements
+                      ? { ...player, position: getInterpolatedPosition(player.id, player.position) }
+                      : player;
+                    
+                    return (
+                      <PlayerNode
+                        key={player.id}
+                        player={animatedPlayer}
+                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        isSelected={!isPlaying && selectedIds.includes(player.id)}
+                        onSelect={isPlaying ? () => {} : handleElementSelect}
+                        onDragEnd={handleElementDragEnd}
+                        onDragStart={startMultiDrag}
+                      />
+                    );
+                  })}
 
                 {/* Ball (highest z-order) - filtered by layer visibility and group visibility */}
                 {layerVisibility.ball && elements
                   .filter(isBallElement)
                   .filter((ball) => !hiddenByGroup.has(ball.id))
-                  .map((ball) => (
-                    <BallNode
-                      key={ball.id}
-                      ball={ball}
-                      pitchConfig={DEFAULT_PITCH_CONFIG}
-                      isSelected={selectedIds.includes(ball.id)}
-                      onSelect={handleElementSelect}
-                      onDragEnd={handleElementDragEnd}
-                      onDragStart={startMultiDrag}
-                    />
-                  ))}
+                  .map((ball) => {
+                    // During animation, interpolate position
+                    const animatedBall = isPlaying && animationProgress > 0 && nextStepElements
+                      ? { ...ball, position: getInterpolatedPosition(ball.id, ball.position) }
+                      : ball;
+                    
+                    return (
+                      <BallNode
+                        key={ball.id}
+                        ball={animatedBall}
+                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        isSelected={!isPlaying && selectedIds.includes(ball.id)}
+                        onSelect={isPlaying ? () => {} : handleElementSelect}
+                        onDragEnd={handleElementDragEnd}
+                        onDragStart={startMultiDrag}
+                      />
+                    );
+                  })}
+
+                {/* Text elements - filtered by layer visibility */}
+                {layerVisibility.labels && elements
+                  .filter(isTextElement)
+                  .filter((t) => t.id !== editingTextId) // Hide text being edited
+                  .map((textEl) => {
+                    // During animation, interpolate position
+                    const animatedText = isPlaying && animationProgress > 0 && nextStepElements
+                      ? { ...textEl, position: getInterpolatedPosition(textEl.id, textEl.position) }
+                      : textEl;
+                    
+                    return (
+                      <TextNode
+                        key={textEl.id}
+                        text={animatedText}
+                        pitchConfig={DEFAULT_PITCH_CONFIG}
+                        isSelected={!isPlaying && selectedIds.includes(textEl.id)}
+                        onSelect={isPlaying ? () => {} : handleElementSelect}
+                        onDragEnd={handleElementDragEnd}
+                        onDragStart={startMultiDrag}
+                        onDoubleClick={isPlaying ? undefined : handleTextDoubleClick}
+                      />
+                    );
+                  })}
 
                 {/* Drawing preview - ghost while dragging */}
                 {drawingStart && drawingEnd && (activeTool === 'arrow-pass' || activeTool === 'arrow-run') && (
@@ -779,6 +1209,13 @@ export default function App() {
                     start={drawingStart}
                     end={drawingEnd}
                     shape="rect"
+                  />
+                )}
+                {drawingStart && drawingEnd && activeTool === 'zone-ellipse' && (
+                  <ZonePreview
+                    start={drawingStart}
+                    end={drawingEnd}
+                    shape="ellipse"
                   />
                 )}
 
@@ -811,6 +1248,34 @@ export default function App() {
             onZoomOut={zoomOut}
             onZoomFit={zoomFit}
           />
+
+          {/* Text editing input overlay */}
+          {editingTextElement && isTextElement(editingTextElement) && (
+            <div
+              className="absolute pointer-events-auto"
+              style={{
+                left: `calc(50% - ${canvasWidth * zoom / 2}px + ${(editingTextElement.position.x + 12) * zoom}px)`,
+                top: `calc(50% - ${canvasHeight * zoom / 2}px + ${(editingTextElement.position.y - 4) * zoom}px)`,
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left',
+              }}
+            >
+              <input
+                type="text"
+                value={editingTextValue}
+                onChange={(e) => setEditingTextValue(e.target.value)}
+                onKeyDown={handleTextEditKeyDown}
+                onBlur={handleTextEditSave}
+                autoFocus
+                className="px-2 py-1 bg-surface border border-accent rounded text-white text-base min-w-[100px] outline-none shadow-lg"
+                style={{
+                  fontSize: editingTextElement.fontSize,
+                  fontWeight: editingTextElement.bold ? 'bold' : 'normal',
+                  fontFamily: editingTextElement.fontFamily,
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Inspector - hidden in focus mode */}
@@ -837,20 +1302,21 @@ export default function App() {
 
       {/* Bottom Steps Bar */}
       <BottomStepsBar
-        steps={steps}
-        currentStepIndex={0}
-        isPlaying={false}
-        isLooping={false}
-        duration={0.8}
-        onStepSelect={() => {}}
-        onAddStep={() => showToast('Add step coming soon')}
-        onDeleteStep={() => {}}
-        onPlay={() => showToast('Playback coming soon')}
-        onPause={() => {}}
-        onPrevStep={() => {}}
-        onNextStep={() => {}}
-        onToggleLoop={() => {}}
-        onDurationChange={() => {}}
+        steps={stepsData}
+        currentStepIndex={currentStepIndex}
+        isPlaying={isPlaying}
+        isLooping={isLooping}
+        duration={stepDuration}
+        onStepSelect={goToStep}
+        onAddStep={addStep}
+        onDeleteStep={removeStep}
+        onRenameStep={renameStep}
+        onPlay={play}
+        onPause={pause}
+        onPrevStep={prevStep}
+        onNextStep={nextStep}
+        onToggleLoop={toggleLoop}
+        onDurationChange={setStepDuration}
       />
 
       {/* Command Palette Modal */}

@@ -73,71 +73,97 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 
 ---
 
-## 🚧 Sprint 2 — Animation System (NEXT)
+## ✅ Sprint 2 — Animation System (COMPLETED)
 
-### S2.1 Steps Timeline
-- [ ] Multiple steps (animation frames)
-- [ ] Add/delete steps
-- [ ] Step thumbnails
-- [ ] Reorder steps (drag)
+### S2.1 Steps Timeline ✓
+- [x] Multiple steps (animation frames)
+- [x] Add/delete steps (N / X keys)
+- [x] Step rename (double-click)
+- [ ] Step thumbnails (future)
+- [ ] Reorder steps drag (future)
 
-### S2.2 Keyframe System
-- [ ] Each step stores element positions
-- [ ] Copy elements between steps
-- [ ] Onion skin preview (ghost of prev/next step)
+### S2.2 Keyframe System ✓
+- [x] Each step stores element positions
+- [x] Deep clone between steps (no reference sharing)
+- [x] Sync elements to document on each change
+- [ ] Onion skin preview (future)
 
-### S2.3 Playback
-- [ ] Play/Pause button
-- [ ] Step duration control
-- [ ] Auto-advance animation
-- [ ] Loop toggle
+### S2.3 Playback ✓
+- [x] Play/Pause button (Space)
+- [x] Step duration dropdown (0.6s/0.8s/1.2s)
+- [x] Auto-advance with requestAnimationFrame
+- [x] Loop toggle (L key)
 
-### S2.4 Interpolation
-- [ ] Linear interpolation between steps
-- [ ] Smooth element movement
-- [ ] Easing functions (ease-in, ease-out)
+### S2.4 Interpolation ✓
+- [x] Cubic easing between steps
+- [x] Smooth player/ball movement
+- [x] Arrow endpoints animation
+- [x] Zone position+size animation
 
 ---
 
-## 📅 Sprint 3 — Pro Features
+## ✅ Sprint 3 — Pro Features (COMPLETED)
 
-### S3.1 Advanced Elements
-- [ ] Text labels
-- [ ] Custom player shapes
-- [ ] Arrow curves (bezier)
-- [ ] Ellipse zones
+### S3.1 Advanced Elements ✓
+- [x] Text labels (T key, Enter to edit, ↑/↓ font size, ←/→ bold/italic, Shift+↑ background color)
+- [x] Custom player shapes (S key: circle → square → triangle → diamond)
+- [x] Ellipse zones (Shift+Z = ellipse, E = cycle shape)
+- [x] Zone drawing preview for both rect and ellipse
 
-### S3.2 Formations & Presets
-- [ ] Formation templates (4-3-3, 4-4-2, etc.)
-- [ ] Save custom presets
-- [ ] Quick apply formation
+### S3.2 Formations & Presets ✓
+- [x] Formation templates (4-3-3, 4-4-2, 4-4-2♦, 4-2-3-1, 3-5-2, 5-3-2)
+- [x] Quick apply formation (keys 1-6, Shift+1-6 for away)
+- [x] Horizontal pitch orientation (Home left, Away right)
 
-### S3.3 Team Management
+### S3.3 Arrow Improvements ✓
+- [x] Pass arrows: bright red (#ff0000), 4px stroke
+- [x] Run arrows: blue (#3b82f6), 3px stroke
+- [x] Easy visibility and distinction
+
+### S3.4 UI Polish ✓
+- [x] CheatSheet updated with all new shortcuts
+- [x] Default player shape = circle (explicit)
+
+---
+
+## 🚧 Sprint 4 — Export & Customization (IN PROGRESS)
+
+### S4.1 Export Features
+- [ ] Export all steps as PNGs (Shift+Cmd+E)
+- [ ] Export GIF animation
+- [ ] Export video (MP4/WebM)
+
+### S4.2 Team Customization
 - [ ] Team name/color customization
-- [ ] Player names/labels
-- [ ] Team presets
+- [ ] PlayerNode uses teamSettings colors
+- [ ] Inspector "Teams" tab
 
-### S3.4 Export & Share
-- [ ] Export GIF/Video
-- [ ] Export all steps as PNGs
-- [ ] Share link generation
-- [ ] Embed code
+### S4.3 Advanced Elements
+- [ ] Arrow curves (bezier with control point)
+- [ ] Grid overlay toggle (G key)
+- [ ] Configurable grid size
+- [ ] Snap to element edges
+
+### S4.4 Performance & Polish
+- [ ] Code splitting for smaller bundles
+- [ ] Touch/mobile support (pinch-zoom, pan)
+- [ ] Accessibility improvements
 
 ---
 
-## 🔮 Sprint 4 — Desktop & Cloud
+## 🔮 Sprint 5 — Desktop & Cloud (FUTURE)
 
-### S4.1 Tauri Desktop App
-- [ ] Electron alternative (lighter)
+### S5.1 Tauri Desktop App
+- [ ] Lightweight native app
 - [ ] Native file save/open
 - [ ] Offline-first
 
-### S4.2 Cloud Sync
+### S5.2 Cloud Sync
 - [ ] User accounts
 - [ ] Project sync
 - [ ] Team collaboration
 
-### S4.3 Advanced Analysis
+### S5.3 Advanced Analysis
 - [ ] Heat maps
 - [ ] Pass networks
 - [ ] Statistical overlays
@@ -160,8 +186,9 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 | Version | Features | Target |
 |---------|----------|--------|
 | **0.1** | MVP Core (Sprint 1) | ✅ Done |
-| **0.2** | Animation System (Sprint 2) | Next |
-| **0.3** | Pro Features (Sprint 3) | TBD |
+| **0.2** | Animation System (Sprint 2) | ✅ Done |
+| **0.3** | Pro Features (Sprint 3) | ✅ Done |
+| **0.4** | Export & Customization (Sprint 4) | In Progress |
 | **1.0** | Public Release | TBD |
 
 ---

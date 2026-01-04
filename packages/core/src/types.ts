@@ -11,6 +11,9 @@ export interface Position {
 /** Team identifier */
 export type Team = 'home' | 'away';
 
+/** Player shape types */
+export type PlayerShape = 'circle' | 'square' | 'triangle' | 'diamond';
+
 /** Unique identifier for board elements */
 export type ElementId = string;
 
@@ -26,6 +29,7 @@ export interface PlayerElement extends BoardElementBase {
   team: Team;
   number: number;
   label?: string;
+  shape?: PlayerShape; // Default: 'circle'
 }
 
 /** Ball element on the board */
@@ -65,8 +69,20 @@ export interface ZoneElement {
   borderColor?: string;
 }
 
+/** Text element for labels/annotations */
+export interface TextElement extends BoardElementBase {
+  type: 'text';
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+  bold: boolean;
+  italic: boolean;
+  backgroundColor?: string; // Optional background for better visibility
+}
+
 /** Union type for all board elements */
-export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement;
+export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement | TextElement;
 
 /** Pitch dimensions configuration */
 export interface PitchConfig {
@@ -134,7 +150,11 @@ export function isZoneElement(element: BoardElement): element is ZoneElement {
   return element.type === 'zone';
 }
 
-/** Check if element has a single position (player, ball, zone) */
-export function hasPosition(element: BoardElement): element is PlayerElement | BallElement | ZoneElement {
+export function isTextElement(element: BoardElement): element is TextElement {
+  return element.type === 'text';
+}
+
+/** Check if element has a single position (player, ball, zone, text) */
+export function hasPosition(element: BoardElement): element is PlayerElement | BallElement | ZoneElement | TextElement {
   return 'position' in element;
 }

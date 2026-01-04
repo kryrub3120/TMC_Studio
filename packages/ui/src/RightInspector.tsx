@@ -129,7 +129,9 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
     { key: '⇧P', label: 'Add Away Player', action: 'add-away-player', color: '#457b9d' },
     { key: 'B', label: 'Add Ball', action: 'add-ball', color: '#ffffff' },
     { key: 'A', label: 'Pass Arrow', action: 'add-pass-arrow', color: 'currentColor' },
+    { key: 'R', label: 'Run Arrow', action: 'add-run-arrow', color: 'currentColor' },
     { key: 'Z', label: 'Zone', action: 'add-zone', color: 'currentColor' },
+    { key: 'T', label: 'Text Label', action: 'add-text', color: 'currentColor' },
   ];
 
   return (

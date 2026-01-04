@@ -20,6 +20,7 @@ import {
   createBall,
   createArrow,
   createZone,
+  createText,
   duplicateElements,
   moveElement,
   removeElementsByIds,
@@ -28,7 +29,9 @@ import {
   loadFromLocalStorage,
   isPlayerElement,
   isArrowElement,
+  isTextElement,
 } from '@tmc/core';
+import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 
 /** History entry for undo/redo */
 interface HistoryEntry {
@@ -49,6 +52,9 @@ export interface Group {
 interface BoardState {
   // Document state
   document: BoardDocument;
+  
+  // Current step
+  currentStepIndex: number;
   
   // Current elements (from active step)
   elements: BoardElement[];
@@ -78,6 +84,9 @@ interface BoardState {
   addBallAtCursor: () => void;
   addArrowAtCursor: (arrowType: ArrowType) => void;
   addZoneAtCursor: (shape?: ZoneShape) => void;
+  addTextAtCursor: () => void;
+  updateTextContent: (id: ElementId, content: string) => void;
+  updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string }) => void;
   moveElementById: (id: ElementId, position: Position) => void;
   resizeZone: (id: ElementId, position: Position, width: number, height: number) => void;
   updateArrowEndpoint: (id: ElementId, endpoint: 'start' | 'end', position: Position) => void;
@@ -90,6 +99,8 @@ interface BoardState {
   nudgeSelected: (dx: number, dy: number) => void;
   adjustSelectedStrokeWidth: (delta: number) => void;
   cycleSelectedColor: (direction: number) => void;
+  cyclePlayerShape: () => void;
+  cycleZoneShape: () => void;
   selectElementsInRect: (start: Position, end: Position) => void;
   setCursorPosition: (position: Position | null) => void;
   
@@ -110,6 +121,17 @@ interface BoardState {
   loadDocument: () => boolean;
   newDocument: () => void;
   
+  // Step actions
+  addStep: () => void;
+  removeStep: (index: number) => void;
+  duplicateStep: (index: number) => void;
+  renameStep: (index: number, newName: string) => void;
+  goToStep: (index: number) => void;
+  nextStep: () => void;
+  prevStep: () => void;
+  getSteps: () => { id: string; name: string; index: number }[];
+  getTotalSteps: () => number;
+  
   // Group actions
   createGroup: () => void;
   ungroupSelection: () => void;
@@ -118,6 +140,9 @@ interface BoardState {
   toggleGroupLock: (groupId: string) => void;
   toggleGroupVisibility: (groupId: string) => void;
   renameGroup: (groupId: string, name: string) => void;
+  
+  // Formation actions
+  applyFormation: (formationId: string, team: Team) => void;
   
   // Computed
   getSelectedElements: () => BoardElement[];
@@ -148,6 +173,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
 
   return {
     document: initialDoc,
+    currentStepIndex: 0,
     elements: initialElements,
     selectedIds: [],
     groups: [],
@@ -210,6 +236,40 @@ export const useBoardStore = create<BoardState>((set, get) => {
       };
       const zone = createZone(position, shape);
       get().addElement(zone);
+    },
+
+    addTextAtCursor: () => {
+      const { cursorPosition } = get();
+      const position = cursorPosition ?? { 
+        x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
+        y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
+      };
+      const text = createText(position, 'Text');
+      get().addElement(text);
+    },
+
+    updateTextContent: (id, content) => {
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (el.id === id && isTextElement(el)) {
+            return { ...el, content };
+          }
+          return el;
+        }),
+      }));
+      get().pushHistory();
+    },
+
+    updateTextProperties: (id, updates) => {
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (el.id === id && isTextElement(el)) {
+            return { ...el, ...updates };
+          }
+          return el;
+        }),
+      }));
+      get().pushHistory();
     },
 
     moveElementById: (id, position) => {
@@ -379,7 +439,8 @@ export const useBoardStore = create<BoardState>((set, get) => {
       const { selectedIds } = get();
       if (selectedIds.length === 0) return;
       
-      const COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#f97316'];
+      // Useful colors: strong red, light red, strong green, blue, yellow, orange
+      const COLORS = ['#ff0000', '#ff6b6b', '#00ff00', '#3b82f6', '#eab308', '#f97316'];
       
       set((state) => ({
         elements: state.elements.map((el) => {
@@ -403,6 +464,47 @@ export const useBoardStore = create<BoardState>((set, get) => {
                 : (currentIndex + direction + COLORS.length) % COLORS.length;
               return { ...el, fillColor: COLORS[newIndex] };
             }
+          }
+          return el;
+        }),
+      }));
+      get().pushHistory();
+    },
+
+    cyclePlayerShape: () => {
+      const { selectedIds } = get();
+      if (selectedIds.length === 0) return;
+      
+      const SHAPES: Array<'circle' | 'square' | 'triangle' | 'diamond'> = ['circle', 'square', 'triangle', 'diamond'];
+      
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (selectedIds.includes(el.id) && isPlayerElement(el)) {
+            const currentShape = el.shape || 'circle';
+            const currentIndex = SHAPES.indexOf(currentShape);
+            const newIndex = (currentIndex + 1) % SHAPES.length;
+            return { ...el, shape: SHAPES[newIndex] };
+          }
+          return el;
+        }),
+      }));
+      get().pushHistory();
+    },
+
+    cycleZoneShape: () => {
+      const { selectedIds } = get();
+      if (selectedIds.length === 0) return;
+      
+      const ZONE_SHAPES: Array<'rect' | 'ellipse'> = ['rect', 'ellipse'];
+      
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (selectedIds.includes(el.id) && el.type === 'zone') {
+            const zone = el as { shape?: 'rect' | 'ellipse' };
+            const currentShape = zone.shape || 'rect';
+            const currentIndex = ZONE_SHAPES.indexOf(currentShape);
+            const newIndex = (currentIndex + 1) % ZONE_SHAPES.length;
+            return { ...el, shape: ZONE_SHAPES[newIndex] };
           }
           return el;
         }),
@@ -534,9 +636,22 @@ export const useBoardStore = create<BoardState>((set, get) => {
           newHistory.shift();
         }
         
+        // ALSO: Sync current elements to document.steps to keep in sync
+        const updatedSteps = [...state.document.steps];
+        if (updatedSteps[state.currentStepIndex]) {
+          updatedSteps[state.currentStepIndex] = {
+            ...updatedSteps[state.currentStepIndex],
+            elements: structuredClone(state.elements),
+          };
+        }
+        
         return {
           history: newHistory,
           historyIndex: newHistory.length - 1,
+          document: {
+            ...state.document,
+            steps: updatedSteps,
+          },
         };
       });
     },
@@ -695,5 +810,229 @@ export const useBoardStore = create<BoardState>((set, get) => {
         ),
       }));
     },
+
+    // Formation action
+    applyFormation: (formationId, team) => {
+      const formation = getFormationById(formationId);
+      if (!formation) return;
+      
+      const { elements } = get();
+      
+      // Get absolute positions for this formation
+      const positions = getAbsolutePositions(
+        formation,
+        DEFAULT_PITCH_CONFIG.width,
+        DEFAULT_PITCH_CONFIG.height,
+        DEFAULT_PITCH_CONFIG.padding,
+        team === 'away' // mirror for away team
+      );
+      
+      // Remove all existing players of this team
+      const filteredElements = elements.filter(
+        (el) => !isPlayerElement(el) || el.team !== team
+      );
+      
+      // Create new players at formation positions
+      const newPlayers = positions.map((pos) => 
+        createPlayer({ x: pos.x, y: pos.y }, team, pos.number)
+      );
+      
+      set({
+        elements: [...filteredElements, ...newPlayers],
+        selectedIds: newPlayers.map((p) => p.id),
+      });
+      
+      get().pushHistory();
+    },
+
+    // Step actions
+    addStep: () => {
+      const { document, currentStepIndex, elements } = get();
+      
+      // Deep clone all elements to avoid reference sharing
+      const cloneElements = (els: BoardElement[]) => JSON.parse(JSON.stringify(els));
+      
+      // Deep clone ALL steps to avoid reference sharing
+      const updatedSteps = document.steps.map((step) => ({
+        ...step,
+        elements: cloneElements(step.elements),
+      }));
+      
+      // Save current elements to current step first
+      if (updatedSteps[currentStepIndex]) {
+        updatedSteps[currentStepIndex] = {
+          ...updatedSteps[currentStepIndex],
+          elements: cloneElements(elements),
+        };
+      }
+      
+      // Create new step with copy of current elements
+      const newStepIndex = currentStepIndex + 1;
+      const newStep = {
+        id: `step-${Date.now()}`,
+        name: `Step ${updatedSteps.length + 1}`,
+        elements: cloneElements(elements),
+        duration: 0.8,
+      };
+      
+      // Insert new step after current
+      updatedSteps.splice(newStepIndex, 0, newStep);
+      
+      const newDoc = {
+        ...document,
+        steps: updatedSteps,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const newElements = cloneElements(elements);
+      
+      set({
+        document: newDoc,
+        currentStepIndex: newStepIndex,
+        elements: newElements,
+        selectedIds: [],
+        history: [{ elements: cloneElements(newElements), selectedIds: [] }],
+        historyIndex: 0,
+      });
+    },
+
+    removeStep: (index) => {
+      const { document } = get();
+      if (document.steps.length <= 1) return; // Keep at least 1 step
+      
+      const updatedSteps = document.steps.filter((_, i) => i !== index);
+      const newIndex = Math.min(index, updatedSteps.length - 1);
+      const newElements = updatedSteps[newIndex]?.elements ?? [];
+      
+      const newDoc = {
+        ...document,
+        steps: updatedSteps,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      set({
+        document: newDoc,
+        currentStepIndex: newIndex,
+        elements: structuredClone(newElements),
+        selectedIds: [],
+        history: [{ elements: structuredClone(newElements), selectedIds: [] }],
+        historyIndex: 0,
+      });
+    },
+
+    renameStep: (index, newName) => {
+      const { document } = get();
+      if (index < 0 || index >= document.steps.length) return;
+      
+      const updatedSteps = [...document.steps];
+      updatedSteps[index] = {
+        ...updatedSteps[index],
+        name: newName,
+      };
+      
+      const newDoc = {
+        ...document,
+        steps: updatedSteps,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      set({ document: newDoc });
+    },
+
+    duplicateStep: (index) => {
+      const { document } = get();
+      const stepToDuplicate = document.steps[index];
+      if (!stepToDuplicate) return;
+      
+      const newStep = {
+        ...stepToDuplicate,
+        id: `step-${Date.now()}`,
+        name: `${stepToDuplicate.name} (copy)`,
+        elements: structuredClone(stepToDuplicate.elements),
+      };
+      
+      const updatedSteps = [...document.steps];
+      updatedSteps.splice(index + 1, 0, newStep);
+      
+      const newDoc = {
+        ...document,
+        steps: updatedSteps,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      set({
+        document: newDoc,
+        currentStepIndex: index + 1,
+        elements: structuredClone(newStep.elements),
+        selectedIds: [],
+        history: [{ elements: structuredClone(newStep.elements), selectedIds: [] }],
+        historyIndex: 0,
+      });
+    },
+
+    goToStep: (index) => {
+      const { document, currentStepIndex, elements } = get();
+      if (index < 0 || index >= document.steps.length) return;
+      if (index === currentStepIndex) return;
+      
+      // Deep clone helper using JSON to avoid reference sharing
+      const cloneElements = (els: BoardElement[]) => JSON.parse(JSON.stringify(els));
+      
+      // Deep clone ALL steps to avoid reference sharing
+      const updatedSteps = document.steps.map((step) => ({
+        ...step,
+        elements: cloneElements(step.elements),
+      }));
+      
+      // Save current elements to current step
+      if (updatedSteps[currentStepIndex]) {
+        updatedSteps[currentStepIndex] = {
+          ...updatedSteps[currentStepIndex],
+          elements: cloneElements(elements),
+        };
+      }
+      
+      // Load new step elements
+      const newElements = cloneElements(updatedSteps[index]?.elements ?? []);
+      
+      const newDoc = {
+        ...document,
+        steps: updatedSteps,
+      };
+      
+      set({
+        document: newDoc,
+        currentStepIndex: index,
+        elements: newElements,
+        selectedIds: [],
+        history: [{ elements: cloneElements(newElements), selectedIds: [] }],
+        historyIndex: 0,
+      });
+    },
+
+    nextStep: () => {
+      const { currentStepIndex, document } = get();
+      if (currentStepIndex < document.steps.length - 1) {
+        get().goToStep(currentStepIndex + 1);
+      }
+    },
+
+    prevStep: () => {
+      const { currentStepIndex } = get();
+      if (currentStepIndex > 0) {
+        get().goToStep(currentStepIndex - 1);
+      }
+    },
+
+    getSteps: () => {
+      const { document } = get();
+      return document.steps.map((step, index) => ({
+        id: step.id,
+        name: step.name ?? `Step ${index + 1}`,
+        index,
+      }));
+    },
+
+    getTotalSteps: () => get().document.steps.length,
   };
 });

@@ -20,4 +20,7 @@ export type { ArrowNodeProps } from './ArrowNode.js';
 export { ZoneNode, ZONE_COLOR_PRESETS } from './ZoneNode.js';
 export type { ZoneNodeProps } from './ZoneNode.js';
 
+export { TextNode } from './TextNode.js';
+export type { TextNodeProps } from './TextNode.js';
+
 export { ArrowPreview, ZonePreview } from './DrawingPreview.js';

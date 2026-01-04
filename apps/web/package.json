@@ -12,14 +12,15 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@tmc/core": "workspace:*",
     "@tmc/board": "workspace:*",
+    "@tmc/core": "workspace:*",
+    "@tmc/presets": "workspace:*",
     "@tmc/ui": "workspace:*",
-    "konva": "^9.3.0",
+    "konva": "^9.3.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-konva": "^18.2.10",
-    "zustand": "^4.5.0"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

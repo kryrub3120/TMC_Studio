@@ -8,6 +8,7 @@ import {
   BallElement,
   ArrowElement,
   ZoneElement,
+  TextElement,
   Position,
   Team,
   ElementId,
@@ -44,6 +45,7 @@ export function createPlayer(
     position: snapToGrid(position, gridSize),
     team,
     number,
+    shape: 'circle', // Default shape is circle
   };
 }
 
@@ -66,6 +68,10 @@ export function createArrow(
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): ArrowElement {
   const snappedStart = snapToGrid(startPoint, gridSize);
+  // Default colors: pass = bright red, run = bright blue
+  const defaultColor = arrowType === 'pass' ? '#ff0000' : '#3b82f6';
+  const defaultStroke = arrowType === 'pass' ? 4 : 3;
+  
   return {
     id: generateId(),
     type: 'arrow',
@@ -75,7 +81,8 @@ export function createArrow(
       x: snappedStart.x + 80,
       y: snappedStart.y,
     },
-    strokeWidth: arrowType === 'pass' ? 3 : 2,
+    color: defaultColor,
+    strokeWidth: defaultStroke,
   };
 }
 
@@ -95,6 +102,25 @@ export function createZone(
     fillColor: '#22c55e', // Green default
     opacity: 0.25,
     borderStyle: 'none',
+  };
+}
+
+/** Create a new text element */
+export function createText(
+  position: Position,
+  content: string = 'Text',
+  options?: Partial<Omit<TextElement, 'id' | 'type' | 'position'>>
+): TextElement {
+  return {
+    id: generateId(),
+    type: 'text',
+    position,
+    content,
+    fontSize: options?.fontSize ?? 18,
+    fontFamily: options?.fontFamily ?? 'Inter',
+    color: options?.color ?? '#ffffff',
+    bold: options?.bold ?? false,
+    italic: options?.italic ?? false,
   };
 }
 

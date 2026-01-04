@@ -1,5 +1,12 @@
 /**
- * @tmc/presets - Formation and preset configurations for TMC Studio
+ * @tmc/presets - Formation templates and presets
  */
 
-export * from './formations.js';
+export {
+  formations,
+  getFormationById,
+  getFormationIds,
+  getAbsolutePositions,
+  type Formation,
+  type FormationPosition,
+} from './formations';
