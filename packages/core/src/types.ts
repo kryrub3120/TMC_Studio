@@ -100,6 +100,25 @@ export const DEFAULT_PITCH_CONFIG: PitchConfig = {
   gridSize: 10,
 };
 
+/** Team settings for customization */
+export interface TeamSetting {
+  name: string;
+  primaryColor: string;
+  secondaryColor: string;
+}
+
+/** Team settings for both teams */
+export interface TeamSettings {
+  home: TeamSetting;
+  away: TeamSetting;
+}
+
+/** Default team settings */
+export const DEFAULT_TEAM_SETTINGS: TeamSettings = {
+  home: { name: 'Home', primaryColor: '#ef4444', secondaryColor: '#ffffff' },
+  away: { name: 'Away', primaryColor: '#3b82f6', secondaryColor: '#ffffff' },
+};
+
 /** Board state containing all elements */
 export interface BoardState {
   elements: BoardElement[];
@@ -124,6 +143,7 @@ export interface BoardDocument {
   currentStepIndex: number;
   steps: Step[];
   pitchConfig: PitchConfig;
+  teamSettings?: TeamSettings; // Optional for backward compatibility
 }
 
 /** History entry for undo/redo */

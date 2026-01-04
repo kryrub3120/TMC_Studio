@@ -7,6 +7,8 @@ import {
   BoardElement,
   PitchConfig,
   DEFAULT_PITCH_CONFIG,
+  TeamSettings,
+  DEFAULT_TEAM_SETTINGS,
 } from './types.js';
 import { createInitialBoard } from './board.js';
 import { createStep } from './step.js';
@@ -20,7 +22,8 @@ export const STORAGE_KEY = 'tmc-studio-board';
 /** Create a new empty document */
 export function createDocument(
   name: string = 'Untitled Board',
-  pitchConfig: PitchConfig = DEFAULT_PITCH_CONFIG
+  pitchConfig: PitchConfig = DEFAULT_PITCH_CONFIG,
+  teamSettings: TeamSettings = DEFAULT_TEAM_SETTINGS
 ): BoardDocument {
   const now = new Date().toISOString();
   const initialElements = createInitialBoard(pitchConfig);
@@ -34,6 +37,7 @@ export function createDocument(
     currentStepIndex: 0,
     steps: [initialStep],
     pitchConfig,
+    teamSettings,
   };
 }
 
@@ -68,11 +72,14 @@ export function deserializeDocument(json: string): BoardDocument | null {
 
 /** Migrate document to current version (for future use) */
 function migrateDocument(doc: BoardDocument): BoardDocument {
-  // Add migration logic here when version changes
+  // Add teamSettings if missing (backward compatibility)
+  const teamSettings = doc.teamSettings ?? DEFAULT_TEAM_SETTINGS;
+  
   return {
     ...doc,
     version: DOCUMENT_VERSION,
     updatedAt: new Date().toISOString(),
+    teamSettings,
   };
 }
 
