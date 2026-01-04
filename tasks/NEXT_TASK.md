@@ -1,56 +1,45 @@
-# S4.3 Pitch Orientation - COMPLETED ✅
+# S4.4 Export Options - Debug & Shortcuts
 
-## What Was Implemented
+## Goal
+Fix GIF export (gif.js worker issues) and add keyboard shortcuts for exports.
 
-### 1. ✅ getPitchDimensions() Helper
-Added to `packages/core/src/types.ts`:
-```typescript
-export function getPitchDimensions(orientation: PitchOrientation): PitchConfig {
-  if (orientation === 'portrait') {
-    return {
-      width: DEFAULT_PITCH_CONFIG.height, // 680 (swapped)
-      height: DEFAULT_PITCH_CONFIG.width, // 1050 (swapped)
-      padding: DEFAULT_PITCH_CONFIG.padding,
-      gridSize: DEFAULT_PITCH_CONFIG.gridSize,
-    };
-  }
-  return DEFAULT_PITCH_CONFIG;
-}
+## Current State
+- ✅ PNG export - works (Cmd+E)
+- ✅ PDF export - works (via Command Palette)
+- ✅ SVG export - works (via Command Palette)
+- ❌ GIF export - fails (gif.js worker issue)
+
+## Problem
+gif.js requires a Web Worker which may not load correctly in Vite bundled builds. Options:
+1. Use inline worker blob
+2. Bundle worker separately
+3. Use alternative library (modern-gif, gifenc)
+
+## Suggested Fix
+Replace gif.js with `modern-gif` or canvas-based approach without web workers.
+
+## Keyboard Shortcuts to Add
+```
+Cmd+Shift+G = Export GIF
+Cmd+Shift+P = Export PDF
 ```
 
-### 2. ✅ Dynamic Canvas Dimensions in App.tsx
-- Added `pitchConfig` useMemo that recalculates based on orientation
-- Canvas width/height now update reactively
-- All element nodes receive dynamic `pitchConfig`
+## Files to Edit
+- `apps/web/src/utils/exportUtils.ts` - Fix GIF implementation
+- `apps/web/src/App.tsx` - Add keyboard shortcuts in handleKeyDown
 
-### 3. ✅ Pitch Renders with Swapped Dimensions
-- Portrait mode: 680x1050 (taller than wider)
-- Landscape mode: 1050x680 (wider than taller)
-
-## Commits
-- `8e9a13f` - feat(S4.3): Implement pitch orientation (portrait/landscape)
-
-## Build Status: ✅ 5/5 Passing
-
----
-
-## Future Enhancement: Element Position Transformation
-
-When switching orientation, existing elements may need position transformation:
-```typescript
-// Landscape → Portrait transformation formula:
-newX = pitchHeight - oldY
-newY = oldX
-
-// Portrait → Landscape:
-newX = oldY  
-newY = pitchWidth - oldX
+## Commands
+```bash
+cd "/Users/krystianrubajczyk/Documents/PROGRAMOWANIE/TMC Studio"
+pnpm dev
+# Test exports in browser console if needed
 ```
 
-This could be added to `useBoardStore.updatePitchSettings()` to automatically
-transform all element positions when orientation changes.
+## Commits from Previous Session (S4.3 + S4.4)
+- `2cb8f4e` - fix: orientation transformation drift
+- `8919a32` - fix: Print Friendly + Portrait zoom
+- `8a3bd32` - feat: Add export options - GIF, PDF, SVG
+- `ceddcc6` - fix: GIF export worker dependency
 
-## Future Enhancement: Formation Position Swap
-
-The `getAbsolutePositions()` function in formations.ts could accept an
-orientation parameter to swap x/y coordinates for portrait mode.
+## Build Status
+5/5 ✅ (but GIF runtime error)
