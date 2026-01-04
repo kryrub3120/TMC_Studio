@@ -245,6 +245,52 @@ export default function App() {
   const canvasWidth = DEFAULT_PITCH_CONFIG.width + DEFAULT_PITCH_CONFIG.padding * 2;
   const canvasHeight = DEFAULT_PITCH_CONFIG.height + DEFAULT_PITCH_CONFIG.padding * 2;
 
+  // Export single PNG handler
+  const handleExport = useCallback(() => {
+    if (stageRef.current) {
+      const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `${boardDoc.name || 'tactics'}.png`;
+      link.href = dataUrl;
+      link.click();
+      showToast('PNG exported!');
+    }
+  }, [boardDoc.name, showToast]);
+
+  // Export all steps as PNGs
+  const handleExportAllSteps = useCallback(async () => {
+    if (!stageRef.current) return;
+    
+    const originalStep = currentStepIndex;
+    const totalSteps = boardDoc.steps.length;
+    
+    showToast(`Exporting ${totalSteps} steps...`);
+    
+    for (let i = 0; i < totalSteps; i++) {
+      // Go to step
+      goToStep(i);
+      
+      // Wait for render
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      
+      // Export PNG
+      const dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 });
+      if (dataUrl) {
+        const link = document.createElement('a');
+        link.download = `${boardDoc.name || 'tactics'}-step-${i + 1}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+      
+      // Small delay between downloads
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    
+    // Return to original step
+    goToStep(originalStep);
+    showToast(`Exported ${totalSteps} PNGs!`);
+  }, [boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, showToast]);
+
   // Command palette actions
   const commandActions: CommandAction[] = useMemo(() => {
     const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
@@ -284,21 +330,9 @@ export default function App() {
 
       // Export
       { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: () => handleExport() },
-      { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: () => showToast('Export steps coming soon') },
+      { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: () => handleExportAllSteps() },
     ];
-  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo]);
-
-  // Export handler
-  const handleExport = useCallback(() => {
-    if (stageRef.current) {
-      const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2 });
-      const link = document.createElement('a');
-      link.download = `${boardDoc.name || 'tactics'}.png`;
-      link.href = dataUrl;
-      link.click();
-      showToast('PNG exported!');
-    }
-  }, [boardDoc.name, showToast]);
+  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo, handleExport, handleExportAllSteps]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
