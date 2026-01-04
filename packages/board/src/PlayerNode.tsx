@@ -6,8 +6,15 @@
 import React, { useRef, useState, memo } from 'react';
 import { Group, Circle, Rect, RegularPolygon, Text } from 'react-konva';
 import type Konva from 'konva';
-import type { PlayerElement, Position, PitchConfig } from '@tmc/core';
-import { snapToGrid, clampToBounds } from '@tmc/core';
+import type { PlayerElement, Position, PitchConfig, TeamSettings } from '@tmc/core';
+import { snapToGrid, clampToBounds, DEFAULT_TEAM_SETTINGS } from '@tmc/core';
+
+/** Team color configuration */
+export interface TeamColors {
+  fill: string;
+  stroke: string;
+  text: string;
+}
 
 export interface PlayerNodeProps {
   player: PlayerElement;
@@ -17,21 +24,35 @@ export interface PlayerNodeProps {
   onDragEnd: (id: string, position: Position) => void;
   /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
+  /** Optional team settings for custom colors */
+  teamSettings?: TeamSettings;
 }
 
-/** Team colors */
-const TEAM_COLORS = {
-  home: {
-    fill: '#e63946',
-    stroke: '#c1121f',
-    text: '#ffffff',
-  },
-  away: {
-    fill: '#457b9d',
-    stroke: '#1d3557',
-    text: '#ffffff',
-  },
-};
+/** Convert team settings to render colors */
+function getTeamColors(team: 'home' | 'away', teamSettings?: TeamSettings): TeamColors {
+  const settings = teamSettings ?? DEFAULT_TEAM_SETTINGS;
+  const teamSetting = settings[team];
+  
+  // Darken primary color for stroke
+  const primaryHex = teamSetting.primaryColor;
+  const darkenedStroke = darkenColor(primaryHex, 20);
+  
+  return {
+    fill: teamSetting.primaryColor,
+    stroke: darkenedStroke,
+    text: teamSetting.secondaryColor,
+  };
+}
+
+/** Darken hex color by percentage */
+function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.max(0, (num >> 16) - amt);
+  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+  const B = Math.max(0, (num & 0x0000FF) - amt);
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
+}
 
 const PLAYER_RADIUS = 18;
 const SELECTED_STROKE_WIDTH = 3;
@@ -45,11 +66,12 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   onSelect,
   onDragEnd,
   onDragStart,
+  teamSettings,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
-  const colors = TEAM_COLORS[player.team];
+  const colors = getTeamColors(player.team, teamSettings);
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
@@ -242,6 +264,12 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
 
 /** Memoized PlayerNode - only re-renders when props actually change */
 export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
+  // Check teamSettings colors
+  const prevColors = prevProps.teamSettings?.[prevProps.player.team];
+  const nextColors = nextProps.teamSettings?.[nextProps.player.team];
+  const colorsEqual = prevColors?.primaryColor === nextColors?.primaryColor &&
+                      prevColors?.secondaryColor === nextColors?.secondaryColor;
+  
   return (
     prevProps.player.id === nextProps.player.id &&
     prevProps.player.position.x === nextProps.player.position.x &&
@@ -250,7 +278,8 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.team === nextProps.player.team &&
     prevProps.player.label === nextProps.player.label &&
     prevProps.player.shape === nextProps.player.shape &&
-    prevProps.isSelected === nextProps.isSelected
+    prevProps.isSelected === nextProps.isSelected &&
+    colorsEqual
   );
 });
 
