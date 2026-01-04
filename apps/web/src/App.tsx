@@ -46,6 +46,8 @@ export default function App() {
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const boardDoc = useBoardStore((s) => s.document);
   const teamSettings = useBoardStore((s) => s.getTeamSettings());
+  const pitchSettings = useBoardStore((s) => s.getPitchSettings());
+  const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
   
   // Board store actions
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
@@ -1096,7 +1098,7 @@ export default function App() {
               onTouchMove={handleStageMouseMove}
             >
               <Layer>
-                <Pitch config={DEFAULT_PITCH_CONFIG} />
+                <Pitch config={DEFAULT_PITCH_CONFIG} pitchSettings={pitchSettings} />
 
                 {/* Zones (lowest z-order) - filtered by layer visibility */}
                 {layerVisibility.zones && elements
@@ -1335,6 +1337,8 @@ export default function App() {
             onQuickAction={handleQuickAction}
             teamSettings={teamSettings}
             onUpdateTeam={updateTeamSettings}
+            pitchSettings={pitchSettings}
+            onUpdatePitch={updatePitchSettings}
           />
         )}
       </div>

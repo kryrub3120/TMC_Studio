@@ -14,6 +14,7 @@ import type {
   ZoneShape,
   TeamSettings,
   TeamSetting,
+  PitchSettings,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
@@ -149,6 +150,8 @@ interface BoardState {
   // Team settings actions
   updateTeamSettings: (team: Team, settings: Partial<TeamSetting>) => void;
   getTeamSettings: () => TeamSettings | undefined;
+  updatePitchSettings: (settings: Partial<PitchSettings>) => void;
+  getPitchSettings: () => PitchSettings | undefined;
   
   // Computed
   getSelectedElements: () => BoardElement[];
@@ -1067,5 +1070,32 @@ export const useBoardStore = create<BoardState>((set, get) => {
     },
 
     getTeamSettings: () => get().document.teamSettings,
+
+    // Pitch settings actions
+    updatePitchSettings: (settings) => {
+      const { document } = get();
+      const currentSettings = document.pitchSettings ?? {
+        theme: 'grass',
+        primaryColor: '#2d8a3e',
+        stripeColor: '#268735',
+        lineColor: 'rgba(255, 255, 255, 0.85)',
+        showStripes: true,
+      };
+      
+      const updatedPitchSettings = {
+        ...currentSettings,
+        ...settings,
+      };
+      
+      set({
+        document: {
+          ...document,
+          pitchSettings: updatedPitchSettings,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    },
+
+    getPitchSettings: () => get().document.pitchSettings,
   };
 });

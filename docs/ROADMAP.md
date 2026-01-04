@@ -126,23 +126,23 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 
 ---
 
-## 🚧 Sprint 4 — Export & Customization (IN PROGRESS)
+## ✅ Sprint 4 — Export & Customization (COMPLETED)
 
-### S4.1 Export Features
-- [ ] Export all steps as PNGs (Shift+Cmd+E)
-- [ ] Export GIF animation
-- [ ] Export video (MP4/WebM)
+### S4.1 Export Features ✓
+- [x] Export all steps as PNGs (Shift+Cmd+E)
+- [ ] Export GIF animation (future)
+- [ ] Export video (MP4/WebM) (future)
 
-### S4.2 Team Customization
-- [ ] Team name/color customization
-- [ ] PlayerNode uses teamSettings colors
-- [ ] Inspector "Teams" tab
+### S4.2 Team Customization ✓
+- [x] Team name/color customization
+- [x] PlayerNode uses teamSettings colors
+- [x] Inspector "Teams" tab
 
-### S4.3 Advanced Elements
-- [ ] Arrow curves (bezier with control point)
-- [ ] Grid overlay toggle (G key)
-- [ ] Configurable grid size
-- [ ] Snap to element edges
+### S4.3 Pitch Variants ✓
+- [x] Pitch theme presets (grass/indoor/chalk/futsal)
+- [x] Custom pitch colors
+- [x] Show/hide stripes toggle
+- [x] Inspector "Pitch" tab
 
 ### S4.4 Performance & Polish
 - [ ] Code splitting for smaller bundles

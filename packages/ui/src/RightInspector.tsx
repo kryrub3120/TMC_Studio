@@ -4,8 +4,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import type { TeamSettings, TeamSetting } from '@tmc/core';
+import type { TeamSettings, TeamSetting, PitchSettings } from '@tmc/core';
 import { TeamsPanel } from './TeamsPanel.js';
+import { PitchPanel } from './PitchPanel.js';
 
 export interface InspectorElement {
   id: string;
@@ -61,9 +62,11 @@ export interface RightInspectorProps {
   onQuickAction?: (action: string) => void;
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: 'home' | 'away', settings: Partial<TeamSetting>) => void;
+  pitchSettings?: PitchSettings;
+  onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
 }
 
-type TabType = 'props' | 'layers' | 'objects' | 'teams';
+type TabType = 'props' | 'layers' | 'objects' | 'teams' | 'pitch';
 
 /** Icons */
 const CollapseIcon: React.FC<{ className?: string; collapsed?: boolean }> = ({ className, collapsed }) => (
@@ -514,6 +517,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onQuickAction,
   teamSettings,
   onUpdateTeam,
+  pitchSettings,
+  onUpdatePitch,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
 
@@ -522,6 +527,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     { id: 'layers', label: 'Layers' },
     { id: 'objects', label: 'Objects' },
     { id: 'teams', label: 'Teams' },
+    { id: 'pitch', label: 'Pitch' },
   ];
 
   return (
@@ -588,6 +594,12 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
               <TeamsPanel
                 teamSettings={teamSettings}
                 onUpdateTeam={onUpdateTeam}
+              />
+            )}
+            {activeTab === 'pitch' && pitchSettings && onUpdatePitch && (
+              <PitchPanel
+                pitchSettings={pitchSettings}
+                onUpdatePitch={onUpdatePitch}
               />
             )}
           </div>

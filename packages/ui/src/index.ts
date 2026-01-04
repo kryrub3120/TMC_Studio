@@ -40,3 +40,6 @@ export type { ZoomWidgetProps } from './ZoomWidget.js';
 
 export { TeamsPanel } from './TeamsPanel.js';
 export type { TeamsPanelProps } from './TeamsPanel.js';
+
+export { PitchPanel } from './PitchPanel.js';
+export type { PitchPanelProps } from './PitchPanel.js';

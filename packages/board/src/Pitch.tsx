@@ -4,15 +4,20 @@
 
 import React from 'react';
 import { Group, Rect, Line, Circle, Arc } from 'react-konva';
-import type { PitchConfig } from '@tmc/core';
+import type { PitchConfig, PitchSettings } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 
 export interface PitchProps {
   config: PitchConfig;
+  pitchSettings?: PitchSettings;
 }
 
 /** Football pitch with standard markings */
-export const Pitch: React.FC<PitchProps> = ({ config }) => {
+export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
   const { width, height, padding } = config;
+  
+  // Use provided settings or defaults
+  const settings = pitchSettings ?? DEFAULT_PITCH_SETTINGS;
   
   // Pitch dimensions (all relative to pitch size)
   const penaltyAreaWidth = width * 0.16;
@@ -23,9 +28,12 @@ export const Pitch: React.FC<PitchProps> = ({ config }) => {
   const penaltySpotDistance = width * 0.105;
   const cornerRadius = 8;
   const lineWidth = 2;
-  const lineColor = 'rgba(255, 255, 255, 0.8)';
-  const grassColor = '#2d8a3e';
-  const grassStripeColor = '#268735';
+  
+  // Use theme colors
+  const lineColor = settings.lineColor;
+  const grassColor = settings.primaryColor;
+  const grassStripeColor = settings.stripeColor;
+  const showStripes = settings.showStripes;
 
   // Calculate positions
   const penaltyAreaY = (height - penaltyAreaHeight) / 2;
@@ -44,8 +52,8 @@ export const Pitch: React.FC<PitchProps> = ({ config }) => {
         cornerRadius={4}
       />
       
-      {/* Grass stripes */}
-      {Array.from({ length: 10 }).map((_, i) => (
+      {/* Grass stripes - only if showStripes enabled */}
+      {showStripes && Array.from({ length: 10 }).map((_, i) => (
         i % 2 === 0 ? (
           <Rect
             key={`stripe-${i}`}
