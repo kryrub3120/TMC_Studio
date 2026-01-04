@@ -16,6 +16,8 @@ export interface BallNodeProps {
   isSelected: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
+  /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
+  onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
 }
 
 const BALL_RADIUS = 11;
@@ -27,9 +29,11 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   isSelected,
   onSelect,
   onDragEnd,
+  onDragStart,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [multiDragActive, setMultiDragActive] = useState(false);
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
@@ -37,7 +41,28 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
     onSelect(ball.id, addToSelection);
   };
 
-  const handleDragStart = () => {
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (onDragStart) {
+      const stage = e.target.getStage();
+      const rect = stage?.container().getBoundingClientRect();
+      if (rect) {
+        const shouldMultiDrag = onDragStart(
+          ball.id,
+          e.evt.clientX - rect.left,
+          e.evt.clientY - rect.top
+        );
+        if (shouldMultiDrag) {
+          e.cancelBubble = true;
+          setMultiDragActive(true);
+          return;
+        }
+      }
+    }
+    setMultiDragActive(false);
+  };
+
+  const handleDragStartKonva = () => {
+    if (multiDragActive) return;
     setIsDragging(true);
     if (groupRef.current) {
       groupRef.current.moveToTop();
@@ -73,10 +98,11 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
       ref={groupRef}
       x={ball.position.x}
       y={ball.position.y}
-      draggable
+      draggable={!multiDragActive}
       onClick={handleClick}
       onTap={handleClick}
-      onDragStart={handleDragStart}
+      onMouseDown={handleMouseDown}
+      onDragStart={handleDragStartKonva}
       onDragEnd={handleDragEnd}
     >
       {/* Selection ring */}

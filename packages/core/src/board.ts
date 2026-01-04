@@ -6,11 +6,16 @@ import {
   BoardElement,
   PlayerElement,
   BallElement,
+  ArrowElement,
+  ZoneElement,
   Position,
   Team,
   ElementId,
   PitchConfig,
   DEFAULT_PITCH_CONFIG,
+  ArrowType,
+  ZoneShape,
+  isArrowElement,
 } from './types.js';
 
 /** Generate a unique ID */
@@ -54,16 +59,71 @@ export function createBall(
   };
 }
 
-/** Update element position */
+/** Create a new arrow element */
+export function createArrow(
+  startPoint: Position,
+  arrowType: ArrowType = 'pass',
+  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
+): ArrowElement {
+  const snappedStart = snapToGrid(startPoint, gridSize);
+  return {
+    id: generateId(),
+    type: 'arrow',
+    arrowType,
+    startPoint: snappedStart,
+    endPoint: {
+      x: snappedStart.x + 80,
+      y: snappedStart.y,
+    },
+    strokeWidth: arrowType === 'pass' ? 3 : 2,
+  };
+}
+
+/** Create a new zone element */
+export function createZone(
+  position: Position,
+  shape: ZoneShape = 'rect',
+  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
+): ZoneElement {
+  return {
+    id: generateId(),
+    type: 'zone',
+    position: snapToGrid(position, gridSize),
+    width: 120,
+    height: 80,
+    shape,
+    fillColor: '#22c55e', // Green default
+    opacity: 0.25,
+    borderStyle: 'none',
+  };
+}
+
+/** Update element position (handles arrows differently) */
 export function moveElement(
   element: BoardElement,
   newPosition: Position,
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): BoardElement {
+  if (isArrowElement(element)) {
+    // For arrows, move both endpoints by the delta
+    const oldCenter = {
+      x: (element.startPoint.x + element.endPoint.x) / 2,
+      y: (element.startPoint.y + element.endPoint.y) / 2,
+    };
+    const snapped = snapToGrid(newPosition, gridSize);
+    const dx = snapped.x - oldCenter.x;
+    const dy = snapped.y - oldCenter.y;
+    return {
+      ...element,
+      startPoint: { x: element.startPoint.x + dx, y: element.startPoint.y + dy },
+      endPoint: { x: element.endPoint.x + dx, y: element.endPoint.y + dy },
+    };
+  }
+  // Elements with position (player, ball, zone)
   return {
     ...element,
     position: snapToGrid(newPosition, gridSize),
-  };
+  } as BoardElement;
 }
 
 /** Duplicate an element with new ID and offset position */
@@ -71,12 +131,28 @@ export function duplicateElement(
   element: BoardElement,
   offset: Position = { x: 20, y: 20 }
 ): BoardElement {
+  if (isArrowElement(element)) {
+    return {
+      ...element,
+      id: generateId(),
+      startPoint: {
+        x: element.startPoint.x + offset.x,
+        y: element.startPoint.y + offset.y,
+      },
+      endPoint: {
+        x: element.endPoint.x + offset.x,
+        y: element.endPoint.y + offset.y,
+      },
+    };
+  }
+  // Elements with position (player, ball, zone)
+  const el = element as PlayerElement | BallElement | ZoneElement;
   return {
-    ...element,
+    ...el,
     id: generateId(),
     position: {
-      x: element.position.x + offset.x,
-      y: element.position.y + offset.y,
+      x: el.position.x + offset.x,
+      y: el.position.y + offset.y,
     },
   };
 }

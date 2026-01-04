@@ -33,6 +33,14 @@ export interface LayerVisibility {
 
 export type LayerType = 'homePlayers' | 'awayPlayers' | 'ball' | 'arrows' | 'zones' | 'labels';
 
+export interface GroupData {
+  id: string;
+  name: string;
+  memberIds: string[];
+  locked: boolean;
+  visible: boolean;
+}
+
 export interface RightInspectorProps {
   isOpen: boolean;
   onToggle: () => void;
@@ -40,9 +48,14 @@ export interface RightInspectorProps {
   selectedElement?: InspectorElement;
   elements: ElementInList[];
   layerVisibility: LayerVisibility;
+  groups?: GroupData[];
   onUpdateElement?: (updates: { number?: number; label?: string }) => void;
   onSelectElement?: (id: string) => void;
   onToggleLayerVisibility?: (layer: LayerType) => void;
+  onSelectGroup?: (groupId: string) => void;
+  onToggleGroupLock?: (groupId: string) => void;
+  onToggleGroupVisibility?: (groupId: string) => void;
+  onRenameGroup?: (groupId: string, name: string) => void;
   onQuickAction?: (action: string) => void;
 }
 
@@ -86,6 +99,26 @@ const PlayerIcon: React.FC<{ className?: string }> = ({ className }) => (
 const BallIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="10" />
+  </svg>
+);
+
+const FolderIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const LockIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const UnlockIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 9.9-1" />
   </svg>
 );
 
@@ -223,11 +256,19 @@ const PropsTab: React.FC<{
   );
 };
 
-/** Layers Tab Content - Category visibility toggles */
+/** Layers Tab Content - Category visibility toggles + Groups */
 const LayersTab: React.FC<{
   layerVisibility: LayerVisibility;
+  groups?: GroupData[];
   onToggle?: (layer: LayerType) => void;
-}> = ({ layerVisibility, onToggle }) => {
+  onSelectGroup?: (groupId: string) => void;
+  onToggleGroupLock?: (groupId: string) => void;
+  onToggleGroupVisibility?: (groupId: string) => void;
+  onRenameGroup?: (groupId: string, name: string) => void;
+}> = ({ layerVisibility, groups, onToggle, onSelectGroup, onToggleGroupLock, onToggleGroupVisibility, onRenameGroup }) => {
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  
   const layers: { key: LayerType; label: string; color: string }[] = [
     { key: 'homePlayers', label: 'Home Players', color: '#e63946' },
     { key: 'awayPlayers', label: 'Away Players', color: '#457b9d' },
@@ -236,9 +277,101 @@ const LayersTab: React.FC<{
     { key: 'zones', label: 'Zones', color: '#888888' },
     { key: 'labels', label: 'Labels', color: '#888888' },
   ];
+  
+  const handleStartEdit = (group: GroupData, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingGroupId(group.id);
+    setEditingName(group.name);
+  };
+  
+  const handleFinishEdit = () => {
+    if (editingGroupId && editingName.trim()) {
+      onRenameGroup?.(editingGroupId, editingName.trim());
+    }
+    setEditingGroupId(null);
+    setEditingName('');
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleFinishEdit();
+    } else if (e.key === 'Escape') {
+      setEditingGroupId(null);
+      setEditingName('');
+    }
+  };
 
   return (
     <div className="py-2">
+      {/* Groups Section */}
+      {groups && groups.length > 0 && (
+        <div className="px-4 pb-2 mb-2 border-b border-border">
+          <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+            Groups
+          </div>
+          <div className="space-y-1">
+            {groups.map((group) => (
+              <div
+                key={group.id}
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface2 cursor-pointer transition-colors"
+                onClick={() => onSelectGroup?.(group.id)}
+              >
+                <FolderIcon className="h-4 w-4 text-accent flex-shrink-0" />
+                {editingGroupId === group.id ? (
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={handleFinishEdit}
+                    onKeyDown={handleKeyDown}
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                    className="flex-1 text-sm text-text bg-surface2 border border-accent rounded px-1 py-0.5 focus:outline-none"
+                  />
+                ) : (
+                  <span 
+                    className="flex-1 text-sm text-text truncate"
+                    onDoubleClick={(e) => handleStartEdit(group, e)}
+                    title="Double-click to rename"
+                  >
+                    {group.name}
+                  </span>
+                )}
+                <span className="text-xs text-muted">{group.memberIds.length}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleGroupLock?.(group.id); }}
+                  className="p-1 hover:bg-surface rounded transition-colors"
+                  title={group.locked ? 'Unlock group' : 'Lock group'}
+                >
+                  {group.locked ? (
+                    <LockIcon className="h-3 w-3 text-accent" />
+                  ) : (
+                    <UnlockIcon className="h-3 w-3 text-muted" />
+                  )}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleGroupVisibility?.(group.id); }}
+                  className="p-1 hover:bg-surface rounded transition-colors"
+                  title={group.visible ? 'Hide group' : 'Show group'}
+                >
+                  {group.visible ? (
+                    <EyeIcon className="h-3 w-3 text-accent" />
+                  ) : (
+                    <EyeOffIcon className="h-3 w-3 text-muted" />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Layers Section */}
+      <div className="px-4 pb-2">
+        <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+          Layers
+        </div>
+      </div>
       {layers.map((layer) => {
         const isVisible = layerVisibility[layer.key];
         return (
@@ -364,9 +497,14 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   selectedElement,
   elements,
   layerVisibility,
+  groups,
   onUpdateElement,
   onSelectElement,
   onToggleLayerVisibility,
+  onSelectGroup,
+  onToggleGroupLock,
+  onToggleGroupVisibility,
+  onRenameGroup,
   onQuickAction,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
@@ -421,7 +559,12 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
             {activeTab === 'layers' && (
               <LayersTab
                 layerVisibility={layerVisibility}
+                groups={groups}
                 onToggle={onToggleLayerVisibility}
+                onSelectGroup={onSelectGroup}
+                onToggleGroupLock={onToggleGroupLock}
+                onToggleGroupVisibility={onToggleGroupVisibility}
+                onRenameGroup={onRenameGroup}
               />
             )}
             {activeTab === 'objects' && (

@@ -35,6 +35,7 @@ export const Pitch: React.FC<PitchProps> = ({ config }) => {
     <Group x={padding} y={padding}>
       {/* Grass background with stripes */}
       <Rect
+        name="pitch-background"
         x={0}
         y={0}
         width={width}

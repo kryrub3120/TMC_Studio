@@ -6,9 +6,10 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_CONFIG, isPlayerElement, isBallElement } from '@tmc/core';
+import { DEFAULT_PITCH_CONFIG, isPlayerElement, isBallElement, isArrowElement, isZoneElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
-import { Pitch, PlayerNode, BallNode } from '@tmc/board';
+import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, ArrowPreview, ZonePreview, SelectionBox } from '@tmc/board';
+import { useState } from 'react';
 import {
   TopBar,
   RightInspector,
@@ -27,6 +28,14 @@ import { useUIStore, useInitializeTheme } from './store/useUIStore';
 /** Main App component */
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null);
+  
+  // Multi-drag state for moving multiple selected elements together
+  const multiDragRef = useRef<{
+    startMouseX: number;
+    startMouseY: number;
+    elementOffsets: Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position }>;
+  } | null>(null);
+  const [isMultiDragging, setIsMultiDragging] = useState(false);
 
   // Initialize theme on mount
   useInitializeTheme();
@@ -39,7 +48,10 @@ export default function App() {
   // Board store actions
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
+  const addArrowAtCursor = useBoardStore((s) => s.addArrowAtCursor);
+  const addZoneAtCursor = useBoardStore((s) => s.addZoneAtCursor);
   const moveElementById = useBoardStore((s) => s.moveElementById);
+  const resizeZone = useBoardStore((s) => s.resizeZone);
   const selectElement = useBoardStore((s) => s.selectElement);
   const clearSelection = useBoardStore((s) => s.clearSelection);
   const deleteSelected = useBoardStore((s) => s.deleteSelected);
@@ -54,6 +66,33 @@ export default function App() {
   const canRedoFn = useBoardStore((s) => s.canRedo);
   const pushHistory = useBoardStore((s) => s.pushHistory);
   const selectAll = useBoardStore((s) => s.selectAll);
+  const nudgeSelected = useBoardStore((s) => s.nudgeSelected);
+  const adjustSelectedStrokeWidth = useBoardStore((s) => s.adjustSelectedStrokeWidth);
+  const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
+  const selectElementsInRect = useBoardStore((s) => s.selectElementsInRect);
+  const updateArrowEndpoint = useBoardStore((s) => s.updateArrowEndpoint);
+  const createGroup = useBoardStore((s) => s.createGroup);
+  const ungroupSelection = useBoardStore((s) => s.ungroupSelection);
+  const groups = useBoardStore((s) => s.groups);
+  const selectGroup = useBoardStore((s) => s.selectGroup);
+  const toggleGroupLock = useBoardStore((s) => s.toggleGroupLock);
+  const toggleGroupVisibility = useBoardStore((s) => s.toggleGroupVisibility);
+  const renameGroup = useBoardStore((s) => s.renameGroup);
+  
+  // Get IDs of elements hidden by groups
+  const hiddenByGroup = useMemo(() => {
+    const hidden = new Set<string>();
+    for (const g of groups) {
+      if (!g.visible) {
+        g.memberIds.forEach((id) => hidden.add(id));
+      }
+    }
+    return hidden;
+  }, [groups]);
+
+  // Marquee selection state
+  const [marqueeStart, setMarqueeStart] = useState<Position | null>(null);
+  const [marqueeEnd, setMarqueeEnd] = useState<Position | null>(null);
 
   // UI store state
   const theme = useUIStore((s) => s.theme);
@@ -77,6 +116,8 @@ export default function App() {
   const zoomIn = useUIStore((s) => s.zoomIn);
   const zoomOut = useUIStore((s) => s.zoomOut);
   const zoomFit = useUIStore((s) => s.zoomFit);
+  const setActiveTool = useUIStore((s) => s.setActiveTool);
+  const activeTool = useUIStore((s) => s.activeTool);
 
   // Derived state
   const selectedElement = getSelectedElement();
@@ -87,15 +128,31 @@ export default function App() {
   // Prepare selected element for inspector
   const inspectorElement: InspectorElement | undefined = useMemo(() => {
     if (!selectedElement) return undefined;
-    return {
-      id: selectedElement.id,
-      type: selectedElement.type as 'player' | 'ball',
-      team: isPlayerElement(selectedElement) ? selectedElement.team : undefined,
-      number: isPlayerElement(selectedElement) ? selectedElement.number : undefined,
-      label: isPlayerElement(selectedElement) ? selectedElement.label : undefined,
-      x: selectedElement.position.x,
-      y: selectedElement.position.y,
-    };
+    
+    // Handle elements with position (players, ball, zones)
+    if (hasPosition(selectedElement)) {
+      return {
+        id: selectedElement.id,
+        type: selectedElement.type as 'player' | 'ball',
+        team: isPlayerElement(selectedElement) ? selectedElement.team : undefined,
+        number: isPlayerElement(selectedElement) ? selectedElement.number : undefined,
+        label: isPlayerElement(selectedElement) ? selectedElement.label : undefined,
+        x: selectedElement.position.x,
+        y: selectedElement.position.y,
+      };
+    }
+    
+    // Handle arrows (use startPoint as position)
+    if (isArrowElement(selectedElement)) {
+      return {
+        id: selectedElement.id,
+        type: 'arrow' as unknown as 'player' | 'ball', // TODO: extend InspectorElement type
+        x: selectedElement.startPoint.x,
+        y: selectedElement.startPoint.y,
+      };
+    }
+    
+    return undefined;
   }, [selectedElement]);
 
   // Prepare elements list for Objects tab
@@ -155,9 +212,9 @@ export default function App() {
       { id: 'add-home-player', label: 'Add Home Player', shortcut: 'P', category: 'elements', onExecute: () => addPlayerAtCursor('home') },
       { id: 'add-away-player', label: 'Add Away Player', shortcut: '⇧P', category: 'elements', onExecute: () => addPlayerAtCursor('away') },
       { id: 'add-ball', label: 'Add Ball', shortcut: 'B', category: 'elements', onExecute: () => addBallAtCursor() },
-      { id: 'add-pass-arrow', label: 'Add Pass Arrow', shortcut: 'A', category: 'elements', onExecute: () => showToast('Pass arrows coming soon') },
-      { id: 'add-run-arrow', label: 'Add Run Arrow', shortcut: 'R', category: 'elements', onExecute: () => showToast('Run arrows coming soon') },
-      { id: 'add-zone', label: 'Add Zone', shortcut: 'Z', category: 'elements', onExecute: () => showToast('Zones coming soon') },
+      { id: 'add-pass-arrow', label: 'Add Pass Arrow', shortcut: 'A', category: 'elements', onExecute: () => addArrowAtCursor('pass') },
+      { id: 'add-run-arrow', label: 'Add Run Arrow', shortcut: 'R', category: 'elements', onExecute: () => addArrowAtCursor('run') },
+      { id: 'add-zone', label: 'Add Zone', shortcut: 'Z', category: 'elements', onExecute: () => addZoneAtCursor() },
       { id: 'add-text', label: 'Add Text', shortcut: 'T', category: 'elements', onExecute: () => showToast('Text coming soon') },
 
       // Edit
@@ -186,7 +243,7 @@ export default function App() {
       { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: () => handleExport() },
       { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: () => showToast('Export steps coming soon') },
     ];
-  }, [addPlayerAtCursor, addBallAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo]);
+  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo]);
 
   // Export handler
   const handleExport = useCallback(() => {
@@ -244,6 +301,17 @@ export default function App() {
             duplicateSelected();
           }
           break;
+        case 'g':
+          if (isCmd && e.shiftKey) {
+            e.preventDefault();
+            ungroupSelection();
+            showToast('Ungrouped');
+          } else if (isCmd) {
+            e.preventDefault();
+            createGroup();
+            showToast('Group created');
+          }
+          break;
         case 'z':
           if (isCmd && e.shiftKey) {
             e.preventDefault();
@@ -251,6 +319,9 @@ export default function App() {
           } else if (isCmd) {
             e.preventDefault();
             undo();
+          } else {
+            e.preventDefault();
+            setActiveTool('zone');
           }
           break;
         case 's':
@@ -264,6 +335,15 @@ export default function App() {
           if (isCmd) {
             e.preventDefault();
             selectAll();
+          } else if (!e.shiftKey) {
+            e.preventDefault();
+            setActiveTool('arrow-pass');
+          }
+          break;
+        case 'r':
+          if (!isCmd) {
+            e.preventDefault();
+            setActiveTool('arrow-run');
           }
           break;
         case 'i':
@@ -290,6 +370,42 @@ export default function App() {
         case 'escape':
           clearSelection();
           break;
+        case 'arrowup':
+          e.preventDefault();
+          if (e.altKey) {
+            cycleSelectedColor(-1);
+            showToast('Previous color');
+          } else {
+            nudgeSelected(0, e.shiftKey ? -1 : -5);
+          }
+          break;
+        case 'arrowdown':
+          e.preventDefault();
+          if (e.altKey) {
+            cycleSelectedColor(1);
+            showToast('Next color');
+          } else {
+            nudgeSelected(0, e.shiftKey ? 1 : 5);
+          }
+          break;
+        case 'arrowleft':
+          e.preventDefault();
+          if (e.altKey) {
+            adjustSelectedStrokeWidth(-1);
+            showToast('Thinner stroke');
+          } else {
+            nudgeSelected(e.shiftKey ? -1 : -5, 0);
+          }
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          if (e.altKey) {
+            adjustSelectedStrokeWidth(1);
+            showToast('Thicker stroke');
+          } else {
+            nudgeSelected(e.shiftKey ? 1 : 5, 0);
+          }
+          break;
         case '=':
         case '+':
           if (isCmd) {
@@ -311,7 +427,7 @@ export default function App() {
           break;
       }
     },
-    [commandPaletteOpen, closeCommandPalette, openCommandPalette, addPlayerAtCursor, addBallAtCursor, duplicateSelected, undo, redo, saveDocument, selectAll, toggleInspector, toggleFocusMode, toggleCheatSheet, deleteSelected, clearSelection, showToast, zoomIn, zoomOut, zoomFit]
+    [commandPaletteOpen, closeCommandPalette, openCommandPalette, addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, undo, redo, saveDocument, selectAll, toggleInspector, toggleFocusMode, toggleCheatSheet, deleteSelected, clearSelection, showToast, zoomIn, zoomOut, zoomFit, setActiveTool, nudgeSelected, adjustSelectedStrokeWidth, cycleSelectedColor, createGroup, ungroupSelection]
   );
 
   useEffect(() => {
@@ -319,16 +435,202 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Stage event handlers
+  // Multi-drag window event handlers
+  useEffect(() => {
+    if (!isMultiDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!multiDragRef.current) return;
+      
+      const stage = stageRef.current;
+      if (!stage) return;
+      
+      const rect = stage.container().getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      const dx = mouseX - multiDragRef.current.startMouseX;
+      const dy = mouseY - multiDragRef.current.startMouseY;
+      
+      // Update all selected elements
+      multiDragRef.current.elementOffsets.forEach((offset, id) => {
+        if (offset.isArrow && offset.startPoint && offset.endPoint) {
+          // For arrows, update both endpoints
+          updateArrowEndpoint(id, 'start', {
+            x: offset.startPoint.x + dx,
+            y: offset.startPoint.y + dy,
+          });
+          updateArrowEndpoint(id, 'end', {
+            x: offset.endPoint.x + dx,
+            y: offset.endPoint.y + dy,
+          });
+        } else {
+          // For position-based elements
+          moveElementById(id, {
+            x: offset.x + dx,
+            y: offset.y + dy,
+          });
+        }
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsMultiDragging(false);
+      multiDragRef.current = null;
+      pushHistory();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isMultiDragging, moveElementById, updateArrowEndpoint, pushHistory]);
+
+  // Start multi-drag when dragging a selected element that's part of multi-selection
+  const startMultiDrag = useCallback((draggedId: string, mouseX: number, mouseY: number): boolean => {
+    if (selectedIds.length <= 1) return false;
+    if (!selectedIds.includes(draggedId)) return false;
+
+    const offsets = new Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position }>();
+
+    for (const id of selectedIds) {
+      const el = elements.find((e) => e.id === id);
+      if (!el) continue;
+
+      if (isArrowElement(el)) {
+        offsets.set(id, {
+          x: 0,
+          y: 0,
+          isArrow: true,
+          startPoint: { ...el.startPoint },
+          endPoint: { ...el.endPoint },
+        });
+      } else if (hasPosition(el)) {
+        offsets.set(id, {
+          x: el.position.x,
+          y: el.position.y,
+        });
+      }
+    }
+
+    multiDragRef.current = {
+      startMouseX: mouseX,
+      startMouseY: mouseY,
+      elementOffsets: offsets,
+    };
+    setIsMultiDragging(true);
+    return true;
+  }, [selectedIds, elements]);
+
+  // Get drawing actions from board store
+  const startDrawing = useBoardStore((s) => s.startDrawing);
+  const updateDrawing = useBoardStore((s) => s.updateDrawing);
+  const finishArrowDrawing = useBoardStore((s) => s.finishArrowDrawing);
+  const finishZoneDrawing = useBoardStore((s) => s.finishZoneDrawing);
+  const drawingStart = useBoardStore((s) => s.drawingStart);
+  const drawingEnd = useBoardStore((s) => s.drawingEnd);
+  const clearActiveTool = useUIStore((s) => s.clearActiveTool);
+
+  // Stage event handlers (use any event type for compatibility)
+  const handleStageMouseDown = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (e: any) => {
+      const stage = e.target.getStage();
+      const pos = stage?.getPointerPosition();
+      if (!pos) return;
+      
+      // If a tool is active, start drawing
+      if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'zone') {
+        startDrawing(pos);
+      } else if (!activeTool) {
+        // Check if we clicked on an interactive element (they have id starting with specific prefixes)
+        const target = e.target;
+        const isStage = target === stage;
+        const isLayer = target.nodeType === 'Layer';
+        const isPitchElement = target.name()?.startsWith('pitch') || !target.name();
+        const isInteractive = target.id() && (
+          target.id().startsWith('player-') ||
+          target.id().startsWith('ball-') ||
+          target.id().startsWith('arrow-') ||
+          target.id().startsWith('zone-')
+        );
+        
+        // Start marquee selection if clicking on empty space (not on interactive elements)
+        if ((isStage || isLayer || isPitchElement) && !isInteractive) {
+          setMarqueeStart(pos);
+          setMarqueeEnd(pos);
+        }
+      }
+    },
+    [activeTool, startDrawing]
+  );
+
+  const handleStageMouseMove = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (e: any) => {
+      const stage = e.target.getStage();
+      const pos = stage?.getPointerPosition();
+      if (!pos) return;
+      
+      // If drawing, update the end position
+      if (drawingStart) {
+        updateDrawing(pos);
+      }
+      // If marquee selection, update end
+      if (marqueeStart) {
+        setMarqueeEnd(pos);
+      }
+    },
+    [drawingStart, updateDrawing, marqueeStart]
+  );
+
+  const handleStageMouseUp = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (e: any) => {
+      const stage = e.target.getStage();
+      const pos = stage?.getPointerPosition();
+      
+      // If drawing, finish the element
+      if (drawingStart && pos) {
+        if (activeTool === 'arrow-pass') {
+          finishArrowDrawing('pass');
+          clearActiveTool();
+        } else if (activeTool === 'arrow-run') {
+          finishArrowDrawing('run');
+          clearActiveTool();
+        } else if (activeTool === 'zone') {
+          finishZoneDrawing('rect');
+          clearActiveTool();
+        }
+      }
+      
+      // Finish marquee selection
+      if (marqueeStart && marqueeEnd) {
+        selectElementsInRect(marqueeStart, marqueeEnd);
+        setMarqueeStart(null);
+        setMarqueeEnd(null);
+      }
+    },
+    [activeTool, drawingStart, finishArrowDrawing, finishZoneDrawing, clearActiveTool, marqueeStart, marqueeEnd, selectElementsInRect]
+  );
+
   const handleStageClick = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
+      // Don't clear if marquee was active (selection was made via drag)
+      // Also skip if tool is active
+      if (activeTool) return;
+      
+      // Click without drag = clear selection
       const clickedOnEmpty = e.target === e.target.getStage() || 
                              e.target.name() === 'pitch-background';
-      if (clickedOnEmpty) {
+      if (clickedOnEmpty && !marqueeStart) {
         clearSelection();
       }
     },
-    [clearSelection]
+    [clearSelection, activeTool, marqueeStart]
   );
 
   const handleElementSelect = useCallback(
@@ -385,12 +687,57 @@ export default function App() {
               height={canvasHeight}
               onClick={handleStageClick}
               onTap={handleStageClick}
+              onMouseDown={handleStageMouseDown}
+              onTouchStart={handleStageMouseDown}
+              onMouseUp={handleStageMouseUp}
+              onTouchEnd={handleStageMouseUp}
+              onMouseMove={handleStageMouseMove}
+              onTouchMove={handleStageMouseMove}
             >
               <Layer>
                 <Pitch config={DEFAULT_PITCH_CONFIG} />
 
+                {/* Zones (lowest z-order) - filtered by layer visibility */}
+                {layerVisibility.zones && elements
+                  .filter(isZoneElement)
+                  .map((zone) => (
+                    <ZoneNode
+                      key={zone.id}
+                      zone={zone}
+                      pitchConfig={DEFAULT_PITCH_CONFIG}
+                      isSelected={selectedIds.includes(zone.id)}
+                      onSelect={handleElementSelect}
+                      onDragEnd={handleElementDragEnd}
+                      onResize={resizeZone}
+                    />
+                  ))}
+
+                {/* Arrows - filtered by layer visibility */}
+                {layerVisibility.arrows && elements
+                  .filter(isArrowElement)
+                  .map((arrow) => (
+                    <ArrowNode
+                      key={arrow.id}
+                      arrow={arrow}
+                      pitchConfig={DEFAULT_PITCH_CONFIG}
+                      isSelected={selectedIds.includes(arrow.id)}
+                      onSelect={handleElementSelect}
+                      onDragEnd={handleElementDragEnd}
+                      onEndpointDrag={(id, endpoint, pos) => {
+                        updateArrowEndpoint(id, endpoint, pos);
+                        pushHistory();
+                      }}
+                    />
+                  ))}
+
+                {/* Players - filtered by team visibility and group visibility */}
                 {elements
                   .filter(isPlayerElement)
+                  .filter((player) => !hiddenByGroup.has(player.id))
+                  .filter((player) => 
+                    (player.team === 'home' && layerVisibility.homePlayers) ||
+                    (player.team === 'away' && layerVisibility.awayPlayers)
+                  )
                   .map((player) => (
                     <PlayerNode
                       key={player.id}
@@ -399,11 +746,14 @@ export default function App() {
                       isSelected={selectedIds.includes(player.id)}
                       onSelect={handleElementSelect}
                       onDragEnd={handleElementDragEnd}
+                      onDragStart={startMultiDrag}
                     />
                   ))}
 
-                {elements
+                {/* Ball (highest z-order) - filtered by layer visibility and group visibility */}
+                {layerVisibility.ball && elements
                   .filter(isBallElement)
+                  .filter((ball) => !hiddenByGroup.has(ball.id))
                   .map((ball) => (
                     <BallNode
                       key={ball.id}
@@ -412,8 +762,36 @@ export default function App() {
                       isSelected={selectedIds.includes(ball.id)}
                       onSelect={handleElementSelect}
                       onDragEnd={handleElementDragEnd}
+                      onDragStart={startMultiDrag}
                     />
                   ))}
+
+                {/* Drawing preview - ghost while dragging */}
+                {drawingStart && drawingEnd && (activeTool === 'arrow-pass' || activeTool === 'arrow-run') && (
+                  <ArrowPreview
+                    start={drawingStart}
+                    end={drawingEnd}
+                    type={activeTool === 'arrow-pass' ? 'pass' : 'run'}
+                  />
+                )}
+                {drawingStart && drawingEnd && activeTool === 'zone' && (
+                  <ZonePreview
+                    start={drawingStart}
+                    end={drawingEnd}
+                    shape="rect"
+                  />
+                )}
+
+                {/* Marquee selection box */}
+                {marqueeStart && marqueeEnd && (
+                  <SelectionBox
+                    x={marqueeStart.x}
+                    y={marqueeStart.y}
+                    width={marqueeEnd.x - marqueeStart.x}
+                    height={marqueeEnd.y - marqueeStart.y}
+                    visible={true}
+                  />
+                )}
               </Layer>
             </Stage>
           </div>
@@ -444,9 +822,14 @@ export default function App() {
             selectedElement={inspectorElement}
             elements={elementsList}
             layerVisibility={layerVisibility}
+            groups={groups}
             onUpdateElement={handleUpdateElement}
             onSelectElement={(id) => selectElement(id, false)}
             onToggleLayerVisibility={toggleLayerVisibility}
+            onSelectGroup={selectGroup}
+            onToggleGroupLock={toggleGroupLock}
+            onToggleGroupVisibility={toggleGroupVisibility}
+            onRenameGroup={renameGroup}
             onQuickAction={handleQuickAction}
           />
         )}

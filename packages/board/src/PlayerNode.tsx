@@ -15,6 +15,8 @@ export interface PlayerNodeProps {
   isSelected: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
+  /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
+  onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
 }
 
 /** Team colors */
@@ -42,9 +44,11 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   isSelected,
   onSelect,
   onDragEnd,
+  onDragStart,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [multiDragActive, setMultiDragActive] = useState(false);
   const colors = TEAM_COLORS[player.team];
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -53,7 +57,30 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     onSelect(player.id, addToSelection);
   };
 
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Check if multi-drag should handle this
+    if (onDragStart) {
+      const stage = e.target.getStage();
+      const rect = stage?.container().getBoundingClientRect();
+      if (rect) {
+        const shouldMultiDrag = onDragStart(
+          player.id,
+          e.evt.clientX - rect.left,
+          e.evt.clientY - rect.top
+        );
+        if (shouldMultiDrag) {
+          // Prevent default Konva drag
+          e.cancelBubble = true;
+          setMultiDragActive(true);
+          return;
+        }
+      }
+    }
+    setMultiDragActive(false);
+  };
+
   const handleDragStart = () => {
+    if (multiDragActive) return; // Skip if multi-drag is handling this
     setIsDragging(true);
     // Visual feedback during drag
     if (groupRef.current) {
@@ -82,9 +109,10 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       ref={groupRef}
       x={player.position.x}
       y={player.position.y}
-      draggable
+      draggable={!multiDragActive}
       onClick={handleClick}
       onTap={handleClick}
+      onMouseDown={handleMouseDown}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >

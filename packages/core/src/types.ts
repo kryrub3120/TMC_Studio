@@ -33,8 +33,40 @@ export interface BallElement extends BoardElementBase {
   type: 'ball';
 }
 
+/** Arrow types for tactical movements */
+export type ArrowType = 'pass' | 'run';
+
+/** Arrow element (pass/run lines) */
+export interface ArrowElement {
+  id: ElementId;
+  type: 'arrow';
+  arrowType: ArrowType;
+  startPoint: Position;
+  endPoint: Position;
+  curveControl?: Position; // Optional bezier control point
+  color?: string;
+  strokeWidth?: number;
+}
+
+/** Zone shape types */
+export type ZoneShape = 'rect' | 'ellipse';
+
+/** Zone element (highlighted areas) */
+export interface ZoneElement {
+  id: ElementId;
+  type: 'zone';
+  position: Position; // Top-left corner
+  width: number;
+  height: number;
+  shape: ZoneShape;
+  fillColor: string;
+  opacity: number;
+  borderStyle?: 'solid' | 'dashed' | 'none';
+  borderColor?: string;
+}
+
 /** Union type for all board elements */
-export type BoardElement = PlayerElement | BallElement;
+export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement;
 
 /** Pitch dimensions configuration */
 export interface PitchConfig {
@@ -92,4 +124,17 @@ export function isPlayerElement(element: BoardElement): element is PlayerElement
 
 export function isBallElement(element: BoardElement): element is BallElement {
   return element.type === 'ball';
+}
+
+export function isArrowElement(element: BoardElement): element is ArrowElement {
+  return element.type === 'arrow';
+}
+
+export function isZoneElement(element: BoardElement): element is ZoneElement {
+  return element.type === 'zone';
+}
+
+/** Check if element has a single position (player, ball, zone) */
+export function hasPosition(element: BoardElement): element is PlayerElement | BallElement | ZoneElement {
+  return 'position' in element;
 }

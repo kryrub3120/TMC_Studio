@@ -1,279 +1,189 @@
-# TMC Studio — Tactical Board and Animation
+# TMC Studio — Tactical Board & Animation
 
-**by Tactics Made Clear**
+**Fast, professional football tactics board for analysts, coaches, and content creators.**
 
-Ultra-fast football tactics board with step-based animation for analysts.
-
-## 🎯 Features (MVP)
-
-- **Full Football Pitch** - Realistic pitch rendering with standard markings
-- **Player Management** - 11 Home (red) + 11 Away (blue) players with numbers
-- **Ball Element** - Add and position the ball on the pitch
-- **Selection** - Single click or multi-select with Shift/Ctrl+Click
-- **Drag & Snap** - Drag players and ball with snap-to-grid functionality
-- **Undo/Redo** - Full history support
-- **Save/Load** - Persist your board to localStorage
-- **Keyboard Shortcuts** - Fast workflow with keyboard controls
-
-## ⌨️ Keyboard Shortcuts
-
-### Command Palette
-| Key | Action |
-|-----|--------|
-| `Cmd/Ctrl + K` | Open command palette (search any action) |
-
-### Elements
-| Key | Action |
-|-----|--------|
-| `P` | Add Home player at cursor |
-| `Shift + P` | Add Away player at cursor |
-| `B` | Add ball at cursor |
-
-### Edit
-| Key | Action |
-|-----|--------|
-| `Cmd/Ctrl + D` | Duplicate selection |
-| `Cmd/Ctrl + Z` | Undo |
-| `Shift + Cmd/Ctrl + Z` | Redo |
-| `Cmd/Ctrl + A` | Select all |
-| `Cmd/Ctrl + S` | Save to localStorage |
-| `Delete/Backspace` | Delete selection |
-| `Escape` | Clear selection |
-
-### View
-| Key | Action |
-|-----|--------|
-| `F` | Toggle Focus Mode (hide UI) |
-| `I` | Toggle Inspector Panel |
-| `?` | Toggle Keyboard Shortcuts |
-
-### Steps & Animation
-| Key | Action |
-|-----|--------|
-| `N` | Add new step |
-| `←` / `→` | Previous / Next step |
-| `Space` | Play / Pause |
-| `L` | Toggle Loop |
+Built by [Tactics Made Clear](https://tacticsmadeclear.com)
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- pnpm 9+
-
-### Installation
-
 ```bash
-# Install pnpm if not already installed
-npm install -g pnpm
-
 # Install dependencies
 pnpm install
 
 # Start development server
 pnpm dev
-```
 
-The app will open at [http://localhost:3000](http://localhost:3000)
-
-### Build for Production
-
-```bash
+# Build for production
 pnpm build
 ```
 
-## 📁 Project Structure
-
-```
-tmc-studio/
-├── apps/
-│   └── web/                    # React + Vite web application
-│       ├── src/
-│       │   ├── App.tsx         # Main application component
-│       │   ├── main.tsx        # Entry point
-│       │   ├── index.css       # Global styles (Tailwind)
-│       │   └── store/
-│       │       └── useBoardStore.ts  # Zustand state management
-│       ├── index.html
-│       ├── vite.config.ts
-│       └── tailwind.config.js
-│
-├── packages/
-│   ├── core/                   # Core TypeScript library
-│   │   └── src/
-│   │       ├── types.ts        # Type definitions
-│   │       ├── board.ts        # Board operations
-│   │       ├── step.ts         # Animation step management
-│   │       └── serialization.ts # Save/Load utilities
-│   │
-│   ├── board/                  # React-Konva canvas components
-│   │   └── src/
-│   │       ├── Pitch.tsx       # Football pitch rendering
-│   │       ├── PlayerNode.tsx  # Draggable player circle
-│   │       ├── BallNode.tsx    # Draggable ball element
-│   │       └── SelectionBox.tsx # Multi-select rectangle
-│   │
-│   ├── ui/                     # UI components (Tailwind)
-│   │   └── src/
-│   │       ├── Button.tsx      # Reusable button component
-│   │       ├── Toolbar.tsx     # Main toolbar
-│   │       └── RightPanel.tsx  # Properties panel
-│   │
-│   └── presets/                # Formation presets (placeholder)
-│       └── src/
-│           └── formations.ts   # Formation schemas
-│
-├── package.json                # Root package.json
-├── pnpm-workspace.yaml         # PNPM workspace config
-├── turbo.json                  # Turborepo config
-└── tsconfig.json               # Root TypeScript config
-```
-
-## 🏗️ Data Model
-
-### BoardDocument
-
-The main document structure for saving/loading:
-
-```typescript
-interface BoardDocument {
-  version: string;          // Document version (e.g., "1.0.0")
-  name: string;             // Board name
-  createdAt: string;        // ISO timestamp
-  updatedAt: string;        // ISO timestamp
-  currentStepIndex: number; // Active step index
-  steps: Step[];            // Animation steps
-  pitchConfig: PitchConfig; // Pitch dimensions
-}
-```
-
-### BoardElement
-
-Elements on the board (players or ball):
-
-```typescript
-// Player element
-interface PlayerElement {
-  id: string;
-  type: 'player';
-  position: { x: number; y: number };
-  team: 'home' | 'away';
-  number: number;
-  label?: string;
-}
-
-// Ball element
-interface BallElement {
-  id: string;
-  type: 'ball';
-  position: { x: number; y: number };
-}
-```
-
-### Step (Animation)
-
-Each step represents a frame in the animation:
-
-```typescript
-interface Step {
-  id: string;
-  name: string;
-  elements: BoardElement[];
-  duration: number; // milliseconds
-}
-```
-
-### PitchConfig
-
-Pitch dimensions and grid settings:
-
-```typescript
-interface PitchConfig {
-  width: number;    // Pitch width (default: 1050)
-  height: number;   // Pitch height (default: 680)
-  padding: number;  // Padding around pitch (default: 40)
-  gridSize: number; // Snap grid size (default: 10)
-}
-```
-
-## 🛠️ Technology Stack
-
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite 5
-- **Canvas**: Konva + react-konva
-- **State Management**: Zustand
-- **Styling**: Tailwind CSS
-- **Monorepo**: pnpm + Turborepo
-
-## 🔮 Architecture (Future-Ready)
-
-The architecture is designed for:
-
-- **Desktop App**: Ready for Tauri integration
-- **Animation Timeline**: Step-based animation system in place
-- **Formation Presets**: Schema placeholders ready
-- **Export Features**: Serialization utilities implemented
-
-## 📦 Package Commands
-
-### Root commands
-
-```bash
-pnpm dev        # Start all packages in dev mode
-pnpm build      # Build all packages
-pnpm typecheck  # TypeScript type checking
-pnpm clean      # Clean all build artifacts
-```
-
-### Package-specific
-
-```bash
-# Run only web app
-pnpm --filter @tmc/web dev
-
-# Build only core package
-pnpm --filter @tmc/core build
-```
-
-## 🎨 Design System
-
-### Theme Support
-
-TMC Studio supports both **Light** and **Dark** themes, with automatic persistence of your preference.
-
-### Colors
-
-- **Home Team**: Red (`#e63946`)
-- **Away Team**: Blue (`#457b9d`)
-- **Ball**: White (`#ffffff`)
-- **Selection**: Yellow (`#ffd60a`)
-- **Pitch**: Green (`#2d8a3e`)
-- **Accent**: Emerald (`#12CFA0`)
-
-### UI Components
-
-The UI package (`@tmc/ui`) provides:
-
-| Component | Description |
-|-----------|-------------|
-| `TopBar` | Header with logo, project name, theme toggle, and actions |
-| `RightInspector` | Collapsible properties panel with Props/Layers tabs |
-| `BottomStepsBar` | Animation timeline with step chips and playback controls |
-| `CommandPaletteModal` | VS Code-style command search (Cmd/Ctrl+K) |
-| `CheatSheetOverlay` | Keyboard shortcuts reference card |
-| `ToastHint` | Brief notification for tool activations |
-
-### UI Architecture
-
-- **Focus Mode**: Press `F` to hide all UI and focus on the canvas
-- **Command Palette First**: Access any action via `Cmd/Ctrl + K`
-- **Responsive Inspector**: Toggle with `I` key or collapse button
-
-## 📝 License
-
-MIT © Tactics Made Clear
+Open http://localhost:5173
 
 ---
 
-**TMC Studio** — Making tactics clear, one board at a time.
+## 📖 User Guide
+
+### Keyboard Shortcuts
+
+| Action | Shortcut |
+|--------|----------|
+| **Elements** |  |
+| Add Home Player | `P` |
+| Add Away Player | `Shift+P` |
+| Add Ball | `B` |
+| Add Pass Arrow | `A` (then drag) |
+| Add Run Arrow | `R` (then drag) |
+| Add Zone | `Z` (then drag) |
+| **Selection** |  |
+| Select All | `Cmd/Ctrl+A` |
+| Clear Selection | `Escape` |
+| Multi-select | `Shift+Click` |
+| Marquee Select | Click+Drag on empty area |
+| **Edit** |  |
+| Duplicate | `Cmd/Ctrl+D` |
+| Delete | `Delete` / `Backspace` |
+| Undo | `Cmd/Ctrl+Z` |
+| Redo | `Shift+Cmd/Ctrl+Z` |
+| **Groups** |  |
+| Create Group | `Ctrl+G` |
+| Ungroup | `Ctrl+Shift+G` |
+| **View** |  |
+| Toggle Inspector | `I` |
+| Focus Mode | `F` |
+| Show Shortcuts | `?` |
+| Zoom In | `Cmd/Ctrl++` |
+| Zoom Out | `Cmd/Ctrl+-` |
+| Zoom Fit | `Shift+1` |
+| **Move Elements** |  |
+| Nudge 5px | `Arrow keys` |
+| Nudge 1px | `Shift+Arrow keys` |
+| Cycle Color | `Alt+Up/Down` |
+| Stroke Width | `Alt+Left/Right` |
+| **Other** |  |
+| Command Palette | `Cmd/Ctrl+K` |
+| Save | `Cmd/Ctrl+S` |
+| Export PNG | `Cmd/Ctrl+E` |
+
+### Features
+
+#### 🎯 Elements
+- **Players**: Home (red) and Away (blue) with jersey numbers
+- **Ball**: Standard football
+- **Arrows**: Pass (dashed white) and Run (solid blue) arrows
+- **Zones**: Rectangular highlight areas
+
+#### 📐 Drawing Tools
+- Click `A`, `R`, or `Z` to activate tool
+- Click and drag on pitch to draw
+- Tool auto-deactivates after drawing
+
+#### 🎨 Inspector Panel (press `I`)
+- **Props tab**: Edit selected element properties
+- **Layers tab**: Toggle visibility by category + manage groups
+- **Objects tab**: Search and select elements
+
+#### 📦 Groups
+- Select multiple elements → `Ctrl+G` to group
+- Groups appear in Layers tab
+- Double-click group name to rename
+- Click eye icon to hide/show all group members
+- Click lock icon to lock group (coming soon)
+- `Ctrl+Shift+G` to ungroup
+
+#### 🔍 Zoom
+- Use widget in bottom-right corner
+- `Cmd/Ctrl++` / `Cmd/Ctrl+-`
+- `Shift+1` to fit to screen
+
+#### 🎬 Focus Mode
+- Press `F` to hide all UI
+- Hover top edge to exit
+
+---
+
+## 🏗️ Architecture
+
+### Monorepo Structure
+
+```
+TMC Studio/
+├── apps/
+│   └── web/              # React + Vite web app
+├── packages/
+│   ├── core/             # Data models, serialization
+│   ├── board/            # Konva canvas components
+│   ├── ui/               # UI components (TopBar, Inspector, etc.)
+│   └── presets/          # Formations, templates (WIP)
+├── docs/                 # Documentation
+└── tasks/                # Development tasks
+```
+
+### Tech Stack
+- **Framework**: React 18 + Vite
+- **Canvas**: Konva (react-konva)
+- **State**: Zustand
+- **Styling**: Tailwind CSS
+- **Build**: pnpm + Turborepo
+- **Language**: TypeScript (strict mode)
+
+### Data Model
+
+```typescript
+// Board Document
+interface BoardDocument {
+  id: string;
+  name: string;
+  steps: Step[];        // Animation frames
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Step (animation frame)
+interface Step {
+  id: string;
+  elements: BoardElement[];
+  duration: number;
+}
+
+// Elements
+type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement;
+```
+
+---
+
+## 🛠️ Development
+
+### Commands
+
+```bash
+pnpm dev          # Start dev server
+pnpm build        # Production build
+pnpm lint         # Run ESLint
+pnpm typecheck    # TypeScript check
+pnpm clean        # Clean build artifacts
+```
+
+### Adding a Package
+
+```bash
+# Add to specific workspace
+pnpm add <package> --filter @tmc/web
+
+# Add dev dependency
+pnpm add -D <package> --filter @tmc/core
+```
+
+### Project Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Start web dev server |
+| `pnpm build` | Build all packages |
+| `pnpm lint` | Lint all packages |
+| `pnpm typecheck` | Type-check all packages |
+
+---
+
+## 📄 License
+
+MIT © Tactics Made Clear

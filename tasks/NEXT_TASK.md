@@ -1,74 +1,125 @@
-# Sprint D Completion + Remaining P0 Features
+# S1.8 Part 2: Groups UI in Inspector
 
 ## Goal
-Complete Sprint D: Zoom integration, Smart Numbering, Account Menu, Locked Presets upsell, Duplicate offset.
+Add Groups section in RightInspector Layers tab.
 
-## Inputs
-- `apps/web/src/store/useUIStore.ts` - has zoom state ready (zoom, zoomIn, zoomOut, zoomFit, setZoom)
-- `packages/ui/src/ZoomWidget.tsx` - ZoomWidget component ready
-- `apps/web/src/App.tsx` - needs zoom integration + keyboard shortcuts
-- `apps/web/src/store/useBoardStore.ts` - needs smart numbering + duplicate offset
+## Completed This Session ✅
+- **S1.6 Multi-Selection Drag** - Players + Ball drag together
+- **S1.7 Groups System Core** - Ctrl+G/Ctrl+Shift+G working
+- **S1.8 Part 1 Store Actions** - All group management functions
 
-## Current State (completed)
-- [x] D1: Ball Vector - professional pentagon pattern ball 
-- [x] D2: Zoom store in useUIStore (zoom, zoomIn, zoomOut, zoomFit)
-- [x] D2: ZoomWidget component exported from @tmc/ui
-- [ ] D2: Integrate ZoomWidget in App.tsx
-- [ ] D2: Add zoom keyboard shortcuts (Cmd+/-, Shift+1)
-- [ ] D2: Apply scale to Stage
-- [ ] D3: Smart Numbering (next free number)
-- [ ] D4: Account Menu + Plan Badge in TopBar
-- [ ] D5: Locked Presets in Command Palette
-- [ ] D6: Duplicate with offset (+12px)
+### Store Functions Ready
+```typescript
+// useBoardStore exports
+- createGroup()           // Creates group from selected (min 2)
+- ungroupSelection()      // Removes groups containing selected
+- selectGroup(id)         // Selects all group members
+- getGroups()            // Returns Group[]
+- toggleGroupLock(id)    // Toggle locked state
+- toggleGroupVisibility(id) // Toggle visible state
+- renameGroup(id, name)  // Rename group
+```
 
-## Deliverables
-- [ ] `apps/web/src/App.tsx` - ZoomWidget integrated, Stage scaled, zoom shortcuts
-- [ ] `apps/web/src/store/useBoardStore.ts` - getNextFreeNumber(), duplicateSelected with offset
-- [ ] `packages/ui/src/TopBar.tsx` - Account menu dropdown
-- [ ] `packages/ui/src/CommandPaletteModal.tsx` - Locked preset actions with 🔒
+## TODO: Groups UI (~30 min)
 
-## Step-by-step Plan
+### 1. Add Group type export to @tmc/ui (`packages/ui/src/index.ts`)
+```typescript
+// Add Group to exported types in RightInspector
+export interface GroupData {
+  id: string;
+  name: string;
+  memberIds: string[];
+  locked: boolean;
+  visible: boolean;
+}
+```
 
-### D2 Complete: Zoom Integration (~15min)
-1. Import ZoomWidget in App.tsx
-2. Add zoom state from useUIStore
-3. Render ZoomWidget in canvas area
-4. Apply scale transform to Stage
-5. Add keyboard shortcuts: Cmd+Plus, Cmd+Minus, Shift+1
+### 2. Update RightInspector Props
+```typescript
+// packages/ui/src/RightInspector.tsx
+interface RightInspectorProps {
+  // existing props...
+  groups?: GroupData[];
+  onSelectGroup?: (groupId: string) => void;
+  onToggleGroupLock?: (groupId: string) => void;
+  onToggleGroupVisibility?: (groupId: string) => void;
+}
+```
 
-### D3: Smart Numbering (~10min)
-1. Add getNextFreeNumber(team) to useBoardStore
-2. Use in addPlayerAtCursor() to auto-increment
+### 3. Add Groups Section in Layers Tab
+```tsx
+{/* In Layers tab, before individual layer toggles */}
+{groups && groups.length > 0 && (
+  <div className="space-y-1 mb-4">
+    <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+      Groups
+    </div>
+    {groups.map((group) => (
+      <div
+        key={group.id}
+        className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface2 cursor-pointer transition-colors"
+        onClick={() => onSelectGroup?.(group.id)}
+      >
+        <FolderIcon className="h-4 w-4 text-accent" />
+        <span className="flex-1 text-sm truncate">{group.name}</span>
+        <span className="text-xs text-muted">{group.memberIds.length}</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleGroupLock?.(group.id); }}
+          className="p-1 hover:bg-surface rounded"
+        >
+          {group.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3 text-muted" />}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleGroupVisibility?.(group.id); }}
+          className="p-1 hover:bg-surface rounded"
+        >
+          {group.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3 text-muted" />}
+        </button>
+      </div>
+    ))}
+  </div>
+)}
+```
 
-### D4: Account Menu (~20min)
-1. Add AccountMenu component to TopBar
-2. Avatar (initials circle) + "Free" badge
-3. Dropdown: Account, Billing, Upgrade, ----, Logout
+### 4. Wire in App.tsx
+```tsx
+// Import groups getter
+const groups = useBoardStore((s) => s.getGroups());
+const selectGroup = useBoardStore((s) => s.selectGroup);
+const toggleGroupLock = useBoardStore((s) => s.toggleGroupLock);
+const toggleGroupVisibility = useBoardStore((s) => s.toggleGroupVisibility);
 
-### D5: Locked Presets (~15min)
-1. Add locked preset commands to commandActions
-2. Show 🔒 icon and "Pro" label
-3. On click: show upgrade modal/toast
+// Pass to RightInspector
+<RightInspector
+  // existing props...
+  groups={groups}
+  onSelectGroup={selectGroup}
+  onToggleGroupLock={toggleGroupLock}
+  onToggleGroupVisibility={toggleGroupVisibility}
+/>
+```
 
-### D6: Duplicate Offset (~5min)
-1. Modify duplicateSelected() to offset by +12px X and Y
+## Files to Modify
+1. `packages/ui/src/RightInspector.tsx` - Add groups section
+2. `packages/ui/src/index.ts` - Export GroupData type
+3. `apps/web/src/App.tsx` - Wire group handlers
 
 ## Commands
 ```bash
-# dev
 pnpm dev
-
-# build
 pnpm build
 
-# test zoom
-# Press Cmd++ / Cmd+- / Shift+1
-# Use widget in bottom-right corner
+# Test:
+# 1. Create 3+ players
+# 2. Cmd+A to select all
+# 3. Ctrl+G to create group
+# 4. Check Inspector Layers tab - group should appear
+# 5. Click group → all members selected
+# 6. Click lock/eye icons → toggle state
 ```
 
-## Files to edit/create
-- `apps/web/src/App.tsx` — ZoomWidget + zoom shortcuts + Stage scale
-- `apps/web/src/store/useBoardStore.ts` — smart numbering + duplicate offset
-- `packages/ui/src/TopBar.tsx` — account menu dropdown
-- `packages/ui/src/CommandPaletteModal.tsx` — locked presets
-- `packages/ui/src/AccountMenu.tsx` — new component (optional, can inline)
+## Future: S1.9+ 
+- Animation timeline
+- Keyframe interpolation
+- Group visibility actually hides elements
+- Group locked prevents editing
