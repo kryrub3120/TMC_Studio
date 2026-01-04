@@ -25,6 +25,7 @@ import {
 import { useBoardStore } from './store/useBoardStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
 import { formations } from '@tmc/presets';
+import { exportGIF, exportPDF, exportSVG } from './utils/exportUtils';
 
 /** Main App component */
 export default function App() {
@@ -304,6 +305,83 @@ export default function App() {
     showToast(`Exported ${totalSteps} PNGs!`);
   }, [boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, showToast]);
 
+  // Export animated GIF
+  const handleExportGIF = useCallback(async () => {
+    if (!stageRef.current) return;
+    if (boardDoc.steps.length < 2) {
+      showToast('Need at least 2 steps for GIF');
+      return;
+    }
+    
+    const originalStep = currentStepIndex;
+    showToast('Creating GIF...');
+    
+    try {
+      await exportGIF(
+        async () => {
+          await new Promise((r) => setTimeout(r, 50));
+          return stageRef.current?.toDataURL({ pixelRatio: 2 }) ?? '';
+        },
+        goToStep,
+        boardDoc.steps.length,
+        { filename: boardDoc.name || 'tactics', stepDuration },
+        (percent) => {
+          if (percent === 50) showToast('Encoding GIF...');
+        }
+      );
+      showToast('GIF exported!');
+    } catch (error) {
+      showToast('GIF export failed');
+      console.error(error);
+    }
+    
+    goToStep(originalStep);
+  }, [boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, stepDuration, showToast]);
+
+  // Export multi-page PDF
+  const handleExportPDF = useCallback(async () => {
+    if (!stageRef.current) return;
+    
+    const originalStep = currentStepIndex;
+    showToast('Creating PDF...');
+    
+    try {
+      await exportPDF(
+        async () => {
+          await new Promise((r) => setTimeout(r, 50));
+          return stageRef.current?.toDataURL({ pixelRatio: 2 }) ?? '';
+        },
+        goToStep,
+        boardDoc.steps.length,
+        { filename: boardDoc.name || 'tactics' }
+      );
+      showToast('PDF exported!');
+    } catch (error) {
+      showToast('PDF export failed');
+      console.error(error);
+    }
+    
+    goToStep(originalStep);
+  }, [boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, showToast]);
+
+  // Export SVG
+  const handleExportSVG = useCallback(async () => {
+    if (!stageRef.current) return;
+    
+    try {
+      await exportSVG(
+        stageRef.current,
+        canvasWidth,
+        canvasHeight,
+        { filename: boardDoc.name || 'tactics' }
+      );
+      showToast('SVG exported!');
+    } catch (error) {
+      showToast('SVG export failed');
+      console.error(error);
+    }
+  }, [boardDoc.name, canvasWidth, canvasHeight, showToast]);
+
   // Command palette actions
   const commandActions: CommandAction[] = useMemo(() => {
     const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
@@ -344,8 +422,11 @@ export default function App() {
       // Export
       { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: () => handleExport() },
       { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: () => handleExportAllSteps() },
+      { id: 'export-gif', label: 'Export Animated GIF', category: 'export', onExecute: () => handleExportGIF(), disabled: boardDoc.steps.length < 2 },
+      { id: 'export-pdf', label: 'Export PDF (all steps)', category: 'export', onExecute: () => handleExportPDF() },
+      { id: 'export-svg', label: 'Export SVG', category: 'export', onExecute: () => handleExportSVG() },
     ];
-  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo, handleExport, handleExportAllSteps]);
+  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo, handleExport, handleExportAllSteps, handleExportGIF, handleExportPDF, handleExportSVG, boardDoc.steps.length]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
