@@ -1,98 +1,76 @@
-# Sprint 5 — Quality & UX (Next Session)
+# TMC Studio - Next Task
 
-## Goal
-Improve performance, add mobile support, and enhance UX with step thumbnails.
+## 🔄 Handoff - Context 81%
 
-## Priority Order
+### ✅ Ukończone w tej sesji:
+1. **S4.5 Pitch Views & Line Controls**
+   - Dodano typy `PitchView` i `PitchLineSettings` w types.ts
+   - Dodano `DEFAULT_PITCH_SETTINGS`, `DEFAULT_LINE_SETTINGS`, `PLAIN_PITCH_LINES`
+   - Zaktualizowano Pitch.tsx z conditional rendering dla wszystkich linii boiska
+   - Dodano UI w PitchPanel: View selector dropdown + Line toggles checkboxes
+   - Przyciski "All" / "None" dla szybkiego toggle linii
+   - Skrót klawiszowy `V` = cyklowanie widoków (Full → Plain → Half-left → Half-right)
+   - Zaktualizowano CheatSheetOverlay
 
-### 1. S5.1 Performance Optimization (High Priority)
-Code splitting and lazy loading to reduce initial bundle size.
+### Commits:
+- `ab8494c` - feat(S4.5): Add pitch views and line visibility controls
+- `aa672fc` - feat(S4.5): Add V keyboard shortcut for pitch view cycling
 
-**Tasks:**
-- [ ] Lazy load jsPDF (`const { jsPDF } = await import('jspdf')`)
-- [ ] Lazy load gifenc for GIF export
-- [ ] Split export utils into dynamic import
-- [ ] Audit bundle size with `vite-plugin-visualizer`
-- [ ] Add loading states for async exports
-
-**Files to Edit:**
-- `apps/web/src/utils/exportUtils.ts` - Dynamic imports
-- `apps/web/vite.config.ts` - Add bundle visualizer
-- `apps/web/src/App.tsx` - Loading states
-
-### 2. S5.3 Step Thumbnails (Medium Priority)
-Visual previews for each step in the timeline.
-
-**Tasks:**
-- [ ] Generate thumbnail on step change
-- [ ] Store as data URL in step data
-- [ ] Display in BottomStepsBar
-- [ ] Add loading skeleton
-- [ ] Cache thumbnails in memory
-
-**Files to Edit:**
-- `packages/core/src/step.ts` - Add thumbnail field
-- `packages/ui/src/BottomStepsBar.tsx` - Display thumbnails
-- `apps/web/src/store/useBoardStore.ts` - Generate thumbnails
-
-### 3. S5.2 Touch Support (Medium Priority)
-Basic mobile/touch support.
-
-**Tasks:**
-- [ ] Pinch-to-zoom gesture
-- [ ] Touch pan/drag
-- [ ] Responsive Inspector panel
-- [ ] Larger touch targets
-
-**Files to Edit:**
-- `apps/web/src/App.tsx` - Touch event handlers
-- `packages/ui/src/RightInspector.tsx` - Mobile layout
+### Build: 5/5 ✅
 
 ---
 
-## Quick Wins for Next Session
+## ⏳ Następne zadania (kolejność priorytetów):
 
-1. **Bundle Visualizer** - See what's large
-2. **Lazy jsPDF** - Only load when exporting PDF
-3. **Lazy gifenc** - Only load when exporting GIF
-4. **Step thumbnail POC** - Basic implementation
+### 1. GIF Export Fix (S4.4 niezakończone)
+**Problem:** gif.js nie działa w Vite bundled builds (worker issues)
 
----
+**Opcje rozwiązania:**
+- A) Zastąpić gif.js biblioteką `modern-gif` lub `gifenc`
+- B) Inline worker jako blob
 
-## Session Summary (2026-01-04)
-
-### Completed Today:
-✅ **Sprint 4 — Export & Customization** fully completed!
-
-- Fixed GIF export (gif.js → gifenc)
-- Added keyboard shortcuts: ⇧⌘G (GIF), ⇧⌘P (PDF)
-- Updated CheatSheetOverlay with all shortcuts
-- Updated README with full documentation
-- Updated ROADMAP with Sprint 5 plan
-- Build: 5/5 ✅
-
-### Commits Today:
-1. `63cb4d3` - fix(S4.4): Replace gif.js with gifenc for working GIF export
-
-### Shortcuts Reference:
-```
-Export PNG:       ⌘E
-Export All PNGs:  ⇧⌘E
-Export GIF:       ⇧⌘G
-Export PDF:       ⇧⌘P
-Export SVG:       via Command Palette (⌘K)
-```
+**Pliki:**
+- `apps/web/src/utils/exportUtils.ts`
+- `apps/web/src/types/gif.js.d.ts`
 
 ---
 
-## Commands
-```bash
-# Start dev
-pnpm dev
+### 2. Pitch Viewbox Clipping (S4.5 rozszerzenie)
+**Cel:** viewBox dla widoków half-left, half-right, penalty-area, etc.
 
-# Build
-pnpm build
+Obecnie View selector zmienia `view`, ale nie obcina boiska.
+Można użyć Konva clipFunc lub zmienić viewBox na SVG.
 
-# Analyze bundle (after adding visualizer)
-pnpm build --analyze
-```
+---
+
+### 3. S4.6 Player Labels & Customization
+- Custom labels dla graczy (pozycje: GK, CB, CM)
+- Font size, kolor tekstu
+- Opacity slider dla elementów
+
+---
+
+### 4. S4.7 Grid & Snap
+- Magnetyczna siatka
+- Snap to grid toggle (G)
+- Wyrównanie elementów
+
+---
+
+## 📊 Status Roadmap Section 4
+
+| Feature | Status |
+|---------|--------|
+| S4.1 Team editor | ✅ Done |
+| S4.2 Pitch themes | ✅ Done |
+| S4.3 Multi-step | ✅ Done |
+| S4.4 Export PNG/PDF/SVG | ✅ Done |
+| S4.4 Export GIF | ❌ Worker issue |
+| S4.5 Pitch views | ✅ Done |
+| S4.5 Line controls | ✅ Done |
+| S4.6 Labels | ⏳ Pending |
+| S4.7 Grid & Snap | ⏳ Pending |
+
+---
+
+**Handoff done → `tasks/NEXT_TASK.md`**
