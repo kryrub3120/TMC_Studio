@@ -2,13 +2,36 @@
  * PitchPanel - Pitch appearance customization
  */
 
-import type { PitchSettings, PitchTheme } from '@tmc/core';
-import { PITCH_THEMES } from '@tmc/core';
+import type { PitchSettings, PitchTheme, PitchView, PitchLineSettings } from '@tmc/core';
+import { PITCH_THEMES, DEFAULT_LINE_SETTINGS, PLAIN_PITCH_LINES } from '@tmc/core';
 
 export interface PitchPanelProps {
   pitchSettings: PitchSettings;
   onUpdatePitch: (settings: Partial<PitchSettings>) => void;
 }
+
+/** View options with labels */
+const VIEW_OPTIONS: { value: PitchView; label: string; desc: string }[] = [
+  { value: 'full', label: 'Full Pitch', desc: 'Całe boisko' },
+  { value: 'half-left', label: 'Half (Left)', desc: 'Lewa połowa' },
+  { value: 'half-right', label: 'Half (Right)', desc: 'Prawa połowa' },
+  { value: 'center', label: 'Center', desc: 'Środek boiska' },
+  { value: 'attacking-third', label: 'Attack Third', desc: 'Tercja ataku' },
+  { value: 'defensive-third', label: 'Defense Third', desc: 'Tercja obrony' },
+  { value: 'penalty-area', label: 'Penalty Area', desc: 'Pole karne' },
+  { value: 'plain', label: 'Plain Grass', desc: 'Tylko trawa' },
+];
+
+/** Line toggle options */
+const LINE_OPTIONS: { key: keyof PitchLineSettings; label: string }[] = [
+  { key: 'showOutline', label: 'Obwód' },
+  { key: 'showCenterLine', label: 'Linia środkowa' },
+  { key: 'showCenterCircle', label: 'Koło środkowe' },
+  { key: 'showPenaltyAreas', label: 'Pola karne' },
+  { key: 'showGoalAreas', label: 'Pola bramkowe' },
+  { key: 'showCornerArcs', label: 'Łuki rożne' },
+  { key: 'showPenaltySpots', label: 'Punkty karne' },
+];
 
 /** Theme button with preview */
 function ThemeButton({
@@ -115,8 +138,81 @@ export function PitchPanel({ pitchSettings, onUpdatePitch }: PitchPanelProps) {
         </div>
       </div>
 
+      {/* Pitch View Selector */}
+      <div className="space-y-2 pt-3 border-t border-border">
+        <div className="text-xs text-muted">View</div>
+        <select
+          value={pitchSettings.view ?? 'full'}
+          onChange={(e) => {
+            const newView = e.target.value as PitchView;
+            if (newView === 'plain') {
+              onUpdatePitch({ view: newView, lines: PLAIN_PITCH_LINES });
+            } else {
+              onUpdatePitch({ view: newView });
+            }
+          }}
+          className="w-full px-3 py-2 text-sm bg-surface2 border border-border rounded-lg text-text focus:outline-none focus:ring-1 focus:ring-accent"
+        >
+          {VIEW_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Line Visibility Controls */}
+      <div className="space-y-2 pt-3 border-t border-border">
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted">Pitch Lines</div>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => onUpdatePitch({ lines: DEFAULT_LINE_SETTINGS, view: 'full' })}
+              className="px-2 py-1 text-xs bg-surface2 hover:bg-surface2/80 text-text rounded transition-colors"
+              title="Show all lines"
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdatePitch({ lines: PLAIN_PITCH_LINES, view: 'plain' })}
+              className="px-2 py-1 text-xs bg-surface2 hover:bg-surface2/80 text-text rounded transition-colors"
+              title="Hide all lines"
+            >
+              None
+            </button>
+          </div>
+        </div>
+        
+        {/* Individual line toggles */}
+        <div className="grid grid-cols-2 gap-2">
+          {LINE_OPTIONS.map((opt) => {
+            const lines = pitchSettings.lines ?? DEFAULT_LINE_SETTINGS;
+            const isChecked = lines[opt.key];
+            return (
+              <label
+                key={opt.key}
+                className="flex items-center gap-2 cursor-pointer text-sm text-text hover:text-accent transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => {
+                    const newLines = { ...lines, [opt.key]: !isChecked };
+                    onUpdatePitch({ lines: newLines, view: 'full' });
+                  }}
+                  className="w-3.5 h-3.5 rounded border-border text-accent focus:ring-accent"
+                />
+                <span className="text-xs">{opt.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Show stripes toggle */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-3 border-t border-border">
         <span className="text-sm text-text">Show Stripes</span>
         <button
           type="button"

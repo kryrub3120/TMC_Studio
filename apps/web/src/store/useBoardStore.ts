@@ -18,6 +18,7 @@ import type {
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
+  DEFAULT_PITCH_SETTINGS,
   createDocument,
   createPlayer,
   createBall,
@@ -1074,14 +1075,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
     // Pitch settings actions
     updatePitchSettings: (settings) => {
       const { document, elements } = get();
-      const currentSettings = document.pitchSettings ?? {
-        theme: 'grass',
-        primaryColor: '#2d8a3e',
-        stripeColor: '#268735',
-        lineColor: 'rgba(255, 255, 255, 0.85)',
-        showStripes: true,
-        orientation: 'landscape' as const,
-      };
+      const currentSettings = document.pitchSettings ?? DEFAULT_PITCH_SETTINGS;
       
       const updatedPitchSettings = {
         ...currentSettings,

@@ -138,6 +138,39 @@ export type PitchTheme = 'grass' | 'indoor' | 'chalk' | 'futsal' | 'custom';
 /** Pitch visual settings */
 export type PitchOrientation = 'landscape' | 'portrait';
 
+/** Pitch view options (which part of the pitch to show) */
+export type PitchView = 
+  | 'full'           // Całe boisko
+  | 'half-left'      // Lewa połowa (z bramką)
+  | 'half-right'     // Prawa połowa (z bramką)
+  | 'center'         // Środek boiska (bez pól karnych)
+  | 'attacking-third' // Tercja ataku
+  | 'defensive-third' // Tercja obrony
+  | 'penalty-area'   // Tylko pole karne
+  | 'plain';         // Bez linii - czysta trawa
+
+/** Line visibility settings */
+export interface PitchLineSettings {
+  showOutline: boolean;      // Obwód boiska
+  showCenterLine: boolean;   // Linia środkowa
+  showCenterCircle: boolean; // Koło środkowe
+  showPenaltyAreas: boolean; // Pola karne (duże)
+  showGoalAreas: boolean;    // Pola bramkowe (małe)
+  showCornerArcs: boolean;   // Łuki rożne
+  showPenaltySpots: boolean; // Punkty karne
+}
+
+/** Default line settings - all visible */
+export const DEFAULT_LINE_SETTINGS: PitchLineSettings = {
+  showOutline: true,
+  showCenterLine: true,
+  showCenterCircle: true,
+  showPenaltyAreas: true,
+  showGoalAreas: true,
+  showCornerArcs: true,
+  showPenaltySpots: true,
+};
+
 export interface PitchSettings {
   theme: PitchTheme;
   primaryColor: string;
@@ -145,6 +178,8 @@ export interface PitchSettings {
   lineColor: string;
   showStripes: boolean;
   orientation: PitchOrientation;
+  view: PitchView;
+  lines: PitchLineSettings;
 }
 
 /** Pitch theme definitions */
@@ -155,6 +190,8 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
     lineColor: 'rgba(255, 255, 255, 0.85)',
     showStripes: true,
     orientation: 'landscape',
+    view: 'full',
+    lines: DEFAULT_LINE_SETTINGS,
   },
   indoor: {
     primaryColor: '#c4a35a',
@@ -162,6 +199,8 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
     lineColor: 'rgba(255, 255, 255, 0.9)',
     showStripes: false,
     orientation: 'landscape',
+    view: 'full',
+    lines: DEFAULT_LINE_SETTINGS,
   },
   chalk: {
     primaryColor: '#3b5249',
@@ -169,6 +208,8 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
     lineColor: 'rgba(255, 255, 255, 0.95)',
     showStripes: true,
     orientation: 'landscape',
+    view: 'full',
+    lines: DEFAULT_LINE_SETTINGS,
   },
   futsal: {
     primaryColor: '#2563eb',
@@ -176,6 +217,8 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
     lineColor: 'rgba(255, 255, 255, 0.9)',
     showStripes: false,
     orientation: 'landscape',
+    view: 'full',
+    lines: DEFAULT_LINE_SETTINGS,
   },
   custom: {
     primaryColor: '#2d8a3e',
@@ -183,6 +226,8 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
     lineColor: 'rgba(255, 255, 255, 0.85)',
     showStripes: true,
     orientation: 'landscape',
+    view: 'full',
+    lines: DEFAULT_LINE_SETTINGS,
   },
 };
 
@@ -190,6 +235,17 @@ export const PITCH_THEMES: Record<PitchTheme, Omit<PitchSettings, 'theme'>> = {
 export const DEFAULT_PITCH_SETTINGS: PitchSettings = {
   theme: 'grass',
   ...PITCH_THEMES.grass,
+};
+
+/** Plain pitch preset (no lines) */
+export const PLAIN_PITCH_LINES: PitchLineSettings = {
+  showOutline: false,
+  showCenterLine: false,
+  showCenterCircle: false,
+  showPenaltyAreas: false,
+  showGoalAreas: false,
+  showCornerArcs: false,
+  showPenaltySpots: false,
 };
 
 /** Board state containing all elements */
