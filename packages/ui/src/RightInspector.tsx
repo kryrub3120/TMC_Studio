@@ -14,6 +14,10 @@ export interface InspectorElement {
   team?: 'home' | 'away';
   number?: number;
   label?: string;
+  showLabel?: boolean;
+  fontSize?: number;
+  textColor?: string;
+  opacity?: number;
   x: number;
   y: number;
 }
@@ -52,7 +56,7 @@ export interface RightInspectorProps {
   elements: ElementInList[];
   layerVisibility: LayerVisibility;
   groups?: GroupData[];
-  onUpdateElement?: (updates: { number?: number; label?: string }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => void;
   onSelectElement?: (id: string) => void;
   onToggleLayerVisibility?: (layer: LayerType) => void;
   onSelectGroup?: (groupId: string) => void;
@@ -186,7 +190,7 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
 const PropsTab: React.FC<{
   selectedCount: number;
   selectedElement?: InspectorElement;
-  onUpdateElement?: (updates: { number?: number; label?: string }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => void;
   onQuickAction?: (action: string) => void;
 }> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction }) => {
   if (selectedCount === 0) {
@@ -213,7 +217,7 @@ const PropsTab: React.FC<{
   if (!selectedElement) return null;
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]">
       {/* Element Type */}
       <div>
         <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Type</label>
@@ -238,6 +242,7 @@ const PropsTab: React.FC<{
       {/* Player-specific fields */}
       {selectedElement.type === 'player' && (
         <>
+          {/* Number */}
           <div>
             <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Number</label>
             <input
@@ -249,14 +254,65 @@ const PropsTab: React.FC<{
               className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text focus:outline-none focus:border-accent"
             />
           </div>
+          
+          {/* Label */}
           <div>
-            <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Label</label>
+            <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Position Label</label>
             <input
               type="text"
               value={selectedElement.label ?? ''}
               onChange={(e) => onUpdateElement?.({ label: e.target.value })}
-              placeholder="Player name..."
+              placeholder="GK, CB, CM..."
               className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
+            />
+          </div>
+          
+          {/* Show Label Toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-muted uppercase tracking-wide">Show Label Inside</label>
+            <button
+              onClick={() => onUpdateElement?.({ showLabel: !selectedElement.showLabel })}
+              className={`relative w-10 h-5 rounded-full transition-colors ${
+                selectedElement.showLabel ? 'bg-accent' : 'bg-surface2 border border-border'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                  selectedElement.showLabel ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+          
+          {/* Font Size */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-muted uppercase tracking-wide">Font Size</label>
+              <span className="text-xs text-accent">{selectedElement.fontSize ?? 14}px</span>
+            </div>
+            <input
+              type="range"
+              min={8}
+              max={20}
+              value={selectedElement.fontSize ?? 14}
+              onChange={(e) => onUpdateElement?.({ fontSize: parseInt(e.target.value) })}
+              className="w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent"
+            />
+          </div>
+          
+          {/* Opacity */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-muted uppercase tracking-wide">Opacity</label>
+              <span className="text-xs text-accent">{Math.round((selectedElement.opacity ?? 1) * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={10}
+              max={100}
+              value={Math.round((selectedElement.opacity ?? 1) * 100)}
+              onChange={(e) => onUpdateElement?.({ opacity: parseInt(e.target.value) / 100 })}
+              className="w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent"
             />
           </div>
         </>
