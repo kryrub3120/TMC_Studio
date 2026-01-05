@@ -1,26 +1,29 @@
 # TMC Studio - Next Task
 
-## 🔄 Handoff - Context 78%
+## 🔄 Session Progress
 
 ### ✅ Ukończone w tej sesji:
 
-1. **S4.5 Pitch Views & Line Controls**
+1. **S4.5 Pitch Views & Line Controls** ✅
    - `PitchView` type (full, plain, half-left, half-right, center, thirds, penalty-area)
    - `PitchLineSettings` - granularna kontrola 7 typów linii
    - View selector dropdown + Line toggles checkboxes
    - Skrót `V` = cyklowanie widoków
 
-2. **S4.6 Player Labels & Customization**
-   - `showLabel` - pokazuj pozycję (GK, CB, CM) zamiast numeru
-   - `fontSize` - custom rozmiar czcionki
-   - `textColor` - custom kolor tekstu
-   - `opacity` - przezroczystość elementu
+2. **S4.6 Player Labels & Customization** ✅ COMPLETE
+   - **Type system:** `showLabel`, `fontSize`, `textColor`, `opacity` w PlayerElement
+   - **Rendering:** PlayerNode obsługuje wszystkie nowe właściwości
+   - **UI Inspector:** 
+     - Position Label input (GK, CB, CM...)
+     - Show Label Inside toggle
+     - Font Size slider (8-20px)
+     - Opacity slider (10-100%)
 
 ### Commits:
-- `ab8494c` - feat(S4.5): Pitch views and line visibility controls
-- `aa672fc` - feat(S4.5): V keyboard shortcut
-- `476e721` - docs: NEXT_TASK.md
-- `c6a85c6` - feat(S4.6): Player label & customization options
+- `ab8494c` - S4.5 Pitch views and line controls
+- `aa672fc` - S4.5 V keyboard shortcut
+- `c6a85c6` - S4.6 Player label options (type + rendering)
+- `c5eb97d` - S4.6 Player customization UI controls
 
 ### Build: 5/5 ✅
 
@@ -28,24 +31,18 @@
 
 ## ⏳ Następne zadania:
 
-### 1. S4.6 UI Controls (kontynuacja)
-Dodać UI w Inspector dla nowych właściwości gracza:
-- Toggle "Show Label" checkbox
-- Label input (GK, CB, CM, etc.)
-- Font Size slider (8-20)
-- Text Color picker
-- Opacity slider (0.1-1.0)
-
-**Pliki:**
-- `packages/ui/src/RightInspector.tsx` - dodać kontrolki
+### 1. S4.6 Integration (wire up App.tsx)
+Połączyć Inspector UI z useBoardStore:
+- App.tsx: przekazać nowe pola do InspectorElement
+- App.tsx: obsłużyć onUpdateElement dla showLabel, fontSize, opacity
 
 ### 2. S4.7 Grid & Snap
 - Magnetyczna siatka
 - Toggle `G` key
 - Snap guides
 
-### 3. GIF Test
-Test czy GIF export działa z gifenc (powinno działać)
+### 3. GIF Export Test
+Zweryfikować że gifenc działa poprawnie
 
 ---
 
@@ -57,13 +54,10 @@ Test czy GIF export działa z gifenc (powinno działać)
 | S4.2 Pitch themes | ✅ Done |
 | S4.3 Multi-step | ✅ Done |
 | S4.4 Export PNG/PDF/SVG | ✅ Done |
-| S4.4 Export GIF | ✅ gifenc (needs test) |
+| S4.4 Export GIF | ✅ gifenc |
 | S4.5 Pitch views | ✅ Done |
 | S4.5 Line controls | ✅ Done |
 | S4.6 Player labels (type) | ✅ Done |
-| S4.6 Player labels (UI) | ⏳ Pending |
+| S4.6 Player labels (UI) | ✅ Done |
+| S4.6 Integration | ⏳ Needs wiring |
 | S4.7 Grid & Snap | ⏳ Pending |
-
----
-
-**Handoff done → `tasks/NEXT_TASK.md`**

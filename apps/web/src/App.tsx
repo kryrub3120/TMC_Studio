@@ -174,6 +174,10 @@ export default function App() {
         team: isPlayerElement(selectedElement) ? selectedElement.team : undefined,
         number: isPlayerElement(selectedElement) ? selectedElement.number : undefined,
         label: isPlayerElement(selectedElement) ? selectedElement.label : undefined,
+        showLabel: isPlayerElement(selectedElement) ? selectedElement.showLabel : undefined,
+        fontSize: isPlayerElement(selectedElement) ? selectedElement.fontSize : undefined,
+        textColor: isPlayerElement(selectedElement) ? selectedElement.textColor : undefined,
+        opacity: isPlayerElement(selectedElement) ? selectedElement.opacity : undefined,
         x: selectedElement.position.x,
         y: selectedElement.position.y,
       };
@@ -1204,7 +1208,7 @@ export default function App() {
   );
 
   const handleUpdateElement = useCallback(
-    (updates: { number?: number; label?: string }) => {
+    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => {
       updateSelectedElement(updates as Partial<PlayerElementType>);
     },
     [updateSelectedElement]
