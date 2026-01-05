@@ -131,6 +131,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       ref={groupRef}
       x={player.position.x}
       y={player.position.y}
+      opacity={player.opacity ?? 1}
       draggable={!multiDragActive}
       onClick={handleClick}
       onTap={handleClick}
@@ -227,24 +228,24 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         />
       )}
       
-      {/* Player number */}
+      {/* Player number or label (inside shape) */}
       <Text
         x={-PLAYER_RADIUS}
-        y={-8}
+        y={-(player.fontSize ?? 14) / 2}
         width={PLAYER_RADIUS * 2}
-        text={String(player.number)}
-        fontSize={14}
+        text={player.showLabel && player.label ? player.label : String(player.number)}
+        fontSize={player.fontSize ?? 14}
         fontFamily="Inter, system-ui, sans-serif"
         fontStyle="bold"
-        fill={colors.text}
+        fill={player.textColor ?? colors.text}
         align="center"
         verticalAlign="middle"
         listening={false}
         perfectDrawEnabled={false}
       />
       
-      {/* Player label (if exists) */}
-      {player.label && (
+      {/* Additional label below shape (only if not showing label inside) */}
+      {player.label && !player.showLabel && (
         <Text
           x={-30}
           y={PLAYER_RADIUS + 4}
@@ -278,6 +279,10 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.team === nextProps.player.team &&
     prevProps.player.label === nextProps.player.label &&
     prevProps.player.shape === nextProps.player.shape &&
+    prevProps.player.showLabel === nextProps.player.showLabel &&
+    prevProps.player.fontSize === nextProps.player.fontSize &&
+    prevProps.player.textColor === nextProps.player.textColor &&
+    prevProps.player.opacity === nextProps.player.opacity &&
     prevProps.isSelected === nextProps.isSelected &&
     colorsEqual
   );

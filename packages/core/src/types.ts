@@ -30,6 +30,10 @@ export interface PlayerElement extends BoardElementBase {
   number: number;
   label?: string;
   shape?: PlayerShape; // Default: 'circle'
+  showLabel?: boolean; // Show label instead of number
+  fontSize?: number; // Custom font size (default: 12)
+  textColor?: string; // Custom text color (overrides team color)
+  opacity?: number; // Element opacity 0-1 (default: 1)
 }
 
 /** Ball element on the board */
