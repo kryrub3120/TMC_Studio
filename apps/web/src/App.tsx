@@ -747,6 +747,54 @@ export default function App() {
             }
           }
           break;
+        case 'v':
+          // V = Cycle pitch views (full → plain → half-left → half-right)
+          if (!isCmd) {
+            e.preventDefault();
+            const VIEWS = ['full', 'plain', 'half-left', 'half-right'] as const;
+            const currentView = useBoardStore.getState().getPitchSettings()?.view ?? 'full';
+            const currentIdx = VIEWS.indexOf(currentView as typeof VIEWS[number]);
+            const nextIdx = (currentIdx + 1) % VIEWS.length;
+            const nextView = VIEWS[nextIdx];
+            
+            // If switching to plain, hide all lines
+            if (nextView === 'plain') {
+              useBoardStore.getState().updatePitchSettings({ 
+                view: nextView,
+                lines: {
+                  showOutline: false,
+                  showCenterLine: false,
+                  showCenterCircle: false,
+                  showPenaltyAreas: false,
+                  showGoalAreas: false,
+                  showCornerArcs: false,
+                  showPenaltySpots: false
+                }
+              });
+            } else {
+              // Show all lines for other views
+              useBoardStore.getState().updatePitchSettings({ 
+                view: nextView,
+                lines: {
+                  showOutline: true,
+                  showCenterLine: true,
+                  showCenterCircle: true,
+                  showPenaltyAreas: true,
+                  showGoalAreas: true,
+                  showCornerArcs: true,
+                  showPenaltySpots: true
+                }
+              });
+            }
+            const viewNames: Record<string, string> = {
+              'full': 'Full pitch',
+              'plain': 'Plain grass',
+              'half-left': 'Half (left)',
+              'half-right': 'Half (right)'
+            };
+            showToast(viewNames[nextView] ?? nextView);
+          }
+          break;
         case 'x':
           // X = Delete current step (only if more than 1 step)
           if (!isCmd && useBoardStore.getState().document.steps.length > 1) {

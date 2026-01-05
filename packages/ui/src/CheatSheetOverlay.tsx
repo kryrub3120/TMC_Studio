@@ -52,6 +52,7 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'I', description: 'Toggle Inspector' },
       { key: 'O', description: 'Toggle Orientation' },
       { key: 'W', description: 'Print Friendly Mode' },
+      { key: 'V', description: 'Cycle Pitch View' },
       { key: '?', description: 'Toggle Shortcuts' },
     ],
   },
