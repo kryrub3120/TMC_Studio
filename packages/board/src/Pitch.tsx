@@ -12,11 +12,12 @@ import { DEFAULT_PITCH_SETTINGS, DEFAULT_LINE_SETTINGS } from '@tmc/core';
 export interface PitchProps {
   config: PitchConfig;
   pitchSettings?: PitchSettings;
+  gridVisible?: boolean;
 }
 
 /** Football pitch with standard markings */
-export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
-  const { width, height, padding } = config;
+export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings, gridVisible = false }) => {
+  const { width, height, padding, gridSize } = config;
   
   // Use provided settings or defaults
   const settings = pitchSettings ?? DEFAULT_PITCH_SETTINGS;
@@ -406,6 +407,32 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings }) => {
             strokeWidth={lineWidth}
           />
         </>
+      )}
+
+      {/* Snap Grid Overlay */}
+      {gridVisible && (
+        <Group listening={false} opacity={0.3}>
+          {/* Vertical grid lines */}
+          {Array.from({ length: Math.floor(width / gridSize) + 1 }).map((_, i) => (
+            <Line
+              key={`grid-v-${i}`}
+              points={[i * gridSize, 0, i * gridSize, height]}
+              stroke="#ffffff"
+              strokeWidth={0.5}
+              dash={[2, 4]}
+            />
+          ))}
+          {/* Horizontal grid lines */}
+          {Array.from({ length: Math.floor(height / gridSize) + 1 }).map((_, i) => (
+            <Line
+              key={`grid-h-${i}`}
+              points={[0, i * gridSize, width, i * gridSize]}
+              stroke="#ffffff"
+              strokeWidth={0.5}
+              dash={[2, 4]}
+            />
+          ))}
+        </Group>
       )}
     </Group>
   );

@@ -144,6 +144,7 @@ export default function App() {
   const zoomFit = useUIStore((s) => s.zoomFit);
   const setActiveTool = useUIStore((s) => s.setActiveTool);
   const activeTool = useUIStore((s) => s.activeTool);
+  const gridVisible = useUIStore((s) => s.gridVisible);
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -488,6 +489,11 @@ export default function App() {
             e.preventDefault();
             createGroup();
             showToast('Group created');
+          } else {
+            // G = Toggle grid
+            e.preventDefault();
+            useUIStore.getState().toggleGrid();
+            showToast(useUIStore.getState().gridVisible ? 'Grid visible' : 'Grid hidden');
           }
           break;
         case 'z':
@@ -1286,7 +1292,7 @@ export default function App() {
               onTouchMove={handleStageMouseMove}
             >
               <Layer>
-                <Pitch config={pitchConfig} pitchSettings={pitchSettings} />
+                <Pitch config={pitchConfig} pitchSettings={pitchSettings} gridVisible={gridVisible} />
 
                 {/* Zones (lowest z-order) - filtered by layer visibility */}
                 {layerVisibility.zones && elements
