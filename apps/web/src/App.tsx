@@ -1104,6 +1104,12 @@ export default function App() {
   const drawingStart = useBoardStore((s) => s.drawingStart);
   const drawingEnd = useBoardStore((s) => s.drawingEnd);
   const clearActiveTool = useUIStore((s) => s.clearActiveTool);
+  
+  // Freehand drawing actions
+  const startFreehandDrawing = useBoardStore((s) => s.startFreehandDrawing);
+  const updateFreehandDrawing = useBoardStore((s) => s.updateFreehandDrawing);
+  const finishFreehandDrawing = useBoardStore((s) => s.finishFreehandDrawing);
+  const freehandPoints = useBoardStore((s) => s.freehandPoints);
 
   // Stage event handlers (use any event type for compatibility)
   const handleStageMouseDown = useCallback(
@@ -1113,7 +1119,13 @@ export default function App() {
       const pos = stage?.getPointerPosition();
       if (!pos) return;
       
-      // If a tool is active, start drawing
+      // Freehand drawing mode
+      if (activeTool === 'drawing' || activeTool === 'highlighter') {
+        startFreehandDrawing(activeTool === 'highlighter' ? 'highlighter' : 'freehand', pos);
+        return;
+      }
+      
+      // Arrow/zone tools
       if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'zone' || activeTool === 'zone-ellipse') {
         startDrawing(pos);
       } else if (!activeTool) {
@@ -1136,7 +1148,7 @@ export default function App() {
         }
       }
     },
-    [activeTool, startDrawing]
+    [activeTool, startDrawing, startFreehandDrawing]
   );
 
   const handleStageMouseMove = useCallback(
@@ -1145,6 +1157,12 @@ export default function App() {
       const stage = e.target.getStage();
       const pos = stage?.getPointerPosition();
       if (!pos) return;
+      
+      // Freehand drawing - update points
+      if (freehandPoints && (activeTool === 'drawing' || activeTool === 'highlighter')) {
+        updateFreehandDrawing(pos);
+        return;
+      }
       
       // If drawing, update the end position
       if (drawingStart) {
@@ -1155,7 +1173,7 @@ export default function App() {
         setMarqueeEnd(pos);
       }
     },
-    [drawingStart, updateDrawing, marqueeStart]
+    [drawingStart, updateDrawing, marqueeStart, freehandPoints, activeTool, updateFreehandDrawing]
   );
 
   const handleStageMouseUp = useCallback(
@@ -1163,6 +1181,13 @@ export default function App() {
     (e: any) => {
       const stage = e.target.getStage();
       const pos = stage?.getPointerPosition();
+      
+      // Finish freehand drawing
+      if (freehandPoints && (activeTool === 'drawing' || activeTool === 'highlighter')) {
+        finishFreehandDrawing();
+        clearActiveTool();
+        return;
+      }
       
       // If drawing, finish the element
       if (drawingStart && pos) {
@@ -1188,7 +1213,7 @@ export default function App() {
         setMarqueeEnd(null);
       }
     },
-    [activeTool, drawingStart, finishArrowDrawing, finishZoneDrawing, clearActiveTool, marqueeStart, marqueeEnd, selectElementsInRect]
+    [activeTool, drawingStart, finishArrowDrawing, finishZoneDrawing, clearActiveTool, marqueeStart, marqueeEnd, selectElementsInRect, freehandPoints, finishFreehandDrawing]
   );
 
   const handleStageClick = useCallback(
