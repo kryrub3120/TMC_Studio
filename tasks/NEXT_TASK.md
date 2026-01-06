@@ -1,65 +1,71 @@
-# 🔄 Handoff - Context 90%
+# 🔄 Handoff - Context 80%
 
 ## ✅ Ukończone w tej sesji:
 
 1. **S4.5 Pitch Views & Line Controls** ✅
-   - `V` key = cycle views (full → plain → half-left → half-right)
-   - `W` key = Print Friendly mode (white pitch, black lines)
-   - Line visibility controls in PitchPanel
-
-2. **S4.6 Player Labels & Customization** ✅
-   - `showLabel`, `fontSize`, `textColor`, `opacity` fields in PlayerElement
-   - Visual rendering with background label in PlayerNode
-   - UI controls in RightInspector (checkbox, slider, color picker)
-
+2. **S4.6 Player Labels & Customization** ✅  
 3. **S4.7 Grid & Snap** ✅
-   - `G` key = toggle grid visibility
-   - Visual dashed grid overlay on pitch (10px spacing)
-   - Persisted in useUIStore
+4. **S4.8 Drawing Foundation** ✅ (partial)
+   - `DrawingType` ('freehand' | 'highlighter')
+   - `DrawingElement` interface with points array
+   - `isDrawingElement()` type guard
+   - `DrawingNode` component (renders strokes)
+   - `ActiveTool` extended with 'drawing' | 'highlighter'
 
-## ⏳ Następne zadanie: S4.8 Coach Drawing Tools
+## ⏳ S4.8 Remaining - Integration
 
-### Zakres:
-- Freehand drawing tool (pędzel/marker)
-- Highlight areas tool
-- Erase drawings tool
-- Drawing color & thickness controls
+### Następne kroki:
+1. **useBoardStore** - add drawing state:
+   - `currentDrawing: { points: number[], color: string, type: DrawingType } | null`
+   - `startFreehandDrawing(type: DrawingType, pos: Position)`
+   - `updateFreehandDrawing(pos: Position)`  
+   - `finishFreehandDrawing()`
 
-### Pliki do modyfikacji:
-- `packages/core/src/types.ts` - add `DrawingElement` type
-- `packages/board/src/DrawingNode.tsx` - new component for freehand
-- `apps/web/src/store/useBoardStore.ts` - add drawing state
-- `apps/web/src/App.tsx` - add drawing tool shortcuts
+2. **App.tsx** - integrate drawing tool:
+   - `D` key = activate drawing tool
+   - `H` key = activate highlighter
+   - Handle mouse events for drawing mode
+   - Render `DrawingNode` for drawing elements
+   - Render live preview while drawing
 
-### Proponowane skróty:
-- `D` = activate drawing mode
-- `H` = highlight mode
-- `E` = eraser mode (when drawing active)
+3. **Drawing colors** - add to inspector or quick actions
+
+### Files to modify:
+- `apps/web/src/store/useBoardStore.ts`
+- `apps/web/src/App.tsx`
 
 ## Commits z tej sesji:
-- `21988e3` - feat(S4.7): Grid & Snap visual overlay
-- `e9abe18` - feat(S4.6): Wire up player customization UI
-- Wcześniejsze dla S4.5/S4.6
+```
+27fa548 - feat(S4.8): Add DrawingElement type and DrawingNode component
+21988e3 - feat(S4.7): Grid & Snap visual overlay
+e9abe18 - feat(S4.6): Wire up player customization UI
+6d54e81 - docs: Update NEXT_TASK.md
+```
 
 ## Build: 5/5 ✅
 ## Server: http://localhost:3001
 
-## Keyboard shortcuts summary (current):
+## New Keyboard Shortcuts:
 | Key | Function |
 |-----|----------|
 | `G` | Toggle Grid |
 | `V` | Cycle Pitch Views |
 | `W` | Print Friendly mode |
 | `O` | Toggle Orientation |
-| `P` | Add Home Player |
-| `⇧P` | Add Away Player |
-| `B` | Add Ball |
-| `A` | Arrow (pass) tool |
-| `R` | Arrow (run) tool |
-| `Z` | Zone tool |
-| `⇧Z` | Zone ellipse tool |
-| `T` | Add Text |
-| `1-6` | Apply formation (home) |
-| `⇧1-6` | Apply formation (away) |
+| `D` | Drawing tool (TODO) |
+| `H` | Highlighter tool (TODO) |
+
+## DrawingElement Structure:
+```typescript
+interface DrawingElement {
+  id: ElementId;
+  type: 'drawing';
+  drawingType: 'freehand' | 'highlighter';
+  points: number[]; // [x1, y1, x2, y2, ...]
+  color: string;
+  strokeWidth: number;
+  opacity: number;
+}
+```
 
 **Handoff done → `tasks/NEXT_TASK.md`**
