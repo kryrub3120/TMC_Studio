@@ -32,6 +32,12 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'D', description: 'Freehand Draw' },
       { key: 'H', description: 'Highlighter' },
       { key: 'C', description: 'Clear Drawings' },
+      { key: 'J', description: 'Goal (⇧ Mini)' },
+      { key: 'M', description: 'Mannequin (⇧ Flat)' },
+      { key: 'K', description: 'Cone (⇧ Pole)' },
+      { key: 'Y', description: 'Ladder' },
+      { key: 'Q', description: 'Hoop' },
+      { key: 'U', description: 'Hurdle' },
     ],
   },
   {

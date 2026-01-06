@@ -6,9 +6,9 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, hasPosition } from '@tmc/core';
-import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
-import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode } from '@tmc/board';
+import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement, hasPosition } from '@tmc/core';
+import type { Position, PlayerElement as PlayerElementType, EquipmentElement } from '@tmc/core';
+import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 import { Line } from 'react-konva';
 import { useState } from 'react';
 import {
@@ -57,6 +57,7 @@ export default function App() {
   const addArrowAtCursor = useBoardStore((s) => s.addArrowAtCursor);
   const addZoneAtCursor = useBoardStore((s) => s.addZoneAtCursor);
   const addTextAtCursor = useBoardStore((s) => s.addTextAtCursor);
+  const addEquipmentAtCursor = useBoardStore((s) => s.addEquipmentAtCursor);
   const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const moveElementById = useBoardStore((s) => s.moveElementById);
   const resizeZone = useBoardStore((s) => s.resizeZone);
@@ -572,6 +573,65 @@ export default function App() {
           if (!isCmd) {
             e.preventDefault();
             addTextAtCursor();
+          }
+          break;
+        
+        // Equipment shortcuts
+        case 'm': // Mannequin
+          if (!isCmd) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              addEquipmentAtCursor('mannequin', 'flat');
+              showToast('Lying Mannequin');
+            } else {
+              addEquipmentAtCursor('mannequin');
+              showToast('Mannequin');
+            }
+          }
+          break;
+        case 'k': // Cone / Pole
+          if (!isCmd) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              addEquipmentAtCursor('pole');
+              showToast('Pole');
+            } else {
+              addEquipmentAtCursor('cone');
+              showToast('Cone');
+            }
+          }
+          break;
+        case 'q': // Hoop
+          if (!isCmd) {
+            e.preventDefault();
+            addEquipmentAtCursor('hoop');
+            showToast('Hoop');
+          }
+          break;
+        case 'u': // Hurdle
+          if (!isCmd) {
+            e.preventDefault();
+            addEquipmentAtCursor('hurdle');
+            showToast('Hurdle');
+          }
+          break;
+        case 'y': // Ladder
+          if (!isCmd) {
+            e.preventDefault();
+            addEquipmentAtCursor('ladder');
+            showToast('Ladder');
+          }
+          break;
+        case 'j': // Goal
+          if (!isCmd) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              addEquipmentAtCursor('goal', 'mini');
+              showToast('Mini Goal');
+            } else {
+              addEquipmentAtCursor('goal');
+              showToast('Goal');
+            }
           }
           break;
         case 'i':
@@ -1445,6 +1505,29 @@ export default function App() {
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}
                         onDragStart={startMultiDrag}
+                      />
+                    );
+                  })}
+
+                {/* Equipment - training objects like cones, goals, mannequins */}
+                {elements
+                  .filter(isEquipmentElement)
+                  .map((equipment) => {
+                    // During animation, interpolate position
+                    const animatedEquipment = isPlaying && animationProgress > 0 && nextStepElements
+                      ? { ...equipment, position: getInterpolatedPosition(equipment.id, equipment.position) }
+                      : equipment;
+                    
+                    return (
+                      <EquipmentNode
+                        key={equipment.id}
+                        element={animatedEquipment as EquipmentElement}
+                        isSelected={!isPlaying && selectedIds.includes(equipment.id)}
+                        onSelect={isPlaying ? () => {} : handleElementSelect}
+                        onDragEnd={(id, x, y) => {
+                          moveElementById(id, { x, y });
+                          pushHistory();
+                        }}
                       />
                     );
                   })}
