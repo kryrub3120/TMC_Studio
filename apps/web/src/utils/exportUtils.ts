@@ -1,10 +1,10 @@
 /**
  * Export utilities for TMC Studio
  * Supports: PNG, GIF, PDF, SVG
+ * 
+ * Uses dynamic imports for heavy libraries (gifenc, jspdf)
+ * to enable code splitting and reduce initial bundle size
  */
-
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
-import { jsPDF } from 'jspdf';
 
 export interface ExportOptions {
   filename: string;
@@ -55,7 +55,7 @@ async function getImageData(dataUrl: string): Promise<{ data: Uint8ClampedArray;
 }
 
 /**
- * Export all steps as animated GIF using gifenc (synchronous, no workers)
+ * Export all steps as animated GIF using gifenc (lazy loaded)
  */
 export async function exportGIF(
   captureFrame: () => Promise<string>,
@@ -67,6 +67,9 @@ export async function exportGIF(
   if (totalSteps < 2) {
     throw new Error('Need at least 2 steps for GIF');
   }
+
+  // Lazy load gifenc (code splitting)
+  const { GIFEncoder, quantize, applyPalette } = await import('gifenc');
 
   // Capture all frames first
   const frames: { data: Uint8ClampedArray; width: number; height: number }[] = [];
@@ -131,7 +134,7 @@ export async function exportGIF(
 }
 
 /**
- * Export all steps as multi-page PDF
+ * Export all steps as multi-page PDF (lazy loaded jsPDF)
  */
 export async function exportPDF(
   captureFrame: () => Promise<string>,
@@ -160,6 +163,9 @@ export async function exportPDF(
   await new Promise((r) => { img.onload = r; });
   
   const { width, height } = img;
+  
+  // Lazy load jsPDF (code splitting)
+  const { jsPDF } = await import('jspdf');
   
   // Create PDF with landscape/portrait based on dimensions
   const orientation = width > height ? 'landscape' : 'portrait';
