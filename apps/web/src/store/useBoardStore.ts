@@ -15,6 +15,7 @@ import type {
   TeamSettings,
   TeamSetting,
   PitchSettings,
+  DrawingType,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
@@ -80,6 +81,10 @@ interface BoardState {
   // Drawing state (for click-drag creation of arrows/zones)
   drawingStart: Position | null;
   drawingEnd: Position | null;
+  
+  // Freehand drawing state
+  freehandPoints: number[] | null;
+  freehandType: DrawingType | null;
   
   // Actions
   setElements: (elements: BoardElement[]) => void;
@@ -193,6 +198,8 @@ export const useBoardStore = create<BoardState>((set, get) => {
     multiDragOffsets: null,
     drawingStart: null,
     drawingEnd: null,
+    freehandPoints: null,
+    freehandType: null,
 
     setElements: (elements) => {
       set({ elements });
