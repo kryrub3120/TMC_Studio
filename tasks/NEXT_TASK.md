@@ -1,36 +1,14 @@
-# Equipment Integration - Part 2
+# Equipment Integration - Part 3 (Final)
 
-## ✅ Completed (17a28b2)
-- EquipmentElement type in types.ts
-- createEquipment() in board.ts
-- EquipmentNode component with SVG shapes
-- All 7 equipment types: goal, mannequin, cone, ladder, hoop, hurdle, pole
+## ✅ Completed
+- `17a28b2` - EquipmentElement type, createEquipment(), EquipmentNode
+- `07410cd` - addEquipmentAtCursor store action
 
-## ⏳ Remaining Work
+## ⏳ Remaining (~15 min work)
 
-### 1. Add to useBoardStore.ts
+### 1. Add keyboard shortcuts in App.tsx
+Find `case 't':` section and add after it:
 ```typescript
-// Add import
-import { EquipmentType, EquipmentVariant, createEquipment } from '@tmc/core';
-
-// Add action type
-addEquipmentAtCursor: (type: EquipmentType, variant?: EquipmentVariant) => void;
-
-// Add implementation
-addEquipmentAtCursor: (equipmentType, variant = 'standard') => {
-  const { cursorPosition } = get();
-  const position = cursorPosition ?? { 
-    x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-    y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-  };
-  const equipment = createEquipment(position, equipmentType, variant);
-  get().addElement(equipment);
-},
-```
-
-### 2. Add keyboard shortcuts in App.tsx
-```typescript
-// In handleKeyDown:
 case 'g': // Goal
   if (e.shiftKey) {
     addEquipmentAtCursor('goal', 'mini');
@@ -41,7 +19,7 @@ case 'g': // Goal
   }
   break;
 
-case 'm': // Mannequin
+case 'm': // Mannequin  
   if (e.shiftKey) {
     addEquipmentAtCursor('mannequin', 'flat');
     showToast('Lying Mannequin');
@@ -51,7 +29,7 @@ case 'm': // Mannequin
   }
   break;
 
-case 'k': // Cone
+case 'k': // Cone/Pole
   if (e.shiftKey) {
     addEquipmentAtCursor('pole');
     showToast('Pole');
@@ -77,7 +55,16 @@ case 'u': // Hurdle
   break;
 ```
 
-### 3. Render Equipment in App.tsx Layer section
+Also destructure `addEquipmentAtCursor` from useBoardStore().
+
+### 2. Render Equipment in App.tsx canvas
+Add import:
+```typescript
+import { EquipmentNode } from '@tmc/board';
+import type { EquipmentElement } from '@tmc/core';
+```
+
+Add after zones layer (before arrows):
 ```tsx
 {/* Equipment layer */}
 {elements
@@ -96,8 +83,8 @@ case 'u': // Hurdle
   ))}
 ```
 
-### 4. Update CheatSheetOverlay.tsx
-Add to Elements section:
+### 3. Update CheatSheetOverlay.tsx
+In `shortcuts` array, Elements section, ADD:
 ```typescript
 { key: 'G', description: 'Goal' },
 { key: '⇧G', description: 'Mini Goal' },
@@ -110,13 +97,13 @@ Add to Elements section:
 { key: 'U', description: 'Hurdle' },
 ```
 
-## Keyboard Shortcuts Summary
-| Key | Element | Variant |
-|-----|---------|---------|
+## Keyboard Shortcuts
+| Key | Equipment | Variant |
+|-----|-----------|---------|
 | G | Goal | standard |
 | ⇧G | Goal | mini |
 | M | Mannequin | standard |
-| ⇧M | Mannequin | flat (lying) |
+| ⇧M | Mannequin | flat |
 | K | Cone | standard |
 | ⇧K | Pole | - |
 | J | Ladder | - |
