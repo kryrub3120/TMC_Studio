@@ -85,8 +85,22 @@ export interface TextElement extends BoardElementBase {
   backgroundColor?: string; // Optional background for better visibility
 }
 
+/** Drawing types for coach tools */
+export type DrawingType = 'freehand' | 'highlighter';
+
+/** Drawing element for freehand/highlight strokes */
+export interface DrawingElement {
+  id: ElementId;
+  type: 'drawing';
+  drawingType: DrawingType;
+  points: number[]; // Flat array [x1, y1, x2, y2, ...]
+  color: string;
+  strokeWidth: number;
+  opacity: number;
+}
+
 /** Union type for all board elements */
-export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement | TextElement;
+export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement | TextElement | DrawingElement;
 
 /** Pitch dimensions configuration */
 export interface PitchConfig {
@@ -306,6 +320,10 @@ export function isZoneElement(element: BoardElement): element is ZoneElement {
 
 export function isTextElement(element: BoardElement): element is TextElement {
   return element.type === 'text';
+}
+
+export function isDrawingElement(element: BoardElement): element is DrawingElement {
+  return element.type === 'drawing';
 }
 
 /** Check if element has a single position (player, ball, zone, text) */

@@ -16,6 +16,8 @@ export type ActiveTool =
   | 'zone'
   | 'zone-ellipse'
   | 'text'
+  | 'drawing'
+  | 'highlighter'
   | null;
 
 /** Theme type */
