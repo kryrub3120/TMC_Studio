@@ -478,6 +478,15 @@ export default function App() {
           if (isCmd) {
             e.preventDefault();
             duplicateSelected();
+          } else if (!e.shiftKey) {
+            e.preventDefault();
+            setActiveTool('drawing');
+          }
+          break;
+        case 'h':
+          if (!isCmd) {
+            setActiveTool('highlighter');
+            e.preventDefault();
           }
           break;
         case 'g':
