@@ -452,6 +452,13 @@ export const useBoardStore = create<BoardState>((set, get) => {
               const newWidth = Math.max(0, Math.min(8, current + delta));
               return { ...el, borderWidth: newWidth };
             }
+            // Drawings have strokeWidth (1-30px range)
+            if (el.type === 'drawing') {
+              const drawing = el as { strokeWidth?: number };
+              const current = drawing.strokeWidth ?? 3;
+              const newWidth = Math.max(1, Math.min(30, current + delta * 2));
+              return { ...el, strokeWidth: newWidth };
+            }
           }
           return el;
         }),
@@ -463,8 +470,8 @@ export const useBoardStore = create<BoardState>((set, get) => {
       const { selectedIds } = get();
       if (selectedIds.length === 0) return;
       
-      // Useful colors: strong red, light red, strong green, blue, yellow, orange
-      const COLORS = ['#ff0000', '#ff6b6b', '#00ff00', '#3b82f6', '#eab308', '#f97316'];
+      // Useful colors: strong red, light red, strong green, blue, yellow, orange, white
+      const COLORS = ['#ff0000', '#ff6b6b', '#00ff00', '#3b82f6', '#eab308', '#f97316', '#ffffff'];
       
       set((state) => ({
         elements: state.elements.map((el) => {
@@ -487,6 +494,16 @@ export const useBoardStore = create<BoardState>((set, get) => {
                 ? 0 
                 : (currentIndex + direction + COLORS.length) % COLORS.length;
               return { ...el, fillColor: COLORS[newIndex] };
+            }
+            // Drawings have color
+            if (el.type === 'drawing') {
+              const drawing = el as { color?: string };
+              const current = drawing.color ?? '#ff0000';
+              const currentIndex = COLORS.indexOf(current);
+              const newIndex = currentIndex === -1 
+                ? 0 
+                : (currentIndex + direction + COLORS.length) % COLORS.length;
+              return { ...el, color: COLORS[newIndex] };
             }
           }
           return el;

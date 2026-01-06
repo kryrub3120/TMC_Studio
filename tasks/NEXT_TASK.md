@@ -1,65 +1,73 @@
-# 🔄 Handoff - S4.8 Drawing Tools
+# Drawing Tools Enhancement
 
-## ✅ Ukończone:
+## Goal
+Enhance freehand drawing tools with color picker, eraser, and stroke width options.
 
-1. **S4.5 Pitch Views** ✅ - `V` key cycles views
-2. **S4.6 Player Labels** ✅ - showLabel, fontSize, textColor, opacity
-3. **S4.7 Grid & Snap** ✅ - `G` key toggles grid
-4. **S4.8 Foundation** ✅
-   - `DrawingElement` type in `@tmc/core/types.ts`
-   - `DrawingNode` component in `@tmc/board`
-   - `DrawingType = 'freehand' | 'highlighter'`
-   - `isDrawingElement()` type guard
-   - `freehandPoints` + `freehandType` state in useBoardStore
+## Current State
+- ✅ D = Freehand drawing (red pen)
+- ✅ H = Highlighter (yellow)
+- ✅ C = Clear all drawings
+- ⏳ No color picker for drawings
+- ⏳ No eraser (click to delete individual drawings)
+- ⏳ No stroke width adjustment
 
-## ⏳ Remaining: App.tsx Integration
+## Deliverables
 
-### Następne kroki:
+### 1. Drawing Color Picker in RightInspector
+- [ ] Add "Drawing" section in Props tab when drawing selected
+- [ ] Color picker for stroke color
+- [ ] Apply to selected drawing element
 
-1. **Add freehand actions to useBoardStore:**
+Files:
+- `packages/ui/src/RightInspector.tsx` - add Drawing panel
+- `apps/web/src/store/useBoardStore.ts` - add updateDrawingProperties action
+
+### 2. Eraser Tool (X key)
+- [ ] Press X to enter eraser mode
+- [ ] Click drawing element to delete it (not whole line eraser)
+- [ ] Visual cursor change
+- [ ] Toast "Eraser mode"
+
+Files:
+- `apps/web/src/App.tsx` - add eraser mode handling
+- `apps/web/src/store/useUIStore.ts` - add 'eraser' to Tool type
+
+### 3. Stroke Width Options  
+- [ ] Alt+Left/Right to adjust drawing stroke width
+- [ ] Show current width in RightInspector
+- [ ] Range: 1-30px
+
+Files:
+- `apps/web/src/App.tsx` - extend adjustSelectedStrokeWidth for drawings
+- `apps/web/src/store/useBoardStore.ts` - update for drawing elements
+
+## Pattern Reference
+Use `isDrawingElement()` from `@tmc/core` for type checking.
+Drawing element structure:
 ```typescript
-startFreehandDrawing: (type: DrawingType, pos: Position) => void;
-updateFreehandDrawing: (pos: Position) => void;
-finishFreehandDrawing: () => void;
+interface DrawingElement {
+  id: string;
+  type: 'drawing';
+  drawingType: 'freehand' | 'highlighter';
+  points: number[];
+  color: string;       // <- editable via picker
+  strokeWidth: number; // <- editable via Alt+Left/Right
+  opacity: number;
+}
 ```
 
-2. **App.tsx keyboard handling:**
-```typescript
-// In handleKeyDown:
-case 'd': setActiveTool('drawing'); break;
-case 'h': setActiveTool('highlighter'); break;
+## Commands
+```bash
+pnpm dev --filter @tmc/web
+pnpm build
 ```
 
-3. **App.tsx mouse events for drawing mode:**
-```typescript
-// When activeTool is 'drawing' or 'highlighter':
-// - onMouseDown: startFreehandDrawing
-// - onMouseMove: updateFreehandDrawing  
-// - onMouseUp: finishFreehandDrawing
-```
+## Priority
+1. Eraser (X key) - fastest UX improvement
+2. Stroke width (Alt+Left/Right)
+3. Color picker - most complex
 
-4. **Render DrawingNode elements:**
-```tsx
-{elements.filter(isDrawingElement).map((el) => (
-  <DrawingNode key={el.id} drawing={el} ... />
-))}
-```
-
-5. **Live preview while drawing:**
-```tsx
-{freehandPoints && (
-  <Line points={freehandPoints} ... />
-)}
-```
-
-## Commits:
-```
-6bb1f5c - feat(S4.8): Add freehand drawing state to useBoardStore
-27fa548 - feat(S4.8): Add DrawingElement type and DrawingNode
-00dfdce - docs: Handoff S4.8 Drawing Foundation complete
-```
-
-## Build: 5/5 ✅
-## Server: http://localhost:3001
-
-**Handoff done → `tasks/NEXT_TASK.md`**
+## Commits from this session
+- `fc27f74` - feat: Add Clear Drawings shortcut (C)
+- `5a28ddb` - docs: Update ROADMAP  
+- `e4b7535` - perf: manualChunks vendor splitting
