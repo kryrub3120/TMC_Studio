@@ -6,9 +6,10 @@
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
-import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox } from '@tmc/board';
+import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode } from '@tmc/board';
+import { Line } from 'react-konva';
 import { useState } from 'react';
 import {
   TopBar,
@@ -1483,6 +1484,29 @@ export default function App() {
                     start={drawingStart}
                     end={drawingEnd}
                     shape="ellipse"
+                  />
+                )}
+
+                {/* Freehand drawing elements */}
+                {elements.filter(isDrawingElement).map((drawing) => (
+                  <DrawingNode
+                    key={drawing.id}
+                    drawing={drawing}
+                    isSelected={selectedIds.includes(drawing.id)}
+                    onSelect={handleElementSelect}
+                  />
+                ))}
+
+                {/* Live freehand preview while drawing */}
+                {freehandPoints && freehandPoints.length >= 4 && (
+                  <Line
+                    points={freehandPoints}
+                    stroke={activeTool === 'highlighter' ? '#ffff00' : '#ff0000'}
+                    strokeWidth={activeTool === 'highlighter' ? 20 : 3}
+                    opacity={activeTool === 'highlighter' ? 0.4 : 1}
+                    lineCap="round"
+                    lineJoin="round"
+                    listening={false}
                   />
                 )}
 
