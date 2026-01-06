@@ -29,6 +29,9 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'Z', description: 'Rect Zone' },
       { key: '⇧Z', description: 'Ellipse Zone' },
       { key: 'T', description: 'Text Label' },
+      { key: 'D', description: 'Freehand Draw' },
+      { key: 'H', description: 'Highlighter' },
+      { key: 'C', description: 'Clear Drawings' },
     ],
   },
   {

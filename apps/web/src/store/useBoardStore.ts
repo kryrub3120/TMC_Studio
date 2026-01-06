@@ -125,6 +125,7 @@ interface BoardState {
   updateFreehandDrawing: (position: Position) => void;
   finishFreehandDrawing: () => void;
   cancelFreehandDrawing: () => void;
+  clearAllDrawings: () => void;
   
   // History actions
   pushHistory: () => void;
@@ -687,6 +688,16 @@ export const useBoardStore = create<BoardState>((set, get) => {
 
     cancelFreehandDrawing: () => {
       set({ freehandPoints: null, freehandType: null });
+    },
+
+    clearAllDrawings: () => {
+      set((state) => ({
+        elements: state.elements.filter((el) => el.type !== 'drawing'),
+        selectedIds: state.selectedIds.filter((id) => 
+          !state.elements.find((el) => el.id === id && el.type === 'drawing')
+        ),
+      }));
+      get().pushHistory();
     },
 
     pushHistory: () => {

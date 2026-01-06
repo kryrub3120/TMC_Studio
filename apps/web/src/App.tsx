@@ -490,6 +490,14 @@ export default function App() {
             e.preventDefault();
           }
           break;
+        case 'c':
+          // C = Clear all drawings (freehand & highlighter)
+          if (!isCmd) {
+            e.preventDefault();
+            clearAllDrawings();
+            showToast('Drawings cleared');
+          }
+          break;
         case 'g':
           if (isCmd && e.shiftKey) {
             e.preventDefault();
@@ -1111,6 +1119,7 @@ export default function App() {
   const updateFreehandDrawing = useBoardStore((s) => s.updateFreehandDrawing);
   const finishFreehandDrawing = useBoardStore((s) => s.finishFreehandDrawing);
   const freehandPoints = useBoardStore((s) => s.freehandPoints);
+  const clearAllDrawings = useBoardStore((s) => s.clearAllDrawings);
 
   // Stage event handlers (use any event type for compatibility)
   const handleStageMouseDown = useCallback(
