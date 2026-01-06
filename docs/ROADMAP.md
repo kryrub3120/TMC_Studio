@@ -155,13 +155,14 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 
 ---
 
-## 🚀 Sprint 5 — Quality & UX (NEXT)
+## 🚀 Sprint 5 — Quality & UX (IN PROGRESS)
 
-### S5.1 Performance Optimization
-- [ ] Code splitting for smaller bundles
-- [ ] Lazy load heavy components (jsPDF, gifenc)
-- [ ] Virtual scrolling for large element lists
-- [ ] Memoization audit
+### S5.1 Performance Optimization ✓
+- [x] Code splitting for smaller bundles (manualChunks)
+- [x] Lazy load heavy components (jsPDF, gifenc via dynamic import)
+- [x] Main bundle reduced from 560kB to 122kB (78% reduction!)
+- [ ] Virtual scrolling for large element lists (future)
+- [ ] Memoization audit (future)
 
 ### S5.2 Mobile & Touch Support
 - [ ] Touch/mobile viewport support
