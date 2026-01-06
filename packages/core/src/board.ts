@@ -9,6 +9,7 @@ import {
   ArrowElement,
   ZoneElement,
   TextElement,
+  EquipmentElement,
   Position,
   Team,
   ElementId,
@@ -16,6 +17,8 @@ import {
   DEFAULT_PITCH_CONFIG,
   ArrowType,
   ZoneShape,
+  EquipmentType,
+  EquipmentVariant,
   isArrowElement,
 } from './types.js';
 
@@ -121,6 +124,36 @@ export function createText(
     color: options?.color ?? '#ffffff',
     bold: options?.bold ?? false,
     italic: options?.italic ?? false,
+  };
+}
+
+/** Default colors for equipment types */
+const EQUIPMENT_COLORS: Record<EquipmentType, string> = {
+  goal: '#ffffff',      // White goal posts
+  mannequin: '#1e40af', // Blue mannequin
+  cone: '#f97316',      // Orange cone
+  ladder: '#fbbf24',    // Yellow ladder
+  hoop: '#ef4444',      // Red hoop
+  hurdle: '#22c55e',    // Green hurdle
+  pole: '#f97316',      // Orange pole
+};
+
+/** Create a new equipment element */
+export function createEquipment(
+  position: Position,
+  equipmentType: EquipmentType,
+  variant: EquipmentVariant = 'standard',
+  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
+): EquipmentElement {
+  return {
+    id: generateId(),
+    type: 'equipment',
+    position: snapToGrid(position, gridSize),
+    equipmentType,
+    variant,
+    rotation: 0,
+    color: EQUIPMENT_COLORS[equipmentType],
+    scale: 1.0,
   };
 }
 

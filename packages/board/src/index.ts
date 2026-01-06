@@ -27,3 +27,6 @@ export { ArrowPreview, ZonePreview } from './DrawingPreview.js';
 
 export { DrawingNode } from './DrawingNode.js';
 export type { DrawingNodeProps } from './DrawingNode.js';
+
+export { EquipmentNode } from './EquipmentNode.js';
+export type { EquipmentNodeProps } from './EquipmentNode.js';

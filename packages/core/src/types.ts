@@ -88,6 +88,12 @@ export interface TextElement extends BoardElementBase {
 /** Drawing types for coach tools */
 export type DrawingType = 'freehand' | 'highlighter';
 
+/** Equipment types for training */
+export type EquipmentType = 'goal' | 'mannequin' | 'cone' | 'ladder' | 'hoop' | 'hurdle' | 'pole';
+
+/** Equipment variants */
+export type EquipmentVariant = 'standard' | 'mini' | 'tall' | 'flat';
+
 /** Drawing element for freehand/highlight strokes */
 export interface DrawingElement {
   id: ElementId;
@@ -99,8 +105,18 @@ export interface DrawingElement {
   opacity: number;
 }
 
+/** Equipment element for training props */
+export interface EquipmentElement extends BoardElementBase {
+  type: 'equipment';
+  equipmentType: EquipmentType;
+  variant: EquipmentVariant;
+  rotation: number;     // 0-360 degrees
+  color: string;        // Main color
+  scale: number;        // Size multiplier (0.5 - 2.0)
+}
+
 /** Union type for all board elements */
-export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement | TextElement | DrawingElement;
+export type BoardElement = PlayerElement | BallElement | ArrowElement | ZoneElement | TextElement | DrawingElement | EquipmentElement;
 
 /** Pitch dimensions configuration */
 export interface PitchConfig {
@@ -326,7 +342,11 @@ export function isDrawingElement(element: BoardElement): element is DrawingEleme
   return element.type === 'drawing';
 }
 
-/** Check if element has a single position (player, ball, zone, text) */
+export function isEquipmentElement(element: BoardElement): element is EquipmentElement {
+  return element.type === 'equipment';
+}
+
+/** Check if element has a single position (player, ball, zone, text, equipment) */
 export function hasPosition(element: BoardElement): element is PlayerElement | BallElement | ZoneElement | TextElement {
   return 'position' in element;
 }
