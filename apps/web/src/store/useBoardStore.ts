@@ -120,6 +120,12 @@ interface BoardState {
   finishZoneDrawing: (shape: ZoneShape) => void;
   cancelDrawing: () => void;
   
+  // Freehand drawing actions
+  startFreehandDrawing: (type: DrawingType, position: Position) => void;
+  updateFreehandDrawing: (position: Position) => void;
+  finishFreehandDrawing: () => void;
+  cancelFreehandDrawing: () => void;
+  
   // History actions
   pushHistory: () => void;
   undo: () => void;
@@ -634,6 +640,53 @@ export const useBoardStore = create<BoardState>((set, get) => {
 
     cancelDrawing: () => {
       set({ drawingStart: null, drawingEnd: null });
+    },
+
+    // Freehand drawing actions
+    startFreehandDrawing: (type, position) => {
+      set({ 
+        freehandType: type, 
+        freehandPoints: [position.x, position.y],
+      });
+    },
+
+    updateFreehandDrawing: (position) => {
+      set((state) => ({
+        freehandPoints: state.freehandPoints 
+          ? [...state.freehandPoints, position.x, position.y]
+          : null,
+      }));
+    },
+
+    finishFreehandDrawing: () => {
+      const { freehandPoints, freehandType } = get();
+      if (!freehandPoints || freehandPoints.length < 4 || !freehandType) {
+        set({ freehandPoints: null, freehandType: null });
+        return;
+      }
+      
+      // Create DrawingElement
+      const drawing = {
+        id: `drawing-${Date.now()}`,
+        type: 'drawing' as const,
+        drawingType: freehandType,
+        points: freehandPoints,
+        color: freehandType === 'highlighter' ? '#ffff00' : '#ff0000',
+        strokeWidth: freehandType === 'highlighter' ? 20 : 3,
+        opacity: freehandType === 'highlighter' ? 0.4 : 1,
+      };
+      
+      set((state) => ({
+        elements: [...state.elements, drawing],
+        selectedIds: [drawing.id],
+        freehandPoints: null,
+        freehandType: null,
+      }));
+      get().pushHistory();
+    },
+
+    cancelFreehandDrawing: () => {
+      set({ freehandPoints: null, freehandType: null });
     },
 
     pushHistory: () => {
