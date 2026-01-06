@@ -45,6 +45,8 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'Esc', description: 'Clear Selection' },
       { key: 'S', description: 'Cycle Player Shape' },
       { key: 'E', description: 'Cycle Zone Shape' },
+      { key: '⌥↑↓', description: 'Cycle Color' },
+      { key: '⌥←→', description: 'Stroke Width' },
     ],
   },
   {

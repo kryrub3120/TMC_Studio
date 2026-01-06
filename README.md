@@ -36,6 +36,10 @@ Open http://localhost:5173
 | Add Rect Zone | `Z` (then drag) |
 | Add Ellipse Zone | `Shift+Z` (then drag) |
 | Add Text Label | `T` |
+| **Freehand Drawing** |  |
+| Freehand Draw (red) | `D` (then drag) |
+| Highlighter (yellow) | `H` (then drag) |
+| Clear All Drawings | `C` |
 | **Selection** |  |
 | Select All | `Cmd/Ctrl+A` |
 | Clear Selection | `Escape` |

@@ -153,6 +153,14 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 - [x] Updated README documentation
 - [x] gifenc library (no Web Worker issues)
 
+### S4.8 Freehand Drawing ✓
+- [x] D = Freehand drawing (red pen 3px)
+- [x] H = Highlighter (yellow 20px, 40% opacity)
+- [x] C = Clear all drawings
+- [x] Alt+Up/Down = Cycle drawing color
+- [x] Alt+Left/Right = Adjust stroke width (1-30px)
+- [x] DrawingNode renders in Konva canvas
+
 ---
 
 ## 🚀 Sprint 5 — Quality & UX (IN PROGRESS)
