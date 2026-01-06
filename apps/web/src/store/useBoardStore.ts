@@ -16,6 +16,8 @@ import type {
   TeamSetting,
   PitchSettings,
   DrawingType,
+  EquipmentType,
+  EquipmentVariant,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
@@ -26,6 +28,7 @@ import {
   createArrow,
   createZone,
   createText,
+  createEquipment,
   duplicateElements,
   moveElement,
   removeElementsByIds,
@@ -94,6 +97,7 @@ interface BoardState {
   addArrowAtCursor: (arrowType: ArrowType) => void;
   addZoneAtCursor: (shape?: ZoneShape) => void;
   addTextAtCursor: () => void;
+  addEquipmentAtCursor: (equipmentType: EquipmentType, variant?: EquipmentVariant) => void;
   updateTextContent: (id: ElementId, content: string) => void;
   updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string }) => void;
   moveElementById: (id: ElementId, position: Position) => void;
@@ -270,6 +274,16 @@ export const useBoardStore = create<BoardState>((set, get) => {
       };
       const text = createText(position, 'Text');
       get().addElement(text);
+    },
+
+    addEquipmentAtCursor: (equipmentType, variant = 'standard') => {
+      const { cursorPosition } = get();
+      const position = cursorPosition ?? { 
+        x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
+        y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
+      };
+      const equipment = createEquipment(position, equipmentType, variant);
+      get().addElement(equipment);
     },
 
     updateTextContent: (id, content) => {
