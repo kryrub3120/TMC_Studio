@@ -18,6 +18,7 @@ export interface InspectorElement {
   fontSize?: number;
   textColor?: string;
   opacity?: number;
+  isGoalkeeper?: boolean;
   x: number;
   y: number;
 }
@@ -56,7 +57,7 @@ export interface RightInspectorProps {
   elements: ElementInList[];
   layerVisibility: LayerVisibility;
   groups?: GroupData[];
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => void;
   onSelectElement?: (id: string) => void;
   onToggleLayerVisibility?: (layer: LayerType) => void;
   onSelectGroup?: (groupId: string) => void;
@@ -190,7 +191,7 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
 const PropsTab: React.FC<{
   selectedCount: number;
   selectedElement?: InspectorElement;
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => void;
   onQuickAction?: (action: string) => void;
 }> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction }) => {
   if (selectedCount === 0) {
@@ -314,6 +315,30 @@ const PropsTab: React.FC<{
               onChange={(e) => onUpdateElement?.({ opacity: parseInt(e.target.value) / 100 })}
               className="w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent"
             />
+          </div>
+          
+          {/* Is Goalkeeper Toggle */}
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <div>
+              <label className="text-xs font-medium text-muted uppercase tracking-wide">Goalkeeper</label>
+              <p className="text-xs text-muted mt-0.5">Uses team GK color</p>
+            </div>
+            <button
+              onClick={() => onUpdateElement?.({ isGoalkeeper: !selectedElement.isGoalkeeper })}
+              className="relative w-10 h-5 rounded-full transition-colors border"
+              style={{
+                backgroundColor: selectedElement.isGoalkeeper ? '#fbbf24' : 'var(--color-surface2, #2a2a2a)',
+                borderColor: selectedElement.isGoalkeeper ? '#f59e0b' : 'var(--color-border, #404040)',
+              }}
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 rounded-full shadow transition-transform"
+                style={{
+                  backgroundColor: selectedElement.isGoalkeeper ? '#fff' : '#888',
+                  transform: selectedElement.isGoalkeeper ? 'translateX(20px)' : 'translateX(2px)',
+                }}
+              />
+            </button>
           </div>
         </>
       )}

@@ -192,6 +192,12 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 - [ ] Toggle on/off
 - [ ] Opacity control
 
+### S5.6 Player UX Improvements ✓
+- [x] Goalkeeper auto-detection (player #1 = yellow color)
+- [x] Toggle "Is Goalkeeper" in Inspector
+- [x] Copy/Paste (Cmd+C / Cmd+V) with clipboard support
+- [x] Quick edit number (Double-click on player = inline input)
+
 ---
 
 ## 🔮 Sprint 6 — Desktop & Cloud (FUTURE)
@@ -245,4 +251,4 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 
 ---
 
-*Last updated: 2026-01-04*
+*Last updated: 2026-01-07*

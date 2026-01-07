@@ -47,12 +47,15 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
   {
     title: 'Edit',
     items: [
+      { key: '⌘C', description: 'Copy Selection' },
+      { key: '⌘V', description: 'Paste' },
       { key: '⌘D', description: 'Duplicate' },
       { key: 'Del', description: 'Delete' },
       { key: '⌘Z', description: 'Undo' },
       { key: '⇧⌘Z', description: 'Redo' },
       { key: '⌘A', description: 'Select All' },
       { key: 'Esc', description: 'Clear Selection' },
+      { key: 'DblClick', description: 'Quick Edit Number' },
       { key: 'S', description: 'Cycle Player Shape' },
       { key: 'E', description: 'Cycle Zone Shape' },
       { key: '⌥↑↓', description: 'Cycle Color' },

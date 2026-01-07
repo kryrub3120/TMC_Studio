@@ -78,6 +78,9 @@ interface BoardState {
   // UI state
   cursorPosition: Position | null;
   
+  // Clipboard for copy/paste
+  clipboard: BoardElement[];
+  
   // Multi-drag state (for dragging multiple selected elements)
   multiDragOffsets: Map<ElementId, Position> | null;
   
@@ -108,6 +111,8 @@ interface BoardState {
   clearSelection: () => void;
   deleteSelected: () => void;
   duplicateSelected: () => void;
+  copySelection: () => void;
+  pasteClipboard: () => void;
   updateSelectedElement: (updates: Partial<PlayerElement>) => void;
   nudgeSelected: (dx: number, dy: number) => void;
   adjustSelectedStrokeWidth: (delta: number) => void;
@@ -207,6 +212,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
     history: [{ elements: initialElements, selectedIds: [] }],
     historyIndex: 0,
     cursorPosition: null,
+    clipboard: [],
     multiDragOffsets: null,
     drawingStart: null,
     drawingEnd: null,
@@ -395,6 +401,29 @@ export const useBoardStore = create<BoardState>((set, get) => {
       set((state) => ({
         elements: [...state.elements, ...duplicated],
         selectedIds: duplicated.map((el) => el.id),
+      }));
+      get().pushHistory();
+    },
+
+    copySelection: () => {
+      const { selectedIds, elements } = get();
+      if (selectedIds.length === 0) return;
+      
+      const selectedElements = filterElementsByIds(elements, selectedIds);
+      // Store deep clone in clipboard
+      set({ clipboard: structuredClone(selectedElements) });
+    },
+
+    pasteClipboard: () => {
+      const { clipboard } = get();
+      if (clipboard.length === 0) return;
+      
+      // Create duplicates with new IDs and offset
+      const pasted = duplicateElements(clipboard, { x: 20, y: 20 });
+      
+      set((state) => ({
+        elements: [...state.elements, ...pasted],
+        selectedIds: pasted.map((el) => el.id),
       }));
       get().pushHistory();
     },

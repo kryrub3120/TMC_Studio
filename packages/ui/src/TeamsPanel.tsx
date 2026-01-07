@@ -55,7 +55,7 @@ function TeamSection({
         />
       </div>
 
-      {/* Color picker */}
+      {/* Primary Color picker */}
       <div>
         <label className="block text-xs text-muted mb-1">Primary Color</label>
         <div className="flex items-center gap-2 mb-2">
@@ -88,6 +88,49 @@ function TeamSection({
               onClick={() => onUpdate({ primaryColor: color })}
               className={`w-5 h-5 rounded border-2 transition-transform hover:scale-110 ${
                 settings.primaryColor.toLowerCase() === color.toLowerCase()
+                  ? 'border-accent ring-1 ring-accent'
+                  : 'border-white/20'
+              }`}
+              style={{ backgroundColor: color }}
+              title={color}
+            />
+          ))}
+        </div>
+      </div>
+      
+      {/* Goalkeeper Color picker */}
+      <div>
+        <label className="block text-xs text-muted mb-1">Goalkeeper Color</label>
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            type="color"
+            value={settings.goalkeeperColor ?? '#fbbf24'}
+            onChange={(e) => onUpdate({ goalkeeperColor: e.target.value })}
+            className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
+          />
+          <input
+            type="text"
+            value={(settings.goalkeeperColor ?? '#fbbf24').toUpperCase()}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                onUpdate({ goalkeeperColor: val });
+              }
+            }}
+            className="flex-1 px-2 py-1.5 text-xs font-mono bg-surface2 border border-border rounded text-text focus:outline-none focus:ring-1 focus:ring-accent"
+            placeholder="#FBBF24"
+          />
+        </div>
+
+        {/* GK Color presets grid */}
+        <div className="grid grid-cols-9 gap-1">
+          {COLOR_PRESETS.map((color) => (
+            <button
+              key={`gk-${color}`}
+              type="button"
+              onClick={() => onUpdate({ goalkeeperColor: color })}
+              className={`w-5 h-5 rounded border-2 transition-transform hover:scale-110 ${
+                (settings.goalkeeperColor ?? '#fbbf24').toLowerCase() === color.toLowerCase()
                   ? 'border-accent ring-1 ring-accent'
                   : 'border-white/20'
               }`}

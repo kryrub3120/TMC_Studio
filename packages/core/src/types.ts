@@ -34,6 +34,7 @@ export interface PlayerElement extends BoardElementBase {
   fontSize?: number; // Custom font size (default: 12)
   textColor?: string; // Custom text color (overrides team color)
   opacity?: number; // Element opacity 0-1 (default: 1)
+  isGoalkeeper?: boolean; // Uses team's goalkeeperColor instead of primaryColor
 }
 
 /** Ball element on the board */
@@ -152,6 +153,7 @@ export interface TeamSetting {
   name: string;
   primaryColor: string;
   secondaryColor: string;
+  goalkeeperColor?: string; // Optional GK jersey color (default: #fbbf24 yellow)
 }
 
 /** Team settings for both teams */

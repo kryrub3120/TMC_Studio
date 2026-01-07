@@ -65,6 +65,8 @@ export default function App() {
   const clearSelection = useBoardStore((s) => s.clearSelection);
   const deleteSelected = useBoardStore((s) => s.deleteSelected);
   const duplicateSelected = useBoardStore((s) => s.duplicateSelected);
+  const copySelection = useBoardStore((s) => s.copySelection);
+  const pasteClipboard = useBoardStore((s) => s.pasteClipboard);
   const updateSelectedElement = useBoardStore((s) => s.updateSelectedElement);
   // Removed: setCursorPosition - was causing lag on every mouse move
   const undo = useBoardStore((s) => s.undo);
@@ -122,6 +124,10 @@ export default function App() {
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingTextValue, setEditingTextValue] = useState<string>('');
   const updateTextContent = useBoardStore((s) => s.updateTextContent);
+
+  // Player quick-edit number state
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editingPlayerNumber, setEditingPlayerNumber] = useState<string>('');
 
   // UI store state
   const theme = useUIStore((s) => s.theme);
@@ -493,11 +499,69 @@ export default function App() {
           }
           break;
         case 'c':
-          // C = Clear all drawings (freehand & highlighter)
-          if (!isCmd) {
+          if (isCmd) {
+            // Cmd+C = Copy selection
+            e.preventDefault();
+            copySelection();
+            showToast('Copied');
+          } else {
+            // C = Clear all drawings (freehand & highlighter)
             e.preventDefault();
             clearAllDrawings();
             showToast('Drawings cleared');
+          }
+          break;
+        case 'v':
+          if (isCmd) {
+            // Cmd+V = Paste from clipboard
+            e.preventDefault();
+            pasteClipboard();
+            showToast('Pasted');
+          } else if (!commandPaletteOpen) {
+            // V = Cycle pitch views (full → plain → half-left → half-right)
+            e.preventDefault();
+            const VIEWS = ['full', 'plain', 'half-left', 'half-right'] as const;
+            const currentView = useBoardStore.getState().getPitchSettings()?.view ?? 'full';
+            const currentIdx = VIEWS.indexOf(currentView as typeof VIEWS[number]);
+            const nextIdx = (currentIdx + 1) % VIEWS.length;
+            const nextView = VIEWS[nextIdx];
+            
+            // If switching to plain, hide all lines
+            if (nextView === 'plain') {
+              useBoardStore.getState().updatePitchSettings({ 
+                view: nextView,
+                lines: {
+                  showOutline: false,
+                  showCenterLine: false,
+                  showCenterCircle: false,
+                  showPenaltyAreas: false,
+                  showGoalAreas: false,
+                  showCornerArcs: false,
+                  showPenaltySpots: false
+                }
+              });
+            } else {
+              // Show all lines for other views
+              useBoardStore.getState().updatePitchSettings({ 
+                view: nextView,
+                lines: {
+                  showOutline: true,
+                  showCenterLine: true,
+                  showCenterCircle: true,
+                  showPenaltyAreas: true,
+                  showGoalAreas: true,
+                  showCornerArcs: true,
+                  showPenaltySpots: true
+                }
+              });
+            }
+            const viewNames: Record<string, string> = {
+              'full': 'Full pitch',
+              'plain': 'Plain grass',
+              'half-left': 'Half (left)',
+              'half-right': 'Half (right)'
+            };
+            showToast(viewNames[nextView] ?? nextView);
           }
           break;
         case 'g':
@@ -834,54 +898,6 @@ export default function App() {
               });
               showToast('Print Friendly mode');
             }
-          }
-          break;
-        case 'v':
-          // V = Cycle pitch views (full → plain → half-left → half-right)
-          if (!isCmd) {
-            e.preventDefault();
-            const VIEWS = ['full', 'plain', 'half-left', 'half-right'] as const;
-            const currentView = useBoardStore.getState().getPitchSettings()?.view ?? 'full';
-            const currentIdx = VIEWS.indexOf(currentView as typeof VIEWS[number]);
-            const nextIdx = (currentIdx + 1) % VIEWS.length;
-            const nextView = VIEWS[nextIdx];
-            
-            // If switching to plain, hide all lines
-            if (nextView === 'plain') {
-              useBoardStore.getState().updatePitchSettings({ 
-                view: nextView,
-                lines: {
-                  showOutline: false,
-                  showCenterLine: false,
-                  showCenterCircle: false,
-                  showPenaltyAreas: false,
-                  showGoalAreas: false,
-                  showCornerArcs: false,
-                  showPenaltySpots: false
-                }
-              });
-            } else {
-              // Show all lines for other views
-              useBoardStore.getState().updatePitchSettings({ 
-                view: nextView,
-                lines: {
-                  showOutline: true,
-                  showCenterLine: true,
-                  showCenterCircle: true,
-                  showPenaltyAreas: true,
-                  showGoalAreas: true,
-                  showCornerArcs: true,
-                  showPenaltySpots: true
-                }
-              });
-            }
-            const viewNames: Record<string, string> = {
-              'full': 'Full pitch',
-              'plain': 'Plain grass',
-              'half-left': 'Half (left)',
-              'half-right': 'Half (right)'
-            };
-            showToast(viewNames[nextView] ?? nextView);
           }
           break;
         case 'x':
@@ -1389,6 +1405,42 @@ export default function App() {
     ? elements.find((el) => el.id === editingTextId && isTextElement(el))
     : null;
 
+  // Player quick-edit handlers
+  const handlePlayerQuickEdit = useCallback((id: string, currentNumber: number) => {
+    setEditingPlayerId(id);
+    setEditingPlayerNumber(String(currentNumber));
+    selectElement(id, false);
+  }, [selectElement]);
+
+  const handlePlayerNumberSave = useCallback(() => {
+    if (editingPlayerId && editingPlayerNumber.trim()) {
+      const numValue = parseInt(editingPlayerNumber.trim(), 10);
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 99) {
+        // Update the player's number by selecting and updating
+        selectElement(editingPlayerId, false);
+        updateSelectedElement({ number: numValue });
+        showToast(`#${numValue}`);
+      }
+    }
+    setEditingPlayerId(null);
+    setEditingPlayerNumber('');
+  }, [editingPlayerId, editingPlayerNumber, selectElement, updateSelectedElement, showToast]);
+
+  const handlePlayerNumberKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePlayerNumberSave();
+    } else if (e.key === 'Escape') {
+      setEditingPlayerId(null);
+      setEditingPlayerNumber('');
+    }
+  }, [handlePlayerNumberSave]);
+
+  // Get editing player element for overlay positioning
+  const editingPlayerElement = editingPlayerId 
+    ? elements.find((el) => el.id === editingPlayerId && isPlayerElement(el))
+    : null;
+
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* Top Bar - hidden in focus mode */}
@@ -1515,6 +1567,7 @@ export default function App() {
                         onSelect={isPlaying ? () => {} : handleElementSelect}
                         onDragEnd={handleElementDragEnd}
                         onDragStart={startMultiDrag}
+                        onQuickEditNumber={isPlaying ? undefined : handlePlayerQuickEdit}
                       />
                     );
                   })}
@@ -1689,6 +1742,35 @@ export default function App() {
                   fontWeight: editingTextElement.bold ? 'bold' : 'normal',
                   fontFamily: editingTextElement.fontFamily,
                 }}
+              />
+            </div>
+          )}
+
+          {/* Player number quick-edit overlay */}
+          {editingPlayerElement && isPlayerElement(editingPlayerElement) && (
+            <div
+              className="absolute pointer-events-auto z-50"
+              style={{
+                left: `calc(50% - ${canvasWidth * zoom / 2}px + ${editingPlayerElement.position.x * zoom}px)`,
+                top: `calc(50% - ${canvasHeight * zoom / 2}px + ${editingPlayerElement.position.y * zoom}px)`,
+                transform: `scale(${zoom}) translate(-50%, -50%)`,
+                transformOrigin: 'center',
+              }}
+            >
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={2}
+                value={editingPlayerNumber}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setEditingPlayerNumber(val);
+                }}
+                onKeyDown={handlePlayerNumberKeyDown}
+                onBlur={handlePlayerNumberSave}
+                autoFocus
+                className="w-12 h-10 text-center bg-surface border-2 border-accent rounded-lg text-white text-xl font-bold outline-none shadow-lg"
               />
             </div>
           )}

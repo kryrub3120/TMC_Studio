@@ -49,6 +49,7 @@ export function createPlayer(
     team,
     number,
     shape: 'circle', // Default shape is circle
+    isGoalkeeper: number === 1, // Nr 1 is always goalkeeper by default
   };
 }
 

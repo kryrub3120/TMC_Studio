@@ -26,19 +26,28 @@ export interface PlayerNodeProps {
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
   /** Optional team settings for custom colors */
   teamSettings?: TeamSettings;
+  /** Called when user double-clicks to quick-edit number */
+  onQuickEditNumber?: (id: string, currentNumber: number) => void;
 }
 
+/** Default goalkeeper color (yellow) */
+const DEFAULT_GK_COLOR = '#fbbf24';
+
 /** Convert team settings to render colors */
-function getTeamColors(team: 'home' | 'away', teamSettings?: TeamSettings): TeamColors {
+function getTeamColors(team: 'home' | 'away', teamSettings?: TeamSettings, isGoalkeeper?: boolean): TeamColors {
   const settings = teamSettings ?? DEFAULT_TEAM_SETTINGS;
   const teamSetting = settings[team];
   
-  // Darken primary color for stroke
-  const primaryHex = teamSetting.primaryColor;
+  // Use goalkeeper color if player is GK, otherwise use primary
+  const primaryHex = isGoalkeeper
+    ? (teamSetting.goalkeeperColor ?? DEFAULT_GK_COLOR)
+    : teamSetting.primaryColor;
+  
+  // Darken color for stroke
   const darkenedStroke = darkenColor(primaryHex, 20);
   
   return {
-    fill: teamSetting.primaryColor,
+    fill: primaryHex,
     stroke: darkenedStroke,
     text: teamSetting.secondaryColor,
   };
@@ -67,16 +76,24 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   onDragEnd,
   onDragStart,
   teamSettings,
+  onQuickEditNumber,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
-  const colors = getTeamColors(player.team, teamSettings);
+  const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper);
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
     const addToSelection = e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey;
     onSelect(player.id, addToSelection);
+  };
+
+  const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
+    if (onQuickEditNumber) {
+      onQuickEditNumber(player.id, player.number);
+    }
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -135,6 +152,8 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       draggable={!multiDragActive}
       onClick={handleClick}
       onTap={handleClick}
+      onDblClick={handleDblClick}
+      onDblTap={handleDblClick}
       onMouseDown={handleMouseDown}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -265,11 +284,12 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
 
 /** Memoized PlayerNode - only re-renders when props actually change */
 export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
-  // Check teamSettings colors
+  // Check teamSettings colors (including goalkeeper color)
   const prevColors = prevProps.teamSettings?.[prevProps.player.team];
   const nextColors = nextProps.teamSettings?.[nextProps.player.team];
   const colorsEqual = prevColors?.primaryColor === nextColors?.primaryColor &&
-                      prevColors?.secondaryColor === nextColors?.secondaryColor;
+                      prevColors?.secondaryColor === nextColors?.secondaryColor &&
+                      prevColors?.goalkeeperColor === nextColors?.goalkeeperColor;
   
   return (
     prevProps.player.id === nextProps.player.id &&
@@ -283,6 +303,7 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.fontSize === nextProps.player.fontSize &&
     prevProps.player.textColor === nextProps.player.textColor &&
     prevProps.player.opacity === nextProps.player.opacity &&
+    prevProps.player.isGoalkeeper === nextProps.player.isGoalkeeper &&
     prevProps.isSelected === nextProps.isSelected &&
     colorsEqual
   );

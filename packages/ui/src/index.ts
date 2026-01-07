@@ -43,3 +43,6 @@ export type { TeamsPanelProps } from './TeamsPanel.js';
 
 export { PitchPanel } from './PitchPanel.js';
 export type { PitchPanelProps } from './PitchPanel.js';
+
+export { QuickEditOverlay } from './QuickEditOverlay.js';
+export type { QuickEditOverlayProps } from './QuickEditOverlay.js';
