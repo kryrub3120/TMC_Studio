@@ -907,21 +907,35 @@ export default function App() {
           }
           break;
         case '[':
-          // Rotate selected equipment counter-clockwise
+          // Rotate selected equipment counter-clockwise (fine)
           if (!isCmd) {
             e.preventDefault();
-            const degrees = e.shiftKey ? -90 : -15;
-            rotateSelected(degrees);
-            showToast(`Rotated ${degrees}°`);
+            rotateSelected(-15);
+            showToast('Rotated -15°');
           }
           break;
         case ']':
-          // Rotate selected equipment clockwise
+          // Rotate selected equipment clockwise (fine)
           if (!isCmd) {
             e.preventDefault();
-            const degrees = e.shiftKey ? 90 : 15;
-            rotateSelected(degrees);
-            showToast(`Rotated +${degrees}°`);
+            rotateSelected(15);
+            showToast('Rotated +15°');
+          }
+          break;
+        case '{':
+          // Shift+[ on most keyboards = fast rotate counter-clockwise
+          if (!isCmd) {
+            e.preventDefault();
+            rotateSelected(-90);
+            showToast('Rotated -90°');
+          }
+          break;
+        case '}':
+          // Shift+] on most keyboards = fast rotate clockwise
+          if (!isCmd) {
+            e.preventDefault();
+            rotateSelected(90);
+            showToast('Rotated +90°');
           }
           break;
       }
