@@ -80,6 +80,7 @@ export default function App() {
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
+  const rotateSelected = useBoardStore((s) => s.rotateSelected);
   const selectElementsInRect = useBoardStore((s) => s.selectElementsInRect);
   const updateArrowEndpoint = useBoardStore((s) => s.updateArrowEndpoint);
   const createGroup = useBoardStore((s) => s.createGroup);
@@ -903,6 +904,24 @@ export default function App() {
           if (isCmd) {
             e.preventDefault();
             zoomOut();
+          }
+          break;
+        case '[':
+          // Rotate selected equipment counter-clockwise
+          if (!isCmd) {
+            e.preventDefault();
+            const degrees = e.shiftKey ? -90 : -15;
+            rotateSelected(degrees);
+            showToast(`Rotated ${degrees}°`);
+          }
+          break;
+        case ']':
+          // Rotate selected equipment clockwise
+          if (!isCmd) {
+            e.preventDefault();
+            const degrees = e.shiftKey ? 90 : 15;
+            rotateSelected(degrees);
+            showToast(`Rotated +${degrees}°`);
           }
           break;
       }

@@ -38,6 +38,8 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
       { key: 'Y', description: 'Ladder' },
       { key: 'Q', description: 'Hoop' },
       { key: 'U', description: 'Hurdle' },
+      { key: '[/]', description: 'Rotate ±15°' },
+      { key: '⇧[/]', description: 'Rotate ±90°' },
     ],
   },
   {

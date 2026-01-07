@@ -114,6 +114,7 @@ interface BoardState {
   cycleSelectedColor: (direction: number) => void;
   cyclePlayerShape: () => void;
   cycleZoneShape: () => void;
+  rotateSelected: (degrees: number) => void;
   selectElementsInRect: (start: Position, end: Position) => void;
   setCursorPosition: (position: Position | null) => void;
   
@@ -560,6 +561,25 @@ export const useBoardStore = create<BoardState>((set, get) => {
             const currentIndex = ZONE_SHAPES.indexOf(currentShape);
             const newIndex = (currentIndex + 1) % ZONE_SHAPES.length;
             return { ...el, shape: ZONE_SHAPES[newIndex] };
+          }
+          return el;
+        }),
+      }));
+      get().pushHistory();
+    },
+
+    rotateSelected: (degrees) => {
+      const { selectedIds } = get();
+      if (selectedIds.length === 0) return;
+      
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (selectedIds.includes(el.id) && el.type === 'equipment') {
+            const equipment = el as { rotation?: number };
+            const currentRotation = equipment.rotation ?? 0;
+            // Normalize to 0-360
+            const newRotation = ((currentRotation + degrees) % 360 + 360) % 360;
+            return { ...el, rotation: newRotation };
           }
           return el;
         }),
