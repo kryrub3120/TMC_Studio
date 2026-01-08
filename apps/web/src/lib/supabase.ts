@@ -55,13 +55,44 @@ export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   
-  const { data: profile } = await supabase
+  // Try to fetch existing profile
+  let { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
   
-  if (!profile) return null;
+  // If no profile exists, create one (for OAuth users)
+  if (!profile) {
+    console.log('Creating profile for new OAuth user:', user.id);
+    const newProfile = {
+      id: user.id,
+      email: user.email ?? '',
+      full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+      avatar_url: user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
+      subscription_tier: 'free' as const,
+    };
+    
+    const { data: created, error } = await supabase
+      .from('profiles')
+      .upsert(newProfile)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating profile:', error);
+      // Return basic user even without profile
+      return {
+        id: user.id,
+        email: user.email ?? '',
+        full_name: newProfile.full_name ?? undefined,
+        avatar_url: newProfile.avatar_url ?? undefined,
+        subscription_tier: 'free',
+      };
+    }
+    
+    profile = created;
+  }
   
   return {
     id: profile.id,
