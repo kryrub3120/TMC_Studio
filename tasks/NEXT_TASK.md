@@ -1,140 +1,170 @@
-# Backend & Payment Integration - Complete
+# TMC Studio - Current Status & Next Steps
 
-## ✅ Phase 1: Supabase Integration - DONE
-- [x] `apps/web/src/lib/supabase.ts` - Klient SDK
-- [x] `supabase/migrations/20260108000000_initial_schema.sql` - Schemat DB
-- [x] `supabase/migrations/20260108000001_add_stripe_customer_id.sql` - Stripe integration
-- [x] `supabase/seed.sql` - Dane testowe
-- [x] `supabase/config.toml` - Konfiguracja CLI
-
-## ✅ Phase 2: Netlify Functions - DONE
-- [x] `netlify.toml` - Konfiguracja Netlify
-- [x] `netlify/functions/stripe-webhook.ts` - Stripe webhook handler
-- [x] `netlify/functions/health.ts` - Health check endpoint
-- [x] `netlify/functions/tsconfig.json` - TypeScript config
-- [x] `.env.example` - Dokumentacja zmiennych środowiskowych
-
-## ✅ TypeScript Status: PASS (9/9 tasks)
+**Last Updated:** 2026-01-08  
+**Production URL:** https://tmcstudio.app
 
 ---
 
-## 🚀 Next Steps (Manual)
+## ✅ COMPLETED (Phase 1 - Infrastructure)
 
-### 1. Zainstaluj Supabase CLI i połącz projekt (~5 min)
+### Supabase
+- [x] Project: `pgacjczecyfnwsaadyvj`
+- [x] Database schema deployed (profiles, projects, templates)
+- [x] Auth redirect URLs configured for `tmcstudio.app`
+- [x] RLS policies active
 
+### Netlify  
+- [x] Site: `tmc-studio` → `tmcstudio.app`
+- [x] Custom domain with SSL
+- [x] SPA routing fixed
+- [x] Netlify Functions deployed
+
+### Stripe (Live Mode!)
+- [x] Products created (Pro + Team)
+- [x] Webhook: `https://tmcstudio.app/.netlify/functions/stripe-webhook`
+- [x] Price IDs configured in code
+
+**Price IDs:**
+| Plan | Monthly | Yearly |
+|------|---------|--------|
+| Pro | `price_1SnQvaANogcZdSR39JL60iCS` | `price_1SnQvaANogcZdSR3f6Pv3xZ8` |
+| Team | `price_1SnQvzANogcZdSR3BiUrQvqc` | `price_1SnQwfANogcZdSR3Kdp2j8FB` |
+
+### Environment Variables (9 total)
+- [x] `VITE_SUPABASE_URL`
+- [x] `VITE_SUPABASE_ANON_KEY`
+- [x] `SUPABASE_URL`
+- [x] `SUPABASE_SERVICE_ROLE_KEY`
+- [x] `STRIPE_SECRET_KEY`
+- [x] `STRIPE_WEBHOOK_SECRET`
+- [x] `NODE_VERSION` (20)
+- [x] `PNPM_VERSION` (9)
+- [x] `NPM_FLAGS` (--include=dev)
+
+---
+
+## 🚧 TODO (Phase 2 - Auth & Logic)
+
+### Authentication
+- [ ] **Google OAuth Setup**
+  - Configure in Supabase: Authentication → Providers → Google
+  - Get OAuth credentials from Google Cloud Console
+  - Add `accounts.google.com` to authorized domains
+  
+- [ ] **Magic Link Testing**
+  - Test email signup flow
+  - Verify redirect back to app
+  - Check profile creation trigger
+
+- [ ] **Session Persistence**
+  - Test token refresh
+  - Handle expired sessions gracefully
+
+### Payment Flow
+- [ ] **Checkout Testing**
+  - Test Pro monthly checkout
+  - Test Team yearly checkout
+  - Verify webhook updates `subscription_tier`
+  
+- [ ] **Test Cards:**
+  - Success: `4242 4242 4242 4242`
+  - Decline: `4000 0000 0000 0002`
+  - 3D Secure: `4000 0025 0000 3155`
+
+### Frontend Logic
+- [ ] **AuthModal integration**
+  - Connect to actual Supabase auth
+  - Handle loading states
+  - Show proper error messages
+
+- [ ] **PricingModal**
+  - Connect upgrade buttons to Stripe checkout
+  - Pass user email to checkout session
+
+- [ ] **ProjectsDrawer**
+  - Fetch projects from Supabase
+  - Implement save/load project
+  - Handle cloud sync
+
+### Database Functions
+- [ ] **Profile creation trigger** (on auth.users insert)
+- [ ] **Subscription tier check** function
+- [ ] **Project ownership validation**
+
+---
+
+## 🧪 Testing Checklist
+
+### Manual Testing
+- [ ] Sign up with email → verify email → login
+- [ ] Sign in with Google (after setup)
+- [ ] Create a project → save → reload → verify data
+- [ ] Upgrade to Pro → verify subscription_tier changes
+- [ ] Cancel subscription → verify downgrade to free
+
+### API Testing
 ```bash
-# Install CLI (jeśli nie masz)
-brew install supabase/tap/supabase
+# Health check
+curl https://tmcstudio.app/.netlify/functions/health
 
-# Login
+# Create checkout (needs auth)
+curl -X POST https://tmcstudio.app/.netlify/functions/create-checkout \
+  -H "Content-Type: application/json" \
+  -d '{"priceId":"price_1SnQvaANogcZdSR39JL60iCS","successUrl":"https://tmcstudio.app/success","cancelUrl":"https://tmcstudio.app/cancel"}'
+```
+
+---
+
+## 📝 Quick Reference
+
+### Local Development
+```bash
+cd "TMC Studio"
+pnpm install
+pnpm dev              # Start all packages
+# Frontend: http://localhost:5173
+```
+
+### Netlify CLI
+```bash
+netlify status        # Check project link
+netlify env:list      # List env vars
+netlify deploy --prod # Manual deploy
+```
+
+### Supabase CLI
+```bash
 supabase login
-
-# Link projekt
-cd "/Users/krystianrubajczyk/Documents/PROGRAMOWANIE/TMC Studio "
 supabase link --project-ref pgacjczecyfnwsaadyvj
-
-# Push migracji
-supabase db push
-```
-
-### 2. Skonfiguruj Netlify (~3 min)
-
-```bash
-# Install Netlify CLI (jeśli nie masz)
-npm install -g netlify-cli
-
-# Login
-netlify login
-
-# Init nowy site lub link istniejący
-netlify init
-# lub
-netlify link
-```
-
-### 3. Dodaj zmienne środkowiskowe w Netlify Dashboard
-
-Przejdź do: **Site Settings → Environment Variables**
-
-```env
-# Required for Netlify Functions
-SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<z Supabase Dashboard>
-STRIPE_SECRET_KEY=sk_test_xxx  # Z https://dashboard.stripe.com/apikeys
-STRIPE_WEBHOOK_SECRET=whsec_xxx  # Po utworzeniu webhook
-```
-
-### 4. Skonfiguruj Stripe Webhook
-
-1. Przejdź do: https://dashboard.stripe.com/webhooks
-2. Kliknij "Add endpoint"
-3. URL: `https://YOUR-SITE.netlify.app/api/stripe-webhook`
-4. Events:
-   - `checkout.session.completed`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.payment_succeeded`
-   - `invoice.payment_failed`
-5. Skopiuj `Webhook signing secret` do env
-
-### 5. Test lokalnie (~2 min)
-
-```bash
-# Start Netlify dev (z functions)
-netlify dev
-
-# Test health endpoint
-curl http://localhost:8888/api/health
-
-# Test Stripe webhook (z Stripe CLI)
-stripe listen --forward-to localhost:8888/api/stripe-webhook
+supabase db push      # Push migrations
 ```
 
 ---
 
-## 📁 Project Structure (After Changes)
+## 🔗 Important Links
 
-```
-TMC Studio/
-├── apps/web/
-│   ├── src/
-│   │   ├── lib/
-│   │   │   └── supabase.ts          # ✅ Supabase client
-│   │   └── ...
-│   └── .env.local                    # ✅ Local credentials
-├── netlify/
-│   └── functions/
-│       ├── stripe-webhook.ts        # ✅ Payment webhook
-│       ├── health.ts                # ✅ Health check
-│       └── tsconfig.json            # ✅ TS config
-├── supabase/
-│   ├── migrations/
-│   │   ├── 20260108000000_initial_schema.sql      # ✅ Base schema
-│   │   └── 20260108000001_add_stripe_customer_id.sql  # ✅ Stripe
-│   ├── config.toml                  # ✅ CLI config
-│   └── seed.sql                     # ✅ Test data
-├── netlify.toml                     # ✅ Netlify config
-├── .env.example                     # ✅ Env documentation
-└── docs/
-    └── MASTER_DEVELOPMENT_PLAN.md   # ✅ Full roadmap
-```
+- **Production:** https://tmcstudio.app
+- **Netlify Dashboard:** https://app.netlify.com/projects/tmc-studio
+- **Supabase Dashboard:** https://supabase.com/dashboard/project/pgacjczecyfnwsaadyvj
+- **Stripe Dashboard:** https://dashboard.stripe.com
+- **GitHub:** https://github.com/kryrub3120/TMC_Studio
 
 ---
 
-## 🔜 Future Tasks (W3-W4)
+## ⚠️ Known Issues
 
-1. **Auth UI** - Login/Register komponenty
-2. **Projects Dashboard** - Lista projektów użytkownika
-3. **Cloud Save** - Auto-sync do Supabase
-4. **Stripe Checkout** - /pricing page z Checkout
-5. **Billing Portal** - /settings/billing
+1. **Google OAuth not configured yet** - only Magic Link works
+2. **No profile avatar upload** - using initials for now
+3. **Stripe in Live Mode** - be careful with real charges!
 
 ---
 
-## 📚 Resources
+## 📅 Session Log
 
-- [Supabase Dashboard](https://supabase.com/dashboard/project/pgacjczecyfnwsaadyvj)
-- [Stripe Dashboard](https://dashboard.stripe.com)
-- [Netlify Dashboard](https://app.netlify.com)
-- [Master Plan](../docs/MASTER_DEVELOPMENT_PLAN.md)
-3. **Cloud Save** - zamiana localStorage na Supabase
+### 2026-01-08
+- ✅ Supabase schema deployed
+- ✅ Stripe products created (Pro + Team)
+- ✅ Netlify functions deployed
+- ✅ Custom domain `tmcstudio.app` configured
+- ✅ Fixed 404 error (SPA redirect condition)
+- ✅ All environment variables set
