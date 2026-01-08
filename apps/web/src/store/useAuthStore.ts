@@ -1,6 +1,8 @@
 /**
  * Auth Store - Zustand
  * TMC Studio - Authentication state management
+ * 
+ * SIMPLIFIED VERSION - let Supabase handle OAuth automatically
  */
 
 import { create } from 'zustand';
@@ -13,6 +15,7 @@ import {
   signOut as supabaseSignOut,
   signInWithGoogle as supabaseSignInWithGoogle,
   onAuthStateChange,
+  supabase,
   type User,
 } from '../lib/supabase';
 
@@ -51,8 +54,10 @@ export const useAuthStore = create<AuthState>()(
 
       // Initialize auth - call on app startup
       initialize: async () => {
-        if (!isSupabaseEnabled()) {
-          console.log('Supabase disabled - using offline mode');
+        console.log('[Auth] Initialize started');
+        
+        if (!isSupabaseEnabled() || !supabase) {
+          console.log('[Auth] Supabase disabled - using offline mode');
           set({ isInitialized: true, isLoading: false });
           return;
         }
@@ -60,18 +65,31 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
 
         try {
-          // Handle OAuth redirect - check if we have tokens in URL hash
-          const hash = window.location.hash;
-          if (hash && hash.includes('access_token')) {
-            console.log('Processing OAuth callback...');
-            // Supabase will process the hash automatically, but we need to wait
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            // Clear the hash from URL for cleaner UI
+          // First, get the session - this will process any OAuth callback automatically
+          console.log('[Auth] Getting session...');
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          
+          if (sessionError) {
+            console.error('[Auth] Session error:', sessionError);
+            throw sessionError;
+          }
+          
+          console.log('[Auth] Session:', session ? 'Found' : 'None');
+          
+          // If we have a session, get the full user profile
+          let user: User | null = null;
+          if (session?.user) {
+            console.log('[Auth] User in session:', session.user.email);
+            user = await getCurrentUser();
+            console.log('[Auth] Full user profile:', user);
+          }
+          
+          // Clear hash from URL if present (cleanup after OAuth)
+          if (window.location.hash && window.location.hash.includes('access_token')) {
+            console.log('[Auth] Clearing OAuth hash from URL');
             window.history.replaceState(null, '', window.location.pathname);
           }
 
-          // Get initial user
-          const user = await getCurrentUser();
           set({
             user,
             isAuthenticated: !!user,
@@ -80,9 +98,12 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             isInitialized: true,
           });
+          
+          console.log('[Auth] Initialized - authenticated:', !!user);
 
-          // Listen for auth changes
+          // Listen for auth changes (login, logout, token refresh)
           onAuthStateChange((user) => {
+            console.log('[Auth] State changed - user:', user?.email ?? 'none');
             set({
               user,
               isAuthenticated: !!user,
@@ -90,15 +111,16 @@ export const useAuthStore = create<AuthState>()(
               isTeam: user?.subscription_tier === 'team',
             });
           });
+          
         } catch (error) {
-          // AbortError is expected during OAuth redirects, ignore it
+          // Ignore AbortError - it's expected during page navigation
           if (error instanceof Error && error.name === 'AbortError') {
-            console.log('Auth init interrupted (OAuth redirect) - this is normal');
+            console.log('[Auth] AbortError (expected during navigation)');
             set({ isLoading: false, isInitialized: true });
             return;
           }
           
-          console.error('Auth initialization error:', error);
+          console.error('[Auth] Initialization error:', error);
           set({
             isLoading: false,
             isInitialized: true,
@@ -166,10 +188,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
+          console.log('[Auth] Starting Google sign in...');
           await supabaseSignInWithGoogle();
-          // Redirect will happen, so don't need to set state
+          // Redirect will happen, state will be set after return
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Google sign in failed';
+          console.error('[Auth] Google sign in error:', error);
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -209,11 +233,11 @@ export const useAuthStore = create<AuthState>()(
 
 // Auto-initialize on import
 if (typeof window !== 'undefined') {
-  // Defer initialization to avoid blocking
+  // Defer initialization slightly to let Supabase client process any OAuth hash
   setTimeout(() => {
     const { initialize, isInitialized } = useAuthStore.getState();
     if (!isInitialized) {
       initialize();
     }
-  }, 0);
+  }, 100);
 }
