@@ -114,7 +114,8 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      // Redirect to home page - Supabase handles token extraction
+      redirectTo: window.location.origin,
     },
   });
   
