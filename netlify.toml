@@ -5,8 +5,8 @@
   # Base directory (root of monorepo)
   base = "/"
   
-  # Build command (use npx for turbo in CI)
-  command = "pnpm install && npx turbo run build"
+  # Build command - force install devDependencies for build tools
+  command = "corepack enable && pnpm install --prod=false && pnpm run build"
   
   # Output directory (Vite build output)
   publish = "apps/web/dist"
@@ -20,6 +20,9 @@
   
   # pnpm version
   PNPM_VERSION = "9"
+  
+  # Install all dependencies (including devDependencies for build tools)
+  NPM_FLAGS = "--include=dev"
 
 # Development settings
 [dev]
