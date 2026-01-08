@@ -60,6 +60,16 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
 
         try {
+          // Handle OAuth redirect - check if we have tokens in URL hash
+          const hash = window.location.hash;
+          if (hash && hash.includes('access_token')) {
+            console.log('Processing OAuth callback...');
+            // Supabase will process the hash automatically, but we need to wait
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            // Clear the hash from URL for cleaner UI
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+
           // Get initial user
           const user = await getCurrentUser();
           set({
