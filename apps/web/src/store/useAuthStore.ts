@@ -91,6 +91,13 @@ export const useAuthStore = create<AuthState>()(
             });
           });
         } catch (error) {
+          // AbortError is expected during OAuth redirects, ignore it
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.log('Auth init interrupted (OAuth redirect) - this is normal');
+            set({ isLoading: false, isInitialized: true });
+            return;
+          }
+          
           console.error('Auth initialization error:', error);
           set({
             isLoading: false,

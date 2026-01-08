@@ -27,6 +27,10 @@ export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
+        // Fix AbortError in Navigator Locks API during OAuth redirects
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storageKey: 'tmc-auth-token',
+        flowType: 'pkce',
       },
     })
   : null;
