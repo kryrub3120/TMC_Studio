@@ -200,18 +200,35 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 
 ---
 
-## 🔮 Sprint 6 — Desktop & Cloud (FUTURE)
+## 🔄 Sprint 6 — Cloud & Auth (IN PROGRESS)
 
-### S6.1 Tauri Desktop App
+### S6.1 Authentication ✓
+- [x] Supabase setup (PostgreSQL + Auth + Storage)
+- [x] User profiles table with RLS
+- [x] Google OAuth integration
+- [x] Auth state management (Zustand)
+- [x] UserMenu component with avatar/initials
+- [x] AuthModal for login/signup
+- [x] Session persistence (localStorage)
+- [x] Auto-profile creation on OAuth
+
+### S6.2 Cloud Save (NEXT)
+- [ ] Save project to Supabase
+- [ ] Load project from Supabase
+- [ ] ProjectsDrawer integration
+- [ ] Auto-save on changes
+- [ ] Offline queue with sync
+
+### S6.3 Stripe Payments
+- [ ] Checkout integration
+- [ ] Webhook handler (Netlify Functions)
+- [ ] Subscription tier updates
+- [ ] PricingModal integration
+
+### S6.4 Tauri Desktop App (FUTURE)
 - [ ] Lightweight native app wrapper
 - [ ] Native file save/open dialogs
 - [ ] Offline-first architecture
-
-### S6.2 Cloud Features
-- [ ] User accounts (auth)
-- [ ] Project cloud sync
-- [ ] Team collaboration
-- [ ] Share links
 
 ### S6.3 Advanced Analysis
 - [ ] Heat maps overlay

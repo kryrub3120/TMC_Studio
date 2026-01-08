@@ -185,24 +185,30 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_SAUMCKnlRg70wb1Ig-x0ng_CjHleGc5
 
 ## 📋 Plan Rozwoju - Fazy
 
-### Faza 1: Fundament Backend (Tydzień 1-2)
+### Faza 1: Fundament Backend (Tydzień 1-2) ✅ COMPLETED
 
-#### 1.1 Setup Supabase
+#### 1.1 Setup Supabase ✓
 - [x] Utworzenie projektu Supabase
-- [ ] Inicjalizacja Supabase CLI w projekcie
-- [ ] Utworzenie schematu bazy danych
-- [ ] Konfiguracja RLS policies
-- [ ] Setup auth (email/password + OAuth Google)
+- [x] Inicjalizacja Supabase CLI w projekcie
+- [x] Utworzenie schematu bazy danych (profiles, projects, templates)
+- [x] Konfiguracja RLS policies (users, projects)
+- [x] Setup auth (email/password + OAuth Google)
+- [x] Migracje SQL w `supabase/migrations/`
+- [x] Storage buckets (thumbnails, avatars)
 
-#### 1.2 Integracja Frontend
-- [ ] Instalacja @supabase/supabase-js
-- [ ] Klient Supabase w `apps/web/src/lib/supabase.ts`
-- [ ] Auth context/provider
-- [ ] Protected routes
-- [ ] User profile w TopBar
+#### 1.2 Integracja Frontend ✓
+- [x] Instalacja @supabase/supabase-js
+- [x] Klient Supabase w `apps/web/src/lib/supabase.ts`
+- [x] AuthStore (Zustand) w `apps/web/src/store/useAuthStore.ts`
+- [x] AuthModal component (login/signup/OAuth)
+- [x] UserMenu component (avatar, dropdown, logout)
+- [x] User profile w TopBar (inicjały KR)
+- [x] Auto-profile creation on OAuth
 
-#### 1.3 Cloud Save
-- [ ] Migracja z localStorage na Supabase
+#### 1.3 Cloud Save (NEXT)
+- [ ] Save project to Supabase (Cmd+S integration)
+- [ ] Load project from Supabase
+- [ ] ProjectsDrawer lista projektów
 - [ ] Auto-sync projektu
 - [ ] Conflict resolution (last-write-wins)
 - [ ] Offline mode z sync przy połączeniu
@@ -340,8 +346,8 @@ pnpm dev
 ## 📅 Timeline (10 tygodni do v1.0)
 
 ```
-Tydzień 1-2:  [█████░░░░░] Setup Supabase + Basic Auth
-Tydzień 3-4:  [░░░░░░░░░░] User System + Projects
+Tydzień 1-2:  [██████████] Setup Supabase + Basic Auth ✅ DONE
+Tydzień 3-4:  [██░░░░░░░░] Cloud Save + Projects Dashboard
 Tydzień 5-6:  [░░░░░░░░░░] Sharing + Collaboration
 Tydzień 7-8:  [░░░░░░░░░░] Stripe + Subscriptions
 Tydzień 9-10: [░░░░░░░░░░] Testing + Launch
