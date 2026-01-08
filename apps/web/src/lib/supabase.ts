@@ -234,12 +234,13 @@ export async function getProject(id: string): Promise<Project | null> {
 export async function createProject(project: ProjectInsert): Promise<Project | null> {
   if (!supabase) return null;
   
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  // Ensure user profile exists (fixes FK constraint errors)
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated or profile missing');
   
   const { data, error } = await supabase
     .from('projects')
-    .insert({ ...project, user_id: user.id })
+    .insert({ ...project, user_id: currentUser.id })
     .select()
     .single();
   

@@ -3,7 +3,7 @@
  * Contains: Logo, project name, saved status, Export, Focus, Theme toggle, Help, Cmd+K hint
  */
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export type PlanType = 'free' | 'pro';
 
@@ -16,11 +16,17 @@ export interface TopBarProps {
   plan?: PlanType;
   /** User initials for avatar */
   userInitials?: string;
+  /** Is syncing to cloud */
+  isSyncing?: boolean;
   onExport: () => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
   onOpenPalette: () => void;
   onOpenHelp: () => void;
+  /** Open projects drawer */
+  onOpenProjects?: () => void;
+  /** Rename project callback */
+  onRename?: (newName: string) => void;
   /** Account menu callbacks */
   onOpenAccount?: () => void;
   onUpgrade?: () => void;
@@ -187,17 +193,52 @@ export const TopBar: React.FC<TopBarProps> = ({
   theme,
   plan = 'free',
   userInitials = 'U',
+  isSyncing = false,
   onExport,
   onToggleFocus,
   onToggleTheme,
   onOpenPalette,
   onOpenHelp,
+  onOpenProjects,
+  onRename,
   onOpenAccount,
   onUpgrade,
   onLogout,
 }) => {
   const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
   const cmdKey = isMac ? '⌘' : 'Ctrl';
+  
+  // Inline editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(projectName);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  
+  // Handle save
+  const handleSave = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== projectName && onRename) {
+      onRename(trimmed);
+    }
+    setIsEditing(false);
+  };
+  
+  // Handle key events
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditValue(projectName);
+      setIsEditing(false);
+    }
+  };
 
   return (
     <header className="h-12 px-4 flex items-center justify-between bg-surface border-b border-border z-topbar">
@@ -217,19 +258,60 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="w-px h-5 bg-border hidden sm:block" />
 
         {/* Project name + saved status */}
-        <div className="flex items-center gap-2">
-          <span className="text-text text-sm font-medium truncate max-w-[200px]">
-            {projectName}
-          </span>
-          <span
-            className={`text-xs px-1.5 py-0.5 rounded ${
-              isSaved
-                ? 'bg-accent/10 text-accent'
-                : 'bg-orange-500/10 text-orange-500'
-            }`}
+        <div className="flex items-center gap-2 px-2 py-1 -mx-2">
+          {/* Folder icon - click opens Projects drawer */}
+          <button
+            onClick={onOpenProjects}
+            className="p-1 -m-1 rounded hover:bg-surface2 transition-colors group"
+            title="Open Projects"
           >
-            {isSaved ? 'Saved' : 'Unsaved'}
-          </span>
+            <svg className="w-4 h-4 text-muted group-hover:text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+          
+          {/* Project name - click to edit */}
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={handleKeyDown}
+              className="text-text text-sm font-medium bg-surface2 border border-accent rounded px-2 py-0.5 w-[180px] outline-none"
+              placeholder="Project name"
+            />
+          ) : (
+            <button
+              onClick={() => {
+                setEditValue(projectName);
+                setIsEditing(true);
+              }}
+              className="text-text text-sm font-medium truncate max-w-[200px] hover:text-accent transition-colors cursor-text"
+              title="Click to rename"
+            >
+              {projectName}
+            </button>
+          )}
+          
+          {/* Sync indicator */}
+          {isSyncing ? (
+            <svg className="w-3 h-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <span
+              className={`text-xs px-1.5 py-0.5 rounded ${
+                isSaved
+                  ? 'bg-accent/10 text-accent'
+                  : 'bg-orange-500/10 text-orange-500'
+              }`}
+            >
+              {isSaved ? 'Saved' : 'Unsaved'}
+            </span>
+          )}
         </div>
       </div>
 

@@ -1411,10 +1411,12 @@ export const useBoardStore = create<BoardState>((set, get) => {
     },
 
     fetchCloudProjects: async () => {
+      console.log('[DEBUG] fetchCloudProjects called, supabase enabled:', isSupabaseEnabled());
       if (!isSupabaseEnabled()) return;
       
       try {
         const projects = await getProjects();
+        console.log('[DEBUG] getProjects returned:', projects?.length ?? 0, 'projects', projects);
         set({ cloudProjects: projects });
       } catch (error) {
         console.error('Fetch projects error:', error);

@@ -25,6 +25,7 @@ interface ProjectsDrawerProps {
   onDeleteProject: (id: string) => void;
   onDuplicateProject: (id: string) => void;
   onSignIn: () => void;
+  onRefresh?: () => void;
 }
 
 export function ProjectsDrawer({
@@ -39,6 +40,7 @@ export function ProjectsDrawer({
   onDeleteProject,
   onDuplicateProject,
   onSignIn,
+  onRefresh,
 }: ProjectsDrawerProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -72,7 +74,21 @@ export function ProjectsDrawer({
       <div className="relative w-80 max-w-[90vw] h-full bg-surface border-r border-border shadow-2xl flex flex-col animate-slide-in-left">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text">Projects</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-text">Projects</h2>
+            {isAuthenticated && onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isLoading}
+                className="p-1.5 hover:bg-surface2 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh projects"
+              >
+                <svg className={`w-4 h-4 text-muted ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-surface2 rounded-lg transition-colors"
@@ -104,6 +120,22 @@ export function ProjectsDrawer({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
+            </div>
+          ) : !isAuthenticated ? (
+            <div className="p-4 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface2 flex items-center justify-center">
+                <svg className="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                </svg>
+              </div>
+              <p className="text-muted text-sm">Sign in to sync projects</p>
+              <p className="text-muted/70 text-xs mt-1">Cloud projects require authentication</p>
+              <button
+                onClick={onSignIn}
+                className="mt-4 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
             </div>
           ) : projects.length === 0 ? (
             <div className="p-4 text-center">

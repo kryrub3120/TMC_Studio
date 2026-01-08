@@ -10,7 +10,7 @@ import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElem
 import type { Position, PlayerElement as PlayerElementType, EquipmentElement } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 import { Line } from 'react-konva';
-import { useState } from 'react';
+import { useState, useEffect as useEffectReact } from 'react';
 import {
   TopBar,
   RightInspector,
@@ -22,10 +22,13 @@ import {
   AuthModal,
   PricingModal,
   WelcomeOverlay,
+  ProjectsDrawer,
   type CommandAction,
   type InspectorElement,
   type ElementInList,
+  type ProjectItem,
 } from '@tmc/ui';
+import { deleteProject as deleteProjectApi } from './lib/supabase';
 import { useBoardStore } from './store/useBoardStore';
 import { useAuthStore } from './store/useAuthStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
@@ -47,6 +50,8 @@ export default function App() {
   // Auth state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
+  const [projectsLoading, setProjectsLoading] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(() => {
     // Show welcome only for first-time visitors
     const hasVisited = localStorage.getItem('tmc-visited');
@@ -117,6 +122,15 @@ export default function App() {
   const renameGroup = useBoardStore((s) => s.renameGroup);
   const applyFormation = useBoardStore((s) => s.applyFormation);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
+  
+  // Cloud save actions
+  const saveToCloud = useBoardStore((s) => s.saveToCloud);
+  const loadFromCloud = useBoardStore((s) => s.loadFromCloud);
+  const fetchCloudProjects = useBoardStore((s) => s.fetchCloudProjects);
+  const cloudProjectId = useBoardStore((s) => s.cloudProjectId);
+  const isSaving = useBoardStore((s) => s.isSaving);
+  const cloudProjects = useBoardStore((s) => s.cloudProjects);
+  const newDocument = useBoardStore((s) => s.newDocument);
   
   // Step actions
   const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
@@ -630,8 +644,22 @@ export default function App() {
         case 's':
           if (isCmd) {
             e.preventDefault();
+            // Save to localStorage always
             saveDocument();
-            showToast('Saved to localStorage');
+            // Also save to cloud if authenticated
+            if (authIsAuthenticated) {
+              saveToCloud().then(async (success) => {
+                if (success) {
+                  // Refresh project list after save
+                  await fetchCloudProjects();
+                  showToast('Saved to cloud ☁️');
+                } else {
+                  showToast('Saved locally');
+                }
+              });
+            } else {
+              showToast('Saved locally');
+            }
           } else if (selectedIds.length > 0) {
             // S key = cycle player shape
             const hasPlayer = elements.some((el) => selectedIds.includes(el.id) && isPlayerElement(el));
@@ -1464,6 +1492,96 @@ export default function App() {
     ? elements.find((el) => el.id === editingPlayerId && isPlayerElement(el))
     : null;
 
+  // Convert cloud projects to ProjectItem format for ProjectsDrawer
+  const projectItems: ProjectItem[] = useMemo(() => {
+    return cloudProjects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      updatedAt: p.updated_at,
+      thumbnailUrl: p.thumbnail_url ?? undefined,
+      isCloud: true,
+    }));
+  }, [cloudProjects]);
+
+  // Fetch cloud projects when drawer opens
+  useEffectReact(() => {
+    if (projectsDrawerOpen && authIsAuthenticated) {
+      setProjectsLoading(true);
+      fetchCloudProjects().finally(() => setProjectsLoading(false));
+    }
+  }, [projectsDrawerOpen, authIsAuthenticated, fetchCloudProjects]);
+
+  // ProjectsDrawer handlers
+  const handleOpenProjectsDrawer = useCallback(() => {
+    setProjectsDrawerOpen(true);
+  }, []);
+
+  const handleSelectProject = useCallback(async (id: string) => {
+    const success = await loadFromCloud(id);
+    if (success) {
+      setProjectsDrawerOpen(false);
+      showToast('Project loaded ☁️');
+    } else {
+      showToast('Failed to load project');
+    }
+  }, [loadFromCloud, showToast]);
+
+  const handleCreateProject = useCallback(async () => {
+    newDocument();
+    setProjectsDrawerOpen(false);
+    showToast('New project created');
+    
+    // Auto-save to cloud if authenticated
+    if (authIsAuthenticated) {
+      try {
+        const success = await saveToCloud();
+        if (success) {
+          await fetchCloudProjects();
+          showToast('Project saved to cloud ☁️');
+        } else {
+          showToast('Failed to save to cloud ❌');
+        }
+      } catch (error) {
+        console.error('Cloud save error:', error);
+        showToast('Cloud save error - check console ❌');
+      }
+    }
+  }, [newDocument, showToast, authIsAuthenticated, saveToCloud, fetchCloudProjects]);
+
+  const handleDeleteProject = useCallback(async (id: string) => {
+    const success = await deleteProjectApi(id);
+    if (success) {
+      await fetchCloudProjects();
+      showToast('Project deleted');
+    } else {
+      showToast('Failed to delete project');
+    }
+  }, [fetchCloudProjects, showToast]);
+
+  const handleDuplicateProject = useCallback(async (id: string) => {
+    // Load the project first, then save as new (cloudProjectId will be cleared)
+    const success = await loadFromCloud(id);
+    if (success) {
+      // Reset cloud ID so save creates new project
+      useBoardStore.setState({ cloudProjectId: null });
+      await saveToCloud();
+      await fetchCloudProjects();
+      showToast('Project duplicated ☁️');
+    }
+  }, [loadFromCloud, saveToCloud, fetchCloudProjects, showToast]);
+
+  // Rename project handler
+  const handleRenameProject = useCallback((newName: string) => {
+    useBoardStore.setState((state) => ({
+      document: {
+        ...state.document,
+        name: newName,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+    showToast('Project renamed');
+  }, [showToast]);
+
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* Top Bar - hidden in focus mode */}
@@ -1475,11 +1593,14 @@ export default function App() {
           theme={theme}
           plan={authIsPro ? 'pro' : 'free'}
           userInitials={authUser?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || (authIsAuthenticated ? 'U' : '?')}
+          isSyncing={isSaving}
           onExport={handleExport}
           onToggleFocus={toggleFocusMode}
           onToggleTheme={toggleTheme}
           onOpenPalette={openCommandPalette}
           onOpenHelp={toggleCheatSheet}
+          onOpenProjects={handleOpenProjectsDrawer}
+          onRename={handleRenameProject}
           onOpenAccount={authIsAuthenticated ? () => showToast('Account settings coming soon') : () => setAuthModalOpen(true)}
           onUpgrade={() => setPricingModalOpen(true)}
           onLogout={authIsAuthenticated ? signOut : undefined}
@@ -1922,6 +2043,30 @@ export default function App() {
         onDismiss={() => {
           localStorage.setItem('tmc-visited', 'true');
           setWelcomeVisible(false);
+        }}
+      />
+
+      {/* Projects Drawer - Cloud projects management */}
+      <ProjectsDrawer
+        isOpen={projectsDrawerOpen}
+        onClose={() => setProjectsDrawerOpen(false)}
+        projects={projectItems}
+        currentProjectId={cloudProjectId}
+        isAuthenticated={authIsAuthenticated}
+        isLoading={projectsLoading}
+        onSelectProject={handleSelectProject}
+        onCreateProject={handleCreateProject}
+        onDeleteProject={handleDeleteProject}
+        onDuplicateProject={handleDuplicateProject}
+        onSignIn={() => {
+          setProjectsDrawerOpen(false);
+          setAuthModalOpen(true);
+        }}
+        onRefresh={async () => {
+          setProjectsLoading(true);
+          await fetchCloudProjects();
+          setProjectsLoading(false);
+          showToast('Projects refreshed');
         }}
       />
     </div>
