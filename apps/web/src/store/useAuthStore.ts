@@ -231,13 +231,12 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Auto-initialize on import
+// Auto-initialize on import - ALWAYS run, don't check isInitialized
 if (typeof window !== 'undefined') {
   // Defer initialization slightly to let Supabase client process any OAuth hash
   setTimeout(() => {
-    const { initialize, isInitialized } = useAuthStore.getState();
-    if (!isInitialized) {
-      initialize();
-    }
+    console.log('[Auth] Auto-init triggered');
+    const { initialize } = useAuthStore.getState();
+    initialize();
   }, 100);
 }
