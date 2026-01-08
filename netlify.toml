@@ -52,17 +52,16 @@
   # Include external packages
   external_node_modules = ["@supabase/supabase-js"]
 
-# Redirects - SPA fallback
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin", "user"]}
-
-# API routes to functions
+# API routes to functions (MUST be first!)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback - serve index.html for all non-file routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 # Headers for security
