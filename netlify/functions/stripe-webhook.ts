@@ -29,13 +29,14 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Subscription tier mapping
+// Subscription tier mapping - TMC Studio Price IDs
 const PRICE_TO_TIER: Record<string, 'free' | 'pro' | 'team'> = {
-  // Add your Stripe Price IDs here
-  'price_pro_monthly': 'pro',
-  'price_pro_yearly': 'pro',
-  'price_team_monthly': 'team',
-  'price_team_yearly': 'team',
+  // Pro plans
+  'price_1SnQvaANogcZdSR39JL60iCS': 'pro',  // Pro Monthly
+  'price_1SnQvaANogcZdSR3f6Pv3xZ8': 'pro',  // Pro Yearly
+  // Team plans
+  'price_1SnQvzANogcZdSR3BiUrQvqc': 'team', // Team Monthly
+  'price_1SnQwfANogcZdSR3Kdp2j8FB': 'team', // Team Yearly
 };
 
 /**
