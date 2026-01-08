@@ -5,8 +5,8 @@
   # Base directory (root of monorepo)
   base = "/"
   
-  # Build command
-  command = "pnpm install && pnpm build"
+  # Build command (use npx for turbo in CI)
+  command = "pnpm install && npx turbo run build"
   
   # Output directory (Vite build output)
   publish = "apps/web/dist"
