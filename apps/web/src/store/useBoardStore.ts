@@ -39,6 +39,14 @@ import {
   isArrowElement,
   isTextElement,
 } from '@tmc/core';
+import {
+  isSupabaseEnabled,
+  createProject,
+  updateProject,
+  getProject,
+  getProjects,
+  type Project,
+} from '../lib/supabase';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 
 /** History entry for undo/redo */
@@ -91,6 +99,11 @@ interface BoardState {
   // Freehand drawing state
   freehandPoints: number[] | null;
   freehandType: DrawingType | null;
+  
+  // Cloud save state
+  cloudProjectId: string | null;
+  isSaving: boolean;
+  cloudProjects: Project[];
   
   // Actions
   setElements: (elements: BoardElement[]) => void;
@@ -176,6 +189,11 @@ interface BoardState {
   updatePitchSettings: (settings: Partial<PitchSettings>) => void;
   getPitchSettings: () => PitchSettings | undefined;
   
+  // Cloud save actions
+  saveToCloud: () => Promise<boolean>;
+  loadFromCloud: (projectId: string) => Promise<boolean>;
+  fetchCloudProjects: () => Promise<void>;
+  
   // Computed
   getSelectedElements: () => BoardElement[];
   getSelectedElement: () => BoardElement | undefined;
@@ -218,6 +236,9 @@ export const useBoardStore = create<BoardState>((set, get) => {
     drawingEnd: null,
     freehandPoints: null,
     freehandType: null,
+    cloudProjectId: null,
+    isSaving: false,
+    cloudProjects: [],
 
     setElements: (elements) => {
       set({ elements });
@@ -1317,5 +1338,87 @@ export const useBoardStore = create<BoardState>((set, get) => {
     },
 
     getPitchSettings: () => get().document.pitchSettings,
+
+    // Cloud save actions
+    saveToCloud: async () => {
+      if (!isSupabaseEnabled()) return false;
+      
+      const { document, elements, cloudProjectId } = get();
+      set({ isSaving: true });
+      
+      try {
+        // Update document with current elements
+        const updatedDoc: BoardDocument = {
+          ...document,
+          steps: [
+            { ...document.steps[0], elements: structuredClone(elements) },
+            ...document.steps.slice(1),
+          ],
+          updatedAt: new Date().toISOString(),
+        };
+        
+        if (cloudProjectId) {
+          // Update existing project
+          const project = await updateProject(cloudProjectId, {
+            name: document.name,
+            document: updatedDoc,
+          });
+          if (!project) throw new Error('Failed to update project');
+        } else {
+          // Create new project
+          const project = await createProject({
+            name: document.name,
+            document: updatedDoc,
+          });
+          if (!project) throw new Error('Failed to create project');
+          set({ cloudProjectId: project.id });
+        }
+        
+        set({ isSaving: false, document: updatedDoc });
+        return true;
+      } catch (error) {
+        console.error('Cloud save error:', error);
+        set({ isSaving: false });
+        return false;
+      }
+    },
+
+    loadFromCloud: async (projectId: string) => {
+      if (!isSupabaseEnabled()) return false;
+      
+      try {
+        const project = await getProject(projectId);
+        if (!project) return false;
+        
+        const doc = project.document;
+        const elements = doc.steps[0]?.elements ?? [];
+        
+        set({
+          document: doc,
+          elements,
+          selectedIds: [],
+          cloudProjectId: projectId,
+          history: [{ elements: structuredClone(elements), selectedIds: [] }],
+          historyIndex: 0,
+          currentStepIndex: 0,
+        });
+        
+        return true;
+      } catch (error) {
+        console.error('Cloud load error:', error);
+        return false;
+      }
+    },
+
+    fetchCloudProjects: async () => {
+      if (!isSupabaseEnabled()) return;
+      
+      try {
+        const projects = await getProjects();
+        set({ cloudProjects: projects });
+      } catch (error) {
+        console.error('Fetch projects error:', error);
+      }
+    },
   };
 });

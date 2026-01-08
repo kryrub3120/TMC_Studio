@@ -19,11 +19,15 @@ import {
   CheatSheetOverlay,
   ToastHint,
   ZoomWidget,
+  AuthModal,
+  PricingModal,
+  WelcomeOverlay,
   type CommandAction,
   type InspectorElement,
   type ElementInList,
 } from '@tmc/ui';
 import { useBoardStore } from './store/useBoardStore';
+import { useAuthStore } from './store/useAuthStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
 import { formations } from '@tmc/presets';
 import { exportGIF, exportPDF, exportSVG } from './utils/exportUtils';
@@ -39,6 +43,25 @@ export default function App() {
     elementOffsets: Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position }>;
   } | null>(null);
   const [isMultiDragging, setIsMultiDragging] = useState(false);
+  
+  // Auth state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [welcomeVisible, setWelcomeVisible] = useState(() => {
+    // Show welcome only for first-time visitors
+    const hasVisited = localStorage.getItem('tmc-visited');
+    return !hasVisited;
+  });
+  const authUser = useAuthStore((s) => s.user);
+  const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authIsPro = useAuthStore((s) => s.isPro);
+  const authIsLoading = useAuthStore((s) => s.isLoading);
+  const authError = useAuthStore((s) => s.error);
+  const signIn = useAuthStore((s) => s.signIn);
+  const signUp = useAuthStore((s) => s.signUp);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const signOut = useAuthStore((s) => s.signOut);
+  const clearAuthError = useAuthStore((s) => s.clearError);
 
   // Initialize theme on mount
   useInitializeTheme();
@@ -1450,11 +1473,16 @@ export default function App() {
           isSaved={isSaved}
           focusMode={focusMode}
           theme={theme}
+          plan={authIsPro ? 'pro' : 'free'}
+          userInitials={authUser?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || (authIsAuthenticated ? 'U' : '?')}
           onExport={handleExport}
           onToggleFocus={toggleFocusMode}
           onToggleTheme={toggleTheme}
           onOpenPalette={openCommandPalette}
           onOpenHelp={toggleCheatSheet}
+          onOpenAccount={authIsAuthenticated ? () => showToast('Account settings coming soon') : () => setAuthModalOpen(true)}
+          onUpgrade={() => setPricingModalOpen(true)}
+          onLogout={authIsAuthenticated ? signOut : undefined}
         />
       )}
 
@@ -1847,6 +1875,55 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => {
+          setAuthModalOpen(false);
+          clearAuthError();
+        }}
+        onSignIn={async (email, password) => {
+          await signIn(email, password);
+          setAuthModalOpen(false);
+          showToast('Welcome back!');
+        }}
+        onSignUp={signUp}
+        onSignInWithGoogle={signInWithGoogle}
+        error={authError}
+        isLoading={authIsLoading}
+      />
+
+      {/* Pricing Modal */}
+      <PricingModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+        currentPlan={authIsPro ? 'pro' : 'free'}
+        isAuthenticated={authIsAuthenticated}
+        onSignUp={() => {
+          setPricingModalOpen(false);
+          setAuthModalOpen(true);
+        }}
+      />
+
+      {/* Welcome Overlay - first time visitors */}
+      <WelcomeOverlay
+        isVisible={welcomeVisible && !authIsAuthenticated}
+        onGetStarted={() => {
+          localStorage.setItem('tmc-visited', 'true');
+          setWelcomeVisible(false);
+          setAuthModalOpen(true);
+        }}
+        onSignIn={() => {
+          localStorage.setItem('tmc-visited', 'true');
+          setWelcomeVisible(false);
+          setAuthModalOpen(true);
+        }}
+        onDismiss={() => {
+          localStorage.setItem('tmc-visited', 'true');
+          setWelcomeVisible(false);
+        }}
+      />
     </div>
   );
 }

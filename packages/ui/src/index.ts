@@ -46,3 +46,11 @@ export type { PitchPanelProps } from './PitchPanel.js';
 
 export { QuickEditOverlay } from './QuickEditOverlay.js';
 export type { QuickEditOverlayProps } from './QuickEditOverlay.js';
+
+// Auth components
+export { AuthModal } from './AuthModal.js';
+export { UserMenu } from './UserMenu.js';
+export { PricingModal } from './PricingModal.js';
+export { WelcomeOverlay } from './WelcomeOverlay.js';
+export { ProjectsDrawer } from './ProjectsDrawer.js';
+export type { ProjectItem } from './ProjectsDrawer.js';

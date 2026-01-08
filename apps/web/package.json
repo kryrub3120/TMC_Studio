@@ -12,6 +12,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
     "@tmc/board": "workspace:*",
     "@tmc/core": "workspace:*",
     "@tmc/presets": "workspace:*",

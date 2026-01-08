@@ -33,3 +33,11 @@ coverage/
 # Misc
 *.local
 .cache/
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+.supabase/
+
+# Local Netlify folder
+.netlify
