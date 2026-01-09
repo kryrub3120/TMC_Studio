@@ -145,6 +145,71 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
+/** Update user profile */
+export async function updateProfile(updates: { full_name?: string; avatar_url?: string }) {
+  if (!supabase) throw new Error('Supabase not configured');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', user.id);
+  
+  if (error) throw error;
+}
+
+/** Change password */
+export async function changePassword(currentPassword: string, newPassword: string) {
+  if (!supabase) throw new Error('Supabase not configured');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error('Not authenticated');
+  
+  // Verify current password by attempting sign in
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  
+  if (signInError) throw new Error('Current password is incorrect');
+  
+  // Update to new password
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+  
+  if (error) throw error;
+}
+
+/** Delete account */
+export async function deleteAccount(password: string) {
+  if (!supabase) throw new Error('Supabase not configured');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error('Not authenticated');
+  
+  // Verify password
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password,
+  });
+  
+  if (signInError) throw new Error('Incorrect password');
+  
+  // Delete profile (cascade will delete projects)
+  const { error: deleteError } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', user.id);
+  
+  if (deleteError) throw deleteError;
+  
+  // Sign out
+  await supabase.auth.signOut();
+}
+
 /** Sign in with OAuth (Google) */
 export async function signInWithGoogle() {
   if (!supabase) throw new Error('Supabase not configured');
@@ -193,6 +258,44 @@ export interface ProjectUpdate {
   document?: BoardDocument;
   thumbnail_url?: string | null;
   is_public?: boolean;
+  folder_id?: string | null;
+  tags?: string[];
+  is_favorite?: boolean;
+}
+
+// =====================================================
+// FOLDERS TYPES
+// =====================================================
+
+export interface ProjectFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  icon: string;
+  description: string | null;
+  parent_id: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectFolderInsert {
+  name: string;
+  color?: string;
+  icon?: string;
+  description?: string | null;
+  parent_id?: string | null;
+  position?: number;
+}
+
+export interface ProjectFolderUpdate {
+  name?: string;
+  color?: string;
+  icon?: string;
+  description?: string | null;
+  parent_id?: string | null;
+  position?: number;
 }
 
 /** Get all projects for current user */
@@ -282,6 +385,153 @@ export async function deleteProject(id: string): Promise<boolean> {
   
   if (error) {
     console.error('Error deleting project:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+// =====================================================
+// FOLDERS API
+// =====================================================
+
+/** Get all folders for current user */
+export async function getFolders(): Promise<ProjectFolder[]> {
+  if (!supabase) return [];
+  
+  const { data, error } = await supabase
+    .from('project_folders')
+    .select('*')
+    .order('position', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching folders:', error);
+    return [];
+  }
+  
+  return (data ?? []) as ProjectFolder[];
+}
+
+/** Get single folder by ID */
+export async function getFolder(id: string): Promise<ProjectFolder | null> {
+  if (!supabase) return null;
+  
+  const { data, error } = await supabase
+    .from('project_folders')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching folder:', error);
+    return null;
+  }
+  
+  return data as ProjectFolder;
+}
+
+/** Create new folder */
+export async function createFolder(folder: ProjectFolderInsert): Promise<ProjectFolder | null> {
+  if (!supabase) return null;
+  
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated');
+  
+  const { data, error } = await supabase
+    .from('project_folders')
+    .insert({ ...folder, user_id: currentUser.id })
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error creating folder:', error);
+    throw error;
+  }
+  
+  return data as ProjectFolder;
+}
+
+/** Update existing folder */
+export async function updateFolder(id: string, updates: ProjectFolderUpdate): Promise<ProjectFolder | null> {
+  if (!supabase) return null;
+  
+  const { data, error } = await supabase
+    .from('project_folders')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error updating folder:', error);
+    throw error;
+  }
+  
+  return data as ProjectFolder;
+}
+
+/** Delete folder */
+export async function deleteFolder(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('project_folders')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error deleting folder:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Move project to folder */
+export async function moveProjectToFolder(projectId: string, folderId: string | null): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({ folder_id: folderId })
+    .eq('id', projectId);
+  
+  if (error) {
+    console.error('Error moving project:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Toggle project favorite status */
+export async function toggleProjectFavorite(projectId: string, isFavorite: boolean): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({ is_favorite: isFavorite })
+    .eq('id', projectId);
+  
+  if (error) {
+    console.error('Error toggling favorite:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Update project tags */
+export async function updateProjectTags(projectId: string, tags: string[]): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({ tags })
+    .eq('id', projectId);
+  
+  if (error) {
+    console.error('Error updating tags:', error);
     return false;
   }
   

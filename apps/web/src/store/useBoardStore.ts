@@ -45,7 +45,10 @@ import {
   updateProject,
   getProject,
   getProjects,
+  getFolders,
+  createFolder,
   type Project,
+  type ProjectFolder,
 } from '../lib/supabase';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 
@@ -104,6 +107,12 @@ interface BoardState {
   cloudProjectId: string | null;
   isSaving: boolean;
   cloudProjects: Project[];
+  cloudFolders: ProjectFolder[];
+  
+  // Autosave state
+  autoSaveTimer: NodeJS.Timeout | null;
+  isDirty: boolean;
+  lastSavedAt: string | null;
   
   // Actions
   setElements: (elements: BoardElement[]) => void;
@@ -155,6 +164,12 @@ interface BoardState {
   undo: () => void;
   redo: () => void;
   
+  // Autosave actions
+  markDirty: () => void;
+  scheduleAutoSave: () => void;
+  performAutoSave: () => Promise<void>;
+  clearAutoSaveTimer: () => void;
+  
   // Document actions
   saveDocument: () => void;
   loadDocument: () => boolean;
@@ -193,6 +208,8 @@ interface BoardState {
   saveToCloud: () => Promise<boolean>;
   loadFromCloud: (projectId: string) => Promise<boolean>;
   fetchCloudProjects: () => Promise<void>;
+  fetchCloudFolders: () => Promise<void>;
+  createCloudFolder: (name: string, color?: string) => Promise<boolean>;
   
   // Computed
   getSelectedElements: () => BoardElement[];
@@ -239,6 +256,10 @@ export const useBoardStore = create<BoardState>((set, get) => {
     cloudProjectId: null,
     isSaving: false,
     cloudProjects: [],
+    cloudFolders: [],
+    autoSaveTimer: null,
+    isDirty: false,
+    lastSavedAt: null,
 
     setElements: (elements) => {
       set({ elements });
@@ -836,6 +857,9 @@ export const useBoardStore = create<BoardState>((set, get) => {
           },
         };
       });
+      
+      // Mark as dirty and schedule autosave after every history change
+      get().markDirty();
     },
 
     undo: () => {
@@ -907,6 +931,8 @@ export const useBoardStore = create<BoardState>((set, get) => {
         selectedIds: [],
         history: [{ elements, selectedIds: [] }],
         historyIndex: 0,
+        cloudProjectId: null, // Reset cloud ID so next save creates a NEW project
+        currentStepIndex: 0,
       });
     },
 
@@ -1343,33 +1369,53 @@ export const useBoardStore = create<BoardState>((set, get) => {
     saveToCloud: async () => {
       if (!isSupabaseEnabled()) return false;
       
-      const { document, elements, cloudProjectId } = get();
+      const { document, elements, cloudProjectId, currentStepIndex } = get();
       set({ isSaving: true });
       
       try {
-        // Update document with current elements
+        // Deep clone steps and update ALL steps with current context
+        const cloneElements = (els: BoardElement[]) => JSON.parse(JSON.stringify(els));
+        
+        // Clone all steps
+        const updatedSteps = document.steps.map((step, idx) => ({
+          ...step,
+          elements: idx === currentStepIndex 
+            ? cloneElements(elements)  // Current step uses live elements
+            : cloneElements(step.elements), // Other steps keep their elements
+        }));
+        
+        // Create updated document with ALL steps
         const updatedDoc: BoardDocument = {
           ...document,
-          steps: [
-            { ...document.steps[0], elements: structuredClone(elements) },
-            ...document.steps.slice(1),
-          ],
+          steps: updatedSteps,
           updatedAt: new Date().toISOString(),
         };
         
+        console.log('[DEBUG] saveToCloud:', {
+          cloudProjectId,
+          name: document.name,
+          stepsCount: updatedSteps.length,
+          currentStepElements: elements.length,
+          step0Elements: updatedSteps[0]?.elements.length,
+        });
+        
         if (cloudProjectId) {
           // Update existing project
+          console.log('[DEBUG] Updating project:', cloudProjectId);
           const project = await updateProject(cloudProjectId, {
             name: document.name,
             document: updatedDoc,
           });
+          console.log('[DEBUG] Update result:', project?.id);
           if (!project) throw new Error('Failed to update project');
         } else {
           // Create new project
+          console.log('[DEBUG] Creating new project');
           const project = await createProject({
             name: document.name,
             document: updatedDoc,
           });
+          console.log('[DEBUG] Create result:', project?.id);
           if (!project) throw new Error('Failed to create project');
           set({ cloudProjectId: project.id });
         }
@@ -1420,6 +1466,92 @@ export const useBoardStore = create<BoardState>((set, get) => {
         set({ cloudProjects: projects });
       } catch (error) {
         console.error('Fetch projects error:', error);
+      }
+    },
+    
+    fetchCloudFolders: async () => {
+      console.log('[DEBUG] fetchCloudFolders called');
+      if (!isSupabaseEnabled()) return;
+      
+      try {
+        const folders = await getFolders();
+        console.log('[DEBUG] getFolders returned:', folders?.length ?? 0, 'folders');
+        set({ cloudFolders: folders });
+      } catch (error) {
+        console.error('Fetch folders error:', error);
+      }
+    },
+    
+    createCloudFolder: async (name: string, color = '#3b82f6') => {
+      console.log('[DEBUG] createCloudFolder:', name);
+      if(!isSupabaseEnabled()) return false;
+      
+      try {
+        const folder = await createFolder({ name, color });
+        if (folder) {
+          // Refresh folders list
+          await get().fetchCloudFolders();
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Create folder error:', error);
+        return false;
+      }
+    },
+    
+    // Autosave actions
+    markDirty: () => {
+      set({ isDirty: true });
+      get().scheduleAutoSave();
+    },
+    
+    scheduleAutoSave: () => {
+      const state = get();
+      
+      // Clear existing timer
+      if (state.autoSaveTimer) {
+        clearTimeout(state.autoSaveTimer);
+      }
+      
+      // Schedule save in 2 seconds (debounce)
+      const timer = setTimeout(() => {
+        get().performAutoSave();
+      }, 2000);
+      
+      set({ autoSaveTimer: timer });
+    },
+    
+    performAutoSave: async () => {
+      const state = get();
+      if (!state.isDirty) return;
+      
+      console.log('[Autosave] Saving...');
+      
+      // Save to localStorage always
+      state.saveDocument();
+      
+      // Also save to cloud if authenticated
+      if (isSupabaseEnabled()) {
+        try {
+          await state.saveToCloud();
+          console.log('[Autosave] Saved to cloud');
+        } catch (error) {
+          console.error('[Autosave] Cloud save failed:', error);
+        }
+      }
+      
+      set({ 
+        isDirty: false,
+        lastSavedAt: new Date().toISOString(),
+      });
+    },
+    
+    clearAutoSaveTimer: () => {
+      const timer = get().autoSaveTimer;
+      if (timer) {
+        clearTimeout(timer);
+        set({ autoSaveTimer: null });
       }
     },
   };

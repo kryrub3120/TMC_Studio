@@ -212,8 +212,10 @@ export const useAuthStore = create<AuthState>()(
             isTeam: false,
             isLoading: false,
           });
+          console.log('[Auth] Successfully signed out');
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign out failed';
+          console.error('[Auth] Sign out error:', error);
           set({ isLoading: false, error: message });
         }
       },
