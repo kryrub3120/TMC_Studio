@@ -4,3 +4,4 @@
 
 export { keyboardService, type ShortcutDefinition } from './KeyboardService';
 export { exportService, type ExportProgressCallback } from './ExportService';
+export { autosaveService, type AutosaveConfig } from './AutosaveService';

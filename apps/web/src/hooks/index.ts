@@ -3,3 +3,5 @@
  */
 
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
+export { useAnimationPlayback } from './useAnimationPlayback';
+export { useInterpolatedElements } from './useInterpolation';
