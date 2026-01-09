@@ -1,1 +1,5 @@
-// Commands index - will export cmd registry
+/**
+ * Commands Index - Export command registry
+ */
+
+export { cmd, intentCommands, effectCommands } from './CommandRegistry';
