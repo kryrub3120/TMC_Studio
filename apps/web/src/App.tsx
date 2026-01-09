@@ -4,7 +4,7 @@
  */
 
 // Feature flag for new canvas architecture
-const USE_NEW_CANVAS = false; // Set to true to test new BoardCanvas
+const USE_NEW_CANVAS = false; // Toggle to true to test BoardCanvas
 
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
@@ -1287,6 +1287,9 @@ export default function App() {
   const freehandPoints = useBoardStore((s) => s.freehandPoints);
   const clearAllDrawings = useBoardStore((s) => s.clearAllDrawings);
 
+  // New canvas architecture - hook for canvas interactions
+  const canvasInteraction = USE_NEW_CANVAS ? useCanvasInteraction() : null;
+
   // Stage event handlers (use any event type for compatibility)
   const handleStageMouseDown = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1623,7 +1626,55 @@ export default function App() {
             className="shadow-canvas rounded-[20px] overflow-hidden border border-border/50 p-3 bg-surface/50 backdrop-blur-sm transition-transform"
             style={{ transform: `scale(${effectiveZoom})`, transformOrigin: 'center' }}
           >
-            <Stage
+            {USE_NEW_CANVAS ? (
+              <BoardCanvas
+                ref={stageRef}
+                width={canvasWidth}
+                height={canvasHeight}
+                elements={elements}
+                selectedIds={selectedIds}
+                pitchConfig={pitchConfig}
+                pitchSettings={pitchSettings ?? DEFAULT_PITCH_SETTINGS}
+                teamSettings={teamSettings ?? { home: { primaryColor: '#3b82f6', secondaryColor: '#1e40af', name: 'Home' }, away: { primaryColor: '#ef4444', secondaryColor: '#b91c1c', name: 'Away' } }}
+                gridVisible={gridVisible}
+                layerVisibility={{
+                  zones: layerVisibility.zones,
+                  arrows: layerVisibility.arrows,
+                  homePlayers: layerVisibility.homePlayers,
+                  awayPlayers: layerVisibility.awayPlayers,
+                  ball: layerVisibility.ball,
+                  equipment: true,
+                  text: layerVisibility.labels,
+                  drawings: true,
+                }}
+                hiddenByGroup={hiddenByGroup}
+                isPlaying={isPlaying}
+                freehandPoints={freehandPoints ? freehandPoints.map((val, idx) => idx % 2 === 0 ? { x: val, y: freehandPoints[idx + 1] ?? 0 } : null).filter((p): p is { x: number; y: number } => p !== null) : null}
+                freehandType={
+                  activeTool === 'highlighter' ? 'highlighter' :
+                  activeTool === 'drawing' ? 'drawing' :
+                  null
+                }
+                marqueeStart={marqueeStart}
+                marqueeEnd={marqueeEnd}
+                onStageClick={handleStageClick}
+                onStageMouseDown={handleStageMouseDown}
+                onStageMouseMove={handleStageMouseMove}
+                onStageMouseUp={handleStageMouseUp}
+                onElementSelect={canvasInteraction?.handleElementSelect}
+                onElementDragEnd={canvasInteraction?.handleElementDragEnd}
+                onElementDragStart={canvasInteraction?.handleDragStart}
+                onResizeZone={resizeZone}
+                onUpdateArrowEndpoint={updateArrowEndpoint}
+                onPlayerQuickEdit={(id) => {
+                  const player = elements.find(el => el.id === id && isPlayerElement(el));
+                  if (player && isPlayerElement(player)) {
+                    handlePlayerQuickEdit(id, player.number);
+                  }
+                }}
+              />
+            ) : (
+              <Stage
               ref={stageRef}
               width={canvasWidth}
               height={canvasHeight}
@@ -1856,6 +1907,7 @@ export default function App() {
                 )}
               </Layer>
             </Stage>
+            )}
           </div>
 
           {/* Cheat Sheet Overlay - inside canvas area */}
