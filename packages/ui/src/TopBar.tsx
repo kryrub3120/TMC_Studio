@@ -18,6 +18,8 @@ export interface TopBarProps {
   userInitials?: string;
   /** Is syncing to cloud */
   isSyncing?: boolean;
+  /** Step info badge (e.g., "Step 2/5") */
+  stepInfo?: string;
   onExport: () => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
@@ -194,6 +196,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   plan = 'free',
   userInitials = 'U',
   isSyncing = false,
+  stepInfo,
   onExport,
   onToggleFocus,
   onToggleTheme,
@@ -310,6 +313,13 @@ export const TopBar: React.FC<TopBarProps> = ({
               }`}
             >
               {isSaved ? 'Saved' : 'Unsaved'}
+            </span>
+          )}
+          
+          {/* Step info badge */}
+          {stepInfo && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">
+              {stepInfo}
             </span>
           )}
         </div>

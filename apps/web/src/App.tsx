@@ -464,11 +464,11 @@ export default function App() {
       { id: 'focus-mode', label: 'Focus Mode', shortcut: 'F', category: 'view', onExecute: toggleFocusMode },
 
       // Steps
-      { id: 'add-step', label: 'Add Step', shortcut: 'N', category: 'steps', onExecute: () => showToast('Steps coming soon') },
-      { id: 'prev-step', label: 'Previous Step', shortcut: '←', category: 'steps', onExecute: () => showToast('Steps coming soon') },
-      { id: 'next-step', label: 'Next Step', shortcut: '→', category: 'steps', onExecute: () => showToast('Steps coming soon') },
-      { id: 'play-pause', label: 'Play/Pause', shortcut: 'Space', category: 'steps', onExecute: () => showToast('Playback coming soon') },
-      { id: 'toggle-loop', label: 'Toggle Loop', shortcut: 'L', category: 'steps', onExecute: () => showToast('Loop coming soon') },
+      { id: 'add-step', label: 'Add Step', shortcut: 'N', category: 'steps', onExecute: () => { addStep(); showToast('New step added'); } },
+      { id: 'prev-step', label: 'Previous Step', shortcut: '←', category: 'steps', onExecute: prevStep, disabled: currentStepIndex === 0 },
+      { id: 'next-step', label: 'Next Step', shortcut: '→', category: 'steps', onExecute: nextStep, disabled: currentStepIndex >= boardDoc.steps.length - 1 },
+      { id: 'play-pause', label: isPlaying ? 'Pause' : 'Play', shortcut: 'Space', category: 'steps', onExecute: () => { isPlaying ? pause() : play(); } },
+      { id: 'toggle-loop', label: 'Toggle Loop', shortcut: 'L', category: 'steps', onExecute: () => { toggleLoop(); showToast(isLooping ? 'Loop disabled' : 'Loop enabled'); } },
 
       // Export
       { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: () => handleExport() },
@@ -1594,6 +1594,7 @@ export default function App() {
           plan={authIsPro ? 'pro' : 'free'}
           userInitials={authUser?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || (authIsAuthenticated ? 'U' : '?')}
           isSyncing={isSaving}
+          stepInfo={boardDoc.steps.length > 1 ? `Step ${currentStepIndex + 1}/${boardDoc.steps.length}` : undefined}
           onExport={handleExport}
           onToggleFocus={toggleFocusMode}
           onToggleTheme={toggleTheme}
@@ -1655,7 +1656,7 @@ export default function App() {
                         pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(zone.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
-                        onDragEnd={handleElementDragEnd}
+                        onDragEnd={isPlaying ? () => {} : handleElementDragEnd}
                         onResize={resizeZone}
                       />
                     );
@@ -1683,7 +1684,7 @@ export default function App() {
                         pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(arrow.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
-                        onDragEnd={handleElementDragEnd}
+                        onDragEnd={isPlaying ? () => {} : handleElementDragEnd}
                         onEndpointDrag={(id, endpoint, pos) => {
                           updateArrowEndpoint(id, endpoint, pos);
                           pushHistory();
@@ -1714,8 +1715,8 @@ export default function App() {
                         teamSettings={teamSettings}
                         isSelected={!isPlaying && selectedIds.includes(player.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
-                        onDragEnd={handleElementDragEnd}
-                        onDragStart={startMultiDrag}
+                        onDragEnd={isPlaying ? () => {} : handleElementDragEnd}
+                        onDragStart={isPlaying ? () => false : startMultiDrag}
                         onQuickEditNumber={isPlaying ? undefined : handlePlayerQuickEdit}
                       />
                     );
@@ -1738,8 +1739,8 @@ export default function App() {
                         pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(ball.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
-                        onDragEnd={handleElementDragEnd}
-                        onDragStart={startMultiDrag}
+                        onDragEnd={isPlaying ? () => {} : handleElementDragEnd}
+                        onDragStart={isPlaying ? () => false : startMultiDrag}
                       />
                     );
                   })}
@@ -1759,7 +1760,7 @@ export default function App() {
                         element={animatedEquipment as EquipmentElement}
                         isSelected={!isPlaying && selectedIds.includes(equipment.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
-                        onDragEnd={(id, x, y) => {
+                        onDragEnd={isPlaying ? () => {} : (id, x, y) => {
                           moveElementById(id, { x, y });
                           pushHistory();
                         }}
@@ -1784,8 +1785,8 @@ export default function App() {
                         pitchConfig={pitchConfig}
                         isSelected={!isPlaying && selectedIds.includes(textEl.id)}
                         onSelect={isPlaying ? () => {} : handleElementSelect}
-                        onDragEnd={handleElementDragEnd}
-                        onDragStart={startMultiDrag}
+                        onDragEnd={isPlaying ? () => {} : handleElementDragEnd}
+                        onDragStart={isPlaying ? () => false : startMultiDrag}
                         onDoubleClick={isPlaying ? undefined : handleTextDoubleClick}
                       />
                     );
