@@ -89,8 +89,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
         return (
           <EquipmentNode
             key={eq.id}
-            equipment={eq}
-            pitchConfig={pitchConfig}
+            element={eq}
             isSelected={!isPlaying && selectedIds.includes(eq.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleDragEnd}
@@ -98,8 +97,8 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
         );
       })}
       {texts.map((text) => {
-        const handleDragEnd = (id: string, x: number, y: number) => {
-          onDragEnd?.(id, { x, y });
+        const handleDragEnd = (id: string, position: { x: number; y: number }) => {
+          onDragEnd?.(id, position);
         };
         return (
           <TextNode
