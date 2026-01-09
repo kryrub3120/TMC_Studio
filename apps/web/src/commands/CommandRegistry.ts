@@ -1,77 +1,187 @@
 /**
- * CommandRegistry - Central command dispatcher (PLACEHOLDER)
+ * CommandRegistry - Central command dispatcher
  * 
- * TODO: Implement full command registry
- * All UI interactions should go through cmd.intent.* or cmd.effect.*
- * 
- * Intent commands: frequent, no side-effects (drag, resize)
- * Effect commands: commit history + autosave (pointerUp, add, delete)
+ * All UI interactions go through CommandRegistry.
+ * Separates intent (frequent, no side-effects) from effect (history + autosave).
  */
 
+import { useBoardStore } from '../store';
 import { autosaveService } from '../services';
+import type { BoardElement, Position } from '@tmc/core';
 
 /**
- * Intent Commands - PLACEHOLDER
+ * Intent Commands - Frequent, no side-effects
+ * Used during continuous interactions (drag, resize, etc.)
  */
 export const intentCommands = {
-  moveStart: (elementIds: string[]) => {
-    // TODO: call store.beginContinuous()
-    console.log('cmd.intent.moveStart', elementIds);
+  /**
+   * Start moving elements (continuous interaction)
+   */
+  moveStart: (_elementIds: string[]) => {
+    const { beginContinuous } = useBoardStore.getState();
+    beginContinuous();
   },
   
-  moveDelta: (elementId: string, position: { x: number; y: number }) => {
-    // TODO: call store.updateElement (no history)
-    console.log('cmd.intent.moveDelta', elementId, position);
+  /**
+   * Update element position during drag (no history)
+   */
+  moveDelta: (elementId: string, position: Position) => {
+    const { moveElementById } = useBoardStore.getState();
+    moveElementById(elementId, position);
   },
   
-  resizeStart: (zoneId: string) => {
-    // TODO: call store.beginContinuous()
-    console.log('cmd.intent.resizeStart', zoneId);
+  /**
+   * Start resizing zone (continuous interaction)
+   */
+  resizeStart: (_zoneId: string) => {
+    const { beginContinuous } = useBoardStore.getState();
+    beginContinuous();
   },
   
-  resizeDelta: (zoneId: string, width: number, height: number) => {
-    // TODO: call store.resizeZone (no history)
-    console.log('cmd.intent.resizeDelta', zoneId, width, height);
+  /**
+   * Update zone size during resize (no history)
+   */
+  resizeDelta: (zoneId: string, position: Position, width: number, height: number) => {
+    const { resizeZone } = useBoardStore.getState();
+    resizeZone(zoneId, position, width, height);
+  },
+  
+  /**
+   * Update arrow endpoint during drag (no history)
+   */
+  arrowEndpointDelta: (arrowId: string, endpoint: 'start' | 'end', position: Position) => {
+    const { updateArrowEndpoint } = useBoardStore.getState();
+    updateArrowEndpoint(arrowId, endpoint, position);
   },
 };
 
 /**
- * Effect Commands - PLACEHOLDER
+ * Effect Commands - Commits history + triggers autosave
+ * Called on pointerUp, add, delete, group, paste, etc.
  */
 export const effectCommands = {
+  /**
+   * End moving elements (commit history)
+   */
   moveEnd: (label?: string) => {
-    // TODO: call store.endContinuous() + autosave
-    console.log('cmd.effect.moveEnd', label);
+    const { endContinuous } = useBoardStore.getState();
+    endContinuous(label || 'Move elements');
     autosaveService.markDirty();
   },
   
+  /**
+   * End resizing zone (commit history)
+   */
   resizeEnd: (label?: string) => {
-    // TODO: call store.endContinuous() + autosave
-    console.log('cmd.effect.resizeEnd', label);
+    const { endContinuous } = useBoardStore.getState();
+    endContinuous(label || 'Resize zone');
     autosaveService.markDirty();
   },
   
-  addElements: (elements: any[], label?: string) => {
-    // TODO: call store actions + commitHistory + autosave
-    console.log('cmd.effect.addElements', elements, label);
+  /**
+   * End arrow endpoint drag (commit history)
+   */
+  arrowEndpointEnd: (label?: string) => {
+    const { endContinuous } = useBoardStore.getState();
+    endContinuous(label || 'Update arrow');
     autosaveService.markDirty();
   },
   
-  deleteElements: (elementIds: string[], label?: string) => {
-    // TODO: call store actions + commitHistory + autosave
-    console.log('cmd.effect.deleteElements', elementIds, label);
+  /**
+   * Add element (commit history immediately)
+   */
+  addElement: (element: BoardElement, _label?: string) => {
+    const { addElement } = useBoardStore.getState();
+    addElement(element);
+    // addElement already pushes history
     autosaveService.markDirty();
   },
   
-  commitHistory: (label: string) => {
-    // TODO: call store.commitHistory + autosave
-    console.log('cmd.effect.commitHistory', label);
+  /**
+   * Delete selected elements (commit history immediately)
+   */
+  deleteSelected: (_label?: string) => {
+    const { deleteSelected } = useBoardStore.getState();
+    deleteSelected();
+    // deleteSelected already pushes history
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Duplicate selected elements (commit history immediately)
+   */
+  duplicateSelected: () => {
+    const { duplicateSelected } = useBoardStore.getState();
+    duplicateSelected();
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Nudge selected elements (commit history immediately)
+   */
+  nudgeSelected: (dx: number, dy: number) => {
+    const { nudgeSelected } = useBoardStore.getState();
+    nudgeSelected(dx, dy);
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Group selected elements (commit history immediately)
+   */
+  groupSelected: () => {
+    const { createGroup, pushHistory } = useBoardStore.getState();
+    createGroup(); // uses selectedIds from store
+    pushHistory();
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Ungroup selected elements (commit history immediately)
+   */
+  ungroupSelected: () => {
+    const { ungroupSelection, pushHistory } = useBoardStore.getState();
+    ungroupSelection();
+    pushHistory();
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Undo last action
+   */
+  undo: () => {
+    const { undo } = useBoardStore.getState();
+    undo();
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Redo last undone action
+   */
+  redo: () => {
+    const { redo } = useBoardStore.getState();
+    redo();
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Commit any pending changes with custom label
+   */
+  commitHistory: (_label: string) => {
+    const { pushHistory } = useBoardStore.getState();
+    pushHistory();
+    autosaveService.markDirty();
+  },
+  
+  /**
+   * Schedule autosave (debounced)
+   */
+  scheduleAutosave: () => {
     autosaveService.markDirty();
   },
 };
 
 /**
- * CommandRegistry - Export as cmd.*
+ * CommandRegistry - Centralized command dispatcher
  */
 export const cmd = {
   intent: intentCommands,
