@@ -3,6 +3,9 @@
  * VS Code-like command-palette-first tactical board
  */
 
+// Feature flag for new canvas architecture
+const USE_NEW_CANVAS = false; // Set to true to test new BoardCanvas
+
 import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
@@ -11,6 +14,9 @@ import type { Position, PlayerElement as PlayerElementType, EquipmentElement } f
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 import { Line } from 'react-konva';
 import { useState, useEffect as useEffectReact } from 'react';
+// New architecture imports
+import { BoardCanvas } from './components/Canvas/BoardCanvas';
+import { useCanvasInteraction } from './hooks';
 import {
   TopBar,
   RightInspector,
