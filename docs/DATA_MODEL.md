@@ -348,19 +348,23 @@ interface PitchSettings {
   lineColor: string;          // Pitch markings color
   showStripes: boolean;
   orientation: PitchOrientation;  // 'landscape' | 'portrait'
-  view: PitchView;            // 'full' | 'half-left' | 'half-right' | 'plain' | ...
-  lines: PitchLineSettings;   // Granular line visibility
+  view: PitchView;            // Always 'full' (legacy field for backward compat)
+  lines: PitchLineSettings;   // Line visibility (toggled via "Without Lines" in UI)
 }
 
 interface PitchLineSettings {
-  showOutline: boolean;
-  showCenterLine: boolean;
-  showCenterCircle: boolean;
-  showPenaltyAreas: boolean;
-  showGoalAreas: boolean;
-  showCornerArcs: boolean;
-  showPenaltySpots: boolean;
+  showOutline: boolean;       // Pitch boundary
+  showCenterLine: boolean;    // Half-way line
+  showCenterCircle: boolean;  // Center circle
+  showPenaltyAreas: boolean;  // 18-yard boxes
+  showGoalAreas: boolean;     // 6-yard boxes
+  showCornerArcs: boolean;    // Corner arcs
+  showPenaltySpots: boolean;  // Penalty spots
 }
+
+// Note: PitchPanel UI simplified to single "Without Lines" toggle
+// - OFF (default): All lines visible (DEFAULT_LINE_SETTINGS)
+// - ON: All lines hidden (PLAIN_PITCH_LINES)
 ```
 
 ### TeamSettings
