@@ -58,6 +58,7 @@ export { ContextMenu } from './ContextMenu.js';
 export type { ContextMenuItem } from './ContextMenu.js';
 export { FolderColorPicker } from './FolderColorPicker.js';
 export { FolderOptionsModal } from './FolderOptionsModal.js';
+export { CreateFolderModal } from './CreateFolderModal.js';
 export { SettingsModal } from './SettingsModal.js';
 export { UpgradeSuccessModal } from './UpgradeSuccessModal.js';
 export { Footer } from './Footer.js';

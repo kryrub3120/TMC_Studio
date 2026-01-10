@@ -33,6 +33,8 @@ import {
   SettingsModal,
   UpgradeSuccessModal,
   Footer,
+  CreateFolderModal,
+  FolderOptionsModal,
   type CommandAction,
   type InspectorElement,
   type ElementInList,
@@ -44,6 +46,13 @@ import {
   changePassword,
   deleteAccount,
   supabase,
+  getFolders,
+  createFolder,
+  updateFolder,
+  deleteFolder,
+  toggleProjectFavorite,
+  moveProjectToFolder,
+  type ProjectFolder,
 } from './lib/supabase';
 import { useBoardStore } from './store/useBoardStore';
 import { useAuthStore } from './store/useAuthStore';
@@ -71,6 +80,11 @@ export default function App() {
   const [upgradeSuccessModalOpen, setUpgradeSuccessModalOpen] = useState(false);
   const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(false);
+  const [createFolderModalOpen, setCreateFolderModalOpen] = useState(false);
+  const [folderOptionsModalOpen, setFolderOptionsModalOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
+  const [folders, setFolders] = useState<ProjectFolder[]>([]);
+  const [_foldersLoading, _setFoldersLoading] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(() => {
     // Show welcome only for first-time visitors
     const hasVisited = localStorage.getItem('tmc-visited');
@@ -1524,6 +1538,9 @@ export default function App() {
       updatedAt: p.updated_at,
       thumbnailUrl: p.thumbnail_url ?? undefined,
       isCloud: true,
+      folderId: p.folder_id ?? undefined,
+      tags: p.tags ?? undefined,
+      isFavorite: p.is_favorite ?? false,
     }));
   }, [cloudProjects]);
 
@@ -1593,6 +1610,103 @@ export default function App() {
       showToast('Project duplicated ☁️');
     }
   }, [loadFromCloud, saveToCloud, fetchCloudProjects, showToast]);
+
+  // Folder handlers
+  const fetchFoldersData = useCallback(async () => {
+    if (!authIsAuthenticated) return;
+    _setFoldersLoading(true);
+    try {
+      const data = await getFolders();
+      setFolders(data);
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+    } finally {
+      _setFoldersLoading(false);
+    }
+  }, [authIsAuthenticated]);
+
+  const handleCreateFolder = useCallback(async (name: string, color: string) => {
+    try {
+      await createFolder({ name, color, icon: 'folder' });
+      await fetchFoldersData();
+      await fetchCloudProjects(); // Refresh projects to get updated folder assignments
+      showToast(`Folder "${name}" created 📁`);
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      showToast('Failed to create folder ❌');
+    }
+  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+
+  const handleToggleFavorite = useCallback(async (projectId: string) => {
+    try {
+      const project = cloudProjects.find(p => p.id === projectId);
+      const newValue = project ? !(project.is_favorite ?? false) : true;
+      await toggleProjectFavorite(projectId, newValue);
+      await fetchCloudProjects(); // Refresh projects
+      showToast(newValue ? 'Added to favorites ⭐' : 'Removed from favorites');
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      showToast('Failed to update favorite ❌');
+    }
+  }, [cloudProjects, fetchCloudProjects, showToast]);
+
+  const handleMoveToFolder = useCallback(async (projectId: string, folderId: string | null) => {
+    try {
+      await moveProjectToFolder(projectId, folderId);
+      await fetchCloudProjects(); // Refresh projects
+      showToast(folderId ? 'Project moved to folder 📁' : 'Project removed from folder');
+    } catch (error) {
+      console.error('Error moving project:', error);
+      showToast('Failed to move project ❌');
+    }
+  }, [fetchCloudProjects, showToast]);
+
+  const handleEditFolder = useCallback(async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) {
+      setEditingFolder(folder);
+      setFolderOptionsModalOpen(true);
+    }
+  }, [folders]);
+
+  const handleDeleteFolder = useCallback(async (folderId: string) => {
+    if (!window.confirm('Delete this folder? Projects will not be deleted.')) return;
+    try {
+      const success = await deleteFolder(folderId);
+      if (success) {
+        await fetchFoldersData();
+        await fetchCloudProjects();
+        showToast('Folder deleted 🗑️');
+      } else {
+        showToast('Failed to delete folder ❌');
+      }
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      showToast('Failed to delete folder ❌');
+    }
+  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+
+  const handleUpdateFolder = useCallback(async (name: string, color: string) => {
+    if (!editingFolder) return;
+    try {
+      await updateFolder(editingFolder.id, { name, color });
+      await fetchFoldersData();
+      await fetchCloudProjects();
+      showToast(`Folder "${name}" updated 📁`);
+      setFolderOptionsModalOpen(false);
+      setEditingFolder(null);
+    } catch (error) {
+      console.error('Error updating folder:', error);
+      showToast('Failed to update folder ❌');
+    }
+  }, [editingFolder, fetchFoldersData, fetchCloudProjects, showToast]);
+
+  // Fetch folders when drawer opens
+  useEffectReact(() => {
+    if (projectsDrawerOpen && authIsAuthenticated) {
+      fetchFoldersData();
+    }
+  }, [projectsDrawerOpen, authIsAuthenticated, fetchFoldersData]);
 
   // Rename project handler
   const handleRenameProject = useCallback((newName: string) => {
@@ -2217,6 +2331,12 @@ export default function App() {
         isOpen={projectsDrawerOpen}
         onClose={() => setProjectsDrawerOpen(false)}
         projects={projectItems}
+        folders={folders.map(f => ({
+          id: f.id,
+          name: f.name,
+          color: f.color,
+          icon: f.icon,
+        }))}
         currentProjectId={cloudProjectId}
         isAuthenticated={authIsAuthenticated}
         isLoading={projectsLoading}
@@ -2224,6 +2344,11 @@ export default function App() {
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
         onDuplicateProject={handleDuplicateProject}
+        onCreateFolder={() => setCreateFolderModalOpen(true)}
+        onToggleFavorite={handleToggleFavorite}
+        onMoveToFolder={handleMoveToFolder}
+        onEditFolder={handleEditFolder}
+        onDeleteFolder={handleDeleteFolder}
         onSignIn={() => {
           setProjectsDrawerOpen(false);
           setAuthModalOpen(true);
@@ -2235,6 +2360,27 @@ export default function App() {
           showToast('Projects refreshed');
         }}
       />
+
+      {/* Create Folder Modal */}
+      <CreateFolderModal
+        isOpen={createFolderModalOpen}
+        onClose={() => setCreateFolderModalOpen(false)}
+        onCreate={handleCreateFolder}
+      />
+
+      {/* Folder Options Modal - Edit folder name/color */}
+      {editingFolder && (
+        <FolderOptionsModal
+          isOpen={folderOptionsModalOpen}
+          folderName={editingFolder.name}
+          folderColor={editingFolder.color}
+          onClose={() => {
+            setFolderOptionsModalOpen(false);
+            setEditingFolder(null);
+          }}
+          onSave={handleUpdateFolder}
+        />
+      )}
 
       {/* Settings Modal - Account management */}
       <SettingsModal

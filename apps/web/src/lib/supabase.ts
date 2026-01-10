@@ -292,6 +292,10 @@ export interface Project {
   version: number;
   created_at: string;
   updated_at: string;
+  folder_id: string | null;
+  tags: string[];
+  is_favorite: boolean;
+  position: number;
 }
 
 export interface ProjectInsert {

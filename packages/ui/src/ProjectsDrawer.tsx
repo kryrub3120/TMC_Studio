@@ -42,6 +42,9 @@ interface ProjectsDrawerProps {
   onDuplicateProject: (id: string) => void;
   onCreateFolder?: () => void;
   onToggleFavorite?: (projectId: string) => void;
+  onMoveToFolder?: (projectId: string, folderId: string | null) => void;
+  onEditFolder?: (folderId: string) => void;
+  onDeleteFolder?: (folderId: string) => void;
   onSignIn: () => void;
   onRefresh?: () => void;
 }
@@ -60,6 +63,9 @@ export function ProjectsDrawer({
   onDuplicateProject,
   onCreateFolder,
   onToggleFavorite,
+  onMoveToFolder,
+  onEditFolder: _onEditFolder,
+  onDeleteFolder: _onDeleteFolder,
   onSignIn,
   onRefresh,
 }: ProjectsDrawerProps) {
@@ -70,6 +76,10 @@ export function ProjectsDrawer({
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
+  
+  // Drag & drop states
+  const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
 
   // Filter and sort projects
   const filteredAndSortedProjects = useMemo(() => {
@@ -152,6 +162,75 @@ export function ProjectsDrawer({
     ];
     
     setContextMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
+  const handleFolderContextMenu = (e: React.MouseEvent, folder: FolderItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const items: ContextMenuItem[] = [
+      {
+        label: 'Edit Folder',
+        icon: '✏️',
+        onClick: () => _onEditFolder?.(folder.id),
+      },
+      {
+        label: 'Delete Folder',
+        icon: '🗑️',
+        onClick: () => _onDeleteFolder?.(folder.id),
+        variant: 'danger' as const,
+        divider: true,
+      },
+    ];
+    
+    setContextMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
+  // Drag & drop handlers
+  const handleProjectDragStart = (e: React.DragEvent, projectId: string) => {
+    e.stopPropagation();
+    setDraggedProjectId(projectId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', projectId);
+  };
+
+  const handleProjectDragEnd = () => {
+    setDraggedProjectId(null);
+    setDropTargetFolderId(null);
+  };
+
+  const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
+    if (!draggedProjectId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetFolderId(folderId);
+  };
+
+  const handleFolderDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Only clear if actually leaving the element
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setDropTargetFolderId(null);
+    }
+  };
+
+  const handleFolderDrop = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedProjectId) return;
+    
+    // Move project to folder
+    onMoveToFolder?.(draggedProjectId, folderId);
+    
+    // Reset drag state
+    setDraggedProjectId(null);
+    setDropTargetFolderId(null);
   };
 
   if (!isOpen) return null;
@@ -321,19 +400,28 @@ export function ProjectsDrawer({
                       setViewMode('folder');
                       setSelectedFolderId(folder.id);
                     }}
+                    onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                    onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                    onDragLeave={handleFolderDragLeave}
+                    onDrop={(e) => handleFolderDrop(e, folder.id)}
                     className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
                       viewMode === 'folder' && selectedFolderId === folder.id
                         ? 'bg-accent/10 text-accent'
                         : 'hover:bg-surface2 text-muted'
-                    }`}
+                    } ${dropTargetFolderId === folder.id ? 'bg-accent/20 ring-2 ring-accent' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-sm" style={{ color: folder.color }}>📁</span>
                       <span className="text-sm font-medium truncate max-w-[180px]">{folder.name}</span>
                     </div>
-                    {folder.projectCount! > 0 && (
-                      <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {folder.projectCount! > 0 && (
+                        <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
+                      )}
+                      {dropTargetFolderId === folder.id && (
+                        <span className="text-xs text-accent">Drop here</span>
+                      )}
+                    </div>
                   </button>
                 ))}
                 {/* New Folder button */}
@@ -349,17 +437,20 @@ export function ProjectsDrawer({
               </div>
             )}
 
-            {/* All Projects */}
+            {/* All Projects - Drop zone to remove from folders */}
             <button
               onClick={() => {
                 setViewMode('all');
                 setSelectedFolderId(null);
               }}
+              onDragOver={(e) => handleFolderDragOver(e, 'no-folder')}
+              onDragLeave={handleFolderDragLeave}
+              onDrop={(e) => handleFolderDrop(e, null)}
               className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
                 viewMode === 'all'
                   ? 'bg-accent/10 text-accent'
                   : 'hover:bg-surface2 text-muted'
-              }`}
+              } ${dropTargetFolderId === 'no-folder' ? 'bg-accent/20 ring-2 ring-accent' : ''}`}
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm">📋</span>
@@ -367,7 +458,12 @@ export function ProjectsDrawer({
                   {foldersWithCount.length > 0 ? 'All Projects' : 'Projects'}
                 </span>
               </div>
-              <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{projects.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{projects.length}</span>
+                {dropTargetFolderId === 'no-folder' && (
+                  <span className="text-xs text-accent">Remove from folder</span>
+                )}
+              </div>
             </button>
           </div>
         )}
@@ -412,11 +508,14 @@ export function ProjectsDrawer({
               {filteredAndSortedProjects.map((project) => (
                 <div
                   key={project.id}
+                  draggable={onMoveToFolder !== undefined}
+                  onDragStart={(e) => handleProjectDragStart(e, project.id)}
+                  onDragEnd={handleProjectDragEnd}
                   className={`relative group rounded-lg transition-all cursor-pointer mb-2 ${
                     currentProjectId === project.id
                       ? 'bg-accent/20 ring-1 ring-accent/50'
                       : 'hover:bg-surface2'
-                  }`}
+                  } ${draggedProjectId === project.id ? 'opacity-50' : ''}`}
                   onClick={() => onSelectProject(project.id)}
                   onContextMenu={(e) => handleProjectContextMenu(e, project)}
                   onMouseEnter={() => setHoveredId(project.id)}
