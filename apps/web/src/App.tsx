@@ -210,6 +210,8 @@ export default function App() {
   const setActiveTool = useUIStore((s) => s.setActiveTool);
   const activeTool = useUIStore((s) => s.activeTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
+  const footerVisible = useUIStore((s) => s.footerVisible);
+  const toggleFooter = useUIStore((s) => s.toggleFooter);
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -2271,7 +2273,11 @@ export default function App() {
 
       {/* Footer - Legal links and branding */}
       {!focusMode && (
-        <Footer onNavigate={(path) => navigate(path)} />
+        <Footer 
+          onNavigate={(path) => navigate(path)} 
+          isVisible={footerVisible}
+          onToggle={toggleFooter}
+        />
       )}
     </div>
   );

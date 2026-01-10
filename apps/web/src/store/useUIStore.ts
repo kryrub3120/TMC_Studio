@@ -62,6 +62,7 @@ interface UIState {
   commandPaletteOpen: boolean;
   gridVisible: boolean;
   snapEnabled: boolean;
+  footerVisible: boolean;
   
   // Layer visibility (for Layers tab)
   layerVisibility: LayerVisibility;
@@ -100,6 +101,8 @@ interface UIState {
   closeCommandPalette: () => void;
   toggleGrid: () => void;
   toggleSnap: () => void;
+  toggleFooter: () => void;
+  setFooterVisible: (visible: boolean) => void;
   
   // Actions - Tools
   setActiveTool: (tool: ActiveTool) => void;
@@ -159,13 +162,14 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       // Initial state
-      theme: 'light',
+      theme: 'dark',
       focusMode: false,
       inspectorOpen: true,
       cheatSheetVisible: true, // Show by default for new users
       commandPaletteOpen: false,
       gridVisible: false,
       snapEnabled: true,
+      footerVisible: true,
       layerVisibility: {
         homePlayers: true,
         awayPlayers: true,
@@ -239,6 +243,9 @@ export const useUIStore = create<UIState>()(
         // Sync to cloud
         syncPreferencesToCloud({ snapEnabled: newValue });
       },
+      
+      toggleFooter: () => set((s) => ({ footerVisible: !s.footerVisible })),
+      setFooterVisible: (visible) => set({ footerVisible: visible }),
 
       // Tool actions
       setActiveTool: (tool) => {
@@ -339,6 +346,7 @@ export const useUIStore = create<UIState>()(
         cheatSheetVisible: state.cheatSheetVisible,
         gridVisible: state.gridVisible,
         snapEnabled: state.snapEnabled,
+        footerVisible: state.footerVisible,
       }),
       onRehydrateStorage: () => (state) => {
         // Apply theme on rehydration
