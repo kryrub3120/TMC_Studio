@@ -143,6 +143,24 @@ Open http://localhost:5173
 - Press `F` to hide all UI
 - Hover top edge to exit
 
+#### 👤 User Account & Cloud Sync
+- **Authentication**: Email/password or Google OAuth
+- **Cloud Projects**: Save and sync your boards across devices
+- **Settings Modal**: Access via user menu (top-right)
+  - **Profile**: Update name and avatar (max 2MB images)
+  - **Security**: Change password or delete account
+  - **Billing**: Manage subscription (Free, Pro, Team tiers)
+  - **Preferences**: Theme, Grid, Snap settings with cloud sync
+- **Auto-save**: Projects auto-save to cloud when authenticated
+- **Legal Pages**: Privacy Policy, Terms of Service, Cookie Policy
+
+#### ☁️ Cloud Preferences Sync
+- Theme (Dark/Light) syncs across devices
+- Grid visibility preference syncs
+- Snap to grid preference syncs
+- Automatic sync on login
+- Offline-first: works without internet, syncs when online
+
 ---
 
 ## 🏗️ Architecture

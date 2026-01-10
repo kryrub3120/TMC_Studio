@@ -3,7 +3,7 @@
  * TMC Studio - Profile, Security, Billing, Preferences
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences';
 
@@ -21,11 +21,19 @@ interface SettingsModalProps {
   onClose: () => void;
   user: User | null;
   onUpdateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
+  onUploadAvatar?: (file: File) => Promise<string | null>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onDeleteAccount: (password: string) => Promise<void>;
   onManageBilling: () => void;
   onUpgrade: () => void;
   isLoading?: boolean;
+  // Preferences
+  theme?: 'light' | 'dark';
+  gridVisible?: boolean;
+  snapEnabled?: boolean;
+  onToggleTheme?: () => void;
+  onToggleGrid?: () => void;
+  onToggleSnap?: () => void;
 }
 
 export function SettingsModal({
@@ -33,11 +41,18 @@ export function SettingsModal({
   onClose,
   user,
   onUpdateProfile,
+  onUploadAvatar,
   onChangePassword,
   onDeleteAccount,
   onManageBilling,
   onUpgrade,
   isLoading: _isLoading = false,
+  theme = 'dark',
+  gridVisible = false,
+  snapEnabled = true,
+  onToggleTheme,
+  onToggleGrid,
+  onToggleSnap,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +61,8 @@ export function SettingsModal({
   // Profile form
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Password form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -160,6 +177,43 @@ export function SettingsModal({
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadAvatar) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image must be smaller than 2MB');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setError(null);
+    try {
+      const avatarUrl = await onUploadAvatar(file);
+      if (avatarUrl) {
+        await onUpdateProfile({ avatar_url: avatarUrl });
+        setSuccess('Avatar updated successfully!');
+      } else {
+        setError('Failed to upload avatar');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -232,8 +286,19 @@ export function SettingsModal({
                   </div>
                   <div>
                     <p className="text-sm text-gray-400 mb-2">Profile photo</p>
-                    <button className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors">
-                      Upload new photo
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingAvatar || !onUploadAvatar}
+                      className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isUploadingAvatar ? 'Uploading...' : 'Upload new photo'}
                     </button>
                   </div>
                 </div>
@@ -467,10 +532,85 @@ export function SettingsModal({
           {/* Preferences Tab */}
           {activeTab === 'preferences' && (
             <div className="space-y-6">
+              {/* Appearance Section */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Application Preferences</h3>
-                <p className="text-sm text-gray-400">
-                  Preferences are saved locally in your browser. Cloud sync coming soon!
+                <h3 className="text-lg font-semibold text-white mb-4">Appearance</h3>
+                
+                {/* Theme Toggle */}
+                <div className="flex items-center justify-between py-3 border-b border-white/5">
+                  <div>
+                    <p className="text-sm font-medium text-white">Theme</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Choose your preferred color scheme</p>
+                  </div>
+                  <button
+                    onClick={onToggleTheme}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      theme === 'dark' ? 'bg-blue-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 mt-2 ml-2">
+                  <span className="text-xs text-gray-400">
+                    {theme === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Editor Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Editor</h3>
+                
+                {/* Grid Toggle */}
+                <div className="flex items-center justify-between py-3 border-b border-white/5">
+                  <div>
+                    <p className="text-sm font-medium text-white">Show Grid</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Display alignment grid on canvas</p>
+                  </div>
+                  <button
+                    onClick={onToggleGrid}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      gridVisible ? 'bg-blue-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        gridVisible ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Snap Toggle */}
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Snap to Grid</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Automatically align elements to grid</p>
+                  </div>
+                  <button
+                    onClick={onToggleSnap}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      snapEnabled ? 'bg-blue-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        snapEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Info Footer */}
+              <div className="pt-4 border-t border-white/10">
+                <p className="text-xs text-gray-500">
+                  💡 Preferences are saved locally in your browser. Cloud sync coming in a future update!
                 </p>
               </div>
             </div>

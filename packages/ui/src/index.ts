@@ -60,3 +60,4 @@ export { FolderColorPicker } from './FolderColorPicker.js';
 export { FolderOptionsModal } from './FolderOptionsModal.js';
 export { SettingsModal } from './SettingsModal.js';
 export { UpgradeSuccessModal } from './UpgradeSuccessModal.js';
+export { Footer } from './Footer.js';

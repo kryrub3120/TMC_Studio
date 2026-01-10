@@ -142,6 +142,18 @@ const applyThemeToDocument = (theme: Theme) => {
   }
 };
 
+/** Sync preferences to cloud */
+const syncPreferencesToCloud = async (prefs: { theme?: Theme; gridVisible?: boolean; snapEnabled?: boolean; cheatSheetVisible?: boolean }) => {
+  try {
+    const { updatePreferences, isSupabaseEnabled } = await import('../lib/supabase');
+    if (isSupabaseEnabled()) {
+      await updatePreferences(prefs);
+    }
+  } catch (error) {
+    console.error('Failed to sync preferences to cloud:', error);
+  }
+};
+
 /** Create the UI store with persistence for theme */
 export const useUIStore = create<UIState>()(
   persist(
@@ -175,11 +187,15 @@ export const useUIStore = create<UIState>()(
         const newTheme = get().theme === 'light' ? 'dark' : 'light';
         applyThemeToDocument(newTheme);
         set({ theme: newTheme });
+        // Sync to cloud
+        syncPreferencesToCloud({ theme: newTheme });
       },
       
       setTheme: (theme) => {
         applyThemeToDocument(theme);
         set({ theme });
+        // Sync to cloud
+        syncPreferencesToCloud({ theme });
       },
 
       // Focus mode actions
@@ -211,8 +227,18 @@ export const useUIStore = create<UIState>()(
       openCommandPalette: () => set({ commandPaletteOpen: true }),
       closeCommandPalette: () => set({ commandPaletteOpen: false }),
       
-      toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
-      toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
+      toggleGrid: () => {
+        const newValue = !get().gridVisible;
+        set({ gridVisible: newValue });
+        // Sync to cloud
+        syncPreferencesToCloud({ gridVisible: newValue });
+      },
+      toggleSnap: () => {
+        const newValue = !get().snapEnabled;
+        set({ snapEnabled: newValue });
+        // Sync to cloud
+        syncPreferencesToCloud({ snapEnabled: newValue });
+      },
 
       // Tool actions
       setActiveTool: (tool) => {

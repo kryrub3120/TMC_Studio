@@ -34,16 +34,34 @@ Thank you for your interest in contributing to TMC Studio! 🎉
 ```
 TMC_Studio/
 ├── apps/
-│   └── web/              # Main React+Vite web application
+│   └── web/                    # Main React+Vite web application
+│       └── src/
+│           ├── App.tsx         # ~100 LOC - composition only
+│           ├── components/
+│           │   └── Canvas/     # BoardCanvas, layers, overlays
+│           ├── hooks/          # Custom hooks (keyboard, animation, etc.)
+│           ├── services/       # Business logic services
+│           ├── commands/       # Command palette registry
+│           └── store/          # Zustand state management
+│               ├── slices/     # Individual state slices
+│               └── middleware/ # Undo, autosave middleware
 ├── packages/
-│   ├── core/             # Core TypeScript models and utilities
-│   ├── board/            # React-Konva canvas components
-│   ├── ui/               # Tailwind UI components
-│   └── presets/          # Formation presets (future)
+│   ├── core/                   # Pure TypeScript - types, operations
+│   ├── board/                  # React-Konva canvas components
+│   ├── ui/                     # Tailwind UI components
+│   └── presets/                # Formation presets
+├── docs/                       # Architecture documentation
+│   ├── SYSTEM_ARCHITECTURE.md  # High-level system design
+│   ├── DATA_MODEL.md           # Domain types and DB schema
+│   ├── SERVICE_MODULE_BREAKDOWN.md # Module extraction plan
+│   └── ZUSTAND_SLICES.md       # State management guide
+├── supabase/                   # Database migrations & config
+├── netlify/                    # Serverless functions
 ├── .github/
-│   └── workflows/        # GitHub Actions CI/CD
-├── package.json          # Root package scripts
-└── turbo.json           # Turborepo configuration
+│   └── workflows/              # GitHub Actions CI/CD
+├── commitlint.config.js        # Conventional commits config
+├── package.json                # Root package scripts
+└── turbo.json                  # Turborepo configuration
 ```
 
 ## 🛠 Available Commands
@@ -197,32 +215,109 @@ pnpm add -D -w prettier
 
 ## 🏗 Architecture Guidelines
 
-### Core Package (`@tmc/core`)
+> 📚 **Architecture documentation**:
+> - [`docs/SYSTEM_ARCHITECTURE.md`](docs/SYSTEM_ARCHITECTURE.md) — High-level system design
+> - [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) — Domain types & database schema
+> - [`docs/SERVICE_MODULE_BREAKDOWN.md`](docs/SERVICE_MODULE_BREAKDOWN.md) — Module extraction plan
+> - [`docs/ZUSTAND_SLICES.md`](docs/ZUSTAND_SLICES.md) — State management guide
+> - [`docs/IMPLEMENTATION_CONTRACTS.md`](docs/IMPLEMENTATION_CONTRACTS.md) — **⚠️ BINDING** contracts, PR plan, Definition of Done
 
-- Pure TypeScript, no React
-- All data models and types
-- Board operations and serialization
-- Should be usable without React
+### Package Responsibilities
 
-### Board Package (`@tmc/board`)
+| Package | Purpose | Dependencies |
+|---------|---------|--------------|
+| `@tmc/core` | Pure domain logic, types, serialization | None |
+| `@tmc/board` | React-Konva canvas components | `@tmc/core`, `react-konva` |
+| `@tmc/ui` | Tailwind UI components | `@tmc/core`, `react` |
+| `@tmc/presets` | Static data (formations) | `@tmc/core` |
+| `apps/web` | Application composition | All packages |
 
-- React-Konva components
-- Canvas rendering logic
-- Player/Ball/Pitch nodes
-- Drag and selection handling
+### State Management (Zustand Slices)
 
-### UI Package (`@tmc/ui`)
+> 📚 **Full documentation**: See [`docs/ZUSTAND_SLICES.md`](docs/ZUSTAND_SLICES.md)
 
-- Tailwind-based components
-- Toolbar, panels, buttons
-- Should be reusable
+We use **sliced Zustand stores** for maintainability:
 
-### Web App (`@tmc/web`)
+```typescript
+// ✅ Good: Import specific slice
+import { useAppStore } from './store';
+const elements = useAppStore((s) => s.elements);
+const addPlayer = useAppStore((s) => s.addPlayerAtCursor);
 
-- Main application
-- Zustand store
-- Route handling
-- Integration layer
+// ❌ Avoid: Full store subscription
+const store = useAppStore(); // Re-renders on ANY change
+```
+
+**Available slices:**
+- `elementsSlice` - Element CRUD operations
+- `selectionSlice` - Selection state
+- `historySlice` - Undo/Redo
+- `stepsSlice` - Animation steps
+- `cloudSlice` - Cloud sync
+
+### Canvas Architecture
+
+> 📚 **Full documentation**: See [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)
+
+**Six-Layer Strategy:**
+
+```
+Stage
+├── Layer 1: PitchLayer (STATIC) - Re-renders: on theme change
+├── Layer 2: ZonesLayer - Re-renders: on zone add/remove
+├── Layer 3: ArrowsLayer - Re-renders: on arrow change
+├── Layer 4: PlayersLayer - Re-renders: on drag/animation
+├── Layer 5: DrawingLayer - Re-renders: during drawing
+└── Layer 6: OverlayLayer - Re-renders: on interaction
+```
+
+**Memoization Rule:**
+
+```typescript
+// All board nodes must use React.memo with custom equality
+export const PlayerNode = React.memo(
+  function PlayerNode({ player, isSelected }) {
+    // ...
+  },
+  (prev, next) => {
+    return prev.player.id === next.player.id &&
+           prev.player.position === next.player.position &&
+           prev.isSelected === next.isSelected;
+  }
+);
+```
+
+### Services & Hooks
+
+> 📚 **Full documentation**: See [`docs/SERVICE_MODULE_BREAKDOWN.md`](docs/SERVICE_MODULE_BREAKDOWN.md)
+
+**Services** (no React dependencies):
+- `KeyboardService` - Shortcut registration
+- `ExportService` - PNG/GIF/PDF export
+- `AutosaveService` - Debounced save
+- `CommandRegistry` - Command palette
+
+**Hooks** (React integration):
+- `useKeyboardShortcuts` - Global shortcuts
+- `useAnimationPlayback` - RAF animation
+- `useCanvasInteraction` - Mouse/touch
+- `useInterpolation` - Position interpolation
+
+### Data Types (Discriminated Unions)
+
+```typescript
+// ✅ Good: Use type guards
+import { isPlayerElement, isArrowElement } from '@tmc/core';
+
+elements.forEach(el => {
+  if (isPlayerElement(el)) {
+    console.log(el.team, el.number); // TypeScript knows it's Player
+  }
+});
+
+// ❌ Avoid: Manual type checks
+if (el.type === 'player') { ... }
+```
 
 ## 🐛 Reporting Bugs
 

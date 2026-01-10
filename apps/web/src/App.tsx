@@ -7,6 +7,7 @@
 const USE_NEW_CANVAS = false; // Toggle to true to test BoardCanvas
 
 import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
 import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement, hasPosition } from '@tmc/core';
@@ -29,12 +30,21 @@ import {
   PricingModal,
   WelcomeOverlay,
   ProjectsDrawer,
+  SettingsModal,
+  UpgradeSuccessModal,
+  Footer,
   type CommandAction,
   type InspectorElement,
   type ElementInList,
   type ProjectItem,
 } from '@tmc/ui';
-import { deleteProject as deleteProjectApi } from './lib/supabase';
+import { 
+  deleteProject as deleteProjectApi,
+  updateProfile,
+  changePassword,
+  deleteAccount,
+  supabase,
+} from './lib/supabase';
 import { useBoardStore } from './store/useBoardStore';
 import { useAuthStore } from './store/useAuthStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
@@ -43,6 +53,7 @@ import { exportGIF, exportPDF, exportSVG } from './utils/exportUtils';
 
 /** Main App component */
 export default function App() {
+  const navigate = useNavigate();
   const stageRef = useRef<Konva.Stage>(null);
   
   // Multi-drag state for moving multiple selected elements together
@@ -56,6 +67,8 @@ export default function App() {
   // Auth state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [upgradeSuccessModalOpen, setUpgradeSuccessModalOpen] = useState(false);
   const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(() => {
@@ -1591,6 +1604,98 @@ export default function App() {
     showToast('Project renamed');
   }, [showToast]);
 
+  // Settings handlers
+  const handleUpdateProfile = useCallback(async (updates: { full_name?: string; avatar_url?: string }) => {
+    try {
+      await updateProfile(updates);
+      await useAuthStore.getState().initialize();
+      showToast('Profile updated ✓');
+    } catch (error) {
+      console.error('Profile update error:', error);
+      throw error;
+    }
+  }, [showToast]);
+
+  const handleUploadAvatar = useCallback(async (file: File): Promise<string | null> => {
+    if (!authUser) return null;
+    try {
+      const { uploadAvatar } = await import('./lib/supabase');
+      const avatarUrl = await uploadAvatar(authUser.id, file);
+      return avatarUrl;
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      return null;
+    }
+  }, [authUser]);
+
+  const handleChangePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    try {
+      await changePassword(currentPassword, newPassword);
+      showToast('Password changed ✓');
+    } catch (error) {
+      console.error('Password change error:', error);
+      throw error;
+    }
+  }, [showToast]);
+
+  const handleDeleteAccount = useCallback(async (password: string) => {
+    try {
+      await deleteAccount(password);
+      setSettingsModalOpen(false);
+      showToast('Account deleted. Goodbye! 👋');
+    } catch (error) {
+      console.error('Account deletion error:', error);
+      throw error;
+    }
+  }, [showToast]);
+
+  const handleManageBilling = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) {
+        showToast('Please sign in first');
+        return;
+      }
+
+      const response = await fetch('/.netlify/functions/create-portal-session', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ returnUrl: window.location.origin }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to open billing portal');
+      if (data.url) window.location.href = data.url;
+    } catch (error) {
+      console.error('Billing portal error:', error);
+      showToast('Failed to open billing portal');
+    }
+  }, [showToast]);
+
+  // Post-payment flow - check for checkout success
+  useEffectReact(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get('checkout');
+    
+    if (checkoutStatus === 'success') {
+      console.log('[Payment] Checkout success, refreshing user data...');
+      useAuthStore.getState().initialize().then(() => {
+        const user = useAuthStore.getState().user;
+        if (user?.subscription_tier !== 'free') {
+          setUpgradeSuccessModalOpen(true);
+          showToast('🎉 Upgrade successful!');
+        }
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (checkoutStatus === 'cancelled') {
+      showToast('Checkout cancelled');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [showToast]);
+
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* Top Bar - hidden in focus mode */}
@@ -1611,7 +1716,7 @@ export default function App() {
           onOpenHelp={toggleCheatSheet}
           onOpenProjects={handleOpenProjectsDrawer}
           onRename={handleRenameProject}
-          onOpenAccount={authIsAuthenticated ? () => showToast('Account settings coming soon') : () => setAuthModalOpen(true)}
+          onOpenAccount={authIsAuthenticated ? () => setSettingsModalOpen(true) : () => setAuthModalOpen(true)}
           onUpgrade={() => setPricingModalOpen(true)}
           onLogout={authIsAuthenticated ? signOut : undefined}
         />
@@ -2128,6 +2233,46 @@ export default function App() {
           showToast('Projects refreshed');
         }}
       />
+
+      {/* Settings Modal - Account management */}
+      <SettingsModal
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        user={authUser ?? null}
+        onUpdateProfile={handleUpdateProfile}
+        onUploadAvatar={handleUploadAvatar}
+        onChangePassword={handleChangePassword}
+        onDeleteAccount={handleDeleteAccount}
+        onManageBilling={handleManageBilling}
+        onUpgrade={() => {
+          setSettingsModalOpen(false);
+          setPricingModalOpen(true);
+        }}
+        theme={theme}
+        gridVisible={gridVisible}
+        snapEnabled={useUIStore.getState().snapEnabled}
+        onToggleTheme={toggleTheme}
+        onToggleGrid={() => {
+          useUIStore.getState().toggleGrid();
+          showToast(gridVisible ? 'Grid hidden' : 'Grid visible');
+        }}
+        onToggleSnap={() => {
+          useUIStore.getState().toggleSnap();
+          showToast(useUIStore.getState().snapEnabled ? 'Snap enabled' : 'Snap disabled');
+        }}
+      />
+
+      {/* Upgrade Success Modal - Celebration! */}
+      <UpgradeSuccessModal
+        isOpen={upgradeSuccessModalOpen}
+        onClose={() => setUpgradeSuccessModalOpen(false)}
+        plan="pro"
+      />
+
+      {/* Footer - Legal links and branding */}
+      {!focusMode && (
+        <Footer onNavigate={(path) => navigate(path)} />
+      )}
     </div>
   );
 }

@@ -53,6 +53,14 @@ export type User = {
   full_name?: string;
   avatar_url?: string;
   subscription_tier: 'free' | 'pro' | 'team';
+  preferences?: UserPreferences;
+};
+
+export type UserPreferences = {
+  theme?: 'light' | 'dark';
+  gridVisible?: boolean;
+  snapEnabled?: boolean;
+  cheatSheetVisible?: boolean;
 };
 
 /** Get current authenticated user */
@@ -155,6 +163,48 @@ export async function updateProfile(updates: { full_name?: string; avatar_url?: 
   const { error } = await supabase
     .from('profiles')
     .update(updates)
+    .eq('id', user.id);
+  
+  if (error) throw error;
+}
+
+/** Get user preferences from database */
+export async function getPreferences(): Promise<UserPreferences | null> {
+  if (!supabase) return null;
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('preferences')
+    .eq('id', user.id)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching preferences:', error);
+    return null;
+  }
+  
+  return (data?.preferences as UserPreferences) ?? null;
+}
+
+/** Update user preferences in database */
+export async function updatePreferences(preferences: Partial<UserPreferences>): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  
+  // Get current preferences first
+  const currentPrefs = await getPreferences() ?? {};
+  
+  // Merge with new preferences
+  const updatedPrefs = { ...currentPrefs, ...preferences };
+  
+  const { error } = await supabase
+    .from('profiles')
+    .update({ preferences: updatedPrefs })
     .eq('id', user.id);
   
   if (error) throw error;
@@ -671,4 +721,3 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
   
   return () => subscription.unsubscribe();
 }
-

@@ -100,6 +100,25 @@ export const useAuthStore = create<AuthState>()(
           });
           
           console.log('[Auth] Initialized - authenticated:', !!user);
+          
+          // Load preferences from cloud if user is authenticated
+          if (user) {
+            console.log('[Auth] Loading preferences from cloud...');
+            try {
+              const { getPreferences } = await import('../lib/supabase');
+              const cloudPrefs = await getPreferences();
+              if (cloudPrefs) {
+                const { useUIStore } = await import('./useUIStore');
+                // Merge cloud preferences with local (cloud takes precedence)
+                if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                console.log('[Auth] Preferences loaded from cloud');
+              }
+            } catch (error) {
+              console.error('[Auth] Failed to load preferences:', error);
+            }
+          }
 
           // Listen for auth changes (login, logout, token refresh)
           onAuthStateChange((user) => {
