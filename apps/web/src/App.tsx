@@ -1850,6 +1850,7 @@ export default function App() {
           onOpenHelp={toggleCheatSheet}
           onOpenProjects={handleOpenProjectsDrawer}
           onRename={handleRenameProject}
+          onToggleInspector={toggleInspector}
           onOpenAccount={authIsAuthenticated ? () => setSettingsModalOpen(true) : () => setAuthModalOpen(true)}
           onUpgrade={() => setPricingModalOpen(true)}
           onLogout={authIsAuthenticated ? signOut : undefined}

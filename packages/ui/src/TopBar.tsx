@@ -29,6 +29,8 @@ export interface TopBarProps {
   onOpenProjects?: () => void;
   /** Rename project callback */
   onRename?: (newName: string) => void;
+  /** Toggle inspector (responsive) */
+  onToggleInspector?: () => void;
   /** Account menu callbacks */
   onOpenAccount?: () => void;
   onUpgrade?: () => void;
@@ -79,6 +81,14 @@ const HelpIcon: React.FC<{ className?: string }> = ({ className }) => (
 const CommandIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
+  </svg>
+);
+
+/** Panel/Sidebar icon for Inspector toggle */
+const PanelRightIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <line x1="15" y1="3" x2="15" y2="21" />
   </svg>
 );
 
@@ -204,6 +214,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenHelp,
   onOpenProjects,
   onRename,
+  onToggleInspector,
   onOpenAccount,
   onUpgrade,
   onLogout,
@@ -370,6 +381,17 @@ export const TopBar: React.FC<TopBarProps> = ({
         <IconButton onClick={onOpenHelp} title="Help & Shortcuts (?)">
           <HelpIcon className="w-4 h-4" />
         </IconButton>
+
+        {/* Inspector Toggle - only visible on <xl */}
+        {onToggleInspector && (
+          <button
+            onClick={onToggleInspector}
+            className="xl:hidden p-2 rounded-md transition-all duration-fast hover:bg-surface2 active:scale-95 text-muted hover:text-text"
+            title="Toggle Inspector"
+          >
+            <PanelRightIcon className="w-4 h-4" />
+          </button>
+        )}
 
         <div className="w-px h-5 bg-border mx-1" />
 

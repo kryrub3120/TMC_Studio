@@ -611,16 +611,45 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     { id: 'pitch', label: 'Pitch' },
   ];
 
+  // Close on Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onToggle();
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onToggle]);
+
   return (
-    <div className={`relative flex flex-col bg-surface border-l border-border transition-all duration-200 z-10 ${isOpen ? 'w-[280px]' : 'w-0'}`}>
-      {/* Collapse Toggle Button */}
-      <button
-        onClick={onToggle}
-        className="absolute -left-8 top-3 z-10 w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border flex items-center justify-center text-muted hover:text-text transition-colors"
-        title={isOpen ? 'Close Inspector (I)' : 'Open Inspector (I)'}
+    <>
+      {/* Backdrop - only on <xl when drawer is open */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 xl:hidden"
+          onClick={onToggle}
+        />
+      )}
+
+      {/* Inspector Panel - Responsive: sidebar on xl, drawer on <xl */}
+      <div
+        className={`
+          flex flex-col bg-surface border-l border-border z-50
+          xl:relative xl:transition-all xl:duration-200 xl:z-10
+          max-xl:fixed max-xl:top-0 max-xl:right-0 max-xl:h-full max-xl:shadow-2xl
+          ${isOpen ? 'w-[280px]' : 'xl:w-0 max-xl:translate-x-full'}
+          max-xl:transition-transform max-xl:duration-300
+        `}
       >
-        <CollapseIcon className="w-4 h-4" collapsed={!isOpen} />
-      </button>
+        {/* Collapse Toggle Button - only visible on xl (desktop sidebar mode) */}
+        <button
+          onClick={onToggle}
+          className="hidden xl:block absolute -left-8 top-3 z-10 w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border text-muted hover:text-text transition-colors"
+          title={isOpen ? 'Close Inspector (I)' : 'Open Inspector (I)'}
+        >
+          <CollapseIcon className="w-4 h-4" collapsed={!isOpen} />
+        </button>
 
       {/* Content */}
       {isOpen && (
@@ -686,7 +715,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

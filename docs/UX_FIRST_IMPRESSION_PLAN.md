@@ -455,8 +455,8 @@ useEffect(() => {
 ## 🚀 Execution Order
 
 1. ✅ **PR-UX1** → DONE (commit: fa1d5a0) — Fixes biggest issue (blocked canvas)
-2. **PR-UX2** → IN PROGRESS — Adds guidance (empty state)
-3. **PR-UX3** → Responsive (md drawer)
+2. ✅ **PR-UX2** → DONE (commit: 57298e7) — Adds guidance (empty state)
+3. **PR-UX3** → IN PROGRESS — Responsive (md drawer)
 4. **PR-UX4** → Responsive (sm bottom sheet) — *optional*
 
 **Total time estimate:** 3-5 days for PR-UX1 + PR-UX2 + PR-UX3
@@ -464,7 +464,7 @@ useEffect(() => {
 **Hard Rules Status:**
 - ✅ Rule A: CheatSheet never auto-open (enforced in fa1d5a0)
 - ✅ Rule B: Inspector responsive default (enforced in fa1d5a0)
-- ✅ Rule C: No overlays on first paint (enforced in fa1d5a0)
+- ✅ Rule C: No overlays on first paint (enforced in fa1d5a0, 57298e7)
 
 ---
 
