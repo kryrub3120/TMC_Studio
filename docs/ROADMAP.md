@@ -200,7 +200,7 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 
 ---
 
-## 🔄 Sprint 6 — Cloud & Auth (IN PROGRESS)
+## ✅ Sprint 6 — Cloud & Monetization (COMPLETED)
 
 ### S6.1 Authentication ✓
 - [x] Supabase setup (PostgreSQL + Auth + Storage)
@@ -212,46 +212,123 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 - [x] Session persistence (localStorage)
 - [x] Auto-profile creation on OAuth
 
-### S6.2 Cloud Save (NEXT)
-- [ ] Save project to Supabase
-- [ ] Load project from Supabase
-- [ ] ProjectsDrawer integration
-- [ ] Auto-save on changes
-- [ ] Offline queue with sync
+### S6.2 Cloud Sync & Projects ✓
+- [x] Save project to Supabase (cloud_projects table)
+- [x] Load project from Supabase
+- [x] ProjectsDrawer with list/search/folders
+- [x] Auto-save on changes (debounced 1.5s)
+- [x] Folder organization
+- [x] Project metadata (name, updated_at)
+- [x] RLS policies for data security
 
-### S6.3 Stripe Payments
-- [ ] Checkout integration
-- [ ] Webhook handler (Netlify Functions)
-- [ ] Subscription tier updates
-- [ ] PricingModal integration
+### S6.3 Stripe Payments ✓
+- [x] Checkout integration (Netlify Functions)
+- [x] Webhook handler for subscription events
+- [x] Subscription tier updates (free/pro/team)
+- [x] PricingModal with plan comparison
+- [x] Customer portal for subscription management
+- [x] UpgradeSuccessModal confirmation
 
-### S6.4 Tauri Desktop App (FUTURE)
-- [ ] Lightweight native app wrapper
-- [ ] Native file save/open dialogs
-- [ ] Offline-first architecture
-
-### S6.3 Advanced Analysis
-- [ ] Heat maps overlay
-- [ ] Pass networks visualization
-- [ ] Statistical overlays
-- [ ] xG data integration
-
-### S6.4 Video Export
-- [ ] Export MP4 video
-- [ ] Export WebM video
-- [ ] Custom framerate
-- [ ] Audio support
+### S6.4 Monetization Foundation ✓
+- [x] Entitlements system (guest/free/pro/team plans)
+- [x] Permission checking (can() function)
+- [x] LimitReachedModal with PLG UX
+- [x] Export gating (GIF/PDF = Pro only)
+- [x] Project limits (Guest: 1, Free: 3, Pro: unlimited)
+- [x] Step limits (Guest: 5, Free: 10, Pro: unlimited)
+- [x] Soft-prompt warnings before limits
+- [x] Product-Led Growth UX implementation
 
 ---
 
-## 📊 Technical Debt Queue
+## 🎉 V1 COMPLETE — Foundation Locked In
 
-- [ ] Unit tests for core logic (Vitest)
-- [ ] E2E tests with Playwright
-- [ ] Accessibility audit (a11y)
-- [ ] Performance profiling
-- [ ] Bundle size optimization
-- [ ] Error boundaries
+The following features are **COMPLETE** and form the stable baseline for TMC Studio:
+
+### ✅ Core Product
+- Tactical board with players, ball, arrows, zones, drawings
+- Step-based animation with smooth interpolation
+- Export formats: PNG, GIF, PDF, SVG
+- Formations, team customization, pitch variants
+- Full keyboard shortcut system
+- Undo/redo history
+
+### ✅ Monetization & Auth
+- Guest → Free → Pro plan flow
+- Entitlements enforcement (limits + gating)
+- Stripe subscription integration
+- Cloud sync and project management
+- Product-Led Growth UX (no dark patterns)
+
+### ✅ Technical Foundation
+- Monorepo architecture (pnpm + Turborepo)
+- Zustand state management with slices
+- Konva canvas with layer system
+- Supabase backend (auth + database)
+- Netlify deployment with serverless functions
+
+**This is the stable baseline. All future work builds on this.**
+
+---
+
+## 📅 What's Next (Post-V1)
+
+### Phase 2: Collaboration & Teams
+- Team plan features (shared projects, collaboration)
+- Real-time collaboration (multiplayer canvas)
+- Comments and annotations
+- Version history and branching
+- Project templates library
+
+### Phase 3: Advanced Features
+- Video export (MP4/WebM)
+- Statistical overlays (heat maps, pass networks)
+- xG data integration
+- Mobile app (React Native or PWA)
+
+### Phase 4: Platform Growth
+- Public project gallery
+- Social sharing
+- Coach/analyst community
+- Educational content integration
+
+---
+
+## 🚫 Explicitly NOT Building (Scope Control)
+
+To avoid feature creep, we are **NOT** building:
+
+- ❌ **3D pitch visualization** - Stays 2D tactical board
+- ❌ **Match simulation** - Not a game engine
+- ❌ **AI-generated tactics** - No AI features for now
+- ❌ **Live match tracking** - Not a stats platform
+- ❌ **Social network features** - Focus on creation tools
+- ❌ **Custom branding/white-label** - Single product only
+- ❌ **Desktop app (Tauri)** - Web-first for now
+- ❌ **Mobile apps (native)** - Web responsive is enough
+
+If these are needed in the future, they require explicit strategy decisions.
+
+---
+
+## 📊 Technical Debt & Maintenance
+
+### High Priority
+- [ ] Unit tests for entitlements system
+- [ ] E2E tests for critical flows (signup, upgrade, export)
+- [ ] Accessibility audit (keyboard nav, screen readers)
+- [ ] Performance profiling (canvas rendering)
+
+### Medium Priority
+- [ ] Error boundaries for component failures
+- [ ] Monitoring/analytics setup
+- [ ] Documentation for onboarding
+- [ ] Refactor large App.tsx into smaller components
+
+### Low Priority
+- [ ] Bundle size optimization (already good)
+- [ ] Virtual scrolling for large lists
+- [ ] Advanced memoization patterns
 
 ---
 
@@ -263,9 +340,22 @@ Ultra-fast football tactics board with step-based animation for analysts, coache
 | **0.2** | Animation System (Sprint 2) | ✅ Done |
 | **0.3** | Pro Features (Sprint 3) | ✅ Done |
 | **0.4** | Export & Customization (Sprint 4) | ✅ Done |
-| **0.5** | Quality & UX (Sprint 5) | 🔄 Next |
-| **1.0** | Public Release | TBD |
+| **0.5** | Quality & UX (Sprint 5) | ✅ Done |
+| **0.6** | Cloud & Monetization (Sprint 6) | ✅ Done |
+| **1.0** | **V1 Foundation Complete** | ✅ **LOCKED IN** |
+| **1.1+** | Collaboration & Advanced Features | 🔜 Future |
 
 ---
 
-*Last updated: 2026-01-07*
+**Current Status:** V1 Complete - Stabilized and ready for production.
+
+**Next Steps:**
+1. Lock main branch as stable baseline
+2. Create product documentation (COMPLETE)
+3. QA testing of guest/free/pro flows
+4. Prepare marketing materials
+5. Soft launch to beta users
+
+---
+
+*Last updated: 2026-01-11*
