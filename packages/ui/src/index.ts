@@ -55,7 +55,6 @@ export type { QuickEditOverlayProps } from './QuickEditOverlay.js';
 export { AuthModal } from './AuthModal.js';
 export { UserMenu } from './UserMenu.js';
 export { PricingModal } from './PricingModal.js';
-export { WelcomeOverlay } from './WelcomeOverlay.js';
 export { ProjectsDrawer } from './ProjectsDrawer.js';
 export type { ProjectItem } from './ProjectsDrawer.js';
 export { ContextMenu } from './ContextMenu.js';

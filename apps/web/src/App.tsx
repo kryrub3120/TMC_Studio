@@ -30,7 +30,6 @@ import {
   ZoomWidget,
   AuthModal,
   PricingModal,
-  WelcomeOverlay,
   ProjectsDrawer,
   SettingsModal,
   UpgradeSuccessModal,
@@ -88,11 +87,6 @@ export default function App() {
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
   const [_foldersLoading, _setFoldersLoading] = useState(false);
-  const [welcomeVisible, setWelcomeVisible] = useState(() => {
-    // Show welcome only for first-time visitors
-    const hasVisited = localStorage.getItem('tmc-visited');
-    return !hasVisited;
-  });
   const authUser = useAuthStore((s) => s.user);
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authIsPro = useAuthStore((s) => s.isPro);
@@ -2163,7 +2157,7 @@ export default function App() {
           </div>
 
           {/* Shortcuts Hint - one-time, 3s auto-dismiss */}
-          {!focusMode && authIsAuthenticated && (
+          {!focusMode && (
             <ShortcutsHint
               isVisible={!hasSeenShortcutsHint && !cheatSheetVisible}
               onDismiss={() => setHasSeenShortcutsHint(true)}
@@ -2347,25 +2341,6 @@ export default function App() {
         onSignUp={() => {
           setPricingModalOpen(false);
           setAuthModalOpen(true);
-        }}
-      />
-
-      {/* Welcome Overlay - first time visitors */}
-      <WelcomeOverlay
-        isVisible={welcomeVisible && !authIsAuthenticated}
-        onGetStarted={() => {
-          localStorage.setItem('tmc-visited', 'true');
-          setWelcomeVisible(false);
-          setAuthModalOpen(true);
-        }}
-        onSignIn={() => {
-          localStorage.setItem('tmc-visited', 'true');
-          setWelcomeVisible(false);
-          setAuthModalOpen(true);
-        }}
-        onDismiss={() => {
-          localStorage.setItem('tmc-visited', 'true');
-          setWelcomeVisible(false);
         }}
       />
 
