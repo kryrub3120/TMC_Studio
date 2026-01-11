@@ -64,4 +64,5 @@ export { FolderOptionsModal } from './FolderOptionsModal.js';
 export { CreateFolderModal } from './CreateFolderModal.js';
 export { SettingsModal } from './SettingsModal.js';
 export { UpgradeSuccessModal } from './UpgradeSuccessModal.js';
+export { LimitReachedModal } from './LimitReachedModal.js';
 export { Footer } from './Footer.js';
