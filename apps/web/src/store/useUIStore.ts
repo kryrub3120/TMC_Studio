@@ -63,6 +63,7 @@ interface UIState {
   gridVisible: boolean;
   snapEnabled: boolean;
   footerVisible: boolean;
+  hasSeenShortcutsHint: boolean;
   
   // Layer visibility (for Layers tab)
   layerVisibility: LayerVisibility;
@@ -97,6 +98,7 @@ interface UIState {
   setInspectorOpen: (open: boolean) => void;
   toggleCheatSheet: () => void;
   setCheatSheetVisible: (visible: boolean) => void;
+  setHasSeenShortcutsHint: (seen: boolean) => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
   toggleGrid: () => void;
@@ -129,6 +131,12 @@ interface UIState {
   setStepDuration: (duration: number) => void;
   setAnimationProgress: (progress: number) => void;
 }
+
+/** Get initial inspector state based on screen size */
+const getInitialInspectorState = () => {
+  if (typeof window === 'undefined') return true; // SSR safe
+  return window.innerWidth >= 1280; // lg breakpoint
+};
 
 /** Generate unique ID for toasts */
 let toastIdCounter = 0;
@@ -164,12 +172,13 @@ export const useUIStore = create<UIState>()(
       // Initial state
       theme: 'dark',
       focusMode: false,
-      inspectorOpen: true,
-      cheatSheetVisible: true, // Show by default for new users
+      inspectorOpen: getInitialInspectorState(),
+      cheatSheetVisible: false, // Never auto-open (Hard Rule A)
       commandPaletteOpen: false,
       gridVisible: false,
       snapEnabled: true,
       footerVisible: true,
+      hasSeenShortcutsHint: false, // One-time hint tracking
       layerVisibility: {
         homePlayers: true,
         awayPlayers: true,
@@ -227,6 +236,7 @@ export const useUIStore = create<UIState>()(
       
       toggleCheatSheet: () => set((s) => ({ cheatSheetVisible: !s.cheatSheetVisible })),
       setCheatSheetVisible: (visible) => set({ cheatSheetVisible: visible }),
+      setHasSeenShortcutsHint: (seen) => set({ hasSeenShortcutsHint: seen }),
       
       openCommandPalette: () => set({ commandPaletteOpen: true }),
       closeCommandPalette: () => set({ commandPaletteOpen: false }),
@@ -343,10 +353,12 @@ export const useUIStore = create<UIState>()(
       partialize: (state) => ({
         // Only persist these settings
         theme: state.theme,
-        cheatSheetVisible: state.cheatSheetVisible,
+        // cheatSheetVisible: NOT persisted (Hard Rule A)
+        hasSeenShortcutsHint: state.hasSeenShortcutsHint,
         gridVisible: state.gridVisible,
         snapEnabled: state.snapEnabled,
         footerVisible: state.footerVisible,
+        inspectorOpen: state.inspectorOpen,
       }),
       onRehydrateStorage: () => (state) => {
         // Apply theme on rehydration

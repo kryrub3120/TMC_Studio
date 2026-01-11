@@ -24,6 +24,7 @@ import {
   BottomStepsBar,
   CommandPaletteModal,
   CheatSheetOverlay,
+  ShortcutsHint,
   ToastHint,
   ZoomWidget,
   AuthModal,
@@ -103,6 +104,17 @@ export default function App() {
 
   // Initialize theme on mount
   useInitializeTheme();
+
+  // Post-mount inspector correction (Hard Rule B)
+  useEffect(() => {
+    // Only on first visit (no user preference)
+    const stored = localStorage.getItem('tmc-ui-settings');
+    const hasPreference = stored?.includes('inspectorOpen');
+    if (!hasPreference) {
+      const shouldBeOpen = window.innerWidth >= 1280;
+      setInspectorOpen(shouldBeOpen);
+    }
+  }, []); // Run once on mount
 
   // Board store state  
   const elements = useBoardStore((s) => s.elements);
@@ -208,6 +220,7 @@ export default function App() {
   const activeToast = useUIStore((s) => s.activeToast);
   const layerVisibility = useUIStore((s) => s.layerVisibility);
   const zoom = useUIStore((s) => s.zoom);
+  const hasSeenShortcutsHint = useUIStore((s) => s.hasSeenShortcutsHint);
   
   // UI store actions
   const toggleTheme = useUIStore((s) => s.toggleTheme);
@@ -226,6 +239,9 @@ export default function App() {
   const gridVisible = useUIStore((s) => s.gridVisible);
   const footerVisible = useUIStore((s) => s.footerVisible);
   const toggleFooter = useUIStore((s) => s.toggleFooter);
+  const setHasSeenShortcutsHint = useUIStore((s) => s.setHasSeenShortcutsHint);
+  const setInspectorOpen = useUIStore((s) => s.setInspectorOpen);
+  const setCheatSheetVisible = useUIStore((s) => s.setCheatSheetVisible);
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -2130,6 +2146,18 @@ export default function App() {
             </Stage>
             )}
           </div>
+
+          {/* Shortcuts Hint - one-time, 3s auto-dismiss */}
+          {!focusMode && authIsAuthenticated && (
+            <ShortcutsHint
+              isVisible={!hasSeenShortcutsHint && !cheatSheetVisible}
+              onDismiss={() => setHasSeenShortcutsHint(true)}
+              onClick={() => {
+                setCheatSheetVisible(true);
+                setHasSeenShortcutsHint(true);
+              }}
+            />
+          )}
 
           {/* Cheat Sheet Overlay - inside canvas area */}
           {!focusMode && (

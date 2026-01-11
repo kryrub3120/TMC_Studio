@@ -28,6 +28,8 @@ export type { CommandPaletteModalProps, CommandAction, CommandCategory } from '.
 
 export { CheatSheetOverlay } from './CheatSheetOverlay.js';
 export type { CheatSheetOverlayProps } from './CheatSheetOverlay.js';
+export { ShortcutsHint } from './ShortcutsHint.js';
+export type { ShortcutsHintProps } from './ShortcutsHint.js';
 
 export { ToastHint } from './ToastHint.js';
 export type { ToastHintProps } from './ToastHint.js';
