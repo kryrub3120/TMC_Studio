@@ -60,7 +60,7 @@ export function TermsOfService() {
 
             <h3 className="text-xl font-medium mb-2 mt-4">4.3 Refunds</h3>
             <p className="text-muted leading-relaxed">
-              We offer a 14-day money-back guarantee for first-time subscribers. Refunds after this period are at our discretion.
+              Refund requests are handled on a case-by-case basis. Please contact support if you believe you are entitled to a refund.
             </p>
 
             <h3 className="text-xl font-medium mb-2 mt-4">4.4 Cancellation</h3>

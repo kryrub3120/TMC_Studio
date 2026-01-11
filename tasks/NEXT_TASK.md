@@ -1,94 +1,114 @@
-# Cloud Save - Zapisywanie projektów do Supabase
+# Current Task: PR-MON-COPY
 
-## Goal
-Umożliwić zalogowanym użytkownikom zapisywanie i ładowanie projektów z chmury. Integracja z istniejącym `Cmd+S` oraz `ProjectsDrawer`.
-
-## Current State
-- ✅ Auth działa (Google OAuth)
-- ✅ Profile tworzony automatycznie
-- ✅ Tabela `projects` istnieje w Supabase
-- ✅ RLS policies skonfigurowane
-- ⚠️ Projekty zapisują się tylko do localStorage
-
-## Files to Modify
-- `apps/web/src/lib/supabase.ts` - funkcje API (już częściowo gotowe)
-- `apps/web/src/store/useBoardStore.ts` - integracja cloud save
-- `packages/ui/src/ProjectsDrawer.tsx` - lista projektów z chmury
-- `packages/ui/src/TopBar.tsx` - wskaźnik syncu
-
-## Steps
-
-### Step 1: Cloud Save Integration
-1. Dodać funkcję `saveProjectToCloud()` w `useBoardStore`
-2. Zmodyfikować `saveDocument()` żeby zapisywało do Supabase jeśli user zalogowany
-3. Dodać loading state podczas zapisu
-
-### Step 2: Load Projects from Cloud
-1. Dodać funkcję `loadProjectFromCloud(projectId)` w `useBoardStore`
-2. Zintegrować z `ProjectsDrawer`
-3. Wyświetlać listę projektów użytkownika
-
-### Step 3: ProjectsDrawer Enhancement
-1. Pokazać projekty z chmury zamiast/oprócz localStorage
-2. Dodać akcje: Open, Delete, Rename
-3. Wskaźnik czy projekt jest zsynchronizowany
-
-### Step 4: Auto-sync (Optional)
-1. Debounced auto-save przy zmianach
-2. Conflict resolution (last-write-wins)
-3. Offline queue
-
-## Commands
-```bash
-pnpm dev
-```
-
-## Acceptance Criteria
-- [ ] Cmd+S zapisuje projekt do Supabase (jeśli zalogowany)
-- [ ] ProjectsDrawer pokazuje projekty z chmury
-- [ ] Można otworzyć projekt z chmury
-- [ ] Można usunąć projekt z chmury
-- [ ] Toast notification po zapisie
-
-## Priority
-🔴 HIGH - to jest główna wartość dla użytkowników z kontem
-
-## Estimated Time
-~2-3 godziny
+## Status: 🚧 IN PROGRESS
 
 ---
 
-## Alternative Next Steps
+## What We're Doing
 
-### Option B: Stripe Payments
-Setup płatności dla tier'ów Pro/Team:
-- [ ] Stripe Dashboard konfiguracja
-- [ ] Netlify Function - create-checkout
-- [ ] Webhook handling - subscription updates
-- [ ] Feature gating (limit 5 projektów dla free)
-
-### Option C: Mobile/Touch Support
-Optymalizacja dla urządzeń mobilnych:
-- [ ] Touch pan/drag
-- [ ] Pinch-to-zoom
-- [ ] Responsive Inspector
-
-### Option D: Step Thumbnails
-Mini podglądy kroków animacji:
-- [ ] Generate canvas thumbnails
-- [ ] Show in BottomStepsBar
-- [ ] Cache w localStorage
+**PR-MON-COPY**: Fix pricing modal copy to remove false promises and align with actual product capabilities.
 
 ---
 
-## Recommended Order
-1. **Cloud Save** (high value, auth already works)
-2. **Stripe Payments** (monetization)
-3. **Step Thumbnails** (UX)
-4. **Mobile Support** (reach)
+## Scope
+
+- [x] Create MONETIZATION_PLAN.md (source of truth)
+- [x] Update `PricingModal.tsx` — fix tier copy + guest support
+- [x] Update `UpgradeSuccessModal.tsx` — fix feature lists
+- [x] Fix guest vs free distinction (currentPlan type)
+- [x] Remove risky legal promises (14-day guarantee)
+- [ ] Verify no other files reference false features
 
 ---
 
-*Created: 2026-01-08*
-*Status: Ready for implementation*
+## Changes Implemented
 
+### ✅ PricingModal.tsx
+
+**CRITICAL FIX: Guest vs Free Distinction**
+- ✅ Updated `currentPlan` type: `'guest' | 'free' | 'pro' | 'team'`
+- ✅ Dynamic CTA: Guest sees "Create Free Account", Free sees "Current Plan"
+- ✅ Free button for guests calls `onSignUp()` to start signup flow
+
+**CRITICAL FIX: Footer Legal**
+- ✅ Removed "14-day money-back guarantee" (no refund policy in place)
+- ✅ Changed to: "Cancel anytime. Questions? Contact support."
+
+### Original PricingModal.tsx Changes
+
+**Free tier — REMOVE:**
+- "Local save only" (Free users get cloud sync)
+- "Basic pitch customization" (not gated)
+
+**Free tier — UPDATE TO:**
+- Up to 3 projects
+- Cloud sync & backup
+- PNG export
+- Organize with folders
+
+**Pro tier — REMOVE:**
+- "Team templates" (not implemented)
+- "All pitch styles & sports" (not gated)
+
+**Pro tier — UPDATE TO:**
+- Unlimited projects
+- GIF & PDF export
+- Unlimited steps
+- Priority support
+
+**Team tier — REMOVE:**
+- "Analytics dashboard" (not implemented)
+- "API access" (not implemented)
+- "Team branding" (not implemented)
+- "Shared project library" (not implemented — mark as "Coming Soon")
+
+**Team tier — UPDATE TO:**
+- Everything in Pro
+- 5 team member seats
+- Centralized billing
+- Coming: Shared library
+
+### UpgradeSuccessModal.tsx
+
+**Pro features — REMOVE:**
+- "All pitch styles" (not gated)
+
+**Pro features — KEEP:**
+- Export animated GIFs ✓
+- Export multi-page PDFs ✓
+- Unlimited cloud sync ✓
+- Unlimited projects ✓
+
+**Team features — REMOVE:**
+- "Team branding" (not implemented)
+- "Analytics dashboard" (not implemented)
+- "API access" (not implemented)
+
+**Team features — UPDATE TO:**
+- Up to 5 team members
+- Shared project library → "Coming: Shared library"
+- Everything in Pro
+
+---
+
+## Source of Truth
+
+See: `docs/MONETIZATION_PLAN.md`
+
+---
+
+## After This PR
+
+Next: **PR-MON-CORE** — Create entitlements system (`lib/entitlements.ts`)
+
+---
+
+## Monetization PR Roadmap
+
+| PR | Status | Description |
+|----|--------|-------------|
+| PR-MON-COPY | 🚧 IN PROGRESS | Fix pricing text |
+| PR-MON-CORE | ⏳ NEXT | Entitlements system |
+| PR-MON-EXPORT | ⏳ PLANNED | Gate GIF/PDF exports |
+| PR-MON-PROJECT-LIMITS | ⏳ PLANNED | Enforce project limits |
+| PR-MON-TEAM-MVP | ⏳ FUTURE | Team seats & invites |

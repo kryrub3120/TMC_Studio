@@ -17,7 +17,7 @@ import { Line } from 'react-konva';
 import { useState, useEffect as useEffectReact } from 'react';
 // New architecture imports
 import { BoardCanvas } from './components/Canvas/BoardCanvas';
-import { useCanvasInteraction } from './hooks';
+import { useCanvasInteraction, useEntitlements } from './hooks';
 import {
   TopBar,
   RightInspector,
@@ -33,6 +33,7 @@ import {
   ProjectsDrawer,
   SettingsModal,
   UpgradeSuccessModal,
+  LimitReachedModal,
   Footer,
   CreateFolderModal,
   FolderOptionsModal,
@@ -78,6 +79,10 @@ export default function App() {
   // Auth state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [limitReachedModalOpen, setLimitReachedModalOpen] = useState(false);
+  const [limitReachedType, setLimitReachedType] = useState<'guest-step' | 'guest-project' | 'free-step' | 'free-project'>('guest-step');
+  const [limitCountCurrent, setLimitCountCurrent] = useState(0);
+  const [limitCountMax, setLimitCountMax] = useState(0);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [upgradeSuccessModalOpen, setUpgradeSuccessModalOpen] = useState(false);
   const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
@@ -96,6 +101,9 @@ export default function App() {
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const signOut = useAuthStore((s) => s.signOut);
   const clearAuthError = useAuthStore((s) => s.clearError);
+
+  // Entitlements - check what user can do based on their plan
+  const { can } = useEntitlements();
 
   // Initialize theme on mount
   useInitializeTheme();
@@ -174,7 +182,7 @@ export default function App() {
   
   // Step actions
   const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
-  const addStep = useBoardStore((s) => s.addStep);
+  const addStepRaw = useBoardStore((s) => s.addStep);
   const removeStep = useBoardStore((s) => s.removeStep);
   const renameStep = useBoardStore((s) => s.renameStep);
   const goToStep = useBoardStore((s) => s.goToStep);
@@ -404,6 +412,14 @@ export default function App() {
 
   // Export animated GIF
   const handleExportGIF = useCallback(async () => {
+    // Check entitlements
+    const gifAllowed = can('exportGIF');
+    if (gifAllowed !== true) {
+      setPricingModalOpen(true);
+      showToast('GIF export is a Pro feature ⭐');
+      return;
+    }
+
     if (!stageRef.current) return;
     if (boardDoc.steps.length < 2) {
       showToast('Need at least 2 steps for GIF');
@@ -433,10 +449,18 @@ export default function App() {
     }
     
     goToStep(originalStep);
-  }, [boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, stepDuration, showToast]);
+  }, [can, boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, stepDuration, showToast]);
 
   // Export multi-page PDF
   const handleExportPDF = useCallback(async () => {
+    // Check entitlements
+    const pdfAllowed = can('exportPDF');
+    if (pdfAllowed !== true) {
+      setPricingModalOpen(true);
+      showToast('PDF export is a Pro feature ⭐');
+      return;
+    }
+
     if (!stageRef.current) return;
     
     const originalStep = currentStepIndex;
@@ -459,7 +483,7 @@ export default function App() {
     }
     
     goToStep(originalStep);
-  }, [boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, showToast]);
+  }, [can, boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, showToast]);
 
   // Export SVG
   const handleExportSVG = useCallback(async () => {
@@ -478,6 +502,38 @@ export default function App() {
       console.error(error);
     }
   }, [boardDoc.name, canvasWidth, canvasHeight, showToast]);
+
+  // Gated step addition with entitlement checks
+  const addStep = useCallback(() => {
+    const stepCount = boardDoc.steps.length;
+    const canAddStep = can('addStep', { stepCount });
+    
+    // Guest: hard-block at 5 steps
+    if (!authIsAuthenticated && canAddStep === 'hard-block') {
+      setLimitReachedType('guest-step');
+      setLimitCountCurrent(stepCount);
+      setLimitCountMax(5);
+      setLimitReachedModalOpen(true);
+      return;
+    }
+    
+    // Free: hard-block at 10 steps
+    if (authIsAuthenticated && !authIsPro && canAddStep === 'hard-block') {
+      setLimitReachedType('free-step');
+      setLimitCountCurrent(stepCount);
+      setLimitCountMax(10);
+      setLimitReachedModalOpen(true);
+      return;
+    }
+    
+    // Free: soft-prompt at 9 steps
+    if (authIsAuthenticated && !authIsPro && canAddStep === 'soft-prompt') {
+      showToast(`You have ${stepCount}/10 steps. Upgrade to Pro for unlimited!`);
+    }
+    
+    // Add the step
+    addStepRaw();
+  }, [can, authIsAuthenticated, authIsPro, boardDoc.steps.length, addStepRaw, showToast]);
 
   // Command palette actions
   const commandActions: CommandAction[] = useMemo(() => {
@@ -1581,6 +1637,50 @@ export default function App() {
   }, [loadFromCloud, showToast]);
 
   const handleCreateProject = useCallback(async () => {
+    // Calculate current project count
+    let projectCount = 0;
+    
+    if (authIsAuthenticated) {
+      // For authenticated users: count cloud projects
+      projectCount = cloudProjects.length;
+      // If current project is unsaved (no cloudProjectId), it counts as a project
+      if (!cloudProjectId) {
+        projectCount += 1;
+      }
+    } else {
+      // For guest users: count local projects (1 if we have content, 0 otherwise)
+      projectCount = elements.length > 0 || boardDoc.steps.length > 1 ? 1 : 0;
+    }
+
+    // Check entitlements
+    const canCreate = can('createProject', { projectCount });
+    
+    // Guest: soft-block at limit (prompt to sign up)
+    if (!authIsAuthenticated && canCreate !== true) {
+      setProjectsDrawerOpen(false);
+      setLimitReachedType('guest-project');
+      setLimitCountCurrent(projectCount);
+      setLimitCountMax(1);
+      setLimitReachedModalOpen(true);
+      return;
+    }
+    
+    // Free: hard-block at limit (show pricing modal)
+    if (authIsAuthenticated && !authIsPro && canCreate === 'hard-block') {
+      setProjectsDrawerOpen(false);
+      setLimitReachedType('free-project');
+      setLimitCountCurrent(projectCount);
+      setLimitCountMax(3);
+      setLimitReachedModalOpen(true);
+      return;
+    }
+    
+    // Free: soft-prompt at approaching limit
+    if (authIsAuthenticated && !authIsPro && canCreate === 'soft-prompt') {
+      showToast(`You have ${cloudProjects.length + 1}/3 projects. Upgrade to Pro for unlimited!`);
+    }
+
+    // Create the project
     newDocument();
     setProjectsDrawerOpen(false);
     showToast('New project created');
@@ -1600,7 +1700,7 @@ export default function App() {
         showToast('Cloud save error - check console ❌');
       }
     }
-  }, [newDocument, showToast, authIsAuthenticated, saveToCloud, fetchCloudProjects]);
+  }, [can, authIsAuthenticated, authIsPro, cloudProjects, cloudProjectId, elements.length, boardDoc.steps.length, newDocument, showToast, saveToCloud, fetchCloudProjects]);
 
   const handleDeleteProject = useCallback(async (id: string) => {
     const success = await deleteProjectApi(id);
@@ -1831,7 +1931,7 @@ export default function App() {
           isSaved={isSaved}
           focusMode={focusMode}
           theme={theme}
-          plan={authIsPro ? 'pro' : 'free'}
+          plan={authIsPro ? 'pro' : (authIsAuthenticated ? 'free' : 'guest')}
           userInitials={authUser?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || (authIsAuthenticated ? 'U' : '?')}
           isSyncing={isSaving}
           stepInfo={boardDoc.steps.length > 1 ? `Step ${currentStepIndex + 1}/${boardDoc.steps.length}` : undefined}
@@ -2339,6 +2439,27 @@ export default function App() {
         onSignUp={() => {
           setPricingModalOpen(false);
           setAuthModalOpen(true);
+        }}
+      />
+
+      {/* Limit Reached Modal - Explain why login/upgrade is needed */}
+      <LimitReachedModal
+        isOpen={limitReachedModalOpen}
+        type={limitReachedType}
+        currentCount={limitCountCurrent}
+        maxCount={limitCountMax}
+        onSignup={() => {
+          setLimitReachedModalOpen(false);
+          setAuthModalOpen(true);
+        }}
+        onUpgrade={() => {
+          setLimitReachedModalOpen(false);
+          setPricingModalOpen(true);
+        }}
+        onClose={() => setLimitReachedModalOpen(false)}
+        onSeePlans={() => {
+          setLimitReachedModalOpen(false);
+          setPricingModalOpen(true);
         }}
       />
 
