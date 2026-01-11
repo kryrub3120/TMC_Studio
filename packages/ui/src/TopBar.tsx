@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 
-export type PlanType = 'free' | 'pro';
+export type PlanType = 'guest' | 'free' | 'pro';
 
 export interface TopBarProps {
   projectName: string;

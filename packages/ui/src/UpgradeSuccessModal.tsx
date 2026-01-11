@@ -10,21 +10,19 @@ interface UpgradeSuccessModalProps {
 }
 
 const proFeatures = [
+  { icon: '📦', text: 'Unlimited projects' },
   { icon: '🎬', text: 'Export animated GIFs' },
   { icon: '📄', text: 'Export multi-page PDFs' },
-  { icon: '☁️', text: 'Unlimited cloud sync' },
-  { icon: '📦', text: 'Unlimited projects' },
-  { icon: '🎨', text: 'All pitch styles' },
+  { icon: '♾️', text: 'Unlimited steps' },
+  { icon: '☁️', text: 'Cloud sync & backup' },
   { icon: '⚡', text: 'Priority support' },
 ];
 
 const teamFeatures = [
-  { icon: '👥', text: 'Up to 5 team members' },
-  { icon: '📚', text: 'Shared project library' },
-  { icon: '🎨', text: 'Team branding' },
-  { icon: '📊', text: 'Analytics dashboard' },
-  { icon: '🔌', text: 'API access' },
   { icon: '⚡', text: 'Everything in Pro' },
+  { icon: '👥', text: '5 team member seats' },
+  { icon: '💳', text: 'Centralized billing' },
+  { icon: '📚', text: 'Coming: Shared library' },
 ];
 
 export function UpgradeSuccessModal({

@@ -7,7 +7,7 @@ import { useState } from 'react';
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentPlan: 'free' | 'pro' | 'team';
+  currentPlan: 'guest' | 'free' | 'pro' | 'team';
   isAuthenticated: boolean;
   onSignUp: () => void;
 }
@@ -18,6 +18,7 @@ interface Plan {
   price: string;
   priceId: string;
   period: string;
+  microcopy?: string;
   features: string[];
   highlighted?: boolean;
   cta: string;
@@ -27,29 +28,29 @@ const plans: Plan[] = [
   {
     id: 'free',
     name: 'Free',
-    price: '$0',
+    price: 'Included',
     priceId: '',
-    period: 'forever',
+    period: ' after sign-in',
+    microcopy: 'This is the default plan after login',
     features: [
-      '3 projects',
-      'Basic pitch customization',
+      'Up to 3 projects',
+      'Cloud sync & backup',
       'PNG export',
-      'Local save only',
+      'Organize with folders',
     ],
-    cta: 'Current Plan',
+    cta: 'Continue for free',
   },
   {
     id: 'pro',
     name: 'Pro',
     price: '$9',
-    priceId: 'price_pro_monthly', // Replace with actual Stripe price ID
+    priceId: 'price_pro_monthly', // TODO: Replace with actual Stripe price ID
     period: '/month',
+    microcopy: 'For coaches who create a lot of drills and exports',
     features: [
       'Unlimited projects',
-      'All pitch styles & sports',
       'GIF & PDF export',
-      'Cloud sync & backup',
-      'Team templates',
+      'Unlimited steps',
       'Priority support',
     ],
     highlighted: true,
@@ -59,17 +60,16 @@ const plans: Plan[] = [
     id: 'team',
     name: 'Team',
     price: '$29',
-    priceId: 'price_team_monthly', // Replace with actual Stripe price ID
+    priceId: 'price_team_monthly', // TODO: Replace with actual Stripe price ID
     period: '/month',
+    microcopy: 'Pro + invite your staff by email',
     features: [
-      'Everything in Pro',
       '5 team members',
-      'Shared project library',
-      'Team branding',
-      'Analytics dashboard',
-      'API access',
+      'Shared billing',
+      'Individual workspaces',
+      'Everything in Pro',
     ],
-    cta: 'Contact Sales',
+    cta: 'Upgrade to Team',
   },
 ];
 
@@ -86,12 +86,15 @@ export function PricingModal({
   if (!isOpen) return null;
 
   const handleSelectPlan = async (plan: Plan) => {
-    if (plan.id === 'free') return;
-    if (plan.id === 'team') {
-      window.open('mailto:sales@tmcstudio.app?subject=Team Plan Inquiry', '_blank');
+    // Free plan: Sign up for guests, no-op for existing Free users
+    if (plan.id === 'free') {
+      if (!isAuthenticated) {
+        onSignUp();
+      }
       return;
     }
 
+    // Pro/Team plan: Sign up if guest, otherwise start checkout
     if (!isAuthenticated) {
       onSignUp();
       return;
@@ -141,9 +144,9 @@ export function PricingModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-2xl font-bold text-text">Choose Your Plan</h2>
+            <h2 className="text-2xl font-bold text-text">Choose how you want to use TMC Studio</h2>
             <p className="text-muted mt-1">
-              Unlock powerful features for your coaching workflow
+              Start free. Upgrade only if you need more.
             </p>
           </div>
           <button
@@ -178,6 +181,26 @@ export function PricingModal({
             {plans.map((plan) => {
               const isCurrent = currentPlan === plan.id;
               const isHighlighted = plan.highlighted;
+              
+              // Free plan logic: Guest sees active CTA, authenticated sees Current Plan
+              let buttonLabel = plan.cta;
+              let buttonDisabled = isLoading === plan.id;
+              
+              if (plan.id === 'free') {
+                if (isAuthenticated) {
+                  // Authenticated user on Free → Current Plan (disabled)
+                  buttonLabel = 'Current Plan';
+                  buttonDisabled = true;
+                } else {
+                  // Guest → Continue for free (active)
+                  buttonLabel = 'Continue for free';
+                  buttonDisabled = false;
+                }
+              } else if (isCurrent) {
+                // Pro/Team current plan
+                buttonLabel = 'Current Plan';
+                buttonDisabled = true;
+              }
 
               return (
                 <div
@@ -204,6 +227,11 @@ export function PricingModal({
                       </span>
                       <span className="text-muted">{plan.period}</span>
                     </div>
+                    {plan.microcopy && (
+                      <p className="text-xs text-muted/70 mt-2 italic">
+                        {plan.microcopy}
+                      </p>
+                    )}
                   </div>
 
                   <ul className="space-y-3 mb-6">
@@ -229,43 +257,48 @@ export function PricingModal({
                     ))}
                   </ul>
 
-                  <button
-                    onClick={() => handleSelectPlan(plan)}
-                    disabled={isCurrent || isLoading === plan.id}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
-                      isCurrent
-                        ? 'bg-surface border border-border text-muted cursor-default'
-                        : isHighlighted
-                          ? 'bg-accent hover:bg-accent/90 text-white'
-                          : 'bg-surface hover:bg-surface2 border border-border text-text'
-                    } ${isLoading === plan.id ? 'opacity-50' : ''}`}
-                  >
-                    {isLoading === plan.id ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            fill="none"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
-                        Processing...
-                      </span>
-                    ) : isCurrent ? (
-                      'Current Plan'
-                    ) : (
-                      plan.cta
+                  <div>
+                    <button
+                      onClick={() => handleSelectPlan(plan)}
+                      disabled={buttonDisabled}
+                      className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
+                        buttonDisabled
+                          ? 'bg-surface border border-border text-muted cursor-default'
+                          : isHighlighted
+                            ? 'bg-accent hover:bg-accent/90 text-white'
+                            : 'bg-surface hover:bg-surface2 border border-border text-text'
+                      } ${isLoading === plan.id ? 'opacity-50' : ''}`}
+                    >
+                      {isLoading === plan.id ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        buttonLabel
+                      )}
+                    </button>
+                    {plan.id === 'free' && !isAuthenticated && (
+                      <p className="text-xs text-muted/60 text-center mt-2">
+                        Sign in with Google or email
+                      </p>
                     )}
-                  </button>
+                  </div>
                 </div>
               );
             })}
@@ -275,7 +308,8 @@ export function PricingModal({
         {/* Footer */}
         <div className="p-6 border-t border-border bg-surface2/50 text-center">
           <p className="text-sm text-muted">
-            All plans include 14-day money-back guarantee. Cancel anytime.
+            You can use TMC Studio for free forever.<br />
+            Upgrade only when you hit a real limit.
           </p>
         </div>
       </div>

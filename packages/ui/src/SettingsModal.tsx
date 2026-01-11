@@ -507,6 +507,29 @@ export function SettingsModal({
                   )}
                 </div>
 
+                {/* Upgrade Nudge for Free Users */}
+                {user?.subscription_tier === 'free' && (
+                  <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 text-2xl">⭐</div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-white mb-1">
+                          You're on Free — Upgrade to Pro for more
+                        </h4>
+                        <p className="text-xs text-gray-400 mb-3">
+                          Get unlimited projects, unlimited steps, GIF & PDF export, and priority support
+                        </p>
+                        <button
+                          onClick={onUpgrade}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
+                        >
+                          Upgrade to Pro →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {user?.subscription_tier !== 'free' && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-300 mb-3">Manage Subscription</h4>

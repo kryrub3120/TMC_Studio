@@ -2,7 +2,7 @@
  * PitchPanel - Pitch appearance customization
  */
 
-import type { PitchSettings, PitchTheme, PitchView, PitchLineSettings } from '@tmc/core';
+import type { PitchSettings, PitchTheme } from '@tmc/core';
 import { PITCH_THEMES, DEFAULT_LINE_SETTINGS, PLAIN_PITCH_LINES } from '@tmc/core';
 
 export interface PitchPanelProps {

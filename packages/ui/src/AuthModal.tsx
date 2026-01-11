@@ -113,8 +113,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="px-6 pt-6 pb-4 border-b border-white/10">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-white">
-              {mode === 'login' && 'Welcome Back'}
-              {mode === 'register' && 'Create Account'}
+              {mode === 'login' && 'Continue for free'}
+              {mode === 'register' && 'Continue for free'}
               {mode === 'forgot' && 'Reset Password'}
             </h2>
             <button
@@ -127,8 +127,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
           </div>
           <p className="text-sm text-gray-400 mt-1">
-            {mode === 'login' && 'Sign in to save your boards to the cloud'}
-            {mode === 'register' && 'Start creating professional tactics'}
+            {mode === 'login' && 'Sign in to save your work and unlock the Free plan.'}
+            {mode === 'register' && 'Sign in to save your work and unlock the Free plan.'}
             {mode === 'forgot' && 'Enter your email to reset password'}
           </p>
         </div>
@@ -277,36 +277,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-6 text-center text-sm text-gray-400">
-          {mode === 'login' && (
-            <>
-              Don't have an account?{' '}
-              <button
-                onClick={() => handleModeChange('register')}
-                className="text-blue-400 hover:text-blue-300 font-medium"
-              >
-                Sign up
-              </button>
-            </>
-          )}
-          {mode === 'register' && (
-            <>
-              Already have an account?{' '}
+        <div className="px-6 pb-6 text-center text-sm text-gray-400 space-y-2">
+          <div>
+            {mode === 'login' && (
+              <>
+                Don't have an account?{' '}
+                <button
+                  onClick={() => handleModeChange('register')}
+                  className="text-blue-400 hover:text-blue-300 font-medium"
+                >
+                  Sign up
+                </button>
+              </>
+            )}
+            {mode === 'register' && (
+              <>
+                Already have an account?{' '}
+                <button
+                  onClick={() => handleModeChange('login')}
+                  className="text-blue-400 hover:text-blue-300 font-medium"
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+            {mode === 'forgot' && (
               <button
                 onClick={() => handleModeChange('login')}
                 className="text-blue-400 hover:text-blue-300 font-medium"
               >
-                Sign in
+                ← Back to sign in
               </button>
-            </>
-          )}
-          {mode === 'forgot' && (
-            <button
-              onClick={() => handleModeChange('login')}
-              className="text-blue-400 hover:text-blue-300 font-medium"
-            >
-              ← Back to sign in
-            </button>
+            )}
+          </div>
+          {mode !== 'forgot' && (
+            <p className="text-xs text-gray-500">
+              Free forever. No credit card required.
+            </p>
           )}
         </div>
       </div>
