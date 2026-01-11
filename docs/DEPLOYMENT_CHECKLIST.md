@@ -17,7 +17,7 @@ Go to: Netlify Dashboard → Site Settings → Environment Variables
 # Stripe LIVE Keys (PRODUCTION)
 STRIPE_SECRET_KEY=sk_live_... # Get from Stripe Dashboard
 STRIPE_PUBLISHABLE_KEY=pk_live_51SnQmaANogcZdSR3gUrd67nqjFsHW4GuTkRGfJMbyEY0lW9LrQ5f2LTrKEKcMDlM8HuVawXIe5AFbHgmlzhxEYUB00PIIOPN2R
-STRIPE_WEBHOOK_SECRET=whsec_rUdJ3yzAtzgwcnjHW4rh1CEb78bKiskS
+STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
 
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co
