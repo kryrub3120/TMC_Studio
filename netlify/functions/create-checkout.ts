@@ -14,8 +14,9 @@ interface CheckoutRequest {
   priceId: string;
   successUrl: string;
   cancelUrl: string;
-  customerId?: string;
-  email?: string;
+  userId?: string;      // Supabase user ID for client_reference_id
+  customerId?: string;   // Existing Stripe customer ID
+  email?: string;        // User email for new customer creation
 }
 
 const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
@@ -53,7 +54,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
   try {
     const body: CheckoutRequest = JSON.parse(event.body || '{}');
-    const { priceId, successUrl, cancelUrl, customerId, email } = body;
+    const { priceId, successUrl, cancelUrl, userId, customerId, email } = body;
 
     if (!priceId) {
       return {
@@ -86,6 +87,11 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
     };
+
+    // Add user ID for webhook correlation (critical for finding user in DB)
+    if (userId) {
+      sessionParams.client_reference_id = userId;
+    }
 
     // If customer exists, use it; otherwise collect email
     if (customerId) {

@@ -4,12 +4,38 @@
 
 import { useState } from 'react';
 
+// NOTE: This import path works because ui package is in the monorepo
+// If build fails, we can pass stripe config as props instead
+let STRIPE_PRICES: any;
+try {
+  // Dynamic import to handle potential build issues across packages
+  STRIPE_PRICES = require('../../apps/web/src/config/stripe').STRIPE_PRICES;
+} catch (error) {
+  console.warn('[PricingModal] Could not import Stripe config, using fallback');
+  // Fallback: Hardcoded Price IDs (keep in sync with apps/web/src/config/stripe.ts)
+  STRIPE_PRICES = {
+    pro: {
+      monthly: 'price_1SnQvaANogcZdSR39JL60iCS',
+      yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',
+    },
+    team: {
+      monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc',
+      yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',
+    },
+  };
+}
+
 interface PricingModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentPlan: 'guest' | 'free' | 'pro' | 'team';
   isAuthenticated: boolean;
   onSignUp: () => void;
+  user?: {
+    id: string;
+    email: string;
+    stripe_customer_id?: string | null;
+  } | null;
 }
 
 interface Plan {
@@ -44,7 +70,7 @@ const plans: Plan[] = [
     id: 'pro',
     name: 'Pro',
     price: '$9',
-    priceId: 'price_pro_monthly', // TODO: Replace with actual Stripe price ID
+    priceId: STRIPE_PRICES.pro.monthly, // Real Stripe Price ID
     period: '/month',
     microcopy: 'For coaches who create a lot of drills and exports',
     features: [
@@ -60,7 +86,7 @@ const plans: Plan[] = [
     id: 'team',
     name: 'Team',
     price: '$29',
-    priceId: 'price_team_monthly', // TODO: Replace with actual Stripe price ID
+    priceId: STRIPE_PRICES.team.monthly, // Real Stripe Price ID
     period: '/month',
     microcopy: 'Pro + invite your staff by email',
     features: [
@@ -79,6 +105,7 @@ export function PricingModal({
   currentPlan,
   isAuthenticated,
   onSignUp,
+  user,
 }: PricingModalProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,14 +131,26 @@ export function PricingModal({
     setError(null);
 
     try {
+      // Build checkout request with user context
+      const checkoutBody: any = {
+        priceId: plan.priceId,
+        successUrl: `${window.location.origin}/?checkout=success`,
+        cancelUrl: `${window.location.origin}/?checkout=cancelled`,
+      };
+
+      // Pass user data for webhook correlation
+      if (user) {
+        checkoutBody.userId = user.id; // For client_reference_id
+        checkoutBody.email = user.email; // For customer creation
+        if (user.stripe_customer_id) {
+          checkoutBody.customerId = user.stripe_customer_id; // Reuse existing customer
+        }
+      }
+
       const response = await fetch('/.netlify/functions/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          priceId: plan.priceId,
-          successUrl: `${window.location.origin}/?checkout=success`,
-          cancelUrl: `${window.location.origin}/?checkout=cancelled`,
-        }),
+        body: JSON.stringify(checkoutBody),
       });
 
       const data = await response.json();

@@ -60,6 +60,7 @@ import {
 import { useBoardStore } from './store/useBoardStore';
 import { useAuthStore } from './store/useAuthStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
+import { usePaymentReturn } from './hooks';
 import { formations } from '@tmc/presets';
 import { exportGIF, exportPDF, exportSVG } from './utils/exportUtils';
 
@@ -85,6 +86,8 @@ export default function App() {
   const [limitCountMax, setLimitCountMax] = useState(0);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [upgradeSuccessModalOpen, setUpgradeSuccessModalOpen] = useState(false);
+  const [subscriptionActivating, setSubscriptionActivating] = useState(false);
+  const [upgradedTier, setUpgradedTier] = useState<'pro' | 'team'>('pro');
   const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [createFolderModalOpen, setCreateFolderModalOpen] = useState(false);
@@ -1889,7 +1892,7 @@ export default function App() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ returnUrl: window.location.origin }),
+        body: JSON.stringify({ returnUrl: `${window.location.origin}/?portal=return` }),
       });
 
       const data = await response.json();
@@ -1901,26 +1904,39 @@ export default function App() {
     }
   }, [showToast]);
 
-  // Post-payment flow - check for checkout success
-  useEffectReact(() => {
-    const params = new URLSearchParams(window.location.search);
-    const checkoutStatus = params.get('checkout');
-    
-    if (checkoutStatus === 'success') {
-      console.log('[Payment] Checkout success, refreshing user data...');
-      useAuthStore.getState().initialize().then(() => {
-        const user = useAuthStore.getState().user;
-        if (user?.subscription_tier !== 'free') {
-          setUpgradeSuccessModalOpen(true);
-          showToast('🎉 Upgrade successful!');
+  // Payment return flow - handled by hook (composition-only pattern)
+  usePaymentReturn({
+    onActivateStart: () => {
+      setSubscriptionActivating(true);
+      setUpgradeSuccessModalOpen(true);
+    },
+    onActivateSuccess: (tier) => {
+      setSubscriptionActivating(false);
+      setUpgradedTier(tier);
+      showToast('🎉 Upgrade successful!');
+    },
+    onActivateDelayed: () => {
+      setSubscriptionActivating(false);
+      setUpgradeSuccessModalOpen(false);
+      showToast('Your subscription is being activated. Refresh in a moment.');
+    },
+    onPortalReturn: (tierChanged, newTier) => {
+      if (tierChanged && newTier) {
+        if (newTier === 'free') {
+          showToast('Subscription updated — you are now on Free.');
+        } else if (newTier === 'pro') {
+          showToast('Subscription updated — Pro is active.');
+        } else {
+          showToast('Subscription updated — Team is active.');
         }
-      });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (checkoutStatus === 'cancelled') {
+      } else {
+        showToast('Billing updated.');
+      }
+    },
+    onCancelled: () => {
       showToast('Checkout cancelled');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, [showToast]);
+    },
+  });
 
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
@@ -2440,6 +2456,11 @@ export default function App() {
           setPricingModalOpen(false);
           setAuthModalOpen(true);
         }}
+        user={authUser ? {
+          id: authUser.id,
+          email: authUser.email,
+          stripe_customer_id: authUser.stripe_customer_id,
+        } : null}
       />
 
       {/* Limit Reached Modal - Explain why login/upgrade is needed */}
@@ -2551,7 +2572,8 @@ export default function App() {
       <UpgradeSuccessModal
         isOpen={upgradeSuccessModalOpen}
         onClose={() => setUpgradeSuccessModalOpen(false)}
-        plan="pro"
+        plan={upgradedTier}
+        mode={subscriptionActivating ? 'activating' : 'success'}
       />
 
       {/* Footer - Legal links and branding */}

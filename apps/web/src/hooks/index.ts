@@ -7,3 +7,5 @@ export { useAnimationPlayback } from './useAnimationPlayback';
 export { useInterpolatedElements } from './useInterpolation';
 export { useCanvasInteraction } from './useCanvasInteraction';
 export { useEntitlements } from './useEntitlements';
+export { usePaymentReturn } from './usePaymentReturn';
+export type { PaymentReturnCallbacks } from './usePaymentReturn';

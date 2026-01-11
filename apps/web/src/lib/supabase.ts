@@ -53,6 +53,7 @@ export type User = {
   full_name?: string;
   avatar_url?: string;
   subscription_tier: 'free' | 'pro' | 'team';
+  stripe_customer_id?: string | null;
   preferences?: UserPreferences;
 };
 
@@ -115,6 +116,7 @@ export async function getCurrentUser(): Promise<User | null> {
     full_name: profile.full_name ?? undefined,
     avatar_url: profile.avatar_url ?? undefined,
     subscription_tier: profile.subscription_tier ?? 'free',
+    stripe_customer_id: profile.stripe_customer_id ?? null,
   };
 }
 
