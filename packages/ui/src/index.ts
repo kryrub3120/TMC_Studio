@@ -30,6 +30,8 @@ export { CheatSheetOverlay } from './CheatSheetOverlay.js';
 export type { CheatSheetOverlayProps } from './CheatSheetOverlay.js';
 export { ShortcutsHint } from './ShortcutsHint.js';
 export type { ShortcutsHintProps } from './ShortcutsHint.js';
+export { EmptyStateOverlay } from './EmptyStateOverlay.js';
+export type { EmptyStateOverlayProps } from './EmptyStateOverlay.js';
 
 export { ToastHint } from './ToastHint.js';
 export type { ToastHintProps } from './ToastHint.js';

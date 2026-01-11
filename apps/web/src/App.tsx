@@ -25,6 +25,7 @@ import {
   CommandPaletteModal,
   CheatSheetOverlay,
   ShortcutsHint,
+  EmptyStateOverlay,
   ToastHint,
   ZoomWidget,
   AuthModal,
@@ -41,6 +42,7 @@ import {
   type ElementInList,
   type ProjectItem,
 } from '@tmc/ui';
+import { CanvasShell } from './components/CanvasShell';
 import { 
   deleteProject as deleteProjectApi,
   updateProfile,
@@ -1863,6 +1865,17 @@ export default function App() {
             className="shadow-canvas rounded-[20px] overflow-hidden border border-border/50 p-3 bg-surface/50 backdrop-blur-sm transition-transform"
             style={{ transform: `scale(${effectiveZoom})`, transformOrigin: 'center' }}
           >
+            <CanvasShell
+              emptyStateOverlay={
+                <EmptyStateOverlay
+                  isVisible={elements.length === 0}
+                  onAddPlayer={() => addPlayerAtCursor('home')}
+                  onAddBall={addBallAtCursor}
+                  onAddArrow={() => addArrowAtCursor('pass')}
+                  onOpenPalette={openCommandPalette}
+                />
+              }
+            >
             {USE_NEW_CANVAS ? (
               <BoardCanvas
                 ref={stageRef}
@@ -2145,6 +2158,7 @@ export default function App() {
               </Layer>
             </Stage>
             )}
+            </CanvasShell>
           </div>
 
           {/* Shortcuts Hint - one-time, 3s auto-dismiss */}
