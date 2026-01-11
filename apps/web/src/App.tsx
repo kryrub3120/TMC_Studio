@@ -86,7 +86,6 @@ export default function App() {
   const [folderOptionsModalOpen, setFolderOptionsModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
-  const [_foldersLoading, _setFoldersLoading] = useState(false);
   const authUser = useAuthStore((s) => s.user);
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authIsPro = useAuthStore((s) => s.isPro);
@@ -1329,7 +1328,9 @@ export default function App() {
   const clearAllDrawings = useBoardStore((s) => s.clearAllDrawings);
 
   // New canvas architecture - hook for canvas interactions
-  const canvasInteraction = USE_NEW_CANVAS ? useCanvasInteraction() : null;
+  // NOTE: Hook must be called unconditionally (Rules of Hooks)
+  const canvasInteraction = useCanvasInteraction();
+  const activeCanvasInteraction = USE_NEW_CANVAS ? canvasInteraction : null;
 
   // Stage event handlers (use any event type for compatibility)
   const handleStageMouseDown = useCallback(
@@ -1626,14 +1627,11 @@ export default function App() {
   // Folder handlers
   const fetchFoldersData = useCallback(async () => {
     if (!authIsAuthenticated) return;
-    _setFoldersLoading(true);
     try {
       const data = await getFolders();
       setFolders(data);
     } catch (error) {
       console.error('Error fetching folders:', error);
-    } finally {
-      _setFoldersLoading(false);
     }
   }, [authIsAuthenticated]);
 
@@ -1906,9 +1904,9 @@ export default function App() {
                 onStageMouseDown={handleStageMouseDown}
                 onStageMouseMove={handleStageMouseMove}
                 onStageMouseUp={handleStageMouseUp}
-                onElementSelect={canvasInteraction?.handleElementSelect}
-                onElementDragEnd={canvasInteraction?.handleElementDragEnd}
-                onElementDragStart={canvasInteraction?.handleDragStart}
+                onElementSelect={activeCanvasInteraction?.handleElementSelect}
+                onElementDragEnd={activeCanvasInteraction?.handleElementDragEnd}
+                onElementDragStart={activeCanvasInteraction?.handleDragStart}
                 onResizeZone={resizeZone}
                 onUpdateArrowEndpoint={updateArrowEndpoint}
                 onPlayerQuickEdit={(id) => {

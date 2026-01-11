@@ -4,7 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import type { BoardElement, ElementId, Position } from '@tmc/core';
-import { filterElementsByIds, isArrowElement } from '@tmc/core';
+import { filterElementsByIds, isArrowElement, duplicateElements } from '@tmc/core';
 import type { AppState } from '../types';
 
 export interface SelectionSlice {
@@ -115,7 +115,6 @@ export const createSelectionSlice: StateCreator<
     const { clipboard } = get();
     if (clipboard.length === 0) return;
     
-    const { duplicateElements } = require('@tmc/core');
     const pasted = duplicateElements(clipboard, { x: 20, y: 20 });
     
     set((state) => ({

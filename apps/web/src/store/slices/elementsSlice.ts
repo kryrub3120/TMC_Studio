@@ -31,6 +31,7 @@ import {
   isTextElement,
 } from '@tmc/core';
 import type { AppState } from '../types';
+import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 
 /** Get next available player number */
 function getNextPlayerNumber(elements: BoardElement[], team: Team): number {
@@ -477,7 +478,6 @@ export const createElementsSlice: StateCreator<
   },
   
   applyFormation: (formationId, team) => {
-    const { getFormationById, getAbsolutePositions } = require('@tmc/presets');
     const formation = getFormationById(formationId);
     if (!formation) return;
     
