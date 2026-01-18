@@ -201,8 +201,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     return;
   }
 
-  // Get subscription details
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  // Get subscription details with full expansion
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ['items.data.price', 'latest_invoice']
+  });
   const priceId = subscription.items.data[0]?.price.id;
   
   if (!priceId) {
@@ -210,8 +212,46 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }
 
   const tier = getTierFromPriceId(priceId);
-  // @ts-expect-error - current_period_end exists but type definition may be outdated
-  const expiresAt = new Date(subscription.current_period_end * 1000);
+  
+  // Get expiration date - try multiple sources
+  // @ts-expect-error - current_period_end may exist but type definition incomplete
+  let periodEnd = subscription.current_period_end;
+  
+  // Fallback 1: Get from expanded latest_invoice
+  if (!periodEnd && subscription.latest_invoice) {
+    const invoice = subscription.latest_invoice;
+    // @ts-expect-error - period_end exists on invoice
+    periodEnd = typeof invoice === 'object' ? invoice.period_end : null;
+    console.log(`Using period_end from latest_invoice: ${periodEnd}`);
+  }
+  
+  // Fallback 2: Calculate from start_date + interval
+  if (!periodEnd && subscription.start_date) {
+    const plan = subscription.items.data[0]?.price;
+    // @ts-expect-error - interval exists on price/plan
+    const interval = plan?.recurring?.interval || plan?.interval;
+    // @ts-expect-error - interval_count exists
+    const intervalCount = plan?.recurring?.interval_count || plan?.interval_count || 1;
+    
+    if (interval === 'month') {
+      const startDate = new Date(subscription.start_date * 1000);
+      startDate.setMonth(startDate.getMonth() + intervalCount);
+      periodEnd = Math.floor(startDate.getTime() / 1000);
+      console.log(`Calculated period_end from start_date + ${intervalCount} month(s): ${periodEnd}`);
+    } else if (interval === 'year') {
+      const startDate = new Date(subscription.start_date * 1000);
+      startDate.setFullYear(startDate.getFullYear() + intervalCount);
+      periodEnd = Math.floor(startDate.getTime() / 1000);
+      console.log(`Calculated period_end from start_date + ${intervalCount} year(s): ${periodEnd}`);
+    }
+  }
+  
+  if (!periodEnd || typeof periodEnd !== 'number') {
+    console.error('Subscription object:', JSON.stringify(subscription, null, 2));
+    throw new Error(`Could not determine subscription period end. Status: ${subscription.status}`);
+  }
+  
+  const expiresAt = new Date(periodEnd * 1000);
 
   // PRIMARY: Direct user ID lookup (most reliable)
   if (userId) {
@@ -243,8 +283,36 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
   
   // Check subscription status
   if (subscription.status === 'active' || subscription.status === 'trialing') {
-    // @ts-expect-error - current_period_end exists but type definition may be outdated
-    const expiresAt = new Date(subscription.current_period_end * 1000);
+    // Get expiration date with fallback logic (same as checkout handler)
+    // @ts-expect-error - current_period_end may exist but type definition incomplete
+    let periodEnd = subscription.current_period_end;
+    
+    // Fallback: Calculate from start_date + interval if needed
+    if (!periodEnd && subscription.start_date) {
+      const plan = subscription.items.data[0]?.price;
+      // @ts-expect-error - interval exists on price/plan
+      const interval = plan?.recurring?.interval || plan?.interval;
+      // @ts-expect-error - interval_count exists
+      const intervalCount = plan?.recurring?.interval_count || plan?.interval_count || 1;
+      
+      if (interval === 'month') {
+        const startDate = new Date(subscription.start_date * 1000);
+        startDate.setMonth(startDate.getMonth() + intervalCount);
+        periodEnd = Math.floor(startDate.getTime() / 1000);
+        console.log(`[subscription.updated] Calculated period_end: ${periodEnd}`);
+      } else if (interval === 'year') {
+        const startDate = new Date(subscription.start_date * 1000);
+        startDate.setFullYear(startDate.getFullYear() + intervalCount);
+        periodEnd = Math.floor(startDate.getTime() / 1000);
+        console.log(`[subscription.updated] Calculated period_end: ${periodEnd}`);
+      }
+    }
+    
+    if (!periodEnd || typeof periodEnd !== 'number') {
+      throw new Error(`Could not determine subscription period end`);
+    }
+    
+    const expiresAt = new Date(periodEnd * 1000);
     await updateUserByCustomerId(customerId, tier, expiresAt);
   } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
     // Downgrade to free

@@ -68,10 +68,12 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_live_51SnQmaANogcZdSR3gUrd67nqjFsHW4GuTkRGfJMbyEY
   - [ ] `profiles` table with `stripe_customer_id` column
   - [ ] `profiles` table with `subscription_tier` column
   - [ ] `profiles` table with `subscription_expires_at` column
+  - [ ] `stripe_webhook_events` table (idempotency) ⚠️ CRITICAL!
   - [ ] RLS policies configured correctly
 
 - [ ] **Migrations Applied**
   - [ ] `20260108000001_add_stripe_customer_id.sql`
+  - [ ] `20260111000000_add_stripe_webhook_events.sql` ⚠️ REQUIRED!
   - [ ] All other migrations
 
 - [ ] **Service Role Key Obtained**
@@ -284,6 +286,33 @@ git push origin main
 - Add UI polling after checkout success
 - Force auth store refresh on `/?checkout=success`
 
+### Issue: "Invalid subscription period end: undefined" ⚠️ CRITICAL
+
+**Error in Logs:**
+```
+❌ Error processing webhook: Invalid subscription period end: undefined. Status: active
+```
+
+**Root Cause (PR-PAY-5):**
+- `subscription.current_period_end` is **undefined** in `checkout.session.completed` events
+- This field only exists in `subscription.updated` events
+- Must use `latest_invoice.period_end` or calculate from `start_date + interval`
+
+**Fix (ALREADY IMPLEMENTED in PR-PAY-5):**
+- Webhook handler now has 3-tier fallback:
+  1. Try `subscription.current_period_end`
+  2. Try `latest_invoice.period_end`
+  3. Calculate from `start_date + interval`
+- If you see this error, ensure latest code is deployed
+- Check Netlify function logs show "Using period_end from latest_invoice"
+
+**Verify Fix Working:**
+```
+✅ Logs show: "Using period_end from latest_invoice: 1768778670"
+✅ Logs show: "✅ Updated user XXX to pro"
+✅ Webhook returns 200 status
+```
+
 ---
 
 ## 📊 Monitoring
@@ -397,5 +426,22 @@ Before enabling payments for real users:
 
 ---
 
-**Current Status:** Ready to deploy PR-PAY-1 + PR-PAY-2  
-**Next:** Get LIVE Price IDs, set env vars, deploy, test!
+**Current Status:** ✅ ALL PAYMENT PRs COMPLETE (PR-PAY-1 through PR-PAY-5)  
+**Local Testing:** ✅ VERIFIED - Complete end-to-end payment flow working  
+**Next:** Get LIVE Price IDs, set env vars, deploy to production!
+
+**Completed Work:**
+- ✅ PR-PAY-1: Stripe integration, pricing UI, config
+- ✅ PR-PAY-2: Checkout flow with user context (client_reference_id)
+- ✅ PR-PAY-3: Webhook idempotency (stripe_webhook_events table)
+- ✅ PR-PAY-4: Subscription management, Customer Portal
+- ✅ PR-PAY-5: Webhook period_end fallback fix (CRITICAL BUG FIX)
+
+**Verified Features:**
+- ✅ Checkout redirects to Stripe hosted page
+- ✅ Webhooks process successfully (200 status)
+- ✅ Database updates to `subscription_tier: 'pro'`
+- ✅ UI shows Pro badge
+- ✅ Pro limits unlocked (>10 boards, >10 steps)
+- ✅ GIF/PDF export enabled
+- ✅ Billing portal integration

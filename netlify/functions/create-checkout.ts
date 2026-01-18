@@ -30,7 +30,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
   // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
+    return { statusCode: 204, headers, body: JSON.stringify({}) };
   }
 
   // Only POST

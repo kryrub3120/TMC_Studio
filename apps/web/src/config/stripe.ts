@@ -14,12 +14,12 @@
  */
 export const STRIPE_PRICES = {
   pro: {
-    monthly: 'price_1SnQvaANogcZdSR39JL60iCS', // $9.00 USD/month
-    yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',  // $90.00 USD/year
+    monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV', // $9.00 USD/month (TEST)
+    yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',  // $90.00 USD/year (TEST)
   },
   team: {
-    monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc', // $29.00 USD/month
-    yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',  // $290.00 USD/year
+    monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8', // $29.00 USD/month (TEST)
+    yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',  // $290.00 USD/year (TEST)
   },
 } as const;
 

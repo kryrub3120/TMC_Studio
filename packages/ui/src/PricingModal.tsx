@@ -15,12 +15,12 @@ try {
   // Fallback: Hardcoded Price IDs (keep in sync with apps/web/src/config/stripe.ts)
   STRIPE_PRICES = {
     pro: {
-      monthly: 'price_1SnQvaANogcZdSR39JL60iCS',
-      yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',
+      monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV',
+      yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',
     },
     team: {
-      monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc',
-      yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',
+      monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8',
+      yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',
     },
   };
 }
@@ -153,7 +153,13 @@ export function PricingModal({
         body: JSON.stringify(checkoutBody),
       });
 
-      const data = await response.json();
+      // Safe JSON parsing
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error('Checkout failed. Please try again.');
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create checkout session');
@@ -162,6 +168,8 @@ export function PricingModal({
       // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error('Checkout failed. Please try again.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
