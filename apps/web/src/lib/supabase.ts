@@ -71,15 +71,18 @@ export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   
-  // Try to fetch existing profile
-  let { data: profile } = await supabase
+  // ALWAYS fetch fresh profile from database (not from JWT cache)
+  // This ensures we get the latest subscription_tier after webhook updates
+  const { data, error: fetchError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
   
+  let profile = data;
+  
   // If no profile exists, create one (for OAuth users)
-  if (!profile) {
+  if (!profile && fetchError) {
     console.log('Creating profile for new OAuth user:', user.id);
     const newProfile = {
       id: user.id,
@@ -109,6 +112,9 @@ export async function getCurrentUser(): Promise<User | null> {
     
     profile = created;
   }
+  
+  // Log subscription tier for debugging
+  console.log(`[getCurrentUser] User ${user.email} - tier: ${profile?.subscription_tier ?? 'free'}`);
   
   return {
     id: profile.id,
