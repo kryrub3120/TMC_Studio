@@ -1,37 +1,78 @@
-# Deployment Checklist - TMC Studio Payments
+# Deployment Checklist - TMC Studio BETA
 
-**Date:** 2026-01-11  
-**Environment:** PRODUCTION (LIVE Stripe keys)
+**Date:** 2026-01-22  
+**Environment:** BETA TESTING (TEST Stripe keys)
+**Status:** 🧪 Beta Mode - Testing with TEST cards before going LIVE
+
+---
+
+## 🧪 Current Status: BETA MODE
+
+We are currently in **BETA testing phase** using **TEST Stripe keys** on production.
+
+**Why?**
+- Validate complete flow (signup → upgrade → pro features) with beta testers
+- Gather UX/UI feedback before charging real money
+- Test payment integration with no financial risk
+- Identify and fix bugs before LIVE launch
+
+**Beta testers will:**
+- Use TEST card: `4242 4242 4242 4242`
+- Go through full signup/upgrade flow
+- Test Pro features (GIF export, unlimited projects, etc.)
+- Provide feedback on usability
+
+---
+
+## ✅ BETA Configuration Complete
+
+### Environment Variables (Netlify)
+- [x] `STRIPE_SECRET_KEY` set to **TEST key** (`sk_test_...`)
+- [x] `STRIPE_PUBLISHABLE_KEY` set to **TEST key** (`pk_test_...`)
+- [x] `STRIPE_WEBHOOK_SECRET` configured for TEST mode
+- [x] `SUPABASE_SERVICE_ROLE_KEY` configured
+- [x] Frontend env vars (`VITE_*`) configured
+
+### Code Configuration
+- [x] TEST Price IDs in `apps/web/src/config/stripe.ts`
+- [x] Entitlements system working
+- [x] Payment flow complete (PR-PAY-1 through PR-PAY-5)
+- [x] Webhooks handling all events correctly
+
+### Supabase
+- [x] All migrations applied
+- [x] `stripe_webhook_events` table exists (idempotency)
+- [x] RLS policies configured
 
 ---
 
 ## ⚠️ CRITICAL: Environment Variables
 
-You have **LIVE Stripe keys** - these must NEVER be committed to git!
+All Stripe keys are **TEST mode** - safe to use for beta testing!
 
-### Netlify Environment Variables (Set in Dashboard)
-
-Go to: Netlify Dashboard → Site Settings → Environment Variables
+### Current Netlify Environment Variables (BETA/TEST)
 
 ```bash
-# Stripe LIVE Keys (PRODUCTION)
-STRIPE_SECRET_KEY=sk_live_... # Get from Stripe Dashboard
-STRIPE_PUBLISHABLE_KEY=pk_live_51SnQmaANogcZdSR3gUrd67nqjFsHW4GuTkRGfJMbyEY0lW9LrQ5f2LTrKEKcMDlM8HuVawXIe5AFbHgmlzhxEYUB00PIIOPN2R
-STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
+# Stripe TEST Keys (BETA TESTING)
+STRIPE_SECRET_KEY=sk_test_... # TEST mode
+STRIPE_PUBLISHABLE_KEY=pk_test_... # TEST mode
+STRIPE_WEBHOOK_SECRET=whsec_... # TEST webhook
 
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key # Admin key, never expose!
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-### Frontend Environment Variables (Vite - in Netlify)
+### Frontend Environment Variables (TEST mode)
 
 ```bash
 # These are PUBLIC (safe to expose in frontend)
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_51SnQmaANogcZdSR3gUrd67nqjFsHW4GuTkRGfJMbyEY0lW9LrQ5f2LTrKEKcMDlM8HuVawXIe5AFbHgmlzhxEYUB00PIIOPN2R
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_... # TEST mode
 ```
+
+**✅ All configured and working!**
 
 ---
 

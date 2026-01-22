@@ -271,7 +271,46 @@ The following features are **COMPLETE** and form the stable baseline for TMC Stu
 
 ---
 
-## 📅 What's Next (Post-V1)
+## 🧪 Sprint 7 — BETA Testing Phase (IN PROGRESS)
+
+**Goal:** Soft launch to beta testers using TEST Stripe mode to validate UX/UI and payment flows before going LIVE.
+
+### S7.1 Beta Preparation ✓
+- [x] Configure Netlify with TEST Stripe keys
+- [x] Verify TEST Price IDs in code
+- [x] Documentation updated for beta phase
+- [x] Test scenarios defined
+
+### S7.2 Beta Testing 🚧
+- [ ] Send beta invites (target: 10-20 testers)
+- [ ] Monitor user flows (signup, upgrade, features)
+- [ ] Collect UX/UI feedback
+- [ ] Track Stripe webhook success rate
+- [ ] Document bugs and issues
+
+### S7.3 Feedback & Iteration
+- [ ] Review all tester feedback
+- [ ] Prioritize critical bugs
+- [ ] Implement UI/UX improvements
+- [ ] Fix payment flow issues
+- [ ] Re-test with fixes
+
+### S7.4 Go Live Preparation
+- [ ] Create LIVE products in Stripe Dashboard
+- [ ] Get LIVE Price IDs
+- [ ] Update code with LIVE Price IDs
+- [ ] Switch Netlify to LIVE Stripe keys
+- [ ] Final production test with real card
+- [ ] Verify webhook delivery in LIVE mode
+- [ ] Update Terms/Privacy with refund policy
+- [ ] GO LIVE! 🚀
+
+**Status:** Testing with TEST mode on production
+**Next:** Beta launch to testers
+
+---
+
+## 📅 What's Next (Post-Launch)
 
 ### Phase 2: Collaboration & Teams
 - Team plan features (shared projects, collaboration)
