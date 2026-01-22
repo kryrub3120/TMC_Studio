@@ -52,9 +52,9 @@ export const useAuthStore = create<AuthState>()(
       isPro: false,
       isTeam: false,
 
-      // Initialize auth - call on app startup
+      // Initialize auth - call on app startup (EVENT-BASED, NON-BLOCKING)
       initialize: async () => {
-        console.log('[Auth] Initialize started');
+        console.log('[Auth] Initialize started (event-based)');
         
         if (!isSupabaseEnabled() || !supabase) {
           console.log('[Auth] Supabase disabled - using offline mode');
@@ -62,87 +62,53 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
-        set({ isLoading: true });
+        // ✅ UI starts IMMEDIATELY - no blocking getSession()
+        set({ isInitialized: true, isLoading: false });
 
         try {
-          // First, get the session - this will process any OAuth callback automatically
-          console.log('[Auth] Getting session...');
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) {
-            console.error('[Auth] Session error:', sessionError);
-            throw sessionError;
-          }
-          
-          console.log('[Auth] Session:', session ? 'Found' : 'None');
-          
-          // If we have a session, get the full user profile
-          let user: User | null = null;
-          if (session?.user) {
-            console.log('[Auth] User in session:', session.user.email);
-            user = await getCurrentUser();
-            console.log('[Auth] Full user profile:', user);
-          }
-          
-          // Clear hash from URL if present (cleanup after OAuth)
+          // Clear hash from URL if present (cleanup after OAuth - do this first)
           if (window.location.hash && window.location.hash.includes('access_token')) {
             console.log('[Auth] Clearing OAuth hash from URL');
             window.history.replaceState(null, '', window.location.pathname);
           }
 
-          set({
-            user,
-            isAuthenticated: !!user,
-            isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
-            isTeam: user?.subscription_tier === 'team',
-            isLoading: false,
-            isInitialized: true,
-          });
-          
-          console.log('[Auth] Initialized - authenticated:', !!user);
-          
-          // Load preferences from cloud if user is authenticated
-          if (user) {
-            console.log('[Auth] Loading preferences from cloud...');
-            try {
-              const { getPreferences } = await import('../lib/supabase');
-              const cloudPrefs = await getPreferences();
-              if (cloudPrefs) {
-                const { useUIStore } = await import('./useUIStore');
-                // Merge cloud preferences with local (cloud takes precedence)
-                if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                console.log('[Auth] Preferences loaded from cloud');
-              }
-            } catch (error) {
-              console.error('[Auth] Failed to load preferences:', error);
-            }
-          }
-
-          // Listen for auth changes (login, logout, token refresh)
-          onAuthStateChange((user) => {
+          // ✅ Event-based approach - auth state comes in the background
+          console.log('[Auth] Setting up auth listener...');
+          onAuthStateChange(async (user) => {
             console.log('[Auth] State changed - user:', user?.email ?? 'none');
+            
             set({
               user,
               isAuthenticated: !!user,
               isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
               isTeam: user?.subscription_tier === 'team',
             });
+
+            // Load preferences from cloud if user is authenticated
+            if (user) {
+              console.log('[Auth] Loading preferences from cloud...');
+              try {
+                const { getPreferences } = await import('../lib/supabase');
+                const cloudPrefs = await getPreferences();
+                if (cloudPrefs) {
+                  const { useUIStore } = await import('./useUIStore');
+                  // Merge cloud preferences with local (cloud takes precedence)
+                  if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                  if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                  if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                  console.log('[Auth] Preferences loaded from cloud');
+                }
+              } catch (error) {
+                console.error('[Auth] Failed to load preferences:', error);
+              }
+            }
           });
           
-        } catch (error) {
-          // Ignore AbortError - it's expected during page navigation
-          if (error instanceof Error && error.name === 'AbortError') {
-            console.log('[Auth] AbortError (expected during navigation)');
-            set({ isLoading: false, isInitialized: true });
-            return;
-          }
+          console.log('[Auth] Listener active - UI ready');
           
+        } catch (error) {
           console.error('[Auth] Initialization error:', error);
           set({
-            isLoading: false,
-            isInitialized: true,
             error: 'Failed to initialize authentication',
           });
         }
