@@ -66,10 +66,11 @@ export const useAuthStore = create<AuthState>()(
         set({ isInitialized: true, isLoading: false });
 
         try {
-          // Clear hash from URL if present (cleanup after OAuth - do this first)
-          if (window.location.hash && window.location.hash.includes('access_token')) {
-            console.log('[Auth] OAuth hash detected - cleaning URL');
-            window.history.replaceState(null, '', window.location.pathname);
+          // Check if OAuth callback (has hash with access_token)
+          const hasOAuthHash = window.location.hash && window.location.hash.includes('access_token');
+          
+          if (hasOAuthHash) {
+            console.log('[Auth] OAuth callback detected - will clean URL after processing');
           }
 
           // ✅ Setup listener for future auth changes
@@ -102,44 +103,63 @@ export const useAuthStore = create<AuthState>()(
                 console.error('[Auth] Failed to load preferences:', error);
               }
             }
+
+            // Clean OAuth hash from URL after successful login
+            if (hasOAuthHash && user) {
+              console.log('[Auth] Cleaning OAuth hash from URL');
+              window.history.replaceState(null, '', window.location.pathname);
+            }
           });
           
           console.log('[Auth] Listener active');
 
-          // ✅ ALSO check for existing session (async, non-blocking)
-          // This ensures OAuth callbacks are recognized immediately
-          console.log('[Auth] Checking for existing session...');
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session?.user) {
-            console.log('[Auth] Existing session found:', session.user.email);
-            const user = await getCurrentUser();
-            if (user) {
-              console.log('[Auth] User profile loaded:', user.email);
-              set({
-                user,
-                isAuthenticated: true,
-                isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-                isTeam: user.subscription_tier === 'team',
-              });
+          // ✅ Check for existing session ONLY if NOT OAuth callback
+          // (OAuth hash will be processed by Supabase and trigger onAuthStateChange)
+          if (!hasOAuthHash) {
+            console.log('[Auth] Checking for existing session...');
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              
+              if (session?.user) {
+                console.log('[Auth] Existing session found:', session.user.email);
+                const user = await getCurrentUser();
+                if (user) {
+                  console.log('[Auth] User profile loaded:', user.email);
+                  set({
+                    user,
+                    isAuthenticated: true,
+                    isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
+                    isTeam: user.subscription_tier === 'team',
+                  });
 
-              // Load preferences for existing session
-              try {
-                const { getPreferences } = await import('../lib/supabase');
-                const cloudPrefs = await getPreferences();
-                if (cloudPrefs) {
-                  const { useUIStore } = await import('./useUIStore');
-                  if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                  if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                  if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                  console.log('[Auth] Preferences loaded from cloud');
+                  // Load preferences for existing session
+                  try {
+                    const { getPreferences } = await import('../lib/supabase');
+                    const cloudPrefs = await getPreferences();
+                    if (cloudPrefs) {
+                      const { useUIStore } = await import('./useUIStore');
+                      if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                      if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                      if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                      console.log('[Auth] Preferences loaded from cloud');
+                    }
+                  } catch (error) {
+                    console.error('[Auth] Failed to load preferences:', error);
+                  }
                 }
-              } catch (error) {
-                console.error('[Auth] Failed to load preferences:', error);
+              } else {
+                console.log('[Auth] No existing session');
+              }
+            } catch (error) {
+              // Ignore AbortError - it's expected during OAuth processing
+              if (error instanceof Error && error.name === 'AbortError') {
+                console.log('[Auth] AbortError (expected during OAuth) - ignored');
+              } else {
+                console.error('[Auth] Session check error:', error);
               }
             }
           } else {
-            console.log('[Auth] No existing session');
+            console.log('[Auth] Skipping session check - OAuth callback will be handled by listener');
           }
           
         } catch (error) {

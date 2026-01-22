@@ -93,9 +93,11 @@ Google OAuth Redirect
        └─ User logged in
 ```
 
-## Production Issue & Fix
+## Production Issues & Fixes
 
-**Problem on Production:**
+### Issue 1: OAuth Callback Not Recognized
+
+**Problem:**
 - Pure event-based approach didn't catch OAuth callback sessions
 - User was redirected but not logged in
 - `onAuthStateChange` didn't fire for existing sessions
@@ -108,13 +110,40 @@ Google OAuth Redirect
 **Solution: Hybrid Approach**
 1. UI renders immediately (`isInitialized: true`)
 2. Setup `onAuthStateChange` listener (for future changes)
-3. ALSO run `getSession()` asynchronously (catches OAuth callbacks)
+3. ALSO run `getSession()` asynchronously (for existing sessions)
 4. Both paths update store independently
 
-**Key Insight:**
-- `onAuthStateChange` = future auth changes
-- `getSession()` = existing session at load time
-- Need BOTH for reliable OAuth flow
+### Issue 2: AbortError from locks.js
+
+**Problem:**
+```
+[Auth] Initialization error: AbortError: signal is aborted without reason
+    at locks.js:98:29
+```
+
+**Root Cause:**
+- When OAuth hash is present, Supabase internally processes it using Web Locks API
+- Our code simultaneously calls `getSession()`
+- These two operations CONFLICT → one aborts the other → AbortError
+
+**Solution: Conditional Session Check**
+```typescript
+const hasOAuthHash = window.location.hash.includes('access_token')
+
+if (!hasOAuthHash) {
+  // Safe to call getSession() - no conflict
+  const { session } = await supabase.auth.getSession()
+} else {
+  // Skip getSession() - rely on onAuthStateChange listener
+  // Supabase will process hash and trigger the listener
+}
+```
+
+**Key Insights:**
+- `onAuthStateChange` = future auth changes + OAuth callbacks
+- `getSession()` = existing session at load time (non-OAuth)
+- OAuth hash + `getSession()` = CONFLICT → AbortError
+- Must check for OAuth hash and skip `getSession()` if present
 
 ## Testing
 
