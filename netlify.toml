@@ -48,9 +48,6 @@
 [functions]
   # Node.js bundler (esbuild for TypeScript)
   node_bundler = "esbuild"
-  
-  # Include external packages
-  external_node_modules = ["@supabase/supabase-js"]
 
 # API routes to functions (MUST be first!)
 [[redirects]]
