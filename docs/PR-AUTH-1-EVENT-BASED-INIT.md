@@ -24,16 +24,23 @@ set({ user, isInitialized: true })
 
 ## Solution
 
-Zmieniono na **event-based approach** - UI startuje NATYCHMIAST, auth dochodzi w tle:
+Zmieniono na **hybrid approach** - UI startuje NATYCHMIAST + async session check:
 
 ```typescript
 // ✅ PO (non-blocking):
 set({ isInitialized: true, isLoading: false }) // UI ready NOW
 
+// Setup listener for future changes
 onAuthStateChange(async (user) => {
   set({ user, isAuthenticated: !!user })
-  // preferences load in background
 })
+
+// ALSO check existing session (async, non-blocking)
+const { data: { session } } = await supabase.auth.getSession()
+if (session?.user) {
+  const user = await getCurrentUser()
+  set({ user, isAuthenticated: true })
+}
 ```
 
 ## Files Changed
@@ -86,6 +93,29 @@ Google OAuth Redirect
        └─ User logged in
 ```
 
+## Production Issue & Fix
+
+**Problem on Production:**
+- Pure event-based approach didn't catch OAuth callback sessions
+- User was redirected but not logged in
+- `onAuthStateChange` didn't fire for existing sessions
+
+**Root Cause:**
+- OAuth redirect returns with session in URL hash
+- Supabase stores it, but event doesn't fire on initial load
+- Need to ALSO check for existing session explicitly
+
+**Solution: Hybrid Approach**
+1. UI renders immediately (`isInitialized: true`)
+2. Setup `onAuthStateChange` listener (for future changes)
+3. ALSO run `getSession()` asynchronously (catches OAuth callbacks)
+4. Both paths update store independently
+
+**Key Insight:**
+- `onAuthStateChange` = future auth changes
+- `getSession()` = existing session at load time
+- Need BOTH for reliable OAuth flow
+
 ## Testing
 
 ✅ Tested on local:
@@ -94,6 +124,8 @@ Google OAuth Redirect
 - Session persistence across refreshes
 - OAuth callback cleanup works
 - No console warnings
+
+🚀 **Deploy to production to verify OAuth callback fix**
 
 ## Benefits
 

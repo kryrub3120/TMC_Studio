@@ -62,17 +62,17 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
-        // ✅ UI starts IMMEDIATELY - no blocking getSession()
+        // ✅ UI starts IMMEDIATELY - no blocking
         set({ isInitialized: true, isLoading: false });
 
         try {
           // Clear hash from URL if present (cleanup after OAuth - do this first)
           if (window.location.hash && window.location.hash.includes('access_token')) {
-            console.log('[Auth] Clearing OAuth hash from URL');
+            console.log('[Auth] OAuth hash detected - cleaning URL');
             window.history.replaceState(null, '', window.location.pathname);
           }
 
-          // ✅ Event-based approach - auth state comes in the background
+          // ✅ Setup listener for future auth changes
           console.log('[Auth] Setting up auth listener...');
           onAuthStateChange(async (user) => {
             console.log('[Auth] State changed - user:', user?.email ?? 'none');
@@ -104,7 +104,43 @@ export const useAuthStore = create<AuthState>()(
             }
           });
           
-          console.log('[Auth] Listener active - UI ready');
+          console.log('[Auth] Listener active');
+
+          // ✅ ALSO check for existing session (async, non-blocking)
+          // This ensures OAuth callbacks are recognized immediately
+          console.log('[Auth] Checking for existing session...');
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session?.user) {
+            console.log('[Auth] Existing session found:', session.user.email);
+            const user = await getCurrentUser();
+            if (user) {
+              console.log('[Auth] User profile loaded:', user.email);
+              set({
+                user,
+                isAuthenticated: true,
+                isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
+                isTeam: user.subscription_tier === 'team',
+              });
+
+              // Load preferences for existing session
+              try {
+                const { getPreferences } = await import('../lib/supabase');
+                const cloudPrefs = await getPreferences();
+                if (cloudPrefs) {
+                  const { useUIStore } = await import('./useUIStore');
+                  if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                  if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                  if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                  console.log('[Auth] Preferences loaded from cloud');
+                }
+              } catch (error) {
+                console.error('[Auth] Failed to load preferences:', error);
+              }
+            }
+          } else {
+            console.log('[Auth] No existing session');
+          }
           
         } catch (error) {
           console.error('[Auth] Initialization error:', error);
