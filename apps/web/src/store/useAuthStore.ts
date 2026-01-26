@@ -102,6 +102,49 @@ export const useAuthStore = create<AuthState>()(
               } catch (error) {
                 console.error('[Auth] Failed to load preferences:', error);
               }
+
+              // PR-UX-1: Check for unsaved guest work and offer to save to cloud
+              try {
+                const { useBoardStore } = await import('./useBoardStore');
+                const boardState = useBoardStore.getState();
+                const hasLocalWork = boardState.document.steps[0]?.elements.length > 0;
+                const notSavedToCloud = !boardState.cloudProjectId;
+                
+                if (hasLocalWork && notSavedToCloud) {
+                  console.log('[Auth] Detected unsaved guest work - prompting user to save');
+                  
+                  // Small delay to let UI update first
+                  setTimeout(async () => {
+                    const shouldSave = window.confirm(
+                      '💾 Save Your Work?\n\n' +
+                      'You have unsaved work from your guest session. ' +
+                      'Would you like to save it to your cloud account?'
+                    );
+                    
+                    if (shouldSave) {
+                      console.log('[Auth] User confirmed - saving guest work to cloud...');
+                      const success = await boardState.saveToCloud();
+                      
+                      if (success) {
+                        await boardState.fetchCloudProjects();
+                        console.log('[Auth] ✓ Guest work saved to cloud');
+                        
+                        // Show success toast
+                        const { useUIStore } = await import('./useUIStore');
+                        useUIStore.getState().showToast('✓ Your work has been saved to the cloud!');
+                      } else {
+                        console.error('[Auth] ✗ Failed to save guest work');
+                        const { useUIStore } = await import('./useUIStore');
+                        useUIStore.getState().showToast('⚠️ Failed to save. Try Cmd+S to save manually.');
+                      }
+                    } else {
+                      console.log('[Auth] User declined to save guest work');
+                    }
+                  }, 500);
+                }
+              } catch (error) {
+                console.error('[Auth] Error checking for guest work:', error);
+              }
             }
 
             // Clean OAuth hash from URL after successful login

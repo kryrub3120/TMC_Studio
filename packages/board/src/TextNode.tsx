@@ -109,7 +109,7 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   const fontStyle = `${text.bold ? 'bold ' : ''}${text.italic ? 'italic' : ''}`.trim() || 'normal';
 
   return (
-    <Group
+    <Group id={text.id}
       ref={groupRef}
       x={text.position.x}
       y={text.position.y}

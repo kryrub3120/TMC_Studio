@@ -183,7 +183,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   );
 
   return (
-    <Group
+    <Group id={arrow.id}
       ref={groupRef}
       x={centerX}
       y={centerY}

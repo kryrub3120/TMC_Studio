@@ -96,6 +96,7 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   return (
     <Group
       ref={groupRef}
+      id={ball.id}
       x={ball.position.x}
       y={ball.position.y}
       draggable={!multiDragActive}

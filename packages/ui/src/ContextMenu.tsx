@@ -10,6 +10,7 @@ export interface ContextMenuItem {
   onClick: () => void;
   variant?: 'default' | 'danger';
   divider?: boolean;
+  shortcut?: string; // PR-UX-5: Keyboard shortcut hint
 }
 
 interface ContextMenuProps {
@@ -17,9 +18,10 @@ interface ContextMenuProps {
   y: number;
   items: ContextMenuItem[];
   onClose: () => void;
+  header?: string; // PR-UX-5: Contextual header
 }
 
-export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
+export function ContextMenu({ x, y, items, onClose, header }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,9 +75,18 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-[100] min-w-[200px] bg-surface border border-border rounded-lg shadow-2xl py-1"
+      className="fixed z-[100] min-w-[240px] bg-surface border border-border rounded-lg shadow-2xl py-1"
       style={{ left: x, top: y }}
     >
+      {/* PR-UX-5: Contextual Header */}
+      {header && (
+        <>
+          <div className="px-4 py-2 text-xs font-semibold text-muted uppercase tracking-wider border-b border-border/50">
+            {header}
+          </div>
+        </>
+      )}
+      
       {items.map((item, index) => (
         <div key={index}>
           {item.divider && <div className="h-px bg-border my-1" />}
@@ -84,14 +95,20 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
               item.onClick();
               onClose();
             }}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+            className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors ${
               item.variant === 'danger'
                 ? 'text-red-400 hover:bg-red-500/10'
                 : 'text-text hover:bg-surface2'
             }`}
           >
-            <span className="text-base">{item.icon}</span>
-            <span className="font-medium">{item.label}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-base">{item.icon}</span>
+              <span className="font-medium">{item.label}</span>
+            </div>
+            {/* PR-UX-5: Keyboard shortcut hint */}
+            {item.shortcut && (
+              <span className="text-xs text-muted font-mono">{item.shortcut}</span>
+            )}
           </button>
         </div>
       ))}

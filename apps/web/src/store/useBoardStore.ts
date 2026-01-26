@@ -38,6 +38,7 @@ import {
   isPlayerElement,
   isArrowElement,
   isTextElement,
+  getElementZIndex,
 } from '@tmc/core';
 import {
   isSupabaseEnabled,
@@ -210,6 +211,12 @@ interface BoardState {
   fetchCloudProjects: () => Promise<void>;
   fetchCloudFolders: () => Promise<void>;
   createCloudFolder: (name: string, color?: string) => Promise<boolean>;
+  
+  // PR-UX-2: Layer control actions
+  bringToFront: (id?: ElementId) => void;
+  sendToBack: (id?: ElementId) => void;
+  bringForward: (id?: ElementId) => void;
+  sendBackward: (id?: ElementId) => void;
   
   // Computed
   getSelectedElements: () => BoardElement[];
@@ -556,7 +563,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
       const { selectedIds } = get();
       if (selectedIds.length === 0) return;
       
-      // Useful colors: strong red, light red, strong green, blue, yellow, orange, white
+      // PR-UX-3: Expanded color palette for all element types
       const COLORS = ['#ff0000', '#ff6b6b', '#00ff00', '#3b82f6', '#eab308', '#f97316', '#ffffff'];
       
       set((state) => ({
@@ -590,6 +597,25 @@ export const useBoardStore = create<BoardState>((set, get) => {
                 ? 0 
                 : (currentIndex + direction + COLORS.length) % COLORS.length;
               return { ...el, color: COLORS[newIndex] };
+            }
+            // PR-UX-3: Text elements have color property
+            if (isTextElement(el)) {
+              const current = el.color ?? '#ffffff';
+              const currentIndex = COLORS.indexOf(current);
+              const newIndex = currentIndex === -1 
+                ? 0 
+                : (currentIndex + direction + COLORS.length) % COLORS.length;
+              return { ...el, color: COLORS[newIndex] };
+            }
+            // PR-UX-3: Players have textColor override (or team color)
+            if (isPlayerElement(el)) {
+              const teamSettings = get().getTeamSettings();
+              const current = el.textColor ?? teamSettings?.[el.team].primaryColor ?? '#ffffff';
+              const currentIndex = COLORS.indexOf(current);
+              const newIndex = currentIndex === -1 
+                ? 0 
+                : (currentIndex + direction + COLORS.length) % COLORS.length;
+              return { ...el, textColor: COLORS[newIndex] };
             }
           }
           return el;
@@ -1553,6 +1579,75 @@ export const useBoardStore = create<BoardState>((set, get) => {
         clearTimeout(timer);
         set({ autoSaveTimer: null });
       }
+    },
+    
+    // PR-UX-2: Layer control actions
+    bringToFront: (id?: ElementId) => {
+      const { selectedIds, elements } = get();
+      const targetId = id ?? (selectedIds.length === 1 ? selectedIds[0] : null);
+      if (!targetId) return;
+      
+      // Find max zIndex in all elements
+      const maxZ = Math.max(...elements.map(el => getElementZIndex(el)), 0);
+      
+      set((state) => ({
+        elements: state.elements.map((el) =>
+          el.id === targetId ? { ...el, zIndex: maxZ + 10 } : el
+        ),
+      }));
+      get().pushHistory();
+    },
+    
+    sendToBack: (id?: ElementId) => {
+      const { selectedIds, elements } = get();
+      const targetId = id ?? (selectedIds.length === 1 ? selectedIds[0] : null);
+      if (!targetId) return;
+      
+      // Find min zIndex in all elements
+      const minZ = Math.min(...elements.map(el => getElementZIndex(el)), 100);
+      
+      set((state) => ({
+        elements: state.elements.map((el) =>
+          el.id === targetId ? { ...el, zIndex: Math.max(0, minZ - 10) } : el
+        ),
+      }));
+      get().pushHistory();
+    },
+    
+    bringForward: (id?: ElementId) => {
+      const { selectedIds, elements } = get();
+      const targetId = id ?? (selectedIds.length === 1 ? selectedIds[0] : null);
+      if (!targetId) return;
+      
+      const targetEl = elements.find(el => el.id === targetId);
+      if (!targetEl) return;
+      
+      const currentZ = getElementZIndex(targetEl);
+      
+      set((state) => ({
+        elements: state.elements.map((el) =>
+          el.id === targetId ? { ...el, zIndex: currentZ + 1 } : el
+        ),
+      }));
+      get().pushHistory();
+    },
+    
+    sendBackward: (id?: ElementId) => {
+      const { selectedIds, elements } = get();
+      const targetId = id ?? (selectedIds.length === 1 ? selectedIds[0] : null);
+      if (!targetId) return;
+      
+      const targetEl = elements.find(el => el.id === targetId);
+      if (!targetEl) return;
+      
+      const currentZ = getElementZIndex(targetEl);
+      
+      set((state) => ({
+        elements: state.elements.map((el) =>
+          el.id === targetId ? { ...el, zIndex: Math.max(0, currentZ - 1) } : el
+        ),
+      }));
+      get().pushHistory();
     },
   };
 });

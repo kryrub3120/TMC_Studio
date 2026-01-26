@@ -19,7 +19,7 @@ const GoalShape: React.FC<{ color: string; scale: number; variant: string }> = (
   const height = variant === 'mini' ? 25 : 50;
   const depth = 15 * scale;
   
-  return (
+  <Group id={element.id}
     <Group>
       {/* Goal posts */}
       <Rect x={-width/2} y={-height/2} width={4} height={height} fill={color} />
@@ -45,7 +45,7 @@ const MannequinShape: React.FC<{ color: string; scale: number; variant: string }
     return <Ellipse radiusX={25 * scale} radiusY={8 * scale} fill={color} />;
   }
   
-  return (
+  <Group id={element.id}
     <Group>
       {/* Head */}
       <Circle radius={8 * scale} y={-bodyHeight/2 - 8 * scale} fill={color} />
@@ -61,7 +61,7 @@ const MannequinShape: React.FC<{ color: string; scale: number; variant: string }
 const ConeShape: React.FC<{ color: string; scale: number; variant: string }> = ({ color, scale, variant }) => {
   const size = variant === 'tall' ? 28 : 20;
   
-  return (
+  <Group id={element.id}
     <RegularPolygon
       sides={3}
       radius={size * scale}
@@ -86,7 +86,7 @@ const LadderShape: React.FC<{ color: string; scale: number }> = ({ color, scale 
   const rungCount = 5;
   const rungSpacing = 15 * scale;
   
-  return (
+  <Group id={element.id}
     <Group>
       {/* Side rails */}
       <Rect x={-width/2} y={-rungSpacing * 2} width={3} height={rungSpacing * (rungCount - 1)} fill={color} />
@@ -167,8 +167,8 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
     }
   };
   
-  return (
-    <Group
+  <Group id={element.id}
+    <Group id={element.id}
       x={position.x}
       y={position.y}
       rotation={rotation}

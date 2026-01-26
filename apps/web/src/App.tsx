@@ -6,18 +6,20 @@
 // Feature flag for new canvas architecture
 const USE_NEW_CANVAS = false; // Toggle to true to test BoardCanvas
 
-import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement, hasPosition, getElementZIndex } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType, EquipmentElement } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 import { Line } from 'react-konva';
-import { useState, useEffect as useEffectReact } from 'react';
 // New architecture imports
 import { BoardCanvas } from './components/Canvas/BoardCanvas';
 import { useCanvasInteraction, useEntitlements } from './hooks';
+import { useCanvasContextMenu } from './hooks/useCanvasContextMenu';
+import { getCanvasContextMenuItems, getContextMenuHeader } from './utils/canvasContextMenu';
 import {
   TopBar,
   RightInspector,
@@ -37,6 +39,7 @@ import {
   Footer,
   CreateFolderModal,
   FolderOptionsModal,
+  ContextMenu,
   type CommandAction,
   type InspectorElement,
   type ElementInList,
@@ -174,6 +177,12 @@ export default function App() {
   const applyFormation = useBoardStore((s) => s.applyFormation);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   
+  // Layer control actions (PR-UX-2)
+  const bringToFront = useBoardStore((s) => s.bringToFront);
+  const sendToBack = useBoardStore((s) => s.sendToBack);
+  const bringForward = useBoardStore((s) => s.bringForward);
+  const sendBackward = useBoardStore((s) => s.sendBackward);
+  
   // Cloud save actions
   const saveToCloud = useBoardStore((s) => s.saveToCloud);
   const loadFromCloud = useBoardStore((s) => s.loadFromCloud);
@@ -203,6 +212,11 @@ export default function App() {
     }
     return hidden;
   }, [groups]);
+
+  // PR-UX-2: Sort elements by zIndex for proper rendering order
+  const sortedElements = useMemo(() => {
+    return [...elements].sort((a, b) => getElementZIndex(a) - getElementZIndex(b));
+  }, [elements]);
 
   // Marquee selection state
   const [marqueeStart, setMarqueeStart] = useState<Position | null>(null);
@@ -592,6 +606,11 @@ export default function App() {
       
       // Don't handle if typing in input or command palette is open
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // Don't handle shortcuts if context menu is open (except Escape to close it)
+      if (menuState.visible && e.key !== 'Escape') {
+        return;
+      }
 
       // Command palette toggle
       if (isCmd && e.key.toLowerCase() === 'k') {
@@ -1079,20 +1098,24 @@ export default function App() {
           }
           break;
         case '[':
-          // Rotate selected equipment counter-clockwise (fine)
+          // [ = Rotate selected equipment counter-clockwise (fine)
           if (!isCmd) {
             e.preventDefault();
             rotateSelected(-15);
             showToast('Rotated -15°');
           }
+          // NOTE: Cmd+Shift+[ conflicts with Chrome tab switching
+          // Layer control will be available via context menu (PR-UX-5)
           break;
         case ']':
-          // Rotate selected equipment clockwise (fine)
+          // ] = Rotate selected equipment clockwise (fine)
           if (!isCmd) {
             e.preventDefault();
             rotateSelected(15);
             showToast('Rotated +15°');
           }
+          // NOTE: Cmd+Shift+] conflicts with Chrome tab switching
+          // Layer control will be available via context menu (PR-UX-5)
           break;
         case '{':
           // Shift+[ on most keyboards = fast rotate counter-clockwise
@@ -1391,6 +1414,9 @@ export default function App() {
   const canvasInteraction = useCanvasInteraction();
   const activeCanvasInteraction = USE_NEW_CANVAS ? canvasInteraction : null;
 
+  // PR-UX-5: Canvas Context Menu
+  const { menuState, showMenu, hideMenu } = useCanvasContextMenu();
+
   // Stage event handlers (use any event type for compatibility)
   const handleStageMouseDown = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1502,6 +1528,15 @@ export default function App() {
       // Also skip if tool is active
       if (activeTool) return;
       
+      // Ignore right-clicks - context menu handles them
+      if (e.evt.button === 2) return;
+      
+      // Platform-specific multi-select modifier detection
+      // Don't clear selection if multi-select modifier is held (for multi-selection with click)
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const isMultiModifier = isMac ? e.evt.metaKey : e.evt.ctrlKey;
+      if (isMultiModifier) return;
+      
       // Click without drag = clear selection
       const clickedOnEmpty = e.target === e.target.getStage() || 
                              e.target.name() === 'pitch-background';
@@ -1551,7 +1586,7 @@ export default function App() {
     setEditingTextValue('');
   }, [editingTextId, editingTextValue, updateTextContent]);
 
-  const handleTextEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleTextEditKeyDown = useCallback((e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleTextEditSave();
@@ -1587,7 +1622,7 @@ export default function App() {
     setEditingPlayerNumber('');
   }, [editingPlayerId, editingPlayerNumber, selectElement, updateSelectedElement, showToast]);
 
-  const handlePlayerNumberKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handlePlayerNumberKeyDown = useCallback((e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handlePlayerNumberSave();
@@ -1617,7 +1652,7 @@ export default function App() {
   }, [cloudProjects]);
 
   // Fetch cloud projects when drawer opens
-  useEffectReact(() => {
+  useEffect(() => {
     if (projectsDrawerOpen && authIsAuthenticated) {
       setProjectsLoading(true);
       fetchCloudProjects().finally(() => setProjectsLoading(false));
@@ -1815,7 +1850,7 @@ export default function App() {
   }, [editingFolder, fetchFoldersData, fetchCloudProjects, showToast]);
 
   // Fetch folders when drawer opens
-  useEffectReact(() => {
+  useEffect(() => {
     if (projectsDrawerOpen && authIsAuthenticated) {
       fetchFoldersData();
     }
@@ -2045,6 +2080,69 @@ export default function App() {
               onTouchEnd={handleStageMouseUp}
               onMouseMove={handleStageMouseMove}
               onTouchMove={handleStageMouseMove}
+              // PR-UX-5: Add context menu handler
+              onContextMenu={(e) => {
+                e.evt.preventDefault();
+                const stage = e.target.getStage();
+                const pos = stage?.getPointerPosition();
+                if (!pos) return;
+
+                // Convert canvas coords to viewport coords
+                const canvasRect = stage?.container().getBoundingClientRect();
+                if (!canvasRect) return;
+                
+                const viewportX = pos.x + canvasRect.left;
+                const viewportY = pos.y + canvasRect.top;
+
+                // Check if clicked on element - search up hierarchy for ID
+                // (PlayerNode/BallNode have ID on Group, but click target is Circle/Text child)
+                const target = e.target;
+                let elementId = '';
+                let node: any = target;
+                
+                // Search up parent chain for ID
+                while (node && node !== stage) {
+                  const nodeId = node.id?.();
+                  if (nodeId && nodeId.length > 0) {
+                    elementId = nodeId;
+                    break;
+                  }
+                  node = node.parent;
+                }
+                
+                const clickedElement = elements.find(el => el.id === elementId);
+                
+                // Platform-specific multi-select modifier detection (PR-UX-5 fix)
+                // Mac: Cmd (metaKey) for multi-select, Ctrl+Click = right-click emulation
+                // Windows/Linux: Ctrl (ctrlKey) for multi-select
+                const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+                const isMultiModifier = isMac ? e.evt.metaKey : e.evt.ctrlKey;
+
+                if (clickedElement) {
+                  // Multi-select modifier + RightClick behavior
+                  if (isMultiModifier) {
+                    // If clicking on a selected element → keep selection as is
+                    if (selectedIds.includes(elementId)) {
+                      // Don't change selection, just show menu
+                      showMenu(viewportX, viewportY, elementId);
+                    } else {
+                      // Clicking on unselected element with modifier → ADD to selection
+                      selectElement(elementId, true);
+                      showMenu(viewportX, viewportY, elementId);
+                    }
+                  } else {
+                    // Normal right-click: select element and show its menu
+                    selectElement(elementId, false);
+                    showMenu(viewportX, viewportY, elementId);
+                  }
+                } else {
+                  // Multi-modifier + RightClick on empty space → clear selection
+                  if (isMultiModifier) {
+                    clearSelection();
+                  }
+                  showMenu(viewportX, viewportY, null);
+                }
+              }}
             >
               <Layer>
                 <Pitch config={pitchConfig} pitchSettings={pitchSettings} gridVisible={gridVisible} />
@@ -2353,6 +2451,71 @@ export default function App() {
                 className="w-12 h-10 text-center bg-surface border-2 border-accent rounded-lg text-white text-xl font-bold outline-none shadow-lg"
               />
             </div>
+          )}
+
+          {/* PR-UX-5: Canvas Context Menu */}
+          {menuState.visible && (
+            <ContextMenu
+              x={menuState.x}
+              y={menuState.y}
+              header={getContextMenuHeader(elements.find(el => el.id === menuState.elementId) ?? null)}
+              items={getCanvasContextMenuItems(
+                elements.find(el => el.id === menuState.elementId) ?? null,
+                {
+                  onDelete: () => { deleteSelected(); hideMenu(); showToast('Deleted'); },
+                  onDuplicate: () => { duplicateSelected(); hideMenu(); showToast('Duplicated'); },
+                  onBringToFront: () => { bringToFront(); hideMenu(); showToast('Brought to front'); },
+                  onSendToBack: () => { sendToBack(); hideMenu(); showToast('Sent to back'); },
+                  onBringForward: () => { bringForward(); hideMenu(); showToast('Moved forward'); },
+                  onSendBackward: () => { sendBackward(); hideMenu(); showToast('Moved backward'); },
+                  onCopy: () => { copySelection(); hideMenu(); showToast('Copied'); },
+                  onPaste: () => { pasteClipboard(); hideMenu(); showToast('Pasted'); },
+                  onSelectAll: () => { selectAll(); hideMenu(); },
+                  onAddPlayer: () => { addPlayerAtCursor('home'); hideMenu(); showToast('Player added'); },
+                  onAddBall: () => { addBallAtCursor(); hideMenu(); showToast('Ball added'); },
+                  onAddArrow: () => { addArrowAtCursor('pass'); hideMenu(); showToast('Arrow added'); },
+                  onAddZone: () => { addZoneAtCursor(); hideMenu(); showToast('Zone added'); },
+                  onCycleShape: () => {
+                    const el = elements.find(e => e.id === menuState.elementId);
+                    if (el && isPlayerElement(el)) cyclePlayerShape();
+                    else if (el && isZoneElement(el)) cycleZoneShape();
+                    hideMenu();
+                  },
+                  onCycleColor: () => {
+                    cycleSelectedColor(1);
+                    hideMenu();
+                    showToast('Color changed');
+                  },
+                  onEdit: () => {
+                    const el = elements.find(e => e.id === menuState.elementId);
+                    if (el && isTextElement(el)) {
+                      setEditingTextId(el.id);
+                      setEditingTextValue(el.content);
+                    }
+                    hideMenu();
+                  },
+                  onChangeNumber: () => {
+                    const el = elements.find(e => e.id === menuState.elementId);
+                    if (el && isPlayerElement(el)) {
+                      handlePlayerQuickEdit(el.id, el.number);
+                    }
+                    hideMenu();
+                  },
+                  onSwitchTeam: () => {
+                    const el = elements.find(e => e.id === menuState.elementId);
+                    if (el && isPlayerElement(el)) {
+                      const newTeam = el.team === 'home' ? 'away' : 'home';
+                      selectElement(el.id, false);
+                      updateSelectedElement({ team: newTeam });
+                      showToast(`Switched to ${newTeam}`);
+                    }
+                    hideMenu();
+                  },
+                },
+                selectedIds.length
+              )}
+              onClose={hideMenu}
+            />
           )}
         </div>
 

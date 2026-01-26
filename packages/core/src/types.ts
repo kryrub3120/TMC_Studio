@@ -21,6 +21,7 @@ export type ElementId = string;
 export interface BoardElementBase {
   id: ElementId;
   position: Position;
+  zIndex?: number; // Optional for backward compatibility - PR-UX-2
 }
 
 /** Player element on the board */
@@ -55,6 +56,7 @@ export interface ArrowElement {
   curveControl?: Position; // Optional bezier control point
   color?: string;
   strokeWidth?: number;
+  zIndex?: number; // PR-UX-2
 }
 
 /** Zone shape types */
@@ -72,6 +74,7 @@ export interface ZoneElement {
   opacity: number;
   borderStyle?: 'solid' | 'dashed' | 'none';
   borderColor?: string;
+  zIndex?: number; // PR-UX-2
 }
 
 /** Text element for labels/annotations */
@@ -104,6 +107,7 @@ export interface DrawingElement {
   color: string;
   strokeWidth: number;
   opacity: number;
+  zIndex?: number; // PR-UX-2
 }
 
 /** Equipment element for training props */
@@ -351,4 +355,20 @@ export function isEquipmentElement(element: BoardElement): element is EquipmentE
 /** Check if element has a single position (player, ball, zone, text, equipment) */
 export function hasPosition(element: BoardElement): element is PlayerElement | BallElement | ZoneElement | TextElement {
   return 'position' in element;
+}
+
+/** PR-UX-2: Default z-indexes by element type */
+export const DEFAULT_Z_INDEXES: Record<string, number> = {
+  zone: 10,
+  arrow: 20,
+  drawing: 30,
+  player: 40,
+  ball: 50,
+  equipment: 60,
+  text: 70,
+};
+
+/** PR-UX-2: Get element's effective z-index (uses zIndex property or default by type) */
+export function getElementZIndex(element: BoardElement): number {
+  return element.zIndex ?? DEFAULT_Z_INDEXES[element.type] ?? 0;
 }

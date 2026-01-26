@@ -232,4 +232,24 @@ Consider adding:
 
 ---
 
-**Status**: Fix deployed, awaiting production testing ✅
+## ✅ RESOLVED - Production Test Successful
+
+**Test Date**: 2026-01-22 18:23 UTC  
+**Result**: ✅ PASSED - Subscription upgrade working correctly
+
+### Test Results:
+- ✅ Payment completed in Stripe test mode
+- ✅ Webhooks delivered successfully (HTTP 200)
+  - `checkout.session.completed` - Delivered
+  - `invoice.payment_succeeded` - Delivered
+- ✅ Database updated: `subscription_tier = 'pro'`
+- ✅ UI updated: Console shows `[getCurrentUser] tier: pro`
+- ✅ User confirmed: Tier changed from free → pro in incognito mode
+
+### What Was Fixed:
+1. **Code Bug**: `getCurrentUser()` now fetches fresh data from database
+2. **Webhook Config**: Test mode webhook created and configured
+3. **Domain Fix**: Webhook URL corrected to `tmcstudio.app`
+4. **Bundling Fix**: Removed `external_node_modules` from `netlify.toml`
+
+**Status**: ✅ COMPLETE - All systems operational

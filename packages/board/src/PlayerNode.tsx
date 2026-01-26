@@ -146,6 +146,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   return (
     <Group
       ref={groupRef}
+      id={player.id}
       x={player.position.x}
       y={player.position.y}
       opacity={player.opacity ?? 1}

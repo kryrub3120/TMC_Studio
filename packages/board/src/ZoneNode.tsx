@@ -225,7 +225,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   ];
 
   return (
-    <Group
+    <Group id={zone.id}
       ref={groupRef}
       x={displayX}
       y={displayY}
