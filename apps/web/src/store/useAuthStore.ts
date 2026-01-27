@@ -105,7 +105,7 @@ export const useAuthStore = create<AuthState>()(
 
               // PR-UX-1: Check for unsaved guest work and offer to save to cloud
               try {
-                const { useBoardStore } = await import('./useBoardStore');
+                const { useBoardStore } = await import('./index');
                 const boardState = useBoardStore.getState();
                 const hasLocalWork = boardState.document.steps[0]?.elements.length > 0;
                 const notSavedToCloud = !boardState.cloudProjectId;

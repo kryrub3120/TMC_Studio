@@ -5,6 +5,8 @@
  * Replaces the monolithic handleKeyDown from App.tsx.
  * 
  * Total shortcuts: ~85
+ * 
+ * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-1
  */
 
 import { useEffect, useCallback } from 'react';
@@ -13,6 +15,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { isTextElement, isPlayerElement, isZoneElement} from '@tmc/core';
 import { formations } from '@tmc/presets';
+import { useCommandRegistry } from './useCommandRegistry';
 
 /**
  * Props for useKeyboardShortcuts hook
@@ -52,6 +55,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     contextMenuVisible,
   } = params;
   
+  // ===== Command Registry (PR1) =====
+  const cmdRegistry = useCommandRegistry();
+  
   // ===== Board Store Actions =====
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
@@ -64,8 +70,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const createGroup = useBoardStore((s) => s.createGroup);
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
-  const selectAll = useBoardStore((s) => s.selectAll);
-  const clearSelection = useBoardStore((s) => s.clearSelection);
+  // ✅ selectAll, clearSelection now via cmdRegistry (PR1)
   const deleteSelected = useBoardStore((s) => s.deleteSelected);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
@@ -353,7 +358,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       case 'a':
         if (isCmd) {
           e.preventDefault();
-          selectAll();
+          cmdRegistry.board.selection.selectAll();
         } else {
           e.preventDefault();
           setActiveTool('arrow-pass');
@@ -479,7 +484,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'escape':
-        clearSelection();
+        cmdRegistry.board.selection.clear();
         break;
         
       case 'enter':
@@ -679,10 +684,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     }
   }, [
     // Dependencies
+    cmdRegistry,
     commandPaletteOpen, closeCommandPalette, openCommandPalette, contextMenuVisible,
     addPlayerAtCursor, addBallAtCursor, addTextAtCursor, addEquipmentAtCursor,
     duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, createGroup,
-    undo, redo, selectAll, clearSelection, deleteSelected,
+    undo, redo, deleteSelected,
     cycleZoneShape, cyclePlayerShape, saveDocument, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
     cycleSelectedColor, rotateSelected, updateTextProperties, applyFormation,

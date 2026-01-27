@@ -3,10 +3,13 @@
  * 
  * Handles all canvas interactions and dispatches to CommandRegistry.
  * Manages drag state, selection, and multi-element interactions.
+ * 
+ * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-1
  */
 
 import { useCallback, useRef } from 'react';
 import { useBoardStore } from '../store';
+import { useCommandRegistry } from './useCommandRegistry';
 import { cmd } from '../commands';
 
 interface DragState {
@@ -16,6 +19,8 @@ interface DragState {
 }
 
 export function useCanvasInteraction() {
+  const cmdRegistry = useCommandRegistry();
+  
   const dragState = useRef<DragState>({
     isDragging: false,
     elementId: null,
@@ -23,15 +28,14 @@ export function useCanvasInteraction() {
   });
   
   const selectedIds = useBoardStore((s) => s.selectedIds);
-  const selectElement = useBoardStore((s) => s.selectElement);
-  const clearSelection = useBoardStore((s) => s.clearSelection);
   
   /**
    * Handle element selection
+   * ✅ Uses cmd.board.selection instead of store action
    */
   const handleElementSelect = useCallback((elementId: string, addToSelection: boolean) => {
-    selectElement(elementId, addToSelection);
-  }, [selectElement]);
+    cmdRegistry.board.selection.select(elementId, addToSelection);
+  }, [cmdRegistry]);
   
   /**
    * Handle drag start
@@ -117,13 +121,14 @@ export function useCanvasInteraction() {
   
   /**
    * Handle stage click (background click)
+   * ✅ Uses cmd.board.selection.clear instead of store action
    */
   const handleStageClick = useCallback((e: any) => {
     // Check if clicked on stage background (not on shape)
     if (e.target === e.target.getStage()) {
-      clearSelection();
+      cmdRegistry.board.selection.clear();
     }
-  }, [clearSelection]);
+  }, [cmdRegistry]);
   
   /**
    * Handle player number quick edit
