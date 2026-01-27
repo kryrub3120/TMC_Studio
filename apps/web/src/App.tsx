@@ -11,13 +11,13 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stage, Layer } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement, hasPosition, getElementZIndex } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType, EquipmentElement } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 import { Line } from 'react-konva';
 // New architecture imports
 import { BoardCanvas } from './components/Canvas/BoardCanvas';
-import { useCanvasInteraction, useEntitlements } from './hooks';
+import { useCanvasInteraction, useEntitlements, useKeyboardShortcuts } from './hooks';
 import { useCanvasContextMenu } from './hooks/useCanvasContextMenu';
 import { getCanvasContextMenuItems, getContextMenuHeader } from './utils/canvasContextMenu';
 import {
@@ -60,11 +60,10 @@ import {
   moveProjectToFolder,
   type ProjectFolder,
 } from './lib/supabase';
-import { useBoardStore } from './store/useBoardStore';
+import { useBoardStore } from './store';
 import { useAuthStore } from './store/useAuthStore';
 import { useUIStore, useInitializeTheme } from './store/useUIStore';
 import { usePaymentReturn } from './hooks';
-import { formations } from '@tmc/presets';
 import { exportGIF, exportPDF, exportSVG } from './utils/exportUtils';
 
 /** Main App component */
@@ -139,8 +138,6 @@ export default function App() {
   const addArrowAtCursor = useBoardStore((s) => s.addArrowAtCursor);
   const addZoneAtCursor = useBoardStore((s) => s.addZoneAtCursor);
   const addTextAtCursor = useBoardStore((s) => s.addTextAtCursor);
-  const addEquipmentAtCursor = useBoardStore((s) => s.addEquipmentAtCursor);
-  const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const moveElementById = useBoardStore((s) => s.moveElementById);
   const resizeZone = useBoardStore((s) => s.resizeZone);
   const selectElement = useBoardStore((s) => s.selectElement);
@@ -153,35 +150,28 @@ export default function App() {
   // Removed: setCursorPosition - was causing lag on every mouse move
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
-  const saveDocument = useBoardStore((s) => s.saveDocument);
   const getSelectedElement = useBoardStore((s) => s.getSelectedElement);
   const canUndoFn = useBoardStore((s) => s.canUndo);
   const canRedoFn = useBoardStore((s) => s.canRedo);
   const pushHistory = useBoardStore((s) => s.pushHistory);
   const selectAll = useBoardStore((s) => s.selectAll);
-  const nudgeSelected = useBoardStore((s) => s.nudgeSelected);
-  const adjustSelectedStrokeWidth = useBoardStore((s) => s.adjustSelectedStrokeWidth);
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
-  const rotateSelected = useBoardStore((s) => s.rotateSelected);
   const selectElementsInRect = useBoardStore((s) => s.selectElementsInRect);
   const updateArrowEndpoint = useBoardStore((s) => s.updateArrowEndpoint);
-  const createGroup = useBoardStore((s) => s.createGroup);
-  const ungroupSelection = useBoardStore((s) => s.ungroupSelection);
   const groups = useBoardStore((s) => s.groups);
   const selectGroup = useBoardStore((s) => s.selectGroup);
   const toggleGroupLock = useBoardStore((s) => s.toggleGroupLock);
   const toggleGroupVisibility = useBoardStore((s) => s.toggleGroupVisibility);
   const renameGroup = useBoardStore((s) => s.renameGroup);
-  const applyFormation = useBoardStore((s) => s.applyFormation);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   
-  // Layer control actions (PR-UX-2)
-  const bringToFront = useBoardStore((s) => s.bringToFront);
-  const sendToBack = useBoardStore((s) => s.sendToBack);
-  const bringForward = useBoardStore((s) => s.bringForward);
-  const sendBackward = useBoardStore((s) => s.sendBackward);
+  // Layer control actions (PR-UX-2) - TODO: Add to new store slices
+  // const bringToFront = useBoardStore((s) => s.bringToFront);
+  // const sendToBack = useBoardStore((s) => s.sendToBack);
+  // const bringForward = useBoardStore((s) => s.bringForward);
+  // const sendBackward = useBoardStore((s) => s.sendBackward);
   
   // Cloud save actions
   const saveToCloud = useBoardStore((s) => s.saveToCloud);
@@ -213,10 +203,6 @@ export default function App() {
     return hidden;
   }, [groups]);
 
-  // PR-UX-2: Sort elements by zIndex for proper rendering order
-  const sortedElements = useMemo(() => {
-    return [...elements].sort((a, b) => getElementZIndex(a) - getElementZIndex(b));
-  }, [elements]);
 
   // Marquee selection state
   const [marqueeStart, setMarqueeStart] = useState<Position | null>(null);
@@ -254,7 +240,6 @@ export default function App() {
   const zoomIn = useUIStore((s) => s.zoomIn);
   const zoomOut = useUIStore((s) => s.zoomOut);
   const zoomFit = useUIStore((s) => s.zoomFit);
-  const setActiveTool = useUIStore((s) => s.setActiveTool);
   const activeTool = useUIStore((s) => s.activeTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
   const footerVisible = useUIStore((s) => s.footerVisible);
@@ -598,570 +583,7 @@ export default function App() {
     ];
   }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, duplicateSelected, deleteSelected, undo, redo, selectAll, clearSelection, toggleInspector, toggleCheatSheet, toggleFocusMode, showToast, selectedIds.length, canUndo, canRedo, handleExport, handleExportAllSteps, handleExportGIF, handleExportPDF, handleExportSVG, boardDoc.steps.length]);
 
-  // Keyboard shortcuts
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      const isCmd = e.metaKey || e.ctrlKey;
-      const target = e.target as HTMLElement;
-      
-      // Don't handle if typing in input or command palette is open
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
-      // Don't handle shortcuts if context menu is open (except Escape to close it)
-      if (menuState.visible && e.key !== 'Escape') {
-        return;
-      }
-
-      // Command palette toggle
-      if (isCmd && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        if (commandPaletteOpen) {
-          closeCommandPalette();
-        } else {
-          openCommandPalette();
-        }
-        return;
-      }
-
-      // Don't handle other shortcuts if palette is open
-      if (commandPaletteOpen) return;
-
-      switch (e.key.toLowerCase()) {
-        case 'p':
-          e.preventDefault();
-          if (isCmd && e.shiftKey) {
-            // Cmd+Shift+P = Export PDF
-            handleExportPDF();
-          } else if (e.shiftKey) {
-            addPlayerAtCursor('away');
-          } else {
-            addPlayerAtCursor('home');
-          }
-          break;
-        case 'b':
-          if (!isCmd) {
-            e.preventDefault();
-            addBallAtCursor();
-          }
-          break;
-        case 'd':
-          if (isCmd) {
-            e.preventDefault();
-            duplicateSelected();
-          } else if (!e.shiftKey) {
-            e.preventDefault();
-            setActiveTool('drawing');
-          }
-          break;
-        case 'h':
-          if (!isCmd) {
-            setActiveTool('highlighter');
-            e.preventDefault();
-          }
-          break;
-        case 'c':
-          if (isCmd) {
-            // Cmd+C = Copy selection
-            e.preventDefault();
-            copySelection();
-            showToast('Copied');
-          } else {
-            // C = Clear all drawings (freehand & highlighter)
-            e.preventDefault();
-            clearAllDrawings();
-            showToast('Drawings cleared');
-          }
-          break;
-        case 'v':
-          if (isCmd) {
-            // Cmd+V = Paste from clipboard
-            e.preventDefault();
-            pasteClipboard();
-            showToast('Pasted');
-          } else if (!commandPaletteOpen) {
-            // V = Cycle pitch views (full → plain → half-left → half-right)
-            e.preventDefault();
-            const VIEWS = ['full', 'plain', 'half-left', 'half-right'] as const;
-            const currentView = useBoardStore.getState().getPitchSettings()?.view ?? 'full';
-            const currentIdx = VIEWS.indexOf(currentView as typeof VIEWS[number]);
-            const nextIdx = (currentIdx + 1) % VIEWS.length;
-            const nextView = VIEWS[nextIdx];
-            
-            // If switching to plain, hide all lines
-            if (nextView === 'plain') {
-              useBoardStore.getState().updatePitchSettings({ 
-                view: nextView,
-                lines: {
-                  showOutline: false,
-                  showCenterLine: false,
-                  showCenterCircle: false,
-                  showPenaltyAreas: false,
-                  showGoalAreas: false,
-                  showCornerArcs: false,
-                  showPenaltySpots: false
-                }
-              });
-            } else {
-              // Show all lines for other views
-              useBoardStore.getState().updatePitchSettings({ 
-                view: nextView,
-                lines: {
-                  showOutline: true,
-                  showCenterLine: true,
-                  showCenterCircle: true,
-                  showPenaltyAreas: true,
-                  showGoalAreas: true,
-                  showCornerArcs: true,
-                  showPenaltySpots: true
-                }
-              });
-            }
-            const viewNames: Record<string, string> = {
-              'full': 'Full pitch',
-              'plain': 'Plain grass',
-              'half-left': 'Half (left)',
-              'half-right': 'Half (right)'
-            };
-            showToast(viewNames[nextView] ?? nextView);
-          }
-          break;
-        case 'g':
-          if (isCmd && e.shiftKey) {
-            e.preventDefault();
-            // Cmd+Shift+G = Export GIF
-            handleExportGIF();
-          } else if (isCmd) {
-            e.preventDefault();
-            createGroup();
-            showToast('Group created');
-          } else {
-            // G = Toggle grid
-            e.preventDefault();
-            useUIStore.getState().toggleGrid();
-            showToast(useUIStore.getState().gridVisible ? 'Grid visible' : 'Grid hidden');
-          }
-          break;
-        case 'z':
-          if (isCmd && e.shiftKey) {
-            e.preventDefault();
-            redo();
-          } else if (isCmd) {
-            e.preventDefault();
-            undo();
-          } else {
-            e.preventDefault();
-            // Z = rect zone tool, Shift+Z = ellipse zone tool
-            setActiveTool(e.shiftKey ? 'zone-ellipse' : 'zone');
-          }
-          break;
-        case 'e':
-          // E key = cycle zone shape when zone selected
-          if (!isCmd && selectedIds.length > 0) {
-            const hasZone = elements.some((el) => selectedIds.includes(el.id) && isZoneElement(el));
-            if (hasZone) {
-              e.preventDefault();
-              cycleZoneShape();
-              showToast('Zone shape changed');
-            }
-          }
-          break;
-        case 's':
-          if (isCmd) {
-            e.preventDefault();
-            // Save to localStorage always
-            saveDocument();
-            // Also save to cloud if authenticated
-            if (authIsAuthenticated) {
-              saveToCloud().then(async (success) => {
-                if (success) {
-                  // Refresh project list after save
-                  await fetchCloudProjects();
-                  showToast('Saved to cloud ☁️');
-                } else {
-                  showToast('Saved locally');
-                }
-              });
-            } else {
-              showToast('Saved locally');
-            }
-          } else if (selectedIds.length > 0) {
-            // S key = cycle player shape
-            const hasPlayer = elements.some((el) => selectedIds.includes(el.id) && isPlayerElement(el));
-            if (hasPlayer) {
-              e.preventDefault();
-              cyclePlayerShape();
-              showToast('Shape changed');
-            }
-          }
-          break;
-        case 'a':
-          if (isCmd) {
-            e.preventDefault();
-            selectAll();
-          } else if (!e.shiftKey) {
-            e.preventDefault();
-            setActiveTool('arrow-pass');
-          }
-          break;
-        case 'r':
-          if (!isCmd) {
-            e.preventDefault();
-            setActiveTool('arrow-run');
-          }
-          break;
-        case 't':
-          if (!isCmd) {
-            e.preventDefault();
-            addTextAtCursor();
-          }
-          break;
-        
-        // Equipment shortcuts
-        case 'm': // Mannequin
-          if (!isCmd) {
-            e.preventDefault();
-            if (e.shiftKey) {
-              addEquipmentAtCursor('mannequin', 'flat');
-              showToast('Lying Mannequin');
-            } else {
-              addEquipmentAtCursor('mannequin');
-              showToast('Mannequin');
-            }
-          }
-          break;
-        case 'k': // Cone / Pole
-          if (!isCmd) {
-            e.preventDefault();
-            if (e.shiftKey) {
-              addEquipmentAtCursor('pole');
-              showToast('Pole');
-            } else {
-              addEquipmentAtCursor('cone');
-              showToast('Cone');
-            }
-          }
-          break;
-        case 'q': // Hoop
-          if (!isCmd) {
-            e.preventDefault();
-            addEquipmentAtCursor('hoop');
-            showToast('Hoop');
-          }
-          break;
-        case 'u': // Hurdle
-          if (!isCmd) {
-            e.preventDefault();
-            addEquipmentAtCursor('hurdle');
-            showToast('Hurdle');
-          }
-          break;
-        case 'y': // Ladder
-          if (!isCmd) {
-            e.preventDefault();
-            addEquipmentAtCursor('ladder');
-            showToast('Ladder');
-          }
-          break;
-        case 'j': // Goal
-          if (!isCmd) {
-            e.preventDefault();
-            if (e.shiftKey) {
-              addEquipmentAtCursor('goal', 'mini');
-              showToast('Mini Goal');
-            } else {
-              addEquipmentAtCursor('goal');
-              showToast('Goal');
-            }
-          }
-          break;
-        case 'i':
-          if (!isCmd) {
-            e.preventDefault();
-            toggleInspector();
-          }
-          break;
-        case 'f':
-          if (!isCmd) {
-            e.preventDefault();
-            toggleFocusMode();
-          }
-          break;
-        case '?':
-          e.preventDefault();
-          toggleCheatSheet();
-          break;
-        case 'delete':
-        case 'backspace':
-          e.preventDefault();
-          deleteSelected();
-          break;
-        case 'escape':
-          clearSelection();
-          break;
-        case 'enter':
-          // Enter on selected text = start editing
-          if (selectedIds.length === 1) {
-            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
-            if (sel && isTextElement(sel)) {
-              e.preventDefault();
-              setEditingTextId(sel.id);
-              setEditingTextValue(sel.content);
-            }
-          }
-          break;
-        case 'arrowup':
-          e.preventDefault();
-          // Check if selected element is text - adjust properties
-          if (selectedIds.length === 1) {
-            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
-            if (sel && isTextElement(sel)) {
-              if (e.shiftKey) {
-                // Shift+Up = cycle background color
-                const BG_COLORS = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#3b82f6', '#1f2937'];
-                const currentBg = sel.backgroundColor;
-                const currentIndex = currentBg ? BG_COLORS.indexOf(currentBg) : -1;
-                const newBg = BG_COLORS[(currentIndex + 1) % BG_COLORS.length];
-                updateTextProperties(sel.id, { backgroundColor: newBg });
-                showToast(`Background: ${newBg}`);
-              } else {
-                // Up = increase font size
-                const newSize = Math.min(72, (sel.fontSize || 18) + 2);
-                updateTextProperties(sel.id, { fontSize: newSize });
-                showToast(`Font size: ${newSize}px`);
-              }
-              break;
-            }
-          }
-          if (e.altKey) {
-            cycleSelectedColor(-1);
-            showToast('Previous color');
-          } else {
-            nudgeSelected(0, e.shiftKey ? -1 : -5);
-          }
-          break;
-        case 'arrowdown':
-          e.preventDefault();
-          // Check if selected element is text - adjust properties
-          if (selectedIds.length === 1) {
-            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
-            if (sel && isTextElement(sel)) {
-              if (e.shiftKey) {
-                // Shift+Down = remove background
-                updateTextProperties(sel.id, { backgroundColor: undefined });
-                showToast('Background removed');
-              } else {
-                // Down = decrease font size
-                const newSize = Math.max(8, (sel.fontSize || 18) - 2);
-                updateTextProperties(sel.id, { fontSize: newSize });
-                showToast(`Font size: ${newSize}px`);
-              }
-              break;
-            }
-          }
-          if (e.altKey) {
-            cycleSelectedColor(1);
-            showToast('Next color');
-          } else {
-            nudgeSelected(0, e.shiftKey ? 1 : 5);
-          }
-          break;
-        case 'arrowleft':
-          e.preventDefault();
-          // Check if selected element is text - toggle bold
-          if (selectedIds.length === 1) {
-            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
-            if (sel && isTextElement(sel)) {
-              updateTextProperties(sel.id, { bold: !sel.bold });
-              showToast(sel.bold ? 'Normal' : 'Bold');
-              break;
-            }
-          }
-          if (e.altKey) {
-            adjustSelectedStrokeWidth(-1);
-            showToast('Thinner stroke');
-          } else if (!isCmd && selectedIds.length === 0) {
-            // Arrow keys navigate steps when nothing selected
-            prevStep();
-          } else {
-            nudgeSelected(e.shiftKey ? -1 : -5, 0);
-          }
-          break;
-        case 'arrowright':
-          e.preventDefault();
-          // Check if selected element is text - toggle italic
-          if (selectedIds.length === 1) {
-            const sel = useBoardStore.getState().elements.find((el) => el.id === selectedIds[0]);
-            if (sel && isTextElement(sel)) {
-              updateTextProperties(sel.id, { italic: !sel.italic });
-              showToast(sel.italic ? 'Normal' : 'Italic');
-              break;
-            }
-          }
-          if (e.altKey) {
-            adjustSelectedStrokeWidth(1);
-            showToast('Thicker stroke');
-          } else if (!isCmd && selectedIds.length === 0) {
-            // Arrow keys navigate steps when nothing selected
-            nextStep();
-          } else {
-            nudgeSelected(e.shiftKey ? 1 : 5, 0);
-          }
-          break;
-        case ' ':
-          // Space = Play/Pause
-          e.preventDefault();
-          if (isPlaying) {
-            pause();
-          } else {
-            play();
-          }
-          break;
-        case 'l':
-          // L = Toggle loop
-          if (!isCmd) {
-            e.preventDefault();
-            toggleLoop();
-            showToast(useUIStore.getState().isLooping ? 'Loop enabled' : 'Loop disabled');
-          }
-          break;
-        case 'n':
-          // N = New step
-          if (!isCmd) {
-            e.preventDefault();
-            addStep();
-            showToast('New step added');
-          }
-          break;
-        case 'o':
-          // O = Toggle orientation (landscape/portrait) + auto-adjust zoom
-          if (!isCmd) {
-            e.preventDefault();
-            const currentOrientation = useBoardStore.getState().getPitchSettings()?.orientation ?? 'landscape';
-            const newOrientation = currentOrientation === 'landscape' ? 'portrait' : 'landscape';
-            useBoardStore.getState().updatePitchSettings({ orientation: newOrientation });
-            // Auto-adjust zoom for portrait (75%) to fit tall pitch on screen
-            if (newOrientation === 'portrait') {
-              useUIStore.getState().setZoom(0.75);
-            } else {
-              useUIStore.getState().setZoom(1.0);
-            }
-            showToast(newOrientation === 'portrait' ? 'Portrait mode (75%)' : 'Landscape mode');
-          }
-          break;
-        case 'w':
-          // W = Toggle print friendly (white pitch, black lines, NO stripes)
-          if (!isCmd) {
-            e.preventDefault();
-            const currentSettings = useBoardStore.getState().getPitchSettings();
-            const isPrintFriendly = currentSettings?.primaryColor === '#ffffff' && currentSettings?.lineColor === '#000000';
-            if (isPrintFriendly) {
-              // Back to default green with stripes
-              useBoardStore.getState().updatePitchSettings({ 
-                primaryColor: '#4ade80',
-                stripeColor: '#22c55e', 
-                lineColor: '#ffffff',
-                showStripes: true
-              });
-              showToast('Normal colors');
-            } else {
-              // Set print friendly - white, black lines, NO stripes
-              useBoardStore.getState().updatePitchSettings({ 
-                primaryColor: '#ffffff',
-                stripeColor: '#ffffff', // Same as primary for pure white
-                lineColor: '#000000',
-                showStripes: false
-              });
-              showToast('Print Friendly mode');
-            }
-          }
-          break;
-        case 'x':
-          // X = Delete current step (only if more than 1 step)
-          if (!isCmd && useBoardStore.getState().document.steps.length > 1) {
-            e.preventDefault();
-            const current = useBoardStore.getState().currentStepIndex;
-            removeStep(current);
-            showToast('Step deleted');
-          }
-          break;
-        case '=':
-        case '+':
-          if (isCmd) {
-            e.preventDefault();
-            zoomIn();
-          }
-          break;
-        case '-':
-          if (isCmd) {
-            e.preventDefault();
-            zoomOut();
-          }
-          break;
-        case '[':
-          // [ = Rotate selected equipment counter-clockwise (fine)
-          if (!isCmd) {
-            e.preventDefault();
-            rotateSelected(-15);
-            showToast('Rotated -15°');
-          }
-          // NOTE: Cmd+Shift+[ conflicts with Chrome tab switching
-          // Layer control will be available via context menu (PR-UX-5)
-          break;
-        case ']':
-          // ] = Rotate selected equipment clockwise (fine)
-          if (!isCmd) {
-            e.preventDefault();
-            rotateSelected(15);
-            showToast('Rotated +15°');
-          }
-          // NOTE: Cmd+Shift+] conflicts with Chrome tab switching
-          // Layer control will be available via context menu (PR-UX-5)
-          break;
-        case '{':
-          // Shift+[ on most keyboards = fast rotate counter-clockwise
-          if (!isCmd) {
-            e.preventDefault();
-            rotateSelected(-90);
-            showToast('Rotated -90°');
-          }
-          break;
-        case '}':
-          // Shift+] on most keyboards = fast rotate clockwise
-          if (!isCmd) {
-            e.preventDefault();
-            rotateSelected(90);
-            showToast('Rotated +90°');
-          }
-          break;
-      }
-      
-      // Formation shortcuts using e.code (works with Shift)
-      // 1-6 = Home team, Shift+1-6 = Away team (using e.code for reliability)
-      if (!isCmd && !e.altKey) {
-        const formationIndex = {
-          'Digit1': 0, 'Numpad1': 0,
-          'Digit2': 1, 'Numpad2': 1,
-          'Digit3': 2, 'Numpad3': 2,
-          'Digit4': 3, 'Numpad4': 3,
-          'Digit5': 4, 'Numpad5': 4,
-          'Digit6': 5, 'Numpad6': 5,
-        }[e.code];
-        
-        if (formationIndex !== undefined && formations[formationIndex]) {
-          e.preventDefault();
-          const team = e.shiftKey ? 'away' : 'home';
-          applyFormation(formations[formationIndex].id, team);
-          showToast(`${formations[formationIndex].shortName} applied (${team})`);
-        }
-      }
-    },
-    [commandPaletteOpen, closeCommandPalette, openCommandPalette, addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, addTextAtCursor, updateTextProperties, duplicateSelected, undo, redo, saveDocument, selectAll, toggleInspector, toggleFocusMode, toggleCheatSheet, deleteSelected, clearSelection, showToast, zoomIn, zoomOut, zoomFit, setActiveTool, nudgeSelected, adjustSelectedStrokeWidth, cycleSelectedColor, cyclePlayerShape, createGroup, ungroupSelection, selectedIds, elements, prevStep, nextStep, isPlaying, pause, play, toggleLoop, addStep, removeStep, applyFormation]
-  );
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
 
   // Smooth animation playback effect using requestAnimationFrame
   useEffect(() => {
@@ -1407,7 +829,6 @@ export default function App() {
   const updateFreehandDrawing = useBoardStore((s) => s.updateFreehandDrawing);
   const finishFreehandDrawing = useBoardStore((s) => s.finishFreehandDrawing);
   const freehandPoints = useBoardStore((s) => s.freehandPoints);
-  const clearAllDrawings = useBoardStore((s) => s.clearAllDrawings);
 
   // New canvas architecture - hook for canvas interactions
   // NOTE: Hook must be called unconditionally (Rules of Hooks)
@@ -1416,6 +837,21 @@ export default function App() {
 
   // PR-UX-5: Canvas Context Menu
   const { menuState, showMenu, hideMenu } = useCanvasContextMenu();
+
+  // Keyboard shortcuts - uses hook to handle all shortcuts
+  useKeyboardShortcuts({
+    handleExportPNG: handleExport,
+    handleExportAllSteps,
+    handleExportPDF,
+    handleExportGIF,
+    showToast,
+    onStartEditingText: (id, content) => {
+      setEditingTextId(id);
+      setEditingTextValue(content);
+    },
+    addStep,
+    contextMenuVisible: menuState.visible,
+  });
 
   // Stage event handlers (use any event type for compatibility)
   const handleStageMouseDown = useCallback(
@@ -2464,10 +1900,11 @@ export default function App() {
                 {
                   onDelete: () => { deleteSelected(); hideMenu(); showToast('Deleted'); },
                   onDuplicate: () => { duplicateSelected(); hideMenu(); showToast('Duplicated'); },
-                  onBringToFront: () => { bringToFront(); hideMenu(); showToast('Brought to front'); },
-                  onSendToBack: () => { sendToBack(); hideMenu(); showToast('Sent to back'); },
-                  onBringForward: () => { bringForward(); hideMenu(); showToast('Moved forward'); },
-                  onSendBackward: () => { sendBackward(); hideMenu(); showToast('Moved backward'); },
+                  // TODO: Add layer control actions back when slices support them
+                  onBringToFront: () => { /* bringToFront(); */ hideMenu(); showToast('Layer control coming soon'); },
+                  onSendToBack: () => { /* sendToBack(); */ hideMenu(); showToast('Layer control coming soon'); },
+                  onBringForward: () => { /* bringForward(); */ hideMenu(); showToast('Layer control coming soon'); },
+                  onSendBackward: () => { /* sendBackward(); */ hideMenu(); showToast('Layer control coming soon'); },
                   onCopy: () => { copySelection(); hideMenu(); showToast('Copied'); },
                   onPaste: () => { pasteClipboard(); hideMenu(); showToast('Pasted'); },
                   onSelectAll: () => { selectAll(); hideMenu(); },

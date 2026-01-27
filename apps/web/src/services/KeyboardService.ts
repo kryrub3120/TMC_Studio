@@ -7,10 +7,11 @@
 
 export interface ShortcutDefinition {
   key: string;
+  code?: string; // Optional e.code for key-position specific shortcuts (e.g. formations)
   modifiers?: Array<'ctrl' | 'meta' | 'shift' | 'alt'>;
   action: () => void;
   description: string;
-  category: 'elements' | 'edit' | 'view' | 'tools' | 'export' | 'navigation';
+  category: 'elements' | 'edit' | 'view' | 'tools' | 'export' | 'navigation' | 'steps';
   when?: () => boolean; // Optional condition for execution
 }
 
@@ -22,7 +23,9 @@ class KeyboardService {
    * @returns Cleanup function to unregister the shortcut
    */
   register(shortcut: ShortcutDefinition): () => void {
-    const key = this.normalizeKey(shortcut);
+    const key = shortcut.code 
+      ? this.normalizeKeyWithCode(shortcut)
+      : this.normalizeKey(shortcut);
     this.shortcuts.set(key, shortcut);
     return () => this.shortcuts.delete(key);
   }
@@ -33,13 +36,17 @@ class KeyboardService {
    */
   registerMany(shortcuts: ShortcutDefinition[]): () => void {
     shortcuts.forEach(shortcut => {
-      const key = this.normalizeKey(shortcut);
+      const key = shortcut.code 
+        ? this.normalizeKeyWithCode(shortcut)
+        : this.normalizeKey(shortcut);
       this.shortcuts.set(key, shortcut);
     });
     
     return () => {
       shortcuts.forEach(shortcut => {
-        const key = this.normalizeKey(shortcut);
+        const key = shortcut.code 
+          ? this.normalizeKeyWithCode(shortcut)
+          : this.normalizeKey(shortcut);
         this.shortcuts.delete(key);
       });
     };
@@ -50,6 +57,23 @@ class KeyboardService {
    * @returns true if event was handled, false otherwise
    */
   handleKeyDown(event: KeyboardEvent): boolean {
+    // First try code-based matching (for formation shortcuts)
+    if (event.code) {
+      const codeKey = this.normalizeKeyWithCode({
+        key: event.key,
+        code: event.code,
+        modifiers: this.getActiveModifiers(event),
+      });
+      
+      const codeShortcut = this.shortcuts.get(codeKey);
+      if (codeShortcut && (!codeShortcut.when || codeShortcut.when())) {
+        event.preventDefault();
+        codeShortcut.action();
+        return true;
+      }
+    }
+    
+    // Then try regular key-based matching
     const key = this.normalizeKey({
       key: event.key,
       modifiers: this.getActiveModifiers(event),
@@ -101,6 +125,25 @@ class KeyboardService {
       .join('+');
     
     return modifiers ? `${modifiers}+${key}` : key;
+  }
+  
+  /**
+   * Normalize shortcut with code (for position-specific keys like formations)
+   */
+  private normalizeKeyWithCode(
+    shortcut: Pick<ShortcutDefinition, 'key' | 'code' | 'modifiers'>
+  ): string {
+    if (!shortcut.code) {
+      return this.normalizeKey(shortcut);
+    }
+    
+    const code = shortcut.code.toLowerCase();
+    const modifiers = (shortcut.modifiers || [])
+      .map(m => m.toLowerCase())
+      .sort()
+      .join('+');
+    
+    return modifiers ? `${modifiers}+code:${code}` : `code:${code}`;
   }
   
   /**

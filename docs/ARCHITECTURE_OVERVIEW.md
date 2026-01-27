@@ -180,6 +180,65 @@ cmd.addPlayer = () => {
 
 ---
 
+#### ⚠️ CRITICAL: Single Store Import Path (Lessons Learned)
+
+**The Problem: Multiple Store Instances**
+
+During PR-REFACTOR-1, we discovered a critical bug where keyboard shortcuts stopped working entirely. The root cause: **TWO different store instances existed simultaneously**.
+
+```typescript
+// ❌ WRONG - Creates SEPARATE store instance
+import { useBoardStore } from './store/useBoardStore';
+
+// ✅ CORRECT - Uses composed store from slices
+import { useBoardStore } from './store';
+```
+
+**What happened:**
+1. `store/useBoardStore.ts` = Old monolithic store (3000+ lines)
+2. `store/index.ts` = New composed store from slices
+3. App.tsx imported from `/useBoardStore` (Store #1)
+4. Hooks imported from `/store` (Store #2)
+5. Result: Actions updated Store #2, but UI rendered from Store #1 → **no updates visible**!
+
+**The Fix: Unified Imports**
+
+ALL files now import from the same source:
+
+```typescript
+// ✅ CORRECT - Single source of truth
+import { useBoardStore } from '../store';        // From any /src subdirectory
+import { useBoardStore } from './store';         // From App.tsx
+```
+
+**Enforcement Rule:**
+
+> **NEVER import from `/store/useBoardStore.ts` directly**  
+> **ALWAYS import from `/store/` (index.ts)**
+
+This ensures:
+- ✅ Single store instance across entire app
+- ✅ Consistent state updates
+- ✅ Predictable behavior
+- ✅ Easy to refactor store internals
+
+**Files to check when adding features:**
+- `apps/web/src/store/index.ts` - Main store export (use this)
+- `apps/web/src/store/useBoardStore.ts` - DEPRECATED, can be deleted
+- All hooks in `apps/web/src/hooks/` - Should import from `../store`
+- `apps/web/src/App.tsx` - Should import from `./store`
+
+**Testing for this issue:**
+```bash
+# Search for wrong imports
+grep -r "from './store/useBoardStore'" apps/web/src/
+grep -r "from '../store/useBoardStore'" apps/web/src/
+
+# Should return ZERO results!
+```
+
+---
+
 ### 4. Command Pattern
 
 **Location:** `apps/web/src/commands/CommandRegistry.ts`

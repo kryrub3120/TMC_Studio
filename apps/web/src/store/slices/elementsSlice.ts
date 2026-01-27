@@ -345,6 +345,7 @@ export const createElementsSlice: StateCreator<
     set((state) => ({
       elements: state.elements.map((el) => {
         if (selectedIds.includes(el.id)) {
+          // Arrows
           if (isArrowElement(el)) {
             const current = el.color ?? '#ffffff';
             const currentIndex = COLORS.indexOf(current);
@@ -353,6 +354,7 @@ export const createElementsSlice: StateCreator<
               : (currentIndex + direction + COLORS.length) % COLORS.length;
             return { ...el, color: COLORS[newIndex] };
           }
+          // Zones
           if (el.type === 'zone') {
             const zone = el as { fillColor?: string };
             const current = zone.fillColor ?? '#22c55e';
@@ -362,9 +364,38 @@ export const createElementsSlice: StateCreator<
               : (currentIndex + direction + COLORS.length) % COLORS.length;
             return { ...el, fillColor: COLORS[newIndex] };
           }
+          // Drawings
           if (el.type === 'drawing') {
             const drawing = el as { color?: string };
             const current = drawing.color ?? '#ff0000';
+            const currentIndex = COLORS.indexOf(current);
+            const newIndex = currentIndex === -1 
+              ? 0 
+              : (currentIndex + direction + COLORS.length) % COLORS.length;
+            return { ...el, color: COLORS[newIndex] };
+          }
+          // Players - cycle through player text color
+          if (isPlayerElement(el)) {
+            const current = el.textColor ?? (el.team === 'home' ? '#3b82f6' : '#ef4444');
+            const currentIndex = COLORS.indexOf(current);
+            const newIndex = currentIndex === -1 
+              ? 0 
+              : (currentIndex + direction + COLORS.length) % COLORS.length;
+            return { ...el, textColor: COLORS[newIndex] };
+          }
+          // Text - cycle text color
+          if (isTextElement(el)) {
+            const current = el.color ?? '#ffffff';
+            const currentIndex = COLORS.indexOf(current);
+            const newIndex = currentIndex === -1 
+              ? 0 
+              : (currentIndex + direction + COLORS.length) % COLORS.length;
+            return { ...el, color: COLORS[newIndex] };
+          }
+          // Equipment - add color property if it has one
+          if (el.type === 'equipment') {
+            const equipment = el as { color?: string };
+            const current = equipment.color ?? '#ffffff';
             const currentIndex = COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 

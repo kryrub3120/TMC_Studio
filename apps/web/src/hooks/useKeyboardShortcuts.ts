@@ -3,24 +3,56 @@
  * 
  * Registers all global keyboard shortcuts using KeyboardService.
  * Replaces the monolithic handleKeyDown from App.tsx.
+ * 
+ * Total shortcuts: ~85
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useBoardStore } from '../store';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { keyboardService } from '../services/KeyboardService';
+import { isTextElement, isPlayerElement, isZoneElement} from '@tmc/core';
+import { formations } from '@tmc/presets';
 
-export function useKeyboardShortcuts(
-  handlers: {
-    handleExportPDF: () => void;
-    handleExportGIF: () => void;
-    showToast: (message: string) => void;
-  }
-): void {
-  const { handleExportPDF, handleExportGIF, showToast } = handlers;
+/**
+ * Props for useKeyboardShortcuts hook
+ */
+export interface UseKeyboardShortcutsParams {
+  // Export handlers (require stageRef access)
+  handleExportPNG: () => void;
+  handleExportAllSteps: () => void;
+  handleExportPDF: () => void;
+  handleExportGIF: () => void;
   
-  // Get store actions (not state - to avoid re-renders)
+  // Toast notification
+  showToast: (message: string) => void;
+  
+  // Text editing callbacks
+  onStartEditingText?: (id: string, content: string) => void;
+  
+  // Step management (gated by entitlements)
+  addStep: () => void;
+  
+  // Context menu state (for guards)
+  contextMenuVisible: boolean;
+}
+
+/**
+ * Hook that registers all keyboard shortcuts
+ */
+export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
+  const {
+    handleExportPNG,
+    handleExportAllSteps,
+    handleExportPDF,
+    handleExportGIF,
+    showToast,
+    onStartEditingText,
+    addStep,
+    contextMenuVisible,
+  } = params;
+  
+  // ===== Board Store Actions =====
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
   const addTextAtCursor = useBoardStore((s) => s.addTextAtCursor);
@@ -33,6 +65,8 @@ export function useKeyboardShortcuts(
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
   const selectAll = useBoardStore((s) => s.selectAll);
+  const clearSelection = useBoardStore((s) => s.clearSelection);
+  const deleteSelected = useBoardStore((s) => s.deleteSelected);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
   const saveDocument = useBoardStore((s) => s.saveDocument);
@@ -40,248 +74,236 @@ export function useKeyboardShortcuts(
   const fetchCloudProjects = useBoardStore((s) => s.fetchCloudProjects);
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
   const getPitchSettings = useBoardStore((s) => s.getPitchSettings);
+  const nudgeSelected = useBoardStore((s) => s.nudgeSelected);
+  const adjustSelectedStrokeWidth = useBoardStore((s) => s.adjustSelectedStrokeWidth);
+  const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
+  const rotateSelected = useBoardStore((s) => s.rotateSelected);
+  const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
+  const applyFormation = useBoardStore((s) => s.applyFormation);
+  const removeStep = useBoardStore((s) => s.removeStep);
+  const prevStep = useBoardStore((s) => s.prevStep);
+  const nextStep = useBoardStore((s) => s.nextStep);
   
-  // UI state selectors
+  // ===== UI Store State & Actions =====
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen);
   const openCommandPalette = useUIStore((s) => s.openCommandPalette);
   const closeCommandPalette = useUIStore((s) => s.closeCommandPalette);
   const setActiveTool = useUIStore((s) => s.setActiveTool);
   const toggleGrid = useUIStore((s) => s.toggleGrid);
-  const gridVisible = useUIStore((s) => s.gridVisible);
+  const toggleInspector = useUIStore((s) => s.toggleInspector);
+  const toggleFocusMode = useUIStore((s) => s.toggleFocusMode);
+  const toggleCheatSheet = useUIStore((s) => s.toggleCheatSheet);
+  const zoomIn = useUIStore((s) => s.zoomIn);
+  const zoomOut = useUIStore((s) => s.zoomOut);
+  const isPlaying = useUIStore((s) => s.isPlaying);
+  const play = useUIStore((s) => s.play);
+  const pause = useUIStore((s) => s.pause);
+  const toggleLoop = useUIStore((s) => s.toggleLoop);
   
-  // Auth state
+  // ===== Auth Store =====
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   
-  useEffect(() => {
-    // Helper to check if NOT typing in input
-    const isNotTyping = () => {
-      const target = document.activeElement as HTMLElement;
-      return target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA';
+  // Main keyboard event handler
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    const isCmd = e.metaKey || e.ctrlKey;
+    const target = e.target as HTMLElement;
+    
+    // === Guard: Skip if typing in input ===
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
+    }
+    
+    // === Guard: Context menu open (only Escape allowed) ===
+    if (contextMenuVisible && e.key !== 'Escape') {
+      return;
+    }
+    
+    // === Command Palette Toggle (always available) ===
+    if (isCmd && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      commandPaletteOpen ? closeCommandPalette() : openCommandPalette();
+      return;
+    }
+    
+    // === Guard: Skip if command palette is open ===
+    if (commandPaletteOpen) return;
+    
+    // Get current state for conditional shortcuts
+    const state = useBoardStore.getState();
+    const uiState = useUIStore.getState();
+    const { elements, selectedIds, currentStepIndex, document: boardDoc } = state;
+    
+    // Helper: Check if selected element is text
+    const getSelectedText = () => {
+      if (selectedIds.length !== 1) return null;
+      const el = elements.find((e) => e.id === selectedIds[0]);
+      return el && isTextElement(el) ? el : null;
     };
     
-    // Helper for palette closed
-    const paletteClosedAndNotTyping = () => !commandPaletteOpen && isNotTyping();
+    // Helper: Check if selected element is player
+    const hasSelectedPlayer = () => elements.some((el) => 
+      selectedIds.includes(el.id) && isPlayerElement(el)
+    );
     
-    // Register all shortcuts
-    const unsubscribe = keyboardService.registerMany([
-      // === Command Palette ===
-      {
-        key: 'k',
-        modifiers: ['meta'],
-        action: () => commandPaletteOpen ? closeCommandPalette() : openCommandPalette(),
-        description: 'Toggle Command Palette',
-        category: 'navigation',
-        when: isNotTyping,
-      },
-      
-      // === Elements - Players, Ball, Text ===
-      {
-        key: 'p',
-        action: () => addPlayerAtCursor('home'),
-        description: 'Add Home Player',
-        category: 'elements',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'p',
-        modifiers: ['shift'],
-        action: () => addPlayerAtCursor('away'),
-        description: 'Add Away Player',
-        category: 'elements',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'b',
-        action: () => addBallAtCursor(),
-        description: 'Add Ball',
-        category: 'elements',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 't',
-        action: () => addTextAtCursor(),
-        description: 'Add Text',
-        category: 'elements',
-        when: paletteClosedAndNotTyping,
-      },
-      
+    // Helper: Check if selected element is zone
+    const hasSelectedZone = () => elements.some((el) => 
+      selectedIds.includes(el.id) && isZoneElement(el)
+    );
+    
+    const key = e.key.toLowerCase();
+    
+    // Prevent browser shortcuts that conflict with ours
+    if (isCmd) {
+      const browserShortcuts = ['d', 's', 'e', 'g', 'k', 'a', 'c', 'v', 'z', '+', '=', '-'];
+      if (browserShortcuts.includes(key)) {
+        e.preventDefault();
+      }
+    }
+    
+    switch (key) {
+      // ===== ELEMENTS =====
+      case 'p':
+        if (isCmd && e.shiftKey) {
+          e.preventDefault();
+          handleExportPDF();
+        } else if (!isCmd && e.shiftKey) {
+          e.preventDefault();
+          addPlayerAtCursor('away');
+          showToast('Away Player');
+        } else if (!isCmd) {
+          e.preventDefault();
+          addPlayerAtCursor('home');
+          showToast('Home Player');
+        }
+        break;
+        
+      case 'b':
+        if (!isCmd) {
+          e.preventDefault();
+          addBallAtCursor();
+          showToast('Ball');
+        }
+        break;
+        
+      case 't':
+        if (!isCmd) {
+          e.preventDefault();
+          addTextAtCursor();
+          showToast('Text');
+        }
+        break;
+        
       // === Equipment ===
-      {
-        key: 'm',
-        action: () => addEquipmentAtCursor('mannequin', 'standard'),
-        description: 'Add Mannequin',
-        category: 'elements',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'm',
-        modifiers: ['shift'],
-        action: () => addEquipmentAtCursor('mannequin', 'flat'),
-        description: 'Add Flat Mannequin',
-        category: 'elements',
-        when: paletteClosedAndNotTyping,
-      },
-      
-      // === Edit Commands ===
-      {
-        key: 'z',
-        modifiers: ['meta'],
-        action: () => undo(),
-        description: 'Undo',
-        category: 'edit',
-      },
-      {
-        key: 'z',
-        modifiers: ['meta', 'shift'],
-        action: () => redo(),
-        description: 'Redo',
-        category: 'edit',
-      },
-      {
-        key: 'd',
-        modifiers: ['meta'],
-        action: () => duplicateSelected(),
-        description: 'Duplicate',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'c',
-        modifiers: ['meta'],
-        action: () => {
+      case 'm':
+        if (!isCmd) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            addEquipmentAtCursor('mannequin', 'flat');
+            showToast('Lying Mannequin');
+          } else {
+            addEquipmentAtCursor('mannequin');
+            showToast('Mannequin');
+          }
+        }
+        break;
+        
+      case 'k':
+        if (!isCmd) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            addEquipmentAtCursor('pole');
+            showToast('Pole');
+          } else {
+            addEquipmentAtCursor('cone');
+            showToast('Cone');
+          }
+        }
+        break;
+        
+      case 'q':
+        if (!isCmd) {
+          e.preventDefault();
+          addEquipmentAtCursor('hoop');
+          showToast('Hoop');
+        }
+        break;
+        
+      case 'u':
+        if (!isCmd) {
+          e.preventDefault();
+          addEquipmentAtCursor('hurdle');
+          showToast('Hurdle');
+        }
+        break;
+        
+      case 'y':
+        if (!isCmd) {
+          e.preventDefault();
+          addEquipmentAtCursor('ladder');
+          showToast('Ladder');
+        }
+        break;
+        
+      case 'j':
+        if (!isCmd) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            addEquipmentAtCursor('goal', 'mini');
+            showToast('Mini Goal');
+          } else {
+            addEquipmentAtCursor('goal');
+            showToast('Goal');
+          }
+        }
+        break;
+        
+      // ===== EDIT COMMANDS =====
+      case 'z':
+        if (isCmd && e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else if (isCmd) {
+          e.preventDefault();
+          undo();
+        } else {
+          // Z = rect zone tool, Shift+Z = ellipse zone tool
+          e.preventDefault();
+          setActiveTool(e.shiftKey ? 'zone-ellipse' : 'zone');
+        }
+        break;
+        
+      case 'd':
+        if (isCmd) {
+          e.preventDefault();
+          duplicateSelected();
+          showToast('Duplicated');
+        } else {
+          e.preventDefault();
+          setActiveTool('drawing');
+        }
+        break;
+        
+      case 'c':
+        if (isCmd) {
+          e.preventDefault();
           copySelection();
           showToast('Copied');
-        },
-        description: 'Copy',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'v',
-        modifiers: ['meta'],
-        action: () => {
-          pasteClipboard();
-          showToast('Pasted');
-        },
-        description: 'Paste',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'a',
-        modifiers: ['meta'],
-        action: () => selectAll(),
-        description: 'Select All',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'g',
-        modifiers: ['meta'],
-        action: () => {
-          createGroup();
-          showToast('Group created');
-        },
-        description: 'Create Group',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      
-      // === Tools ===
-      {
-        key: 'd',
-        action: () => setActiveTool('drawing'),
-        description: 'Drawing Tool',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'h',
-        action: () => setActiveTool('highlighter'),
-        description: 'Highlighter Tool',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'a',
-        action: () => setActiveTool('arrow-pass'),
-        description: 'Pass Arrow Tool',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'r',
-        action: () => setActiveTool('arrow-run'),
-        description: 'Run Arrow Tool',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'z',
-        action: () => setActiveTool('zone'),
-        description: 'Rectangle Zone Tool',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'z',
-        modifiers: ['shift'],
-        action: () => setActiveTool('zone-ellipse'),
-        description: 'Ellipse Zone Tool',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'c',
-        action: () => {
+        } else {
+          // C = Clear all drawings
+          e.preventDefault();
           clearAllDrawings();
           showToast('Drawings cleared');
-        },
-        description: 'Clear All Drawings',
-        category: 'tools',
-        when: paletteClosedAndNotTyping,
-      },
-      
-      // === Edit Selected ===
-      {
-        key: 'e',
-        action: () => {
-          const elements = useBoardStore.getState().elements;
-          const selectedIds = useBoardStore.getState().selectedIds;
-          const hasZone = elements.some((el) => 
-            selectedIds.includes(el.id) && el.type === 'zone'
-          );
-          if (hasZone) {
-            cycleZoneShape();
-            showToast('Zone shape changed');
-          }
-        },
-        description: 'Cycle Zone Shape',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 's',
-        action: () => {
-          const elements = useBoardStore.getState().elements;
-          const selectedIds = useBoardStore.getState().selectedIds;
-          const hasPlayer = elements.some((el) => 
-            selectedIds.includes(el.id) && el.type === 'player'
-          );
-          if (hasPlayer) {
-            cyclePlayerShape();
-            showToast('Shape changed');
-          }
-        },
-       description: 'Cycle Player Shape',
-        category: 'edit',
-        when: paletteClosedAndNotTyping,
-      },
-      
-      // === View ===
-      {
-        key: 'v',
-        action: () => {
+        }
+        break;
+        
+      case 'v':
+        if (isCmd) {
+          e.preventDefault();
+          pasteClipboard();
+          showToast('Pasted');
+        } else {
+          // V = Cycle pitch views
+          e.preventDefault();
           const VIEWS = ['full', 'plain', 'half-left', 'half-right'] as const;
           const currentView = getPitchSettings()?.view ?? 'full';
           const currentIdx = VIEWS.indexOf(currentView as typeof VIEWS[number]);
@@ -292,136 +314,390 @@ export function useKeyboardShortcuts(
             updatePitchSettings({
               view: nextView,
               lines: {
-                showOutline: false,
-                showCenterLine: false,
-                showCenterCircle: false,
-                showPenaltyAreas: false,
-                showGoalAreas: false,
-                showCornerArcs: false,
-                showPenaltySpots: false,
+                showOutline: false, showCenterLine: false, showCenterCircle: false,
+                showPenaltyAreas: false, showGoalAreas: false, showCornerArcs: false, showPenaltySpots: false,
               },
             });
           } else {
             updatePitchSettings({
               view: nextView,
               lines: {
-                showOutline: true,
-                showCenterLine: true,
-                showCenterCircle: true,
-                showPenaltyAreas: true,
-                showGoalAreas: true,
-                showCornerArcs: true,
-                showPenaltySpots: true,
+                showOutline: true, showCenterLine: true, showCenterCircle: true,
+                showPenaltyAreas: true, showGoalAreas: true, showCornerArcs: true, showPenaltySpots: true,
               },
             });
           }
-          
           const viewNames: Record<string, string> = {
-            full: 'Full pitch',
-            plain: 'Plain grass',
-            'half-left': 'Half (left)',
-            'half-right': 'Half (right)',
+            full: 'Full pitch', plain: 'Plain grass', 'half-left': 'Half (left)', 'half-right': 'Half (right)',
           };
           showToast(viewNames[nextView] ?? nextView);
-        },
-        description: 'Cycle Pitch View',
-        category: 'view',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'g',
-        action: () => {
+        }
+        break;
+        
+      case 'g':
+        if (isCmd && e.shiftKey) {
+          e.preventDefault();
+          handleExportGIF();
+        } else if (isCmd) {
+          e.preventDefault();
+          createGroup();
+          showToast('Group created');
+        } else {
+          // G = Toggle grid
+          e.preventDefault();
           toggleGrid();
-          showToast(gridVisible ? 'Grid hidden' : 'Grid visible');
-        },
-        description: 'Toggle Grid',
-        category: 'view',
-        when: paletteClosedAndNotTyping,
-      },
-      
-      // === Save ===
-      {
-        key: 's',
-        modifiers: ['meta'],
-        action: async () => {
+          showToast(uiState.gridVisible ? 'Grid hidden' : 'Grid visible');
+        }
+        break;
+        
+      case 'a':
+        if (isCmd) {
+          e.preventDefault();
+          selectAll();
+        } else {
+          e.preventDefault();
+          setActiveTool('arrow-pass');
+        }
+        break;
+        
+      case 'r':
+        if (!isCmd) {
+          e.preventDefault();
+          setActiveTool('arrow-run');
+        }
+        break;
+        
+      case 'h':
+        if (!isCmd) {
+          e.preventDefault();
+          setActiveTool('highlighter');
+        }
+        break;
+        
+      case 'e':
+        // E = cycle zone shape when zone selected
+        if (!isCmd && hasSelectedZone()) {
+          e.preventDefault();
+          cycleZoneShape();
+          showToast('Zone shape changed');
+        } else if (isCmd) {
+          // Cmd+E = Export PNG
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleExportAllSteps();
+          } else {
+            handleExportPNG();
+          }
+        }
+        break;
+        
+      case 's':
+        if (isCmd) {
+          e.preventDefault();
           saveDocument();
           if (authIsAuthenticated) {
-            const success = await saveToCloud();
-            if (success) {
-              await fetchCloudProjects();
-              showToast('Saved to cloud ☁️');
-            } else {
-              showToast('Saved locally');
-            }
+            saveToCloud().then(async (success) => {
+              if (success) {
+                await fetchCloudProjects();
+                showToast('Saved to cloud ☁️');
+              } else {
+                showToast('Saved locally');
+              }
+            });
           } else {
             showToast('Saved locally');
           }
-        },
-        description: 'Save Document',
-        category: 'edit',
-      },
+        } else if (hasSelectedPlayer()) {
+          // S key = cycle player shape
+          e.preventDefault();
+          cyclePlayerShape();
+          showToast('Shape changed');
+        }
+        break;
+        
+      // ===== VIEW =====
+      case 'i':
+        if (!isCmd) {
+          e.preventDefault();
+          toggleInspector();
+        }
+        break;
+        
+      case 'f':
+        if (!isCmd) {
+          e.preventDefault();
+          toggleFocusMode();
+        }
+        break;
+        
+      case '?':
+        e.preventDefault();
+        toggleCheatSheet();
+        break;
+        
+      case 'o':
+        // O = Toggle orientation
+        if (!isCmd) {
+          e.preventDefault();
+          const currentOrientation = getPitchSettings()?.orientation ?? 'landscape';
+          const newOrientation = currentOrientation === 'landscape' ? 'portrait' : 'landscape';
+          updatePitchSettings({ orientation: newOrientation });
+          if (newOrientation === 'portrait') {
+            useUIStore.getState().setZoom(0.75);
+          } else {
+            useUIStore.getState().setZoom(1.0);
+          }
+          showToast(newOrientation === 'portrait' ? 'Portrait mode (75%)' : 'Landscape mode');
+        }
+        break;
+        
+      case 'w':
+        // W = Toggle print friendly mode
+        if (!isCmd) {
+          e.preventDefault();
+          const currentSettings = getPitchSettings();
+          const isPrintFriendly = currentSettings?.primaryColor === '#ffffff' && currentSettings?.lineColor === '#000000';
+          if (isPrintFriendly) {
+            updatePitchSettings({ 
+              primaryColor: '#4ade80', stripeColor: '#22c55e', lineColor: '#ffffff', showStripes: true
+            });
+            showToast('Normal colors');
+          } else {
+            updatePitchSettings({ 
+              primaryColor: '#ffffff', stripeColor: '#ffffff', lineColor: '#000000', showStripes: false
+            });
+            showToast('Print Friendly mode');
+          }
+        }
+        break;
+        
+      // ===== SELECTION =====
+      case 'delete':
+      case 'backspace':
+        e.preventDefault();
+        deleteSelected();
+        break;
+        
+      case 'escape':
+        clearSelection();
+        break;
+        
+      case 'enter':
+        // Enter on selected text = start editing
+        if (selectedIds.length === 1) {
+          const textEl = getSelectedText();
+          if (textEl && onStartEditingText) {
+            e.preventDefault();
+            onStartEditingText(textEl.id, textEl.content);
+          }
+        }
+        break;
+        
+      // ===== STEPS & PLAYBACK =====
+      case ' ':
+        e.preventDefault();
+        isPlaying ? pause() : play();
+        break;
+        
+      case 'l':
+        if (!isCmd) {
+          e.preventDefault();
+          toggleLoop();
+          showToast(uiState.isLooping ? 'Loop disabled' : 'Loop enabled');
+        }
+        break;
+        
+      case 'n':
+        if (!isCmd) {
+          e.preventDefault();
+          addStep();
+          showToast('New step added');
+        }
+        break;
+        
+      case 'x':
+        // X = Delete current step (only if more than 1 step)
+        if (!isCmd && boardDoc.steps.length > 1) {
+          e.preventDefault();
+          removeStep(currentStepIndex);
+          showToast('Step deleted');
+        }
+        break;
+        
+      // ===== ARROW KEYS =====
+      case 'arrowup':
+        e.preventDefault();
+        {
+          const textEl = getSelectedText();
+          if (textEl) {
+            if (e.shiftKey) {
+              // Shift+Up = cycle background color
+              const BG_COLORS = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#3b82f6', '#1f2937'];
+              const currentBg = textEl.backgroundColor;
+              const currentIndex = currentBg ? BG_COLORS.indexOf(currentBg) : -1;
+              const newBg = BG_COLORS[(currentIndex + 1) % BG_COLORS.length];
+              updateTextProperties(textEl.id, { backgroundColor: newBg });
+              showToast(`Background: ${newBg}`);
+            } else {
+              // Up = increase font size
+              const newSize = Math.min(72, (textEl.fontSize || 18) + 2);
+              updateTextProperties(textEl.id, { fontSize: newSize });
+              showToast(`Font size: ${newSize}px`);
+            }
+          } else if (e.altKey) {
+            cycleSelectedColor(-1);
+            showToast('Previous color');
+          } else {
+            nudgeSelected(0, e.shiftKey ? -1 : -5);
+          }
+        }
+        break;
+        
+      case 'arrowdown':
+        e.preventDefault();
+        {
+          const textEl = getSelectedText();
+          if (textEl) {
+            if (e.shiftKey) {
+              updateTextProperties(textEl.id, { backgroundColor: undefined });
+              showToast('Background removed');
+            } else {
+              const newSize = Math.max(8, (textEl.fontSize || 18) - 2);
+              updateTextProperties(textEl.id, { fontSize: newSize });
+              showToast(`Font size: ${newSize}px`);
+            }
+          } else if (e.altKey) {
+            cycleSelectedColor(1);
+            showToast('Next color');
+          } else {
+            nudgeSelected(0, e.shiftKey ? 1 : 5);
+          }
+        }
+        break;
+        
+      case 'arrowleft':
+        e.preventDefault();
+        {
+          const textEl = getSelectedText();
+          if (textEl) {
+            updateTextProperties(textEl.id, { bold: !textEl.bold });
+            showToast(textEl.bold ? 'Normal' : 'Bold');
+          } else if (e.altKey) {
+            adjustSelectedStrokeWidth(-1);
+            showToast('Thinner stroke');
+          } else if (!isCmd && selectedIds.length === 0) {
+            prevStep();
+          } else {
+            nudgeSelected(e.shiftKey ? -1 : -5, 0);
+          }
+        }
+        break;
+        
+      case 'arrowright':
+        e.preventDefault();
+        {
+          const textEl = getSelectedText();
+          if (textEl) {
+            updateTextProperties(textEl.id, { italic: !textEl.italic });
+            showToast(textEl.italic ? 'Normal' : 'Italic');
+          } else if (e.altKey) {
+            adjustSelectedStrokeWidth(1);
+            showToast('Thicker stroke');
+          } else if (!isCmd && selectedIds.length === 0) {
+            nextStep();
+          } else {
+            nudgeSelected(e.shiftKey ? 1 : 5, 0);
+          }
+        }
+        break;
+        
+      // ===== ZOOM =====
+      case '=':
+      case '+':
+        if (isCmd) {
+          e.preventDefault();
+          zoomIn();
+        }
+        break;
+        
+      case '-':
+        if (isCmd) {
+          e.preventDefault();
+          zoomOut();
+        }
+        break;
+        
+      // ===== ROTATION =====
+      case '[':
+        if (!isCmd) {
+          e.preventDefault();
+          rotateSelected(-15);
+          showToast('Rotated -15°');
+        }
+        break;
+        
+      case ']':
+        if (!isCmd) {
+          e.preventDefault();
+          rotateSelected(15);
+          showToast('Rotated +15°');
+        }
+        break;
+        
+      case '{':
+        if (!isCmd) {
+          e.preventDefault();
+          rotateSelected(-90);
+          showToast('Rotated -90°');
+        }
+        break;
+        
+      case '}':
+        if (!isCmd) {
+          e.preventDefault();
+          rotateSelected(90);
+          showToast('Rotated +90°');
+        }
+        break;
+    }
+    
+    // ===== FORMATIONS (1-6, Shift+1-6) =====
+    if (!isCmd && !e.altKey) {
+      const formationIndex: Record<string, number> = {
+        'Digit1': 0, 'Numpad1': 0, 'Digit2': 1, 'Numpad2': 1,
+        'Digit3': 2, 'Numpad3': 2, 'Digit4': 3, 'Numpad4': 3,
+        'Digit5': 4, 'Numpad5': 4, 'Digit6': 5, 'Numpad6': 5,
+      };
       
-      // === Export ===
-      {
-        key: 'p',
-        modifiers: ['meta', 'shift'],
-        action: () => handleExportPDF(),
-        description: 'Export PDF',
-        category: 'export',
-        when: paletteClosedAndNotTyping,
-      },
-      {
-        key: 'g',
-        modifiers: ['meta', 'shift'],
-        action: () => handleExportGIF(),
-        description: 'Export GIF',
-        category: 'export',
-        when: paletteClosedAndNotTyping,
-      },
-    ]);
-    
-    // Global keyboard event listener
-    const handleKeyDown = (e: KeyboardEvent) => {
-      keyboardService.handleKeyDown(e);
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      unsubscribe();
-    };
+      const idx = formationIndex[e.code];
+      if (idx !== undefined && formations[idx]) {
+        e.preventDefault();
+        const team = e.shiftKey ? 'away' : 'home';
+        applyFormation(formations[idx].id, team);
+        showToast(`${formations[idx].shortName} applied (${team})`);
+      }
+    }
   }, [
-    // Dependencies - all functions from stores and handlers
-    addPlayerAtCursor,
-    addBallAtCursor,
-    addTextAtCursor,
-    addEquipmentAtCursor,
-    duplicateSelected,
-    copySelection,
-    pasteClipboard,
-    clearAllDrawings,
-    createGroup,
-    undo,
-    redo,
-    selectAll,
-    cycleZoneShape,
-    cyclePlayerShape,
-    saveDocument,
-    saveToCloud,
-    fetchCloudProjects,
-    updatePitchSettings,
-    getPitchSettings,
-    commandPaletteOpen,
-    openCommandPalette,
-    closeCommandPalette,
-    setActiveTool,
-    toggleGrid,
-    gridVisible,
+    // Dependencies
+    commandPaletteOpen, closeCommandPalette, openCommandPalette, contextMenuVisible,
+    addPlayerAtCursor, addBallAtCursor, addTextAtCursor, addEquipmentAtCursor,
+    duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, createGroup,
+    undo, redo, selectAll, clearSelection, deleteSelected,
+    cycleZoneShape, cyclePlayerShape, saveDocument, saveToCloud, fetchCloudProjects,
+    updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
+    cycleSelectedColor, rotateSelected, updateTextProperties, applyFormation,
+    setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
+    zoomIn, zoomOut, isPlaying, play, pause, toggleLoop,
+    removeStep, prevStep, nextStep, addStep,
     authIsAuthenticated,
-    handleExportPDF,
-    handleExportGIF,
-    showToast,
+    handleExportPNG, handleExportAllSteps, handleExportPDF, handleExportGIF,
+    showToast, onStartEditingText,
   ]);
+  
+  // Attach/detach event listener
+  // Use capture: true to intercept events BEFORE browser shortcuts
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [handleKeyDown]);
 }
