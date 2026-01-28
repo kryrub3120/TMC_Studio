@@ -169,7 +169,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             onPlayerQuickEdit={(id) => {
               const player = elements.find(el => el.id === id && isPlayerElement(el));
               if (player && isPlayerElement(player)) {
-                onPlayerQuickEdit(id, player.number);
+                onPlayerQuickEdit(id, player.number ?? 0);
               }
             }}
           />

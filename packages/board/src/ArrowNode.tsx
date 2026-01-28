@@ -21,6 +21,7 @@ export interface ArrowNodeProps {
 const ARROW_COLORS = {
   pass: '#3b82f6', // Blue
   run: '#f97316', // Orange
+  shoot: '#f97316', // Orange (same as run for now)
 };
 
 type DraggingEndpoint = 'start' | 'end' | null;
@@ -205,6 +206,37 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
         lineJoin="round"
         hitStrokeWidth={15}
       />
+      
+      {/* Double chevron for shoot arrows */}
+      {arrow.arrowType === 'shoot' && (() => {
+        // Calculate vector and length
+        const dx = endRelX - startRelX;
+        const dy = endRelY - startRelY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        
+        // Only show second chevron if arrow is long enough (> 20px)
+        if (length < 20) return null;
+        
+        // Calculate point 15px before the end (second chevron position)
+        const offset = 15;
+        const ratio = (length - offset) / length;
+        const secondChevronX = startRelX + dx * ratio;
+        const secondChevronY = startRelY + dy * ratio;
+        
+        return (
+          <Arrow
+            points={[startRelX, startRelY, secondChevronX, secondChevronY]}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill={color}
+            pointerLength={10}
+            pointerWidth={8}
+            lineCap="round"
+            lineJoin="round"
+            listening={false} // Don't interfere with selection
+          />
+        );
+      })()}
 
       {/* Selection highlight and endpoint handles */}
       {isSelected && (

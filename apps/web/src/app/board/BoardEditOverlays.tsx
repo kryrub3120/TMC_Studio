@@ -10,7 +10,7 @@ export interface BoardEditOverlaysProps {
     elementExists: boolean;
     value: string;
     onChange: (v: string) => void;
-    onKeyDown: (e: ReactKeyboardEvent<HTMLInputElement>) => void;
+    onKeyDown: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
     onBlur: () => void;
     style: React.CSSProperties | null;
     inputStyle: React.CSSProperties | null; // font style for text
@@ -36,14 +36,14 @@ export function BoardEditOverlays(props: BoardEditOverlaysProps) {
           className="absolute pointer-events-auto"
           style={text.style}
         >
-          <input
-            type="text"
+          <textarea
             value={text.value}
             onChange={(e) => text.onChange(e.target.value)}
             onKeyDown={text.onKeyDown}
             onBlur={text.onBlur}
             autoFocus
-            className="px-2 py-1 bg-surface border border-accent rounded text-white text-base min-w-[100px] outline-none shadow-lg"
+            rows={1}
+            className="px-2 py-1 bg-surface border border-accent rounded text-white text-base min-w-[100px] outline-none shadow-lg resize-none overflow-hidden"
             style={text.inputStyle ?? undefined}
           />
         </div>

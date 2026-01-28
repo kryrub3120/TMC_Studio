@@ -92,7 +92,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
     if (onQuickEditNumber) {
-      onQuickEditNumber(player.id, player.number);
+      onQuickEditNumber(player.id, player.number ?? 0);
     }
   };
 
@@ -249,20 +249,22 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       )}
       
       {/* Player number or label (inside shape) */}
-      <Text
-        x={-PLAYER_RADIUS}
-        y={-(player.fontSize ?? 14) / 2}
-        width={PLAYER_RADIUS * 2}
-        text={player.showLabel && player.label ? player.label : String(player.number)}
-        fontSize={player.fontSize ?? 14}
-        fontFamily="Inter, system-ui, sans-serif"
-        fontStyle="bold"
-        fill={player.textColor ?? colors.text}
-        align="center"
-        verticalAlign="middle"
-        listening={false}
-        perfectDrawEnabled={false}
-      />
+      {(player.showLabel && player.label) || player.number != null ? (
+        <Text
+          x={-PLAYER_RADIUS}
+          y={-(player.fontSize ?? 14) / 2}
+          width={PLAYER_RADIUS * 2}
+          text={player.showLabel && player.label ? player.label : String(player.number)}
+          fontSize={player.fontSize ?? 14}
+          fontFamily="Inter, system-ui, sans-serif"
+          fontStyle="bold"
+          fill={player.textColor ?? colors.text}
+          align="center"
+          verticalAlign="middle"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ) : null}
       
       {/* Additional label below shape (only if not showing label inside) */}
       {player.label && !player.showLabel && (

@@ -28,14 +28,14 @@ export interface BoardElementBase {
 export interface PlayerElement extends BoardElementBase {
   type: 'player';
   team: Team;
-  number: number;
+  number?: number | null; // Optional - null or undefined means no number displayed
   label?: string;
   shape?: PlayerShape; // Default: 'circle'
   showLabel?: boolean; // Show label instead of number
   fontSize?: number; // Custom font size (default: 12)
   textColor?: string; // Custom text color (overrides team color)
   opacity?: number; // Element opacity 0-1 (default: 1)
-  isGoalkeeper?: boolean; // Uses team's goalkeeperColor instead of primaryColor
+  isGoalkeeper?: boolean; // Uses team's goalkeeperColor instead of primaryColor (takes precedence over number-based detection)
 }
 
 /** Ball element on the board */
@@ -44,7 +44,7 @@ export interface BallElement extends BoardElementBase {
 }
 
 /** Arrow types for tactical movements */
-export type ArrowType = 'pass' | 'run';
+export type ArrowType = 'pass' | 'run' | 'shoot';
 
 /** Arrow element (pass/run lines) */
 export interface ArrowElement {

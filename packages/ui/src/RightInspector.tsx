@@ -12,7 +12,7 @@ export interface InspectorElement {
   id: string;
   type: 'player' | 'ball' | 'arrow' | 'zone' | 'text';
   team?: 'home' | 'away';
-  number?: number;
+  number?: number | null; // Can be null for players without numbers
   label?: string;
   showLabel?: boolean;
   fontSize?: number;
@@ -251,8 +251,19 @@ const PropsTab: React.FC<{
               min={1}
               max={99}
               value={selectedElement.number ?? ''}
-              onChange={(e) => onUpdateElement?.({ number: parseInt(e.target.value) || undefined })}
-              className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text focus:outline-none focus:border-accent"
+              onChange={(e) => {
+                const value = e.target.value.trim();
+                if (value === '') {
+                  onUpdateElement?.({ number: undefined });
+                } else {
+                  const num = parseInt(value);
+                  if (!isNaN(num) && num >= 1 && num <= 99) {
+                    onUpdateElement?.({ number: num });
+                  }
+                }
+              }}
+              placeholder="No number"
+              className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
             />
           </div>
           

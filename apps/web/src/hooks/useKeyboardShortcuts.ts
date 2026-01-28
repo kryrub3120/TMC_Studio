@@ -67,6 +67,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const copySelection = useBoardStore((s) => s.copySelection);
   const pasteClipboard = useBoardStore((s) => s.pasteClipboard);
   const clearAllDrawings = useBoardStore((s) => s.clearAllDrawings);
+  const setElements = useBoardStore((s) => s.setElements);
   const createGroup = useBoardStore((s) => s.createGroup);
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
@@ -83,6 +84,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const adjustSelectedStrokeWidth = useBoardStore((s) => s.adjustSelectedStrokeWidth);
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
   const rotateSelected = useBoardStore((s) => s.rotateSelected);
+  const resizeSelected = useBoardStore((s) => s.resizeSelected);
   const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const applyFormation = useBoardStore((s) => s.applyFormation);
   const removeStep = useBoardStore((s) => s.removeStep);
@@ -293,11 +295,18 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           copySelection();
           showToast('Copied');
+        } else if (e.shiftKey) {
+          // Shift+C = Clear all elements on this step
+          e.preventDefault();
+          if (window.confirm('Clear all elements on this step? Undo available (Cmd+Z).')) {
+            setElements([]);
+            showToast('All elements cleared');
+          }
         } else {
-          // C = Clear all drawings
+          // C = Clear drawings only (no confirmation, undoable)
           e.preventDefault();
           clearAllDrawings();
-          showToast('Drawings cleared');
+          showToast('Drawings cleared • Undo: Cmd+Z');
         }
         break;
         
@@ -412,11 +421,15 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           } else {
             showToast('Saved locally');
           }
-        } else if (hasSelectedPlayer()) {
-          // S key = cycle player shape
+        } else if (e.shiftKey && hasSelectedPlayer()) {
+          // Shift+S = cycle player shape (when player selected)
           e.preventDefault();
           cyclePlayerShape();
           showToast('Shape changed');
+        } else if (!e.shiftKey) {
+          // S = shoot arrow (primary shortcut)
+          e.preventDefault();
+          setActiveTool('arrow-shoot');
         }
         break;
         
@@ -616,17 +629,27 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         }
         break;
         
-      // ===== ZOOM =====
+      // ===== ZOOM & RESIZE =====
       case '=':
       case '+':
-        if (isCmd) {
+        if (isCmd && e.altKey) {
+          // Option+Cmd+= = Resize up +10%
+          e.preventDefault();
+          resizeSelected(1.1);
+          showToast('Resized +10%');
+        } else if (isCmd) {
           e.preventDefault();
           zoomIn();
         }
         break;
         
       case '-':
-        if (isCmd) {
+        if (isCmd && e.altKey) {
+          // Option+Cmd+- = Resize down -10%
+          e.preventDefault();
+          resizeSelected(0.9);
+          showToast('Resized -10%');
+        } else if (isCmd) {
           e.preventDefault();
           zoomOut();
         }
@@ -687,11 +710,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     cmdRegistry,
     commandPaletteOpen, closeCommandPalette, openCommandPalette, contextMenuVisible,
     addPlayerAtCursor, addBallAtCursor, addTextAtCursor, addEquipmentAtCursor,
-    duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, createGroup,
+    duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements, createGroup,
     undo, redo, deleteSelected,
     cycleZoneShape, cyclePlayerShape, saveDocument, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
-    cycleSelectedColor, rotateSelected, updateTextProperties, applyFormation,
+    cycleSelectedColor, rotateSelected, resizeSelected, updateTextProperties, applyFormation,
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
     zoomIn, zoomOut, isPlaying, play, pause, toggleLoop,
     removeStep, prevStep, nextStep, addStep,

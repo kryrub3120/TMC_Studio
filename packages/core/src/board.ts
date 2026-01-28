@@ -48,7 +48,7 @@ export function createPlayer(
     position: snapToGrid(position, gridSize),
     team,
     number,
-    shape: 'circle', // Default shape is circle
+    shape: team === 'home' ? 'triangle' : 'circle', // Home=triangle, Away=circle for instant visual distinction
     isGoalkeeper: number === 1, // Nr 1 is always goalkeeper by default
   };
 }
@@ -72,9 +72,27 @@ export function createArrow(
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): ArrowElement {
   const snappedStart = snapToGrid(startPoint, gridSize);
-  // Default colors: pass = bright red, run = bright blue
-  const defaultColor = arrowType === 'pass' ? '#ff0000' : '#3b82f6';
-  const defaultStroke = arrowType === 'pass' ? 4 : 3;
+  // Default colors: pass = red, run = blue, shoot = orange
+  let defaultColor: string;
+  let defaultStroke: number;
+  
+  switch (arrowType) {
+    case 'pass':
+      defaultColor = '#ff0000'; // Red
+      defaultStroke = 4;
+      break;
+    case 'run':
+      defaultColor = '#3b82f6'; // Blue
+      defaultStroke = 3;
+      break;
+    case 'shoot':
+      defaultColor = '#f97316'; // Orange
+      defaultStroke = 5; // Thicker for shoot
+      break;
+    default:
+      defaultColor = '#ff0000';
+      defaultStroke = 4;
+  }
   
   return {
     id: generateId(),

@@ -66,6 +66,7 @@ export function useDrawingController(): DrawingController {
            tool === 'highlighter' || 
            tool === 'arrow-pass' || 
            tool === 'arrow-run' || 
+           tool === 'arrow-shoot' ||
            tool === 'zone' || 
            tool === 'zone-ellipse';
   }, []);
@@ -84,7 +85,7 @@ export function useDrawingController(): DrawingController {
     }
     
     // Arrow/zone tools
-    if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'zone' || activeTool === 'zone-ellipse') {
+    if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'arrow-shoot' || activeTool === 'zone' || activeTool === 'zone-ellipse') {
       startDrawing(pos);
       return true;
     }
@@ -130,6 +131,10 @@ export function useDrawingController(): DrawingController {
         return true;
       } else if (activeTool === 'arrow-run') {
         finishArrowDrawing('run');
+        clearActiveTool();
+        return true;
+      } else if (activeTool === 'arrow-shoot') {
+        finishArrowDrawing('shoot');
         clearActiveTool();
         return true;
       } else if (activeTool === 'zone') {

@@ -33,7 +33,7 @@ export interface TextEditController {
     setValue: (v: string) => void;
     save: () => void;
     cancel: () => void;
-    onKeyDown: (e: ReactKeyboardEvent<HTMLInputElement>) => void;
+    onKeyDown: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   };
 
   player: {
@@ -102,13 +102,16 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
   }, []);
 
   const handleTextKeyDown = useCallback(
-    (e: ReactKeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+    (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // Enter without Shift = save
         e.preventDefault();
         saveTextEdit();
       } else if (e.key === 'Escape') {
+        e.preventDefault();
         cancelTextEdit();
       }
+      // Shift+Enter = add newline (default textarea behavior, no preventDefault)
     },
     [saveTextEdit, cancelTextEdit]
   );

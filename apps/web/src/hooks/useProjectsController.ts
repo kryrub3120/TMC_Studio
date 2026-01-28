@@ -76,6 +76,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   const saveToCloud = useBoardStore((s) => s.saveToCloud);
   const fetchCloudProjects = useBoardStore((s) => s.fetchCloudProjects);
   const newDocument = useBoardStore((s) => s.newDocument);
+  const markDirty = useBoardStore((s) => s.markDirty);
   const showToast = useUIStore((s) => s.showToast);
   
   // Entitlements
@@ -244,8 +245,9 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
         updatedAt: new Date().toISOString(),
       },
     }));
+    markDirty(); // Trigger autosave to persist rename to cloud
     showToast('Project renamed');
-  }, [showToast]);
+  }, [markDirty, showToast]);
   
   /**
    * Refresh projects list

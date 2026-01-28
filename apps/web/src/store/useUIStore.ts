@@ -13,6 +13,7 @@ export type ActiveTool =
   | 'ball'
   | 'arrow-pass'
   | 'arrow-run'
+  | 'arrow-shoot'
   | 'zone'
   | 'zone-ellipse'
   | 'text'
@@ -269,6 +270,7 @@ export const useUIStore = create<UIState>()(
             'ball': 'Ball',
             'arrow-pass': 'Pass Arrow',
             'arrow-run': 'Run Arrow',
+            'arrow-shoot': 'Shoot Arrow',
             'zone': 'Zone',
             'text': 'Text',
           };

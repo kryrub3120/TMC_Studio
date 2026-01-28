@@ -38,7 +38,8 @@ function getNextPlayerNumber(elements: BoardElement[], team: Team): number {
   const teamPlayers = elements.filter(
     (el) => isPlayerElement(el) && el.team === team
   ) as PlayerElement[];
-  const numbers = teamPlayers.map((p) => p.number);
+  // Filter out null/undefined numbers before checking
+  const numbers = teamPlayers.map((p) => p.number).filter((n): n is number => n != null);
   let next = 1;
   while (numbers.includes(next)) {
     next++;
@@ -81,6 +82,7 @@ export interface ElementsSlice {
   cyclePlayerShape: () => void;
   cycleZoneShape: () => void;
   rotateSelected: (degrees: number) => void;
+  resizeSelected: (scaleFactor: number) => void;
   
   // Freehand drawing
   finishFreehandDrawing: () => void;
@@ -461,6 +463,48 @@ export const createElementsSlice: StateCreator<
           const currentRotation = equipment.rotation ?? 0;
           const newRotation = ((currentRotation + degrees) % 360 + 360) % 360;
           return { ...el, rotation: newRotation };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  resizeSelected: (scaleFactor) => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    
+    // Clamp scale between 0.4 and 2.5 (40% to 250%)
+    const clampedScale = Math.max(0.4, Math.min(2.5, scaleFactor));
+    
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (selectedIds.includes(el.id)) {
+          // Players and Ball - scale radius
+          if (isPlayerElement(el) || el.type === 'ball') {
+            const element = el as { radius?: number };
+            const defaultRadius = el.type === 'ball' ? 8 : 20;
+            const currentRadius = element.radius ?? defaultRadius;
+            return { ...el, radius: currentRadius * clampedScale };
+          }
+          // Equipment - add scale property
+          if (el.type === 'equipment') {
+            return { ...el, scale: clampedScale };
+          }
+          // Zones - scale dimensions
+          if (el.type === 'zone') {
+            const zone = el as { width?: number; height?: number };
+            return {
+              ...el,
+              width: (zone.width ?? 120) * clampedScale,
+              height: (zone.height ?? 80) * clampedScale,
+            };
+          }
+          // Text - scale font size
+          if (isTextElement(el)) {
+            const currentSize = el.fontSize ?? 18;
+            return { ...el, fontSize: Math.round(currentSize * clampedScale) };
+          }
         }
         return el;
       }),
