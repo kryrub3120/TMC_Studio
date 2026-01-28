@@ -4,14 +4,12 @@
  */
 
 import { ReactNode } from 'react';
-import { Stage, Layer } from 'react-konva';
-import { Line } from 'react-konva';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement } from '@tmc/core';
-import type { BoardElement, Position, PitchSettings, TeamSettings, EquipmentElement } from '@tmc/core';
-import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
+import { DEFAULT_PITCH_SETTINGS, isPlayerElement } from '@tmc/core';
+import type { BoardElement, Position, PitchSettings, TeamSettings } from '@tmc/core';
 import { CanvasShell } from '../../components/CanvasShell';
 import { BoardCanvas } from '../../components/Canvas/BoardCanvas';
+import { CanvasAdapter } from './canvas/CanvasAdapter';
 
 export interface BoardCanvasSectionProps {
   // Canvas config
@@ -176,191 +174,42 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             }}
           />
         ) : (
-          <Stage
-            ref={stageRef}
-            width={canvasWidth}
-            height={canvasHeight}
-            onClick={onStageClick}
-            onTap={onStageClick}
-            onMouseDown={onStageMouseDown}
-            onTouchStart={onStageMouseDown}
-            onMouseUp={onStageMouseUp}
-            onTouchEnd={onStageMouseUp}
-            onMouseMove={onStageMouseMove}
-            onTouchMove={onStageMouseMove}
+          <CanvasAdapter
+            stageRef={stageRef}
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+            pitchConfig={pitchConfig}
+            pitchSettings={pitchSettings}
+            teamSettings={teamSettings}
+            gridVisible={gridVisible}
+            layerVisibility={layerVisibility}
+            hiddenByGroup={hiddenByGroup}
+            elements={elements}
+            selectedIds={selectedIds}
+            isPlaying={isPlaying}
+            activeTool={activeTool}
+            marqueeStart={marqueeStart}
+            marqueeEnd={marqueeEnd}
+            drawingStart={drawingStart}
+            drawingEnd={drawingEnd}
+            freehandPoints={freehandPoints}
+            onStageClick={onStageClick}
+            onStageMouseDown={onStageMouseDown}
+            onStageMouseMove={onStageMouseMove}
+            onStageMouseUp={onStageMouseUp}
             onContextMenu={onContextMenu}
-          >
-            <Layer>
-              <Pitch config={pitchConfig} pitchSettings={pitchSettings} gridVisible={gridVisible} />
-
-              {/* Zones */}
-              {layerVisibility.zones && elements
-                .filter(isZoneElement)
-                .map((zone) => {
-                  const interpolated = getInterpolatedZone(zone.id, zone.position, zone.width, zone.height);
-                  const animatedZone = { ...zone, position: interpolated.position, width: interpolated.width, height: interpolated.height };
-                  return (
-                    <ZoneNode
-                      key={zone.id}
-                      zone={animatedZone}
-                      pitchConfig={pitchConfig}
-                      isSelected={!isPlaying && selectedIds.includes(zone.id)}
-                      onSelect={isPlaying ? () => {} : onElementSelect}
-                      onDragEnd={isPlaying ? () => {} : onElementDragEnd}
-                      onResize={onResizeZone}
-                    />
-                  );
-                })}
-
-              {/* Arrows */}
-              {layerVisibility.arrows && elements
-                .filter(isArrowElement)
-                .map((arrow) => {
-                  const endpoints = getInterpolatedArrowEndpoints(arrow.id, arrow.startPoint, arrow.endPoint);
-                  const animatedArrow = { ...arrow, startPoint: endpoints.start, endPoint: endpoints.end };
-                  return (
-                    <ArrowNode
-                      key={arrow.id}
-                      arrow={animatedArrow}
-                      pitchConfig={pitchConfig}
-                      isSelected={!isPlaying && selectedIds.includes(arrow.id)}
-                      onSelect={isPlaying ? () => {} : onElementSelect}
-                      onDragEnd={isPlaying ? () => {} : onElementDragEnd}
-                      onEndpointDrag={(id, endpoint, pos) => {
-                        onUpdateArrowEndpoint(id, endpoint, pos);
-                        pushHistory();
-                      }}
-                    />
-                  );
-                })}
-
-              {/* Players */}
-              {elements
-                .filter(isPlayerElement)
-                .filter((player) => !hiddenByGroup.has(player.id))
-                .filter((player) => 
-                  (player.team === 'home' && layerVisibility.homePlayers) ||
-                  (player.team === 'away' && layerVisibility.awayPlayers)
-                )
-                .map((player) => {
-                  const animatedPlayer = { ...player, position: getInterpolatedPosition(player.id, player.position) };
-                  return (
-                    <PlayerNode
-                      key={player.id}
-                      player={animatedPlayer}
-                      pitchConfig={pitchConfig}
-                      teamSettings={teamSettings}
-                      isSelected={!isPlaying && selectedIds.includes(player.id)}
-                      onSelect={isPlaying ? () => {} : onElementSelect}
-                      onDragEnd={isPlaying ? () => {} : onElementDragEnd}
-                      onDragStart={isPlaying ? () => false : onElementDragStart}
-                      onQuickEditNumber={isPlaying ? undefined : onPlayerQuickEdit}
-                    />
-                  );
-                })}
-
-              {/* Ball */}
-              {layerVisibility.ball && elements
-                .filter(isBallElement)
-                .filter((ball) => !hiddenByGroup.has(ball.id))
-                .map((ball) => {
-                  const animatedBall = { ...ball, position: getInterpolatedPosition(ball.id, ball.position) };
-                  return (
-                    <BallNode
-                      key={ball.id}
-                      ball={animatedBall}
-                      pitchConfig={pitchConfig}
-                      isSelected={!isPlaying && selectedIds.includes(ball.id)}
-                      onSelect={isPlaying ? () => {} : onElementSelect}
-                      onDragEnd={isPlaying ? () => {} : onElementDragEnd}
-                      onDragStart={isPlaying ? () => false : onElementDragStart}
-                    />
-                  );
-                })}
-
-              {/* Equipment */}
-              {elements
-                .filter(isEquipmentElement)
-                .map((equipment) => {
-                  const animatedEquipment = { ...equipment, position: getInterpolatedPosition(equipment.id, equipment.position) };
-                  return (
-                    <EquipmentNode
-                      key={equipment.id}
-                      element={animatedEquipment as EquipmentElement}
-                      isSelected={!isPlaying && selectedIds.includes(equipment.id)}
-                      onSelect={isPlaying ? () => {} : onElementSelect}
-                      onDragEnd={isPlaying ? () => {} : (id, x, y) => {
-                        onElementDragEnd(id, { x, y });
-                      }}
-                    />
-                  );
-                })}
-
-              {/* Text elements */}
-              {layerVisibility.labels && elements
-                .filter(isTextElement)
-                .map((textEl) => {
-                  const animatedText = { ...textEl, position: getInterpolatedPosition(textEl.id, textEl.position) };
-                  return (
-                    <TextNode
-                      key={textEl.id}
-                      text={animatedText}
-                      pitchConfig={pitchConfig}
-                      isSelected={!isPlaying && selectedIds.includes(textEl.id)}
-                      onSelect={isPlaying ? () => {} : onElementSelect}
-                      onDragEnd={isPlaying ? () => {} : onElementDragEnd}
-                      onDragStart={isPlaying ? () => false : onElementDragStart}
-                      onDoubleClick={isPlaying ? undefined : onTextDoubleClick}
-                    />
-                  );
-                })}
-
-              {/* Drawing preview */}
-              {drawingStart && drawingEnd && (activeTool === 'arrow-pass' || activeTool === 'arrow-run') && (
-                <ArrowPreview start={drawingStart} end={drawingEnd} type={activeTool === 'arrow-pass' ? 'pass' : 'run'} />
-              )}
-              {drawingStart && drawingEnd && activeTool === 'zone' && (
-                <ZonePreview start={drawingStart} end={drawingEnd} shape="rect" />
-              )}
-              {drawingStart && drawingEnd && activeTool === 'zone-ellipse' && (
-                <ZonePreview start={drawingStart} end={drawingEnd} shape="ellipse" />
-              )}
-
-              {/* Freehand drawings */}
-              {elements.filter(isDrawingElement).map((drawing) => (
-                <DrawingNode
-                  key={drawing.id}
-                  drawing={drawing}
-                  isSelected={selectedIds.includes(drawing.id)}
-                  onSelect={onElementSelect}
-                />
-              ))}
-
-              {/* Live freehand preview */}
-              {freehandPoints && freehandPoints.length >= 4 && (
-                <Line
-                  points={freehandPoints}
-                  stroke={activeTool === 'highlighter' ? '#ffff00' : '#ff0000'}
-                  strokeWidth={activeTool === 'highlighter' ? 20 : 3}
-                  opacity={activeTool === 'highlighter' ? 0.4 : 1}
-                  lineCap="round"
-                  lineJoin="round"
-                  listening={false}
-                />
-              )}
-
-              {/* Marquee selection box */}
-              {marqueeStart && marqueeEnd && (
-                <SelectionBox
-                  x={marqueeStart.x}
-                  y={marqueeStart.y}
-                  width={marqueeEnd.x - marqueeStart.x}
-                  height={marqueeEnd.y - marqueeStart.y}
-                  visible={true}
-                />
-              )}
-            </Layer>
-          </Stage>
+            onElementSelect={onElementSelect}
+            onElementDragEnd={onElementDragEnd}
+            onElementDragStart={onElementDragStart}
+            onResizeZone={onResizeZone}
+            onUpdateArrowEndpoint={onUpdateArrowEndpoint}
+            onPlayerQuickEdit={onPlayerQuickEdit}
+            onTextDoubleClick={onTextDoubleClick}
+            pushHistory={pushHistory}
+            getInterpolatedPosition={getInterpolatedPosition}
+            getInterpolatedZone={getInterpolatedZone}
+            getInterpolatedArrowEndpoints={getInterpolatedArrowEndpoints}
+          />
         )}
       </CanvasShell>
     </div>

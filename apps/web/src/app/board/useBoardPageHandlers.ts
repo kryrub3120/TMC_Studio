@@ -7,6 +7,7 @@ import { useCallback, useMemo } from 'react';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
 import { isPlayerElement, isTextElement, isZoneElement } from '@tmc/core';
 import type { CommandAction } from '@tmc/ui';
+import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
 
 export interface BoardPageHandlersInput {
   // Board store actions
@@ -275,54 +276,78 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   // Command palette actions
   const commandActions: CommandAction[] = useMemo(() => {
     const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
-    const cmd = isMac ? '⌘' : 'Ctrl+';
-
-    return [
-      // Elements
-      { id: 'add-home-player', label: 'Add Home Player', shortcut: 'P', category: 'elements', onExecute: () => addPlayerAtCursor('home') },
-      { id: 'add-away-player', label: 'Add Away Player', shortcut: '⇧P', category: 'elements', onExecute: () => addPlayerAtCursor('away') },
-      { id: 'add-ball', label: 'Add Ball', shortcut: 'B', category: 'elements', onExecute: () => addBallAtCursor() },
-      { id: 'add-pass-arrow', label: 'Add Pass Arrow', shortcut: 'A', category: 'elements', onExecute: () => addArrowAtCursor('pass') },
-      { id: 'add-run-arrow', label: 'Add Run Arrow', shortcut: 'R', category: 'elements', onExecute: () => addArrowAtCursor('run') },
-      { id: 'add-zone', label: 'Add Zone', shortcut: 'Z', category: 'elements', onExecute: () => addZoneAtCursor() },
-      { id: 'add-text', label: 'Add Text', shortcut: 'T', category: 'elements', onExecute: () => addTextAtCursor() },
-
-      // Edit
-      { id: 'duplicate', label: 'Duplicate Selection', shortcut: `${cmd}D`, category: 'edit', onExecute: duplicateSelected, disabled: selectedIds.length === 0 },
-      { id: 'delete', label: 'Delete Selection', shortcut: 'Del', category: 'edit', onExecute: deleteSelected, disabled: selectedIds.length === 0 },
-      { id: 'undo', label: 'Undo', shortcut: `${cmd}Z`, category: 'edit', onExecute: undo, disabled: !canUndo },
-      { id: 'redo', label: 'Redo', shortcut: `⇧${cmd}Z`, category: 'edit', onExecute: redo, disabled: !canRedo },
-      { id: 'select-all', label: 'Select All', shortcut: `${cmd}A`, category: 'edit', onExecute: selectAll },
-      { id: 'clear-selection', label: 'Clear Selection', shortcut: 'Esc', category: 'edit', onExecute: () => {} },
-
-      // View
-      { id: 'toggle-inspector', label: 'Toggle Inspector', shortcut: 'I', category: 'view', onExecute: toggleInspector },
-      { id: 'toggle-cheatsheet', label: 'Toggle Shortcuts', shortcut: '?', category: 'view', onExecute: toggleCheatSheet },
-      { id: 'toggle-grid', label: 'Toggle Grid', shortcut: 'G', category: 'view', onExecute: () => showToast('Grid coming soon') },
-      { id: 'toggle-snap', label: 'Toggle Snap', shortcut: 'S', category: 'view', onExecute: () => showToast('Snap toggle coming soon') },
-      { id: 'focus-mode', label: 'Focus Mode', shortcut: 'F', category: 'view', onExecute: toggleFocusMode },
-
-      // Steps
-      { id: 'add-step', label: 'Add Step', shortcut: 'N', category: 'steps', onExecute: () => { addStep(); showToast('New step added'); } },
-      { id: 'prev-step', label: 'Previous Step', shortcut: '←', category: 'steps', onExecute: prevStep, disabled: currentStepIndex === 0 },
-      { id: 'next-step', label: 'Next Step', shortcut: '→', category: 'steps', onExecute: nextStep, disabled: currentStepIndex >= stepsCount - 1 },
-      { id: 'play-pause', label: isPlaying ? 'Pause' : 'Play', shortcut: 'Space', category: 'steps', onExecute: () => { isPlaying ? pause() : play(); } },
-      { id: 'toggle-loop', label: 'Toggle Loop', shortcut: 'L', category: 'steps', onExecute: () => { toggleLoop(); showToast(isLooping ? 'Loop disabled' : 'Loop enabled'); } },
-
-      // Export
-      { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: () => handleExportPNG() },
-      { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: () => handleExportAllSteps() },
-      { id: 'export-gif', label: 'Export Animated GIF', shortcut: `⇧${cmd}G`, category: 'export', onExecute: () => handleExportGIF(), disabled: stepsCount < 2 },
-      { id: 'export-pdf', label: 'Export PDF (all steps)', shortcut: `⇧${cmd}P`, category: 'export', onExecute: () => handleExportPDF() },
-      { id: 'export-svg', label: 'Export SVG', category: 'export', onExecute: () => handleExportSVG() },
-    ];
+    
+    return createCommandActions({
+      isMac,
+      addHomePlayer: () => addPlayerAtCursor('home'),
+      addAwayPlayer: () => addPlayerAtCursor('away'),
+      addBall: addBallAtCursor,
+      addPassArrow: () => addArrowAtCursor('pass'),
+      addRunArrow: () => addArrowAtCursor('run'),
+      addZone: addZoneAtCursor,
+      addText: addTextAtCursor,
+      duplicateSelected,
+      deleteSelected,
+      undo,
+      redo,
+      selectAll,
+      clearSelection: () => {},
+      toggleInspector,
+      toggleCheatSheet,
+      toggleFocusMode,
+      showToast,
+      addStepWithGating: addStep,
+      prevStep,
+      nextStep,
+      play,
+      pause,
+      toggleLoop,
+      exportPNG: handleExportPNG,
+      exportAllStepsPNG: handleExportAllSteps,
+      exportGIF: handleExportGIF,
+      exportPDF: handleExportPDF,
+      exportSVG: handleExportSVG,
+      selectedCount: selectedIds.length,
+      canUndo,
+      canRedo,
+      currentStepIndex,
+      stepsCount,
+      isPlaying,
+      isLooping,
+    });
   }, [
-    addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, addTextAtCursor,
-    duplicateSelected, deleteSelected, undo, redo, selectAll,
-    toggleInspector, toggleCheatSheet, toggleFocusMode, showToast,
-    addStep, prevStep, nextStep, play, pause, toggleLoop,
-    handleExportPNG, handleExportAllSteps, handleExportGIF, handleExportPDF, handleExportSVG,
-    selectedIds.length, canUndo, canRedo, currentStepIndex, stepsCount, isPlaying, isLooping
+    addPlayerAtCursor,
+    addBallAtCursor,
+    addArrowAtCursor,
+    addZoneAtCursor,
+    addTextAtCursor,
+    duplicateSelected,
+    deleteSelected,
+    undo,
+    redo,
+    selectAll,
+    toggleInspector,
+    toggleCheatSheet,
+    toggleFocusMode,
+    showToast,
+    addStep,
+    prevStep,
+    nextStep,
+    play,
+    pause,
+    toggleLoop,
+    handleExportPNG,
+    handleExportAllSteps,
+    handleExportGIF,
+    handleExportPDF,
+    handleExportSVG,
+    selectedIds.length,
+    canUndo,
+    canRedo,
+    currentStepIndex,
+    stepsCount,
+    isPlaying,
+    isLooping,
   ]);
 
   return {

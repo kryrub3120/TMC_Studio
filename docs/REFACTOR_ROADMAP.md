@@ -267,24 +267,26 @@ onDragEnd={(id, pos) => {
 
 ## Sprint 1: Fundament (kontrakty i hooki domenowe) - PO commandRegistry!
 
-### PR-REFACTOR-8: Animation Module 🔄
+### PR-REFACTOR-8: Animation Module ✅ (PARTIAL - 8B DONE)
+
+**Status:** PR-REFACTOR-8B (Interpolation) ✅ ZAKOŃCZONE (2026-01-28)
 
 **Cel:** Wydzielić logikę animacji do 2 niezależnych hooków z kontraktami
 
 **Zakres:**
-1. `useAnimationPlayback` (playback orchestration)
-2. `useAnimationInterpolation` (position/zone/arrow interpolation)
+1. `useAnimationPlayback` (playback orchestration) - ⏳ W TOKU (już istnieje)
+2. `useAnimationInterpolation` (position/zone/arrow interpolation) - ✅ ZAKOŃCZONE
 
-**Pliki do utworzenia:**
+**Pliki utworzone:**
 ```
 apps/web/src/hooks/
-  ├── useAnimationPlayback.ts      (~80 linii)
-  └── useAnimationInterpolation.ts (~60 linii)
+  ├── useAnimationPlayback.ts      (już istniał - używany)
+  └── useAnimationInterpolation.ts ✅ (nowy - 150 linii)
 ```
 
-**Kod do ekstrakcji z App.tsx:**
-- Lines 398-457: Animation playback useEffect (~60 linii)
-- Lines 459-558: Interpolation helpers (~100 linii)
+**Kod wyekstrahowany:**
+- Z `useBoardPageEffects.ts`: useInterpolation (70 linii) → `useAnimationInterpolation.ts`
+- `BoardPage.tsx`: Zaktualizowane do nowego API
 
 **Kontrakt (poprawiony - getters pattern):**
 ```typescript
@@ -359,36 +361,68 @@ const {
 });
 ```
 
-**Kryteria sukcesu:**
-- [ ] TypeScript 0 błędów
-- [ ] Animacja działa identycznie jak przed refaktorem
-- [ ] Hooki NIE importują UI (toast/modal)
-- [ ] App.tsx -100 linii
-- [ ] Dokumentacja: MODULE_BOUNDARIES.md zaktualizowana
+**Kryteria sukcesu PR-REFACTOR-8B (Interpolation):**
+- [x] TypeScript 0 błędów ✅
+- [x] Animacja interpolacja działa identycznie ✅
+- [x] Hook NIE importuje UI ✅
+- [x] Używa predicates z @tmc/core (hasPosition, isZoneElement, isArrowElement) ✅
+- [x] useBoardPageEffects.ts uproszczone (re-export only) ✅
+- [x] BoardPage.tsx używa nowego API ✅
 
-**Szacowany czas:** 1-2h  
-**Redukcja:** ~100 linii
+**Faktyczny czas (8B):** ~1h  
+**Redukcja (8B):** ~70 linii (z useBoardPageEffects.ts)  
+**Pliki dotknięte:** 3 (1 nowy + 2 zmodyfikowane)
+
+**Implementacja kontraktu:**
+```typescript
+// Finalne API (zgodne ze specyfikacją)
+interface UseAnimationInterpolationOptions<TStepElements> {
+  isPlaying: boolean;
+  progress01: number; // 0..1
+  currentStepIndex: number;
+  steps: Array<{ elements: TStepElements }>;
+}
+
+interface UseAnimationInterpolationResult {
+  nextStepElements: any[] | null;
+  getInterpolatedPosition: (id, pos) => Position;
+  getInterpolatedZone: (id, pos, w, h) => ZoneData;
+  getInterpolatedArrowEndpoints: (id, start, end) => ArrowData;
+}
+```
+
+**Pozostało do PR-REFACTOR-8 (FULL):**
+- useAnimationPlayback już istnieje i jest używany ✅
+- Potencjalne dalsze uproszczenia w orchestracji
+
+**Szacowany czas (pozostało):** 0h (playback już zrobiony wcześniej)  
+**Całkowita redukcja PR-8:** ~70 linii
 
 ---
 
-### PR-REFACTOR-9: Edit Controller 🔄
+### PR-REFACTOR-9: Edit Controller ✅ ZAKOŃCZONE
 
-**Cel:** Wydzielić inline editing (text + player number) do jednego hooka z vm/cmd pattern
+**Status:** ✅ **ZAKOŃCZONE** (2026-01-28)
+
+**Cel:** Wydzielić inline editing (text + player number) do dedykowanego hooka z overlay positioning
 
 **Zakres:**
-`useTextEditController` - Unified controller dla inline editing
+`useTextEditController` + `BoardEditOverlays` - Unified controller + presentational overlay component
 
-**Plik do utworzenia:**
+**Pliki utworzone:**
 ```
 apps/web/src/hooks/
-  └── useTextEditController.ts (~100 linii)
+  └── useTextEditController.ts (~220 linii - z overlay positioning)
+apps/web/src/app/board/
+  └── BoardEditOverlays.tsx (~75 linii - presentational)
 ```
 
-**Kod do ekstrakcji z App.tsx:**
-- Lines 183-186: Text/Player editing state (4 state hooks)
-- Lines 734-794: Text editing handlers (~60 linii)
-- Lines 796-823: Player editing handlers (~30 linii)
-- Lines 1376-1417: Editing overlays JSX (~40 linii - do osobnego komponentu)
+**Pliki zmodyfikowane:**
+- `apps/web/src/app/routes/useBoardPageState.ts` (hook wiring)
+- `apps/web/src/app/board/BoardPage.tsx` (overlay rendering)
+
+**Pliki usunięte (cleanup):**
+- `apps/web/src/app/board/useEditOverlayController.ts` (obsolete, replaced by useTextEditController)
 
 **Kontrakt:**
 ```typescript
@@ -762,6 +796,85 @@ apps/web/src/components/Canvas/
   ├── CanvasAdapter.tsx     (~100 linii)
   └── CanvasElements.tsx    (~250 linii)
 ```
+
+---
+
+### PR-REFACTOR-14: OverlayLayer - Single Input Handler ❌ REVERTED
+
+**Status:** ❌ **REVERTED** (2026-01-28 - zdiagnozowano i cofnięto tego samego dnia)
+
+**Pierwotny cel:** Konsolidacja event handlerów w dedykowanym OverlayLayer
+
+**Co poszło nie tak:**
+OverlayLayer złamał fundamentalną zasadę Konva event propagation:
+- **Konva NIE bubbluje eventów między sibling Layers**
+- OverlayLayer (transparent Rect) przechwytywał WSZYSTKIE eventy
+- Eventy nigdy nie docierały do elementów w CanvasElements Layer
+- Rezultat: selection, multi-select, multi-drag, context menu - wszystko zepsute
+
+**Diagnoza:**
+```typescript
+// ❌ NIE DZIAŁA - Event flow w Konva
+<Stage>
+  <Layer>                      ← CanvasElements (PlayerNode, BallNode, etc.)
+    <PlayerNode onClick={...}> ❌ NIGDY NIE WYWOŁANE
+  </Layer>
+  <Layer>                      ← OverlayLayer (top-most)
+    <Rect fill="transparent" onClick={...}> ✅ Przechwytuje event
+  </Layer>
+</Stage>
+
+// Konva hit-testing:
+// 1. Top layer (OverlayLayer) → Rect passes hit test → event captured
+// 2. Event bubbles UP within layer: Rect → Layer → Stage
+// 3. ❌ Event NEVER crosses to sibling layers
+```
+
+**Kluczowa lekcja:**
+> **Konva events bubble UP (Shape → Layer → Stage), NOT ACROSS (Layer ↔ Layer)**
+
+**Poprawka (REVERT):**
+Przywrócono handlers na `<Stage>` - Konva's intended pattern:
+```typescript
+// ✅ DZIAŁA - Stage-level handlers
+<Stage
+  ref={stageRef}
+  width={w}
+  height={h}
+  onClick={onStageClick}
+  onTap={onStageClick}
+  onMouseDown={onStageMouseDown}
+  onTouchStart={onStageMouseDown}
+  onMouseMove={onStageMouseMove}
+  onTouchMove={onStageMouseMove}
+  onMouseUp={onStageMouseUp}
+  onTouchEnd={onStageMouseUp}
+  onContextMenu={onContextMenu}
+>
+  <CanvasElements ... />
+</Stage>
+```
+
+**Pliki zmienione (REVERT):**
+```
+apps/web/src/app/board/canvas/
+  ├── CanvasAdapter.tsx     (handlers przywrócone na Stage)
+  └── OverlayLayer.tsx      (DELETED)
+```
+
+**Czas zmarnowany:** ~1h (implementacja + diagnoza + revert)  
+**Czas zaoszczędzony:** Wiele godzin (dzięki szybkiej diagnozie i revert)
+
+**Architecture lesson learned:**
+- ✅ Stage IS the single input handler in Konva architecture
+- ✅ Stage receives events via bubbling from any layer below
+- ✅ "Single place for input" = Stage, NOT separate Layer
+- ❌ Separate input layer breaks Konva's event model
+
+**Project Rules Compliance (po revert):**
+- ✅ Preserve existing runtime behavior
+- ✅ Minimal changes (revert to working state)
+- ✅ NO new abstractions that break framework fundamentals
 
 **Kontrakt:**
 ```typescript

@@ -18,7 +18,8 @@ import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/can
 
 import { BoardTopBarSection } from './BoardTopBarSection';
 import { BoardCanvasSection } from './BoardCanvasSection';
-import { TextEditOverlay, PlayerNumberEditOverlay, CanvasContextMenuOverlay, FocusModeExitBar } from './BoardOverlays';
+import { BoardEditOverlays } from './BoardEditOverlays';
+import { CanvasContextMenuOverlay, FocusModeExitBar } from './BoardOverlays';
 import { useBoardPageState, type BoardPageProps } from '../routes/useBoardPageState';
 import { useBoardPageHandlers } from './useBoardPageHandlers';
 import { useAnimationPlayback, useInterpolation, useStageEventHandlers, useContextMenuHandler } from './useBoardPageEffects';
@@ -66,8 +67,9 @@ export function BoardPage(props: BoardPageProps) {
   // Interpolation helpers
   const interpolation = useInterpolation({
     isPlaying: state.isPlaying,
-    animationProgress: state.animationProgress,
-    nextStepElements: getNextStepElements(state),
+    progress01: state.animationProgress,
+    currentStepIndex: state.currentStepIndex,
+    steps: state.boardDoc.steps,
   });
 
   // Stage event handlers
@@ -139,7 +141,7 @@ export function BoardPage(props: BoardPageProps) {
             drawingEnd={state.drawingController.drawingEnd}
             freehandPoints={state.drawingController.freehandPoints}
             animationProgress={state.animationProgress}
-            nextStepElements={getNextStepElements(state)}
+            nextStepElements={interpolation.nextStepElements}
             emptyStateOverlay={
               <EmptyStateOverlay
                 isVisible={state.elements.length === 0}
@@ -197,28 +199,29 @@ export function BoardPage(props: BoardPageProps) {
             onZoomFit={state.zoomFit}
           />
 
-          {/* Text editing overlay */}
-          <TextEditOverlay
-            editingTextElement={state.editingTextElement}
-            editingTextValue={state.editingTextValue}
-            zoom={state.zoom}
-            canvasWidth={state.canvasWidth}
-            canvasHeight={state.canvasHeight}
-            onTextChange={state.setEditingTextValue}
-            onTextSave={() => handlers.handleTextEditSave(state.editingTextId, state.editingTextValue)}
-            onTextCancel={handlers.handleTextEditCancel}
-          />
-
-          {/* Player number edit overlay */}
-          <PlayerNumberEditOverlay
-            editingPlayerElement={state.editingPlayerElement}
-            editingPlayerNumber={state.editingPlayerNumber}
-            zoom={state.zoom}
-            canvasWidth={state.canvasWidth}
-            canvasHeight={state.canvasHeight}
-            onNumberChange={state.setEditingPlayerNumber}
-            onNumberSave={() => handlers.handlePlayerNumberSave(state.editingPlayerId, state.editingPlayerNumber)}
-            onNumberCancel={handlers.handlePlayerNumberCancel}
+          {/* Edit overlays (text + player number) */}
+          <BoardEditOverlays
+            text={{
+              elementExists: !!state.editOverlay.text.element,
+              value: state.editOverlay.text.value,
+              onChange: state.editOverlay.text.setValue,
+              onKeyDown: state.editOverlay.text.onKeyDown,
+              onBlur: state.editOverlay.text.save,
+              style: state.editOverlay.overlay.getTextStyle(),
+              inputStyle: state.editOverlay.text.element ? {
+                fontSize: state.editOverlay.text.element.fontSize,
+                fontWeight: state.editOverlay.text.element.bold ? 'bold' : 'normal',
+                fontFamily: state.editOverlay.text.element.fontFamily,
+              } : null,
+            }}
+            player={{
+              elementExists: !!state.editOverlay.player.element,
+              value: state.editOverlay.player.value,
+              onChange: state.editOverlay.player.setValue,
+              onKeyDown: state.editOverlay.player.onKeyDown,
+              onBlur: state.editOverlay.player.save,
+              style: state.editOverlay.overlay.getPlayerStyle(),
+            }}
           />
 
           {/* Context Menu */}
@@ -298,11 +301,4 @@ export function BoardPage(props: BoardPageProps) {
       />
     </div>
   );
-}
-
-// Helper to get next step elements for interpolation
-function getNextStepElements(state: ReturnType<typeof useBoardPageState>) {
-  const nextIndex = state.currentStepIndex + 1;
-  if (nextIndex >= state.boardDoc.steps.length) return null;
-  return state.boardDoc.steps[nextIndex]?.elements ?? null;
 }

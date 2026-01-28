@@ -1,13 +1,12 @@
 /**
- * useAnimationPlayback - RAF-based animation with interpolation
+ * useAnimationPlayback - RAF-based animation playback
  * 
  * Handles step animation playback using requestAnimationFrame.
- * Manages animation progress, looping, and step transitions.
+ * Uses getters pattern to avoid stale closures in RAF loop.
+ * Pure hook with no store imports - caller provides all state and callbacks.
  */
 
 import { useEffect } from 'react';
-import { useBoardStore } from '../store';
-import { useUIStore } from '../store/useUIStore';
 
 /**
  * Easing function for smooth animations
@@ -16,21 +15,43 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-export function useAnimationPlayback(): void {
-  const isPlaying = useUIStore((s) => s.isPlaying);
-  const isLooping = useUIStore((s) => s.isLooping);
-  const stepDuration = useUIStore((s) => s.stepDuration);
-  const setAnimationProgress = useUIStore((s) => s.setAnimationProgress);
-  const pause = useUIStore((s) => s.pause);
-  
-  const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
-  const totalSteps = useBoardStore((s) => s.document.steps.length);
-  const goToStep = useBoardStore((s) => s.goToStep);
-  const nextStep = useBoardStore((s) => s.nextStep);
-  
+export interface UseAnimationPlaybackOptions {
+  isPlaying: boolean;
+  isLooping: boolean;
+  stepDurationSec: number;
+  getCurrentStepIndex: () => number;
+  getStepsCount: () => number;
+  onSetProgress: (progress01: number) => void;
+  onNextStep: () => void;
+  onGoToStep: (index: number) => void;
+  onPause: () => void;
+}
+
+export function useAnimationPlayback(opts: UseAnimationPlaybackOptions): void {
+  const {
+    isPlaying,
+    isLooping,
+    stepDurationSec,
+    getCurrentStepIndex,
+    getStepsCount,
+    onSetProgress,
+    onNextStep,
+    onGoToStep,
+    onPause,
+  } = opts;
+
   useEffect(() => {
-    if (!isPlaying || totalSteps <= 1) {
-      setAnimationProgress(0);
+    // If not playing, reset progress and exit
+    if (!isPlaying) {
+      onSetProgress(0);
+      return;
+    }
+    
+    // If only 1 step or less, pause and exit
+    const stepsCount = getStepsCount();
+    if (stepsCount <= 1) {
+      onPause();
+      onSetProgress(0);
       return;
     }
     
@@ -41,30 +62,34 @@ export function useAnimationPlayback(): void {
       if (!startTime) startTime = timestamp;
       
       const elapsed = timestamp - startTime;
-      const durationMs = stepDuration * 1000;
+      const durationMs = stepDurationSec * 1000;
       const progress = Math.min(elapsed / durationMs, 1);
-      const eased = easeInOutCubic(progress);
       
-      setAnimationProgress(eased);
+      // Apply ease-in-out cubic easing
+      const eased = easeInOutCubic(progress);
+      onSetProgress(eased);
       
       if (progress >= 1) {
-        // Animation step complete
+        // Animation step complete - use getters for latest state
+        const currentStepIndex = getCurrentStepIndex();
+        const totalSteps = getStepsCount();
+        
         if (currentStepIndex >= totalSteps - 1) {
           // Reached last step
           if (isLooping) {
-            goToStep(0);
+            onGoToStep(0);
             startTime = null;
-            setAnimationProgress(0);
+            onSetProgress(0);
             animationFrameId = requestAnimationFrame(animate);
           } else {
-            pause();
-            setAnimationProgress(0);
+            onPause();
+            onSetProgress(0);
           }
         } else {
           // Move to next step
-          nextStep();
+          onNextStep();
           startTime = null;
-          setAnimationProgress(0);
+          onSetProgress(0);
           animationFrameId = requestAnimationFrame(animate);
         }
       } else {
@@ -76,17 +101,17 @@ export function useAnimationPlayback(): void {
     
     return () => {
       cancelAnimationFrame(animationFrameId);
-      setAnimationProgress(0);
+      onSetProgress(0);
     };
   }, [
     isPlaying,
     isLooping,
-    stepDuration,
-    totalSteps,
-    currentStepIndex,
-    setAnimationProgress,
-    pause,
-    goToStep,
-    nextStep,
+    stepDurationSec,
+    getCurrentStepIndex,
+    getStepsCount,
+    onSetProgress,
+    onNextStep,
+    onGoToStep,
+    onPause,
   ]);
 }

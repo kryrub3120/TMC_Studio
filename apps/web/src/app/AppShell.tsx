@@ -6,24 +6,14 @@
 
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AuthModal,
-  PricingModal,
-  ProjectsDrawer,
-  SettingsModal,
-  UpgradeSuccessModal,
-  LimitReachedModal,
-  Footer,
-  CreateFolderModal,
-  FolderOptionsModal,
-  type ProjectItem,
-} from '@tmc/ui';
+import { Footer, type ProjectItem } from '@tmc/ui';
 import { type ProjectFolder } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { useBoardStore } from '../store';
 import { useBillingController, useProjectsController, useSettingsController, usePaymentReturn } from '../hooks';
 import { BoardPage } from './board/BoardPage';
+import { ModalOrchestrator } from './orchestrators/ModalOrchestrator';
 
 /** Global app shell - orchestrates auth, billing, projects, settings */
 export function AppShell() {
@@ -173,11 +163,10 @@ export function AppShell() {
       />
       
       {/* Global Modals */}
-      
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => {
+      <ModalOrchestrator
+        // Auth Modal
+        authModalOpen={authModalOpen}
+        onCloseAuthModal={() => {
           setAuthModalOpen(false);
           clearAuthError();
         }}
@@ -188,110 +177,71 @@ export function AppShell() {
         }}
         onSignUp={signUp}
         onSignInWithGoogle={signInWithGoogle}
-        error={authError}
-        isLoading={authIsLoading}
-      />
-      
-      {/* Pricing Modal */}
-      <PricingModal
-        isOpen={billingController.pricingModalOpen}
-        onClose={() => billingController.closePricingModal()}
-        currentPlan={authIsPro ? 'pro' : 'free'}
-        isAuthenticated={authIsAuthenticated}
-        onSignUp={() => {
-          billingController.closePricingModal();
-          setAuthModalOpen(true);
-        }}
-        user={authUser ? {
-          id: authUser.id,
-          email: authUser.email,
-          stripe_customer_id: authUser.stripe_customer_id,
-        } : null}
-      />
-      
-      {/* Limit Reached Modal */}
-      <LimitReachedModal
-        isOpen={limitReachedModalOpen}
-        type={limitReachedType}
-        currentCount={limitCountCurrent}
-        maxCount={limitCountMax}
-        onSignup={() => {
-          setLimitReachedModalOpen(false);
-          setAuthModalOpen(true);
-        }}
-        onUpgrade={() => {
-          setLimitReachedModalOpen(false);
-          billingController.openPricingModal();
-        }}
-        onClose={() => setLimitReachedModalOpen(false)}
-        onSeePlans={() => {
-          setLimitReachedModalOpen(false);
-          billingController.openPricingModal();
-        }}
-      />
-      
-      {/* Projects Drawer */}
-      <ProjectsDrawer
-        isOpen={projectsDrawerOpen}
-        onClose={() => setProjectsDrawerOpen(false)}
-        projects={projectItems}
-        folders={projectsController.folders.map(f => ({
+        authError={authError}
+        authIsLoading={authIsLoading}
+        
+        // Pricing Modal
+        pricingModalOpen={billingController.pricingModalOpen}
+        onClosePricingModal={() => billingController.closePricingModal()}
+        onOpenAuthModal={() => setAuthModalOpen(true)}
+        authIsPro={authIsPro}
+        authIsAuthenticated={authIsAuthenticated}
+        authUser={authUser}
+        
+        // Limit Reached Modal
+        limitReachedModalOpen={limitReachedModalOpen}
+        limitReachedType={limitReachedType}
+        limitCountCurrent={limitCountCurrent}
+        limitCountMax={limitCountMax}
+        onCloseLimitReachedModal={() => setLimitReachedModalOpen(false)}
+        onOpenPricingModal={() => billingController.openPricingModal()}
+        
+        // Projects Drawer
+        projectsDrawerOpen={projectsDrawerOpen}
+        onCloseProjectsDrawer={() => setProjectsDrawerOpen(false)}
+        projectItems={projectItems}
+        projectsFolders={projectsController.folders.map(f => ({
           id: f.id,
           name: f.name,
           color: f.color,
           icon: f.icon,
         }))}
         currentProjectId={useBoardStore.getState().cloudProjectId}
-        isAuthenticated={authIsAuthenticated}
-        isLoading={projectsController.isLoading}
+        projectsIsLoading={projectsController.isLoading}
         onSelectProject={handleSelectProject}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
         onDuplicateProject={handleDuplicateProject}
-        onCreateFolder={() => setCreateFolderModalOpen(true)}
         onToggleFavorite={handleToggleFavorite}
         onMoveToFolder={handleMoveToFolder}
         onEditFolder={handleEditFolder}
         onDeleteFolder={handleDeleteFolder}
-        onSignIn={() => {
-          setProjectsDrawerOpen(false);
-          setAuthModalOpen(true);
+        onRefreshProjects={projectsController.refreshProjects}
+        onOpenCreateFolderModal={() => setCreateFolderModalOpen(true)}
+        
+        // Create Folder Modal
+        createFolderModalOpen={createFolderModalOpen}
+        onCloseCreateFolderModal={() => setCreateFolderModalOpen(false)}
+        onCreateFolder={handleCreateFolder}
+        
+        // Folder Options Modal
+        folderOptionsModalOpen={folderOptionsModalOpen}
+        editingFolder={editingFolder}
+        onCloseFolderOptionsModal={() => {
+          setFolderOptionsModalOpen(false);
+          setEditingFolder(null);
         }}
-        onRefresh={projectsController.refreshProjects}
-      />
-      
-      {/* Create Folder Modal */}
-      <CreateFolderModal
-        isOpen={createFolderModalOpen}
-        onClose={() => setCreateFolderModalOpen(false)}
-        onCreate={handleCreateFolder}
-      />
-      
-      {/* Folder Options Modal */}
-      {editingFolder && (
-        <FolderOptionsModal
-          isOpen={folderOptionsModalOpen}
-          folderName={editingFolder.name}
-          folderColor={editingFolder.color}
-          onClose={() => {
-            setFolderOptionsModalOpen(false);
-            setEditingFolder(null);
-          }}
-          onSave={handleUpdateFolder}
-        />
-      )}
-      
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={settingsModalOpen}
-        onClose={() => setSettingsModalOpen(false)}
-        user={authUser ?? null}
+        onUpdateFolder={handleUpdateFolder}
+        
+        // Settings Modal
+        settingsModalOpen={settingsModalOpen}
+        onCloseSettingsModal={() => setSettingsModalOpen(false)}
         onUpdateProfile={settingsController.updateProfile}
         onUploadAvatar={settingsController.uploadAvatar}
         onChangePassword={settingsController.changePassword}
         onDeleteAccount={settingsController.deleteAccount}
         onManageBilling={billingController.manageBilling}
-        onUpgrade={() => {
+        onUpgradeFromSettings={() => {
           setSettingsModalOpen(false);
           billingController.openPricingModal();
         }}
@@ -307,14 +257,12 @@ export function AppShell() {
           useUIStore.getState().toggleSnap();
           showToast(useUIStore.getState().snapEnabled ? 'Snap enabled' : 'Snap disabled');
         }}
-      />
-      
-      {/* Upgrade Success Modal */}
-      <UpgradeSuccessModal
-        isOpen={billingController.upgradeSuccessModalOpen}
-        onClose={() => billingController.closeUpgradeSuccessModal()}
-        plan={billingController.upgradedTier}
-        mode={billingController.subscriptionActivating ? 'activating' : 'success'}
+        
+        // Upgrade Success Modal
+        upgradeSuccessModalOpen={billingController.upgradeSuccessModalOpen}
+        onCloseUpgradeSuccessModal={() => billingController.closeUpgradeSuccessModal()}
+        upgradedTier={billingController.upgradedTier}
+        subscriptionActivating={billingController.subscriptionActivating}
       />
       
       {/* Footer */}

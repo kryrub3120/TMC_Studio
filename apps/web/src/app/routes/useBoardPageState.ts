@@ -3,9 +3,9 @@
  * Extracted from App.tsx for modularity
  */
 
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isTextElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, hasPosition } from '@tmc/core';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
 import type { InspectorElement, ElementInList } from '@tmc/ui';
 import { useBoardStore } from '../../store';
@@ -13,6 +13,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore, useInitializeTheme } from '../../store/useUIStore';
 import { useEntitlements, useExportController, useCanvasEventsController, useDrawingController, useCanvasInteraction, useKeyboardShortcuts } from '../../hooks';
 import { useCanvasContextMenu } from '../../hooks/useCanvasContextMenu';
+import { useTextEditController } from '../../hooks/useTextEditController';
 
 // Feature flag for new canvas architecture
 const USE_NEW_CANVAS = false;
@@ -30,14 +31,6 @@ export function useBoardPageState(props: BoardPageProps) {
   const { onOpenLimitModal, onOpenPricingModal } = props;
   
   const stageRef = useRef<Konva.Stage>(null);
-  
-  // Text editing state
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const [editingTextValue, setEditingTextValue] = useState<string>('');
-  
-  // Player quick-edit number state
-  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
-  const [editingPlayerNumber, setEditingPlayerNumber] = useState<string>('');
   
   // Auth store
   const authUser = useAuthStore((s) => s.user);
@@ -287,6 +280,20 @@ export function useBoardPageState(props: BoardPageProps) {
   // Context menu
   const contextMenu = useCanvasContextMenu();
   
+  // Text edit controller (new hook with overlay positioning)
+  const editOverlay = useTextEditController({
+    elements,
+    getZoom: () => zoom,
+    getCanvasRect: () => ({ width: canvasWidth, height: canvasHeight }),
+    onUpdateText: updateTextContent,
+    onUpdatePlayerNumber: (id: string, number: number) => {
+      selectElement(id, false);
+      updateSelectedElement({ number });
+    },
+    onSelectElement: (id: string) => selectElement(id, false),
+    onToast: showToast,
+  });
+  
   // Keyboard shortcuts
   useKeyboardShortcuts({
     handleExportPNG: exportController.exportPNG,
@@ -294,10 +301,7 @@ export function useBoardPageState(props: BoardPageProps) {
     handleExportPDF: exportController.exportPDF,
     handleExportGIF: exportController.exportGIF,
     showToast,
-    onStartEditingText: (id, content) => {
-      setEditingTextId(id);
-      setEditingTextValue(content);
-    },
+    onStartEditingText: editOverlay.text.start,
     addStep,
     contextMenuVisible: contextMenu.menuState.visible,
   });
@@ -337,51 +341,16 @@ export function useBoardPageState(props: BoardPageProps) {
     [updateSelectedElement]
   );
   
-  // Text editing handlers
+  // Text editing handlers (using controller)
   const handleTextDoubleClick = useCallback((id: string) => {
-    const textEl = elements.find((el) => el.id === id);
-    if (textEl && isTextElement(textEl)) {
-      setEditingTextId(id);
-      setEditingTextValue(textEl.content);
-    }
-  }, [elements]);
+    editOverlay.text.start(id);
+  }, [editOverlay.text]);
   
-  const handleTextEditSave = useCallback(() => {
-    if (editingTextId && editingTextValue.trim()) {
-      updateTextContent(editingTextId, editingTextValue.trim());
-    }
-    setEditingTextId(null);
-    setEditingTextValue('');
-  }, [editingTextId, editingTextValue, updateTextContent]);
+  const handleTextEditSave = editOverlay.text.save;
   
-  // Player quick-edit handlers
-  const handlePlayerQuickEdit = useCallback((id: string, currentNumber: number) => {
-    setEditingPlayerId(id);
-    setEditingPlayerNumber(String(currentNumber));
-    selectElement(id, false);
-  }, [selectElement]);
-  
-  const handlePlayerNumberSave = useCallback(() => {
-    if (editingPlayerId && editingPlayerNumber.trim()) {
-      const numValue = parseInt(editingPlayerNumber.trim(), 10);
-      if (!isNaN(numValue) && numValue >= 0 && numValue <= 99) {
-        selectElement(editingPlayerId, false);
-        updateSelectedElement({ number: numValue });
-        showToast(`#${numValue}`);
-      }
-    }
-    setEditingPlayerId(null);
-    setEditingPlayerNumber('');
-  }, [editingPlayerId, editingPlayerNumber, selectElement, updateSelectedElement, showToast]);
-  
-  // Editing elements
-  const editingTextElement = editingTextId 
-    ? elements.find((el) => el.id === editingTextId && isTextElement(el))
-    : null;
-  
-  const editingPlayerElement = editingPlayerId 
-    ? elements.find((el) => el.id === editingPlayerId && isPlayerElement(el))
-    : null;
+  // Player quick-edit handlers (using controller)
+  const handlePlayerQuickEdit = editOverlay.player.start;
+  const handlePlayerNumberSave = editOverlay.player.save;
   
   return {
     // Refs
@@ -507,6 +476,7 @@ export function useBoardPageState(props: BoardPageProps) {
     drawingController,
     activeCanvasInteraction,
     contextMenu,
+    editOverlay,
     
     // Handlers
     handleQuickAction,
@@ -518,18 +488,18 @@ export function useBoardPageState(props: BoardPageProps) {
     handlePlayerQuickEdit,
     handlePlayerNumberSave,
     
-    // Text editing
-    editingTextId,
-    editingTextValue,
-    setEditingTextId,
-    setEditingTextValue,
-    editingTextElement,
+    // Text editing (from controller)
+    editingTextId: editOverlay.text.editingId,
+    editingTextValue: editOverlay.text.value,
+    setEditingTextId: (id: string | null) => id ? editOverlay.text.start(id) : editOverlay.text.cancel(),
+    setEditingTextValue: editOverlay.text.setValue,
+    editingTextElement: editOverlay.text.element,
     
-    // Player editing
-    editingPlayerId,
-    editingPlayerNumber,
-    setEditingPlayerId,
-    setEditingPlayerNumber,
-    editingPlayerElement,
+    // Player editing (from controller)
+    editingPlayerId: editOverlay.player.editingId,
+    editingPlayerNumber: editOverlay.player.value,
+    setEditingPlayerId: (id: string | null) => id ? editOverlay.player.start(id, 0) : editOverlay.player.cancel(),
+    setEditingPlayerNumber: editOverlay.player.setValue,
+    editingPlayerElement: editOverlay.player.element,
   };
 }

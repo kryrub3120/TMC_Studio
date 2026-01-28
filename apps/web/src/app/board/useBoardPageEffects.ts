@@ -3,13 +3,14 @@
  * Extracted from App.tsx for modularity
  */
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import type Konva from 'konva';
-import { hasPosition, isZoneElement, isArrowElement } from '@tmc/core';
 import type { Position, BoardElement } from '@tmc/core';
 import { useBoardStore } from '../../store';
+import { useAnimationPlayback as useAnimationPlaybackCore } from '../../hooks/useAnimationPlayback';
+import { useAnimationInterpolation } from '../../hooks/useAnimationInterpolation';
 
-// Animation playback hook
+// Animation playback hook (wrapper for backward compatibility)
 export interface AnimationPlaybackInput {
   isPlaying: boolean;
   isLooping: boolean;
@@ -22,145 +23,24 @@ export interface AnimationPlaybackInput {
 }
 
 export function useAnimationPlayback(input: AnimationPlaybackInput) {
-  const { isPlaying, isLooping, stepDuration, stepsCount, pause, goToStep, nextStep, setAnimationProgress } = input;
+  const { isPlaying, isLooping, stepDuration, pause, goToStep, nextStep, setAnimationProgress } = input;
 
-  useEffect(() => {
-    if (!isPlaying) {
-      setAnimationProgress(0);
-      return;
-    }
-    
-    if (stepsCount <= 1) {
-      pause();
-      return;
-    }
-    
-    let startTime: number | null = null;
-    let animationFrameId: number;
-    
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      
-      const elapsed = timestamp - startTime;
-      const durationMs = stepDuration * 1000;
-      const progress = Math.min(elapsed / durationMs, 1);
-      
-      // Ease-in-out cubic
-      const eased = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      
-      setAnimationProgress(eased);
-      
-      if (progress >= 1) {
-        const current = useBoardStore.getState().currentStepIndex;
-        const total = useBoardStore.getState().document.steps.length;
-        
-        if (current >= total - 1) {
-          if (isLooping) {
-            goToStep(0);
-            startTime = null;
-            setAnimationProgress(0);
-            animationFrameId = requestAnimationFrame(animate);
-          } else {
-            pause();
-            setAnimationProgress(0);
-          }
-        } else {
-          nextStep();
-          startTime = null;
-          setAnimationProgress(0);
-          animationFrameId = requestAnimationFrame(animate);
-        }
-      } else {
-        animationFrameId = requestAnimationFrame(animate);
-      }
-    };
-    
-    animationFrameId = requestAnimationFrame(animate);
-    
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      setAnimationProgress(0);
-    };
-  }, [isPlaying, isLooping, stepDuration, stepsCount, pause, goToStep, nextStep, setAnimationProgress]);
+  // Use the core hook with getters pattern to avoid stale closures
+  useAnimationPlaybackCore({
+    isPlaying,
+    isLooping,
+    stepDurationSec: stepDuration,
+    getCurrentStepIndex: () => useBoardStore.getState().currentStepIndex,
+    getStepsCount: () => useBoardStore.getState().document.steps.length,
+    onSetProgress: setAnimationProgress,
+    onNextStep: nextStep,
+    onGoToStep: goToStep,
+    onPause: pause,
+  });
 }
 
-// Interpolation helpers hook
-export interface InterpolationInput {
-  isPlaying: boolean;
-  animationProgress: number;
-  nextStepElements: BoardElement[] | null;
-}
-
-export function useInterpolation(input: InterpolationInput) {
-  const { isPlaying, animationProgress, nextStepElements } = input;
-
-  const getInterpolatedPosition = useCallback((elementId: string, currentPos: Position): Position => {
-    if (!isPlaying || animationProgress === 0 || !nextStepElements) {
-      return currentPos;
-    }
-    
-    const nextEl = nextStepElements.find((e) => e.id === elementId);
-    if (!nextEl || !hasPosition(nextEl)) {
-      return currentPos;
-    }
-    
-    const nextPos = nextEl.position;
-    return {
-      x: currentPos.x + (nextPos.x - currentPos.x) * animationProgress,
-      y: currentPos.y + (nextPos.y - currentPos.y) * animationProgress,
-    };
-  }, [isPlaying, animationProgress, nextStepElements]);
-
-  const getInterpolatedZone = useCallback((elementId: string, currentPos: Position, currentWidth: number, currentHeight: number): { position: Position; width: number; height: number } => {
-    if (!isPlaying || animationProgress === 0 || !nextStepElements) {
-      return { position: currentPos, width: currentWidth, height: currentHeight };
-    }
-    
-    const nextEl = nextStepElements.find((e) => e.id === elementId);
-    if (!nextEl || !isZoneElement(nextEl)) {
-      return { position: currentPos, width: currentWidth, height: currentHeight };
-    }
-    
-    return {
-      position: {
-        x: currentPos.x + (nextEl.position.x - currentPos.x) * animationProgress,
-        y: currentPos.y + (nextEl.position.y - currentPos.y) * animationProgress,
-      },
-      width: currentWidth + (nextEl.width - currentWidth) * animationProgress,
-      height: currentHeight + (nextEl.height - currentHeight) * animationProgress,
-    };
-  }, [isPlaying, animationProgress, nextStepElements]);
-
-  const getInterpolatedArrowEndpoints = useCallback((elementId: string, currentStart: Position, currentEnd: Position): { start: Position; end: Position } => {
-    if (!isPlaying || animationProgress === 0 || !nextStepElements) {
-      return { start: currentStart, end: currentEnd };
-    }
-    
-    const nextEl = nextStepElements.find((e) => e.id === elementId);
-    if (!nextEl || !isArrowElement(nextEl)) {
-      return { start: currentStart, end: currentEnd };
-    }
-    
-    return {
-      start: {
-        x: currentStart.x + (nextEl.startPoint.x - currentStart.x) * animationProgress,
-        y: currentStart.y + (nextEl.startPoint.y - currentStart.y) * animationProgress,
-      },
-      end: {
-        x: currentEnd.x + (nextEl.endPoint.x - currentEnd.x) * animationProgress,
-        y: currentEnd.y + (nextEl.endPoint.y - currentEnd.y) * animationProgress,
-      },
-    };
-  }, [isPlaying, animationProgress, nextStepElements]);
-
-  return {
-    getInterpolatedPosition,
-    getInterpolatedZone,
-    getInterpolatedArrowEndpoints,
-  };
-}
+// Re-export interpolation hook for backward compatibility
+export { useAnimationInterpolation as useInterpolation };
 
 // Stage event handlers hook
 export interface StageEventHandlersInput {
