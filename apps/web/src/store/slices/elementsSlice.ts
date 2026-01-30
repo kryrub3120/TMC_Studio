@@ -91,6 +91,12 @@ export interface ElementsSlice {
   
   // Formation
   applyFormation: (formationId: string, team: Team) => void;
+  
+  // B5: Resize popover (players only) - preview/commit separation
+  previewSetPlayersRadius: (ids: ElementId[], radius: number) => void;
+  commitSetPlayersRadius: (ids: ElementId[], radius: number) => void;
+  previewResetPlayersRadius: (ids: ElementId[]) => void;
+  commitResetPlayersRadius: (ids: ElementId[]) => void;
 }
 
 export const createElementsSlice: StateCreator<
@@ -483,7 +489,7 @@ export const createElementsSlice: StateCreator<
           // Players and Ball - scale radius
           if (isPlayerElement(el) || el.type === 'ball') {
             const element = el as { radius?: number };
-            const defaultRadius = el.type === 'ball' ? 8 : 20;
+            const defaultRadius = el.type === 'ball' ? 8 : 18; // B5: Fixed to match PlayerNode PLAYER_RADIUS
             const currentRadius = element.radius ?? defaultRadius;
             return { ...el, radius: currentRadius * clampedScale };
           }
@@ -579,6 +585,57 @@ export const createElementsSlice: StateCreator<
       selectedIds: newPlayers.map((p: BoardElement) => p.id),
     });
     
+    get().pushHistory();
+  },
+  
+  // B5: Resize popover implementations (preview = no history, commit = with history)
+  previewSetPlayersRadius: (ids, radius) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          return { ...el, radius };
+        }
+        return el;
+      }),
+    }));
+    // NO pushHistory, NO markDirty
+  },
+  
+  commitSetPlayersRadius: (ids, radius) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          return { ...el, radius };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  previewResetPlayersRadius: (ids) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          const { radius: _removed, ...rest } = el as any;
+          return { ...rest, radius: undefined };
+        }
+        return el;
+      }),
+    }));
+    // NO pushHistory
+  },
+  
+  commitResetPlayersRadius: (ids) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          const { radius: _removed, ...rest } = el as any;
+          return { ...rest, radius: undefined };
+        }
+        return el;
+      }),
+    }));
     get().pushHistory();
   },
 });

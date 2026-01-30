@@ -23,6 +23,7 @@ interface ContextMenuHandlers {
   onCycleShape?: () => void;
   onEdit?: () => void;
   onCycleColor?: () => void;
+  onResize?: () => void; // B5: PPM Resize Slider
   // Empty space actions
   onAddPlayer?: () => void;
   onAddBall?: () => void;
@@ -85,6 +86,7 @@ export function getCanvasContextMenuItems(
       { label: '', icon: '', onClick: () => {}, divider: true },
       { label: 'Copy', icon: '📄', onClick: handlers.onCopy, shortcut: `${cmd}C` },
       { label: 'Duplicate', icon: '📋', onClick: handlers.onDuplicate, shortcut: `${cmd}D` },
+      ...(handlers.onResize ? [{ label: 'Resize…', icon: '🔍', onClick: handlers.onResize, shortcut: 'Opt+Cmd +/-' }] : []),
       { label: 'Delete', icon: '🗑️', onClick: handlers.onDelete, variant: 'danger', shortcut: 'Del' },
       { label: '', icon: '', onClick: () => {}, divider: true },
       { label: 'Bring to Front', icon: '⬆️', onClick: handlers.onBringToFront },
@@ -128,6 +130,7 @@ export function getCanvasContextMenuItems(
       { label: 'Change Number', icon: '🔢', onClick: handlers.onChangeNumber!, shortcut: 'double-tap' },
       { label: 'Switch Team', icon: '🔄', onClick: handlers.onSwitchTeam!, shortcut: 'Shift+P' },
       { label: 'Cycle Shape', icon: '◼️', onClick: handlers.onCycleShape!, shortcut: 'S' },
+      ...(handlers.onResize ? [{ label: 'Resize…', icon: '🔍', onClick: handlers.onResize, shortcut: 'Opt+Cmd +/-' }] : []),
       ...layerItems,
       ...commonItems,
     ];
@@ -172,6 +175,7 @@ export function getCanvasContextMenuItems(
   // Equipment-specific menu
   if (isEquipmentElement(element)) {
     return [
+      { label: 'Change Color', icon: '🎨', onClick: handlers.onCycleColor!, shortcut: 'Alt+↓' },
       { label: 'Rotate', icon: '🔄', onClick: () => {}, shortcut: '[  ]' },
       ...layerItems,
       ...commonItems,

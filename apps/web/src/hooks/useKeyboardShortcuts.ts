@@ -305,8 +305,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         } else {
           // C = Clear drawings only (no confirmation, undoable)
           e.preventDefault();
-          clearAllDrawings();
-          showToast('Drawings cleared • Undo: Cmd+Z');
+          const drawingsCount = elements.filter(el => el.type === 'drawing').length;
+          if (drawingsCount === 0) {
+            showToast('No drawings to clear');
+          } else {
+            clearAllDrawings();
+            showToast(`${drawingsCount} drawing${drawingsCount > 1 ? 's' : ''} cleared • Undo: Cmd+Z`);
+          }
         }
         break;
         
@@ -330,6 +335,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
               lines: {
                 showOutline: false, showCenterLine: false, showCenterCircle: false,
                 showPenaltyAreas: false, showGoalAreas: false, showCornerArcs: false, showPenaltySpots: false,
+                showGoals: false,
               },
             });
           } else {
@@ -338,6 +344,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
               lines: {
                 showOutline: true, showCenterLine: true, showCenterCircle: true,
                 showPenaltyAreas: true, showGoalAreas: true, showCornerArcs: true, showPenaltySpots: true,
+                showGoals: true,
               },
             });
           }

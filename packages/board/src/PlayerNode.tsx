@@ -63,7 +63,7 @@ function darkenColor(hex: string, percent: number): string {
   return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
 }
 
-const PLAYER_RADIUS = 18;
+const PLAYER_RADIUS = 18; // default only
 const SELECTED_STROKE_WIDTH = 3;
 const NORMAL_STROKE_WIDTH = 2;
 
@@ -82,6 +82,9 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
   const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper);
+  
+  // Use stored radius or default
+  const effectiveRadius = player.radius ?? PLAYER_RADIUS;
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
@@ -164,7 +167,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         <Circle
           x={0}
           y={0}
-          radius={PLAYER_RADIUS + 4}
+          radius={effectiveRadius + 4}
           stroke="#ffd60a"
           strokeWidth={2}
           dash={[4, 2]}
@@ -178,7 +181,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         <Circle
           x={0}
           y={0}
-          radius={PLAYER_RADIUS}
+          radius={effectiveRadius}
           fill={colors.fill}
           stroke={isSelected ? '#ffd60a' : colors.stroke}
           strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
@@ -193,10 +196,10 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       {/* Player shape - square */}
       {player.shape === 'square' && (
         <Rect
-          x={-PLAYER_RADIUS}
-          y={-PLAYER_RADIUS}
-          width={PLAYER_RADIUS * 2}
-          height={PLAYER_RADIUS * 2}
+          x={-effectiveRadius}
+          y={-effectiveRadius}
+          width={effectiveRadius * 2}
+          height={effectiveRadius * 2}
           cornerRadius={4}
           fill={colors.fill}
           stroke={isSelected ? '#ffd60a' : colors.stroke}
@@ -215,7 +218,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
           x={0}
           y={0}
           sides={3}
-          radius={PLAYER_RADIUS + 2}
+          radius={effectiveRadius + 2}
           fill={colors.fill}
           stroke={isSelected ? '#ffd60a' : colors.stroke}
           strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
@@ -230,13 +233,13 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       {/* Player shape - diamond (rotated square) */}
       {player.shape === 'diamond' && (
         <Rect
-          x={-PLAYER_RADIUS}
-          y={-PLAYER_RADIUS}
-          width={PLAYER_RADIUS * 2}
-          height={PLAYER_RADIUS * 2}
+          x={-effectiveRadius}
+          y={-effectiveRadius}
+          width={effectiveRadius * 2}
+          height={effectiveRadius * 2}
           rotation={45}
-          offsetX={-PLAYER_RADIUS}
-          offsetY={-PLAYER_RADIUS}
+          offsetX={0}
+          offsetY={0}
           fill={colors.fill}
           stroke={isSelected ? '#ffd60a' : colors.stroke}
           strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
@@ -251,9 +254,9 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       {/* Player number or label (inside shape) */}
       {(player.showLabel && player.label) || player.number != null ? (
         <Text
-          x={-PLAYER_RADIUS}
+          x={-effectiveRadius}
           y={-(player.fontSize ?? 14) / 2}
-          width={PLAYER_RADIUS * 2}
+          width={effectiveRadius * 2}
           text={player.showLabel && player.label ? player.label : String(player.number)}
           fontSize={player.fontSize ?? 14}
           fontFamily="Inter, system-ui, sans-serif"
@@ -270,7 +273,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       {player.label && !player.showLabel && (
         <Text
           x={-30}
-          y={PLAYER_RADIUS + 4}
+          y={effectiveRadius + 4}
           width={60}
           text={player.label}
           fontSize={10}
@@ -306,6 +309,7 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.fontSize === nextProps.player.fontSize &&
     prevProps.player.textColor === nextProps.player.textColor &&
     prevProps.player.opacity === nextProps.player.opacity &&
+    prevProps.player.radius === nextProps.player.radius &&
     prevProps.player.isGoalkeeper === nextProps.player.isGoalkeeper &&
     prevProps.isSelected === nextProps.isSelected &&
     colorsEqual

@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Group, Arrow, Circle } from 'react-konva';
+import { Group, Arrow, Circle, Line } from 'react-konva';
 import type Konva from 'konva';
 import type { ArrowElement, Position, PitchConfig } from '@tmc/core';
 
@@ -193,50 +193,95 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       onTap={handleClick}
       onDragEnd={handleDragEnd}
     >
-      {/* Arrow line */}
-      <Arrow
-        points={[startRelX, startRelY, endRelX, endRelY]}
-        stroke={color}
-        strokeWidth={strokeWidth}
-        fill={color}
-        pointerLength={10}
-        pointerWidth={8}
-        dash={dash}
-        lineCap="round"
-        lineJoin="round"
-        hitStrokeWidth={15}
-      />
-      
-      {/* Double chevron for shoot arrows */}
-      {arrow.arrowType === 'shoot' && (() => {
-        // Calculate vector and length
+      {/* Shoot arrow - double parallel lines + single arrowhead */}
+      {arrow.arrowType === 'shoot' ? (() => {
         const dx = endRelX - startRelX;
         const dy = endRelY - startRelY;
         const length = Math.sqrt(dx * dx + dy * dy);
         
-        // Only show second chevron if arrow is long enough (> 20px)
-        if (length < 20) return null;
+        // Fallback for very short arrows - render single center line
+        if (length < 10) {
+          return (
+            <Arrow
+              points={[startRelX, startRelY, endRelX, endRelY]}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              fill={color}
+              pointerLength={10}
+              pointerWidth={8}
+              lineCap="round"
+              lineJoin="round"
+              hitStrokeWidth={15}
+            />
+          );
+        }
         
-        // Calculate point 15px before the end (second chevron position)
-        const offset = 15;
-        const ratio = (length - offset) / length;
-        const secondChevronX = startRelX + dx * ratio;
-        const secondChevronY = startRelY + dy * ratio;
+        // Calculate perpendicular offset (3px each side)
+        const perpX = -dy / length * 3;
+        const perpY = dx / length * 3;
+        
+        // Arrowhead dimensions
+        const headLength = 12;
+        const headWidth = 8;
         
         return (
-          <Arrow
-            points={[startRelX, startRelY, secondChevronX, secondChevronY]}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            fill={color}
-            pointerLength={10}
-            pointerWidth={8}
-            lineCap="round"
-            lineJoin="round"
-            listening={false} // Don't interfere with selection
-          />
+          <>
+            {/* First parallel line (shaft) */}
+            <Line
+              points={[
+                startRelX + perpX, startRelY + perpY,
+                endRelX + perpX, endRelY + perpY
+              ]}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              lineCap="round"
+              hitStrokeWidth={15}
+            />
+            
+            {/* Second parallel line (shaft) */}
+            <Line
+              points={[
+                startRelX - perpX, startRelY - perpY,
+                endRelX - perpX, endRelY - perpY
+              ]}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              lineCap="round"
+              hitStrokeWidth={15}
+            />
+            
+            {/* Custom arrowhead (triangle polygon at endpoint) */}
+            <Line
+              points={[
+                endRelX, endRelY,
+                endRelX - headLength * (dx/length) + headWidth * (perpY/length), 
+                endRelY - headLength * (dy/length) - headWidth * (perpX/length),
+                endRelX - headLength * (dx/length) - headWidth * (perpY/length), 
+                endRelY - headLength * (dy/length) + headWidth * (perpX/length),
+                endRelX, endRelY,
+              ]}
+              fill={color}
+              stroke={color}
+              strokeWidth={1}
+              closed={true}
+            />
+          </>
         );
-      })()}
+      })() : (
+        /* Standard arrow (pass/run) */
+        <Arrow
+          points={[startRelX, startRelY, endRelX, endRelY]}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill={color}
+          pointerLength={10}
+          pointerWidth={8}
+          dash={dash}
+          lineCap="round"
+          lineJoin="round"
+          hitStrokeWidth={15}
+        />
+      )}
 
       {/* Selection highlight and endpoint handles */}
       {isSelected && (

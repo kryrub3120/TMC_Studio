@@ -24,7 +24,7 @@ export interface BoardPageProps {
   onOpenSettingsModal: () => void;
   onOpenPricingModal: () => void;
   onOpenLimitModal: (type: 'guest-step' | 'guest-project' | 'free-step' | 'free-project', current: number, max: number) => void;
-  onRenameProject: (id: string, name: string) => void | Promise<void>;
+  onRenameProject: (newName: string) => void;
 }
 
 export function useBoardPageState(props: BoardPageProps) {

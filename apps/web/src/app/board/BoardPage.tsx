@@ -109,7 +109,7 @@ export function BoardPage(props: BoardPageProps) {
         onOpenPalette={state.openCommandPalette}
         onOpenHelp={state.toggleCheatSheet}
         onOpenProjects={onOpenProjectsDrawer}
-        onRenameProject={(newName) => onRenameProject(state.cloudProjectId ?? '', newName)}
+        onRenameProject={onRenameProject}
         onToggleInspector={state.toggleInspector}
         onOpenAccount={state.authIsAuthenticated ? onOpenSettingsModal : onOpenAuthModal}
         onUpgrade={onOpenPricingModal}

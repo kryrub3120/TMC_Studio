@@ -36,6 +36,7 @@ export interface PlayerElement extends BoardElementBase {
   textColor?: string; // Custom text color (overrides team color)
   opacity?: number; // Element opacity 0-1 (default: 1)
   isGoalkeeper?: boolean; // Uses team's goalkeeperColor instead of primaryColor (takes precedence over number-based detection)
+  radius?: number; // Custom player size (default: 18 from PlayerNode)
 }
 
 /** Ball element on the board */
@@ -198,6 +199,7 @@ export interface PitchLineSettings {
   showGoalAreas: boolean;    // Pola bramkowe (małe)
   showCornerArcs: boolean;   // Łuki rożne
   showPenaltySpots: boolean; // Punkty karne
+  showGoals: boolean;        // Bramki (overlay)
 }
 
 /** Default line settings - all visible */
@@ -209,6 +211,7 @@ export const DEFAULT_LINE_SETTINGS: PitchLineSettings = {
   showGoalAreas: true,
   showCornerArcs: true,
   showPenaltySpots: true,
+  showGoals: true,
 };
 
 export interface PitchSettings {
@@ -286,6 +289,7 @@ export const PLAIN_PITCH_LINES: PitchLineSettings = {
   showGoalAreas: false,
   showCornerArcs: false,
   showPenaltySpots: false,
+  showGoals: false,
 };
 
 /** Board state containing all elements */

@@ -58,6 +58,9 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings, gridVisible
   // Calculate positions for penalty/goal areas (centered on short dimension)
   const penaltyAreaOffset = (shortDim - penaltyAreaWidth) / 2;
   const goalAreaOffset = (shortDim - goalAreaWidth) / 2;
+  
+  // Goal mouth width (standard ~7.32m scaled to pitch)
+  const goalMouthWidth = shortDim * 0.12;
 
   return (
     <Group x={padding} y={padding}>
@@ -407,6 +410,149 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings, gridVisible
             strokeWidth={lineWidth}
           />
         </>
+      )}
+
+      {/* === GOALS OVERLAY === */}
+      {!isPlainView && lines.showGoals && (
+        isPortrait ? (
+          // Portrait: Goals at TOP and BOTTOM
+          <>
+            {/* TOP goal */}
+            <Group x={width / 2} y={0} listening={false}>
+              {/* Goal frame - U shape */}
+              <Line
+                points={[
+                  -goalMouthWidth / 2, -8,
+                  goalMouthWidth / 2, -8,
+                  goalMouthWidth / 2, 0,
+                  -goalMouthWidth / 2, 0,
+                ]}
+                stroke={lineColor}
+                strokeWidth={3}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+              {/* Net depth suggestion - diagonal lines */}
+              <Line
+                points={[-goalMouthWidth / 2, -8, -goalMouthWidth / 2 + 8, -18]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+              <Line
+                points={[goalMouthWidth / 2, -8, goalMouthWidth / 2 - 8, -18]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+            </Group>
+
+            {/* BOTTOM goal */}
+            <Group x={width / 2} y={height} listening={false}>
+              {/* Goal frame - U shape */}
+              <Line
+                points={[
+                  -goalMouthWidth / 2, 8,
+                  goalMouthWidth / 2, 8,
+                  goalMouthWidth / 2, 0,
+                  -goalMouthWidth / 2, 0,
+                ]}
+                stroke={lineColor}
+                strokeWidth={3}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+              {/* Net depth suggestion - diagonal lines */}
+              <Line
+                points={[-goalMouthWidth / 2, 8, -goalMouthWidth / 2 + 8, 18]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+              <Line
+                points={[goalMouthWidth / 2, 8, goalMouthWidth / 2 - 8, 18]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+            </Group>
+          </>
+        ) : (
+          // Landscape: Goals at LEFT and RIGHT
+          <>
+            {/* LEFT goal */}
+            <Group x={0} y={height / 2} listening={false}>
+              {/* Goal frame - U shape */}
+              <Line
+                points={[
+                  -8, goalMouthWidth / 2,
+                  -8, -goalMouthWidth / 2,
+                  0, -goalMouthWidth / 2,
+                  0, goalMouthWidth / 2,
+                ]}
+                stroke={lineColor}
+                strokeWidth={3}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+              {/* Net depth suggestion - diagonal lines */}
+              <Line
+                points={[-8, goalMouthWidth / 2, -18, goalMouthWidth / 2 - 8]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+              <Line
+                points={[-8, -goalMouthWidth / 2, -18, -goalMouthWidth / 2 + 8]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+            </Group>
+
+            {/* RIGHT goal */}
+            <Group x={width} y={height / 2} listening={false}>
+              {/* Goal frame - U shape */}
+              <Line
+                points={[
+                  8, goalMouthWidth / 2,
+                  8, -goalMouthWidth / 2,
+                  0, -goalMouthWidth / 2,
+                  0, goalMouthWidth / 2,
+                ]}
+                stroke={lineColor}
+                strokeWidth={3}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+              {/* Net depth suggestion - diagonal lines */}
+              <Line
+                points={[8, goalMouthWidth / 2, 18, goalMouthWidth / 2 - 8]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+              <Line
+                points={[8, -goalMouthWidth / 2, 18, -goalMouthWidth / 2 + 8]}
+                stroke={lineColor}
+                strokeWidth={1}
+                opacity={0.3}
+                listening={false}
+              />
+            </Group>
+          </>
+        )
       )}
 
       {/* Snap Grid Overlay */}
