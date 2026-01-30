@@ -85,6 +85,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
   const rotateSelected = useBoardStore((s) => s.rotateSelected);
   const resizeSelected = useBoardStore((s) => s.resizeSelected);
+  const scaleSelectedEquipmentBy = useBoardStore((s) => s.scaleSelectedEquipmentBy);
   const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const applyFormation = useBoardStore((s) => s.applyFormation);
   const removeStep = useBoardStore((s) => s.removeStep);
@@ -155,6 +156,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     // Helper: Check if selected element is zone
     const hasSelectedZone = () => elements.some((el) => 
       selectedIds.includes(el.id) && isZoneElement(el)
+    );
+    
+    // Helper: Check if selected element is equipment
+    const hasSelectedEquipment = () => elements.some((el) => 
+      selectedIds.includes(el.id) && el.type === 'equipment'
     );
     
     const key = e.key.toLowerCase();
@@ -647,6 +653,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         } else if (isCmd) {
           e.preventDefault();
           zoomIn();
+        } else if (!isCmd && hasSelectedEquipment()) {
+          // + = Equipment resize +15%
+          e.preventDefault();
+          scaleSelectedEquipmentBy(1.15);
+          showToast('Equipment +15%');
         }
         break;
         
@@ -659,6 +670,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         } else if (isCmd) {
           e.preventDefault();
           zoomOut();
+        } else if (!isCmd && hasSelectedEquipment()) {
+          // - = Equipment resize -15%
+          e.preventDefault();
+          scaleSelectedEquipmentBy(0.85);
+          showToast('Equipment -15%');
         }
         break;
         
@@ -721,7 +737,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     undo, redo, deleteSelected,
     cycleZoneShape, cyclePlayerShape, saveDocument, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
-    cycleSelectedColor, rotateSelected, resizeSelected, updateTextProperties, applyFormation,
+    cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation,
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
     zoomIn, zoomOut, isPlaying, play, pause, toggleLoop,
     removeStep, prevStep, nextStep, addStep,

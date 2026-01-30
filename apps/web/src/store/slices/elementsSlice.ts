@@ -83,6 +83,7 @@ export interface ElementsSlice {
   cycleZoneShape: () => void;
   rotateSelected: (degrees: number) => void;
   resizeSelected: (scaleFactor: number) => void;
+  scaleSelectedEquipmentBy: (factor: number) => void;
   
   // Freehand drawing
   finishFreehandDrawing: () => void;
@@ -511,6 +512,24 @@ export const createElementsSlice: StateCreator<
             const currentSize = el.fontSize ?? 18;
             return { ...el, fontSize: Math.round(currentSize * clampedScale) };
           }
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  scaleSelectedEquipmentBy: (factor) => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (selectedIds.includes(el.id) && el.type === 'equipment') {
+          const equipment = el as { scale?: number };
+          const currentScale = equipment.scale ?? 1;
+          const newScale = Math.max(0.25, Math.min(3, currentScale * factor));
+          return { ...el, scale: newScale };
         }
         return el;
       }),

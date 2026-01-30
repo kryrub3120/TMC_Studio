@@ -772,6 +772,57 @@ const GoalShape: React.FC<{ color: string; scale: number; variant: string }> = (
 
 ---
 
+### Stage 3.3 — Equipment System Refactor + PPM UX
+
+**Objective:** Modularize equipment rendering for scalability  
+**Risk:** LOW  
+**Estimated Effort:** 2 hours  
+**Priority:** MEDIUM - Technical debt + future-proofing
+
+#### Changes
+
+**Modularization:**
+- Extract 7 shape components to `equipment/` folder
+- Centralize hit bounds in `getEquipmentHitBounds()`
+- Create `EQUIPMENT_RENDERERS` map for type-safe lookup
+- Simplify `EquipmentNode.tsx` to ~100 line shell
+
+**PPM Fix Verification:**
+- Verify RMB on equipment shows context menu (not browser menu)
+- Verify RMB doesn't trigger marquee selection
+- Existing implementation already correct (no code changes needed)
+
+**Keyboard Resize:**
+- `+` key: Enlarge equipment by 15% (factor 1.15)
+- `-` key: Shrink equipment by 15% (factor 0.85)
+- Works with multi-select equipment
+- Scale range: 25%–300%
+- Single history entry per press
+
+**Future Equipment Standard:**
+1. Create new `{type}.tsx` file with `EquipmentShapeProps`
+2. Add entry to `EQUIPMENT_RENDERERS` map
+3. Add hit bounds case to `getEquipmentHitBounds()`
+4. All shapes must have `listening={false}`
+5. No changes to `EquipmentNode.tsx` needed
+
+**Test Checklist (5-10 min):**
+```
+✓ RMB on goal → context menu appears
+✓ RMB on ladder → context menu appears
+✓ RMB on goal → no marquee selection started
+✓ LMB select equipment → selection works
+✓ Drag equipment → position updates
+✓ Select goal → press [ → rotation works
+✓ Select goal → press + → goal enlarges (~15%)
+✓ Select goal → press - → goal shrinks (~15%)
+✓ Select 3 cones → press + → all enlarge together
+✓ Alt+↓ on equipment → color changes
+✓ pnpm typecheck → passes
+```
+
+---
+
 ### Definition of Done (Stage 3)
 
 **Goal Equipment:**
