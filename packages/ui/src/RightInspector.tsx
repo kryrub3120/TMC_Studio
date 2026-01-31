@@ -69,6 +69,8 @@ export interface RightInspectorProps {
   onUpdateTeam?: (team: 'home' | 'away', settings: Partial<TeamSetting>) => void;
   pitchSettings?: PitchSettings;
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
+  isPrintMode?: boolean;
+  onTogglePrintMode?: () => void;
 }
 
 type TabType = 'props' | 'layers' | 'objects' | 'teams' | 'pitch';
@@ -611,6 +613,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onUpdateTeam,
   pitchSettings,
   onUpdatePitch,
+  isPrintMode,
+  onTogglePrintMode,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
 
@@ -721,6 +725,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
               <PitchPanel
                 pitchSettings={pitchSettings}
                 onUpdatePitch={onUpdatePitch}
+                isPrintMode={isPrintMode}
+                onTogglePrintMode={onTogglePrintMode}
               />
             )}
           </div>

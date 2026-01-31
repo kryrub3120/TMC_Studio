@@ -28,20 +28,41 @@ export interface PlayerNodeProps {
   teamSettings?: TeamSettings;
   /** Called when user double-clicks to quick-edit number */
   onQuickEditNumber?: (id: string, currentNumber: number) => void;
+  /** Print mode flag for render-time color sanitization */
+  isPrintMode?: boolean;
 }
 
 /** Default goalkeeper color (yellow) */
 const DEFAULT_GK_COLOR = '#fbbf24';
 
+/** Sanitize white to black in print mode (inline, avoids cross-package import) */
+function sanitizeForPrint(color: string, isPrintMode: boolean): string {
+  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') {
+    return '#000000';
+  }
+  return color;
+}
+
 /** Convert team settings to render colors */
-function getTeamColors(team: 'home' | 'away', teamSettings?: TeamSettings, isGoalkeeper?: boolean): TeamColors {
+function getTeamColors(
+  team: 'home' | 'away',
+  teamSettings?: TeamSettings,
+  isGoalkeeper?: boolean,
+  playerColorOverride?: string,
+  isPrintMode?: boolean
+): TeamColors {
   const settings = teamSettings ?? DEFAULT_TEAM_SETTINGS;
   const teamSetting = settings[team];
   
-  // Use goalkeeper color if player is GK, otherwise use primary
-  const primaryHex = isGoalkeeper
-    ? (teamSetting.goalkeeperColor ?? DEFAULT_GK_COLOR)
-    : teamSetting.primaryColor;
+  // Priority: player.color > goalkeeper color > team primary color
+  let primaryHex = playerColorOverride ?? (
+    isGoalkeeper
+      ? (teamSetting.goalkeeperColor ?? DEFAULT_GK_COLOR)
+      : teamSetting.primaryColor
+  );
+  
+  // Sanitize white to black in print mode (render-time only)
+  primaryHex = sanitizeForPrint(primaryHex, isPrintMode ?? false);
   
   // Darken color for stroke
   const darkenedStroke = darkenColor(primaryHex, 20);
@@ -77,11 +98,12 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   onDragStart,
   teamSettings,
   onQuickEditNumber,
+  isPrintMode,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
-  const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper);
+  const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper, player.color, isPrintMode);
   
   // Use stored radius or default
   const effectiveRadius = player.radius ?? PLAYER_RADIUS;
@@ -311,6 +333,8 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.opacity === nextProps.player.opacity &&
     prevProps.player.radius === nextProps.player.radius &&
     prevProps.player.isGoalkeeper === nextProps.player.isGoalkeeper &&
+    prevProps.player.color === nextProps.player.color && // Per-player color override
+    prevProps.isPrintMode === nextProps.isPrintMode && // Print mode affects rendering
     prevProps.isSelected === nextProps.isSelected &&
     colorsEqual
   );

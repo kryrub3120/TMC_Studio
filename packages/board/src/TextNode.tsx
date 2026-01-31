@@ -18,9 +18,26 @@ export interface TextNodeProps {
   /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
   onDoubleClick?: (id: string) => void;
+  /** Print mode flag for render-time color sanitization */
+  isPrintMode?: boolean;
 }
 
 const SELECTION_PADDING = 6;
+
+/** Sanitize white to black in print mode (inline, avoids cross-package import) */
+function sanitizeTextColor(color: string | undefined, isPrintMode: boolean): string {
+  // Default: black in print mode, white otherwise
+  if (!color) {
+    return isPrintMode ? '#000000' : '#ffffff';
+  }
+  
+  // Sanitize white to black in print mode
+  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') {
+    return '#000000';
+  }
+  
+  return color;
+}
 
 /** Draggable text element */
 const TextNodeComponent: React.FC<TextNodeProps> = ({
@@ -31,12 +48,16 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   onDragEnd,
   onDragStart,
   onDoubleClick,
+  isPrintMode,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const textRef = useRef<Konva.Text>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
   const [textSize, setTextSize] = useState({ width: 50, height: 20 });
+  
+  // Effective color with print mode sanitization
+  const effectiveColor = sanitizeTextColor(text.color, isPrintMode ?? false);
 
   // Measure text dimensions after render
   useEffect(() => {
@@ -161,7 +182,7 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
         fontSize={text.fontSize}
         fontFamily={text.fontFamily}
         fontStyle={fontStyle}
-        fill={text.color}
+        fill={effectiveColor}
         shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.5)'}
         shadowBlur={isDragging ? 0 : 2}
         shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
@@ -185,6 +206,7 @@ export const TextNode = memo(TextNodeComponent, (prevProps, nextProps) => {
     prevProps.text.bold === nextProps.text.bold &&
     prevProps.text.italic === nextProps.text.italic &&
     prevProps.text.backgroundColor === nextProps.text.backgroundColor &&
+    prevProps.isPrintMode === nextProps.isPrintMode && // Print mode affects rendering
     prevProps.isSelected === nextProps.isSelected
   );
 });

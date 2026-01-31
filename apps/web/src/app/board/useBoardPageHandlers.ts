@@ -401,6 +401,16 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
         }
         hideMenu();
       },
+      onChangePlayerColor: () => {
+        cycleSelectedColor(1);
+        hideMenu();
+        showToast('Player color changed (use Alt+↓/↑ to cycle)');
+      },
+      onChangeTextColor: () => {
+        cycleSelectedColor(1);
+        hideMenu();
+        showToast('Text color changed (use Alt+↓/↑ to cycle)');
+      },
     };
   }, [
     deleteSelected, duplicateSelected, copySelection, pasteClipboard, selectAll,

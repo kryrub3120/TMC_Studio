@@ -120,6 +120,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const hasSeenShortcutsHint = useUIStore((s) => s.hasSeenShortcutsHint);
   const activeTool = useUIStore((s) => s.activeTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
+  const isPrintMode = useUIStore((s) => s.isPrintMode);
   
   // UI store actions
   const toggleTheme = useUIStore((s) => s.toggleTheme);
@@ -136,6 +137,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const setHasSeenShortcutsHint = useUIStore((s) => s.setHasSeenShortcutsHint);
   const setInspectorOpen = useUIStore((s) => s.setInspectorOpen);
   const setCheatSheetVisible = useUIStore((s) => s.setCheatSheetVisible);
+  const togglePrintMode = useUIStore((s) => s.togglePrintMode);
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -430,6 +432,7 @@ export function useBoardPageState(props: BoardPageProps) {
     hasSeenShortcutsHint,
     activeTool,
     gridVisible,
+    isPrintMode,
     
     // UI actions
     toggleTheme,
@@ -445,6 +448,7 @@ export function useBoardPageState(props: BoardPageProps) {
     zoomFit,
     setHasSeenShortcutsHint,
     setCheatSheetVisible,
+    togglePrintMode,
     
     // Playback
     isPlaying,

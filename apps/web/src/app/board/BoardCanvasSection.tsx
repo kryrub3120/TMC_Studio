@@ -36,6 +36,7 @@ export interface BoardCanvasSectionProps {
   selectedIds: string[];
   isPlaying: boolean;
   activeTool: string | null;
+  isPrintMode: boolean;
   
   // Marquee state
   marqueeStart: Position | null;
@@ -94,6 +95,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     selectedIds,
     isPlaying,
     activeTool,
+    isPrintMode,
     marqueeStart,
     marqueeEnd,
     drawingStart,
@@ -188,6 +190,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             selectedIds={selectedIds}
             isPlaying={isPlaying}
             activeTool={activeTool}
+            isPrintMode={isPrintMode}
             marqueeStart={marqueeStart}
             marqueeEnd={marqueeEnd}
             drawingStart={drawingStart}

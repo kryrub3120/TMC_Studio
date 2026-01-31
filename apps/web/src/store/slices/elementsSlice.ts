@@ -32,6 +32,7 @@ import {
 } from '@tmc/core';
 import type { AppState } from '../types';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
+import { SHARED_COLORS } from '@tmc/ui';
 
 /** Get next available player number */
 function getNextPlayerNumber(elements: BoardElement[], team: Team): number {
@@ -66,6 +67,8 @@ export interface ElementsSlice {
   // Element updates
   updateTextContent: (id: ElementId, content: string) => void;
   updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string }) => void;
+  updatePlayerColor: (ids: ElementId[], color: string) => void;
+  updateTextColor: (ids: ElementId[], color: string) => void;
   moveElementById: (id: ElementId, position: Position) => void;
   resizeZone: (id: ElementId, position: Position, width: number, height: number) => void;
   updateArrowEndpoint: (id: ElementId, endpoint: 'start' | 'end', position: Position) => void;
@@ -199,6 +202,30 @@ export const createElementsSlice: StateCreator<
       elements: state.elements.map((el) => {
         if (el.id === id && isTextElement(el)) {
           return { ...el, ...updates };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  updatePlayerColor: (ids, color) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          return { ...el, color };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  updateTextColor: (ids, color) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isTextElement(el)) {
+          return { ...el, color };
         }
         return el;
       }),
@@ -349,67 +376,66 @@ export const createElementsSlice: StateCreator<
     const { selectedIds } = get();
     if (selectedIds.length === 0) return;
     
-    const COLORS = ['#ff0000', '#ff6b6b', '#00ff00', '#3b82f6', '#eab308', '#f97316', '#ffffff'];
-    
     set((state) => ({
       elements: state.elements.map((el) => {
         if (selectedIds.includes(el.id)) {
           // Arrows
           if (isArrowElement(el)) {
             const current = el.color ?? '#ffffff';
-            const currentIndex = COLORS.indexOf(current);
+            const currentIndex = SHARED_COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 
-              : (currentIndex + direction + COLORS.length) % COLORS.length;
-            return { ...el, color: COLORS[newIndex] };
+              : (currentIndex + direction + SHARED_COLORS.length) % SHARED_COLORS.length;
+            return { ...el, color: SHARED_COLORS[newIndex] };
           }
           // Zones
           if (el.type === 'zone') {
             const zone = el as { fillColor?: string };
             const current = zone.fillColor ?? '#22c55e';
-            const currentIndex = COLORS.indexOf(current);
+            const currentIndex = SHARED_COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 
-              : (currentIndex + direction + COLORS.length) % COLORS.length;
-            return { ...el, fillColor: COLORS[newIndex] };
+              : (currentIndex + direction + SHARED_COLORS.length) % SHARED_COLORS.length;
+            return { ...el, fillColor: SHARED_COLORS[newIndex] };
           }
           // Drawings
           if (el.type === 'drawing') {
             const drawing = el as { color?: string };
             const current = drawing.color ?? '#ff0000';
-            const currentIndex = COLORS.indexOf(current);
+            const currentIndex = SHARED_COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 
-              : (currentIndex + direction + COLORS.length) % COLORS.length;
-            return { ...el, color: COLORS[newIndex] };
+              : (currentIndex + direction + SHARED_COLORS.length) % SHARED_COLORS.length;
+            return { ...el, color: SHARED_COLORS[newIndex] };
           }
-          // Players - cycle through player text color
+          // Players - cycle through player fill color (player.color)
           if (isPlayerElement(el)) {
-            const current = el.textColor ?? (el.team === 'home' ? '#3b82f6' : '#ef4444');
-            const currentIndex = COLORS.indexOf(current);
+            // Get current color (defaults handled in PlayerNode)
+            const current = el.color ?? (el.team === 'home' ? '#3b82f6' : '#ef4444');
+            const currentIndex = SHARED_COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 
-              : (currentIndex + direction + COLORS.length) % COLORS.length;
-            return { ...el, textColor: COLORS[newIndex] };
+              : (currentIndex + direction + SHARED_COLORS.length) % SHARED_COLORS.length;
+            return { ...el, color: SHARED_COLORS[newIndex] };
           }
           // Text - cycle text color
           if (isTextElement(el)) {
             const current = el.color ?? '#ffffff';
-            const currentIndex = COLORS.indexOf(current);
+            const currentIndex = SHARED_COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 
-              : (currentIndex + direction + COLORS.length) % COLORS.length;
-            return { ...el, color: COLORS[newIndex] };
+              : (currentIndex + direction + SHARED_COLORS.length) % SHARED_COLORS.length;
+            return { ...el, color: SHARED_COLORS[newIndex] };
           }
           // Equipment - add color property if it has one
           if (el.type === 'equipment') {
             const equipment = el as { color?: string };
             const current = equipment.color ?? '#ffffff';
-            const currentIndex = COLORS.indexOf(current);
+            const currentIndex = SHARED_COLORS.indexOf(current);
             const newIndex = currentIndex === -1 
               ? 0 
-              : (currentIndex + direction + COLORS.length) % COLORS.length;
-            return { ...el, color: COLORS[newIndex] };
+              : (currentIndex + direction + SHARED_COLORS.length) % SHARED_COLORS.length;
+            return { ...el, color: SHARED_COLORS[newIndex] };
           }
         }
         return el;
@@ -581,14 +607,28 @@ export const createElementsSlice: StateCreator<
     const formation = getFormationById(formationId);
     if (!formation) return;
     
-    const { elements } = get();
+    const { elements, document } = get();
+    
+    // Get current pitch orientation from document settings
+    const orientation = document.pitchSettings?.orientation ?? 'landscape';
+    
+    // Get pitch dimensions based on orientation
+    // DEFAULT_PITCH_CONFIG.width/height are landscape dimensions
+    // For portrait, we swap them
+    const pitchWidth = orientation === 'portrait' 
+      ? DEFAULT_PITCH_CONFIG.height 
+      : DEFAULT_PITCH_CONFIG.width;
+    const pitchHeight = orientation === 'portrait' 
+      ? DEFAULT_PITCH_CONFIG.width 
+      : DEFAULT_PITCH_CONFIG.height;
     
     const positions = getAbsolutePositions(
       formation,
-      DEFAULT_PITCH_CONFIG.width,
-      DEFAULT_PITCH_CONFIG.height,
+      pitchWidth,
+      pitchHeight,
       DEFAULT_PITCH_CONFIG.padding,
-      team === 'away'
+      team === 'away',
+      orientation
     );
     
     const filteredElements = elements.filter(

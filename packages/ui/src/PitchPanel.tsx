@@ -8,6 +8,8 @@ import { PITCH_THEMES, DEFAULT_LINE_SETTINGS, PLAIN_PITCH_LINES } from '@tmc/cor
 export interface PitchPanelProps {
   pitchSettings: PitchSettings;
   onUpdatePitch: (settings: Partial<PitchSettings>) => void;
+  isPrintMode?: boolean;
+  onTogglePrintMode?: () => void;
 }
 
 /** Theme button with preview */
@@ -69,7 +71,7 @@ function ThemeButton({
 }
 
 /** Main PitchPanel component */
-export function PitchPanel({ pitchSettings, onUpdatePitch }: PitchPanelProps) {
+export function PitchPanel({ pitchSettings, onUpdatePitch, isPrintMode = false, onTogglePrintMode }: PitchPanelProps) {
   const handleThemeSelect = (theme: PitchTheme) => {
     const themeColors = PITCH_THEMES[theme];
     onUpdatePitch({
@@ -168,14 +170,34 @@ export function PitchPanel({ pitchSettings, onUpdatePitch }: PitchPanelProps) {
       {/* Print Friendly Button */}
       <button
         type="button"
-        onClick={() => onUpdatePitch({
-          theme: 'custom',
-          primaryColor: '#ffffff',
-          stripeColor: '#f5f5f5',
-          lineColor: '#000000',
-          showStripes: false,
-        })}
-        className="w-full px-3 py-2.5 mt-2 flex items-center justify-center gap-2 bg-white text-gray-900 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors"
+        onClick={() => {
+          // Check if we're already in print-friendly mode (white background)
+          const isPrintFriendly = pitchSettings.primaryColor === '#ffffff';
+          if (isPrintFriendly) {
+            // Toggle back to grass theme AND disable print mode
+            handleThemeSelect('grass');
+            if (isPrintMode && onTogglePrintMode) {
+              onTogglePrintMode();
+            }
+          } else {
+            // Set to print-friendly mode AND enable print mode
+            onUpdatePitch({
+              theme: 'custom',
+              primaryColor: '#ffffff',
+              stripeColor: '#f5f5f5',
+              lineColor: '#000000',
+              showStripes: false,
+            });
+            if (!isPrintMode && onTogglePrintMode) {
+              onTogglePrintMode();
+            }
+          }
+        }}
+        className={`w-full px-3 py-2.5 mt-2 flex items-center justify-center gap-2 rounded-lg border transition-colors ${
+          pitchSettings.primaryColor === '#ffffff'
+            ? 'bg-green-500 text-white border-green-600 hover:bg-green-600'
+            : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-100'
+        }`}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="6 9 6 2 18 2 18 9" />

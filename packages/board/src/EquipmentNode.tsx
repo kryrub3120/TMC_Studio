@@ -11,17 +11,30 @@ import { EQUIPMENT_RENDERERS, getEquipmentHitBounds } from './equipment';
 export interface EquipmentNodeProps {
   element: EquipmentElement;
   isSelected: boolean;
+  isPrintMode?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, x: number, y: number) => void;
+}
+
+/** Sanitize white to black in print mode (inline, avoids cross-package import) */
+function sanitizeForPrint(color: string, isPrintMode: boolean): string {
+  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') {
+    return '#000000';
+  }
+  return color;
 }
 
 export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   element,
   isSelected,
+  isPrintMode,
   onSelect,
   onDragEnd,
 }) => {
   const { id, position, equipmentType, variant, rotation, color, scale } = element;
+  
+  // Sanitize white to black in print mode (only for white equipment)
+  const effectiveColor = color ? sanitizeForPrint(color, isPrintMode ?? false) : color;
   
   // Get hit area from centralized function
   const hitBounds = getEquipmentHitBounds(element);
@@ -105,7 +118,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
       
       {/* Equipment shape (listening=false) */}
       <Group listening={false}>
-        {ShapeComponent && <ShapeComponent color={color} scale={scale} variant={variant} />}
+        {ShapeComponent && <ShapeComponent color={effectiveColor} scale={scale} variant={variant} />}
       </Group>
     </Group>
   );

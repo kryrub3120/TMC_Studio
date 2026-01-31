@@ -23,6 +23,8 @@ interface ContextMenuHandlers {
   onCycleShape?: () => void;
   onEdit?: () => void;
   onCycleColor?: () => void;
+  onChangePlayerColor?: () => void;
+  onChangeTextColor?: () => void;
   onResize?: () => void; // B5: PPM Resize Slider
   // Empty space actions
   onAddPlayer?: () => void;
@@ -130,6 +132,7 @@ export function getCanvasContextMenuItems(
       { label: 'Change Number', icon: '🔢', onClick: handlers.onChangeNumber!, shortcut: 'double-tap' },
       { label: 'Switch Team', icon: '🔄', onClick: handlers.onSwitchTeam!, shortcut: 'Shift+P' },
       { label: 'Cycle Shape', icon: '◼️', onClick: handlers.onCycleShape!, shortcut: 'S' },
+      ...(handlers.onChangePlayerColor ? [{ label: 'Change Color…', icon: '🎨', onClick: handlers.onChangePlayerColor }] : []),
       ...(handlers.onResize ? [{ label: 'Resize…', icon: '🔍', onClick: handlers.onResize, shortcut: 'Opt+Cmd +/-' }] : []),
       ...layerItems,
       ...commonItems,
@@ -150,6 +153,7 @@ export function getCanvasContextMenuItems(
   if (isTextElement(element)) {
     return [
       { label: 'Edit Text', icon: '✏️', onClick: handlers.onEdit!, shortcut: 'Enter' },
+      ...(handlers.onChangeTextColor ? [{ label: 'Change Color…', icon: '🎨', onClick: handlers.onChangeTextColor }] : []),
       ...layerItems,
       ...commonItems,
     ];

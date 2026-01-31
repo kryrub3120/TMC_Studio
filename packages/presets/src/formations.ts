@@ -179,23 +179,40 @@ export function getFormationIds(): string[] {
 /** 
  * Convert formation positions to absolute pitch coordinates
  * @param formation - Formation to convert
- * @param pitchWidth - Actual pitch width in pixels
- * @param pitchHeight - Actual pitch height in pixels
+ * @param pitchWidth - Actual pitch width in pixels (inner pitch, not including padding)
+ * @param pitchHeight - Actual pitch height in pixels (inner pitch, not including padding)
  * @param padding - Pitch padding in pixels
  * @param mirror - If true, mirror X positions (for Away team: GK on right)
+ * @param orientation - Pitch orientation ('landscape' or 'portrait')
  */
 export function getAbsolutePositions(
   formation: Formation,
   pitchWidth: number,
   pitchHeight: number,
   padding: number,
-  mirror: boolean = false
+  mirror: boolean = false,
+  orientation: 'landscape' | 'portrait' = 'landscape'
 ): Array<{ x: number; y: number; role: string; number: number }> {
   return formation.positions.map((pos) => {
     // Mirror X for away team: x=4% becomes x=96%, x=46% becomes x=54%
-    const xPercent = mirror ? (100 - pos.x) : pos.x;
+    let xPercent = mirror ? (100 - pos.x) : pos.x;
+    let yPercent = pos.y;
+    
+    // For portrait orientation, rotate the formation:
+    // - What was horizontal (goal-to-goal) becomes vertical (top-to-bottom)
+    // - X% in landscape → Y% in portrait
+    // - Y% in landscape → X% in portrait (mirrored to keep proper left-right)
+    if (orientation === 'portrait') {
+      const origX = xPercent;
+      const origY = yPercent;
+      // Rotate 90° CW: (x, y) → (100-y, x) for canonical rotation
+      // This puts GK at top (low Y) instead of left (low X)
+      xPercent = 100 - origY;
+      yPercent = origX;
+    }
+    
     const x = padding + (xPercent / 100) * pitchWidth;
-    const y = padding + (pos.y / 100) * pitchHeight;
+    const y = padding + (yPercent / 100) * pitchHeight;
     
     return {
       x,

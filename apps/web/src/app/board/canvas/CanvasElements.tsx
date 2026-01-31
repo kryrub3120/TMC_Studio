@@ -32,6 +32,7 @@ export interface CanvasElementsProps {
   // Animation state
   isPlaying: boolean;
   activeTool: string | null;
+  isPrintMode: boolean;
   
   // Marquee
   marqueeStart: Position | null;
@@ -72,6 +73,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     gridVisible,
     isPlaying,
     activeTool,
+    isPrintMode,
     marqueeStart,
     marqueeEnd,
     drawingStart,
@@ -151,6 +153,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               player={animatedPlayer}
               pitchConfig={pitchConfig}
               teamSettings={teamSettings}
+              isPrintMode={isPrintMode}
               isSelected={!isPlaying && selectedIds.includes(player.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
@@ -189,6 +192,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               key={equipment.id}
               element={animatedEquipment as EquipmentElement}
               isSelected={!isPlaying && selectedIds.includes(equipment.id)}
+              isPrintMode={isPrintMode}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : (id, x, y) => {
                 onElementDragEnd(id, { x, y });
@@ -207,6 +211,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               key={textEl.id}
               text={animatedText}
               pitchConfig={pitchConfig}
+              isPrintMode={isPrintMode}
               isSelected={!isPlaying && selectedIds.includes(textEl.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}

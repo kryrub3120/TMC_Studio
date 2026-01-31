@@ -56,6 +56,7 @@ interface UIState {
   
   // Modes
   focusMode: boolean;
+  isPrintMode: boolean; // Print-friendly mode (UI-only, not persisted)
   
   // Visibility toggles
   inspectorOpen: boolean;
@@ -93,6 +94,9 @@ interface UIState {
   // Actions - Focus Mode
   toggleFocusMode: () => void;
   setFocusMode: (enabled: boolean) => void;
+  
+  // Actions - Print Mode
+  togglePrintMode: () => void;
   
   // Actions - Visibility
   toggleInspector: () => void;
@@ -173,6 +177,7 @@ export const useUIStore = create<UIState>()(
       // Initial state
       theme: 'dark',
       focusMode: false,
+      isPrintMode: false, // Print mode is UI-only, not persisted
       inspectorOpen: getInitialInspectorState(),
       cheatSheetVisible: false, // Never auto-open (Hard Rule A)
       commandPaletteOpen: false,
@@ -229,6 +234,11 @@ export const useUIStore = create<UIState>()(
         } else {
           set({ focusMode: false });
         }
+      },
+      
+      // Print mode actions (UI-only, does NOT mutate document)
+      togglePrintMode: () => {
+        set((s) => ({ isPrintMode: !s.isPrintMode }));
       },
 
       // Visibility actions

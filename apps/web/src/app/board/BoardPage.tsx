@@ -135,6 +135,7 @@ export function BoardPage(props: BoardPageProps) {
             selectedIds={state.selectedIds}
             isPlaying={state.isPlaying}
             activeTool={state.activeTool}
+            isPrintMode={state.isPrintMode}
             marqueeStart={state.canvasEventsController.marqueeStart}
             marqueeEnd={state.canvasEventsController.marqueeEnd}
             drawingStart={state.drawingController.drawingStart}
@@ -241,27 +242,29 @@ export function BoardPage(props: BoardPageProps) {
 
         {/* Right Inspector */}
         {!state.focusMode && (
-          <RightInspector
-            isOpen={state.inspectorOpen}
-            onToggle={state.toggleInspector}
-            selectedCount={state.selectedIds.length}
-            selectedElement={state.inspectorElement}
-            elements={state.elementsList}
-            layerVisibility={state.layerVisibility}
-            groups={state.groups}
-            onUpdateElement={handlers.handleUpdateElement}
-            onSelectElement={(id) => state.selectElement(id, false)}
-            onToggleLayerVisibility={state.toggleLayerVisibility}
-            onSelectGroup={state.selectGroup}
-            onToggleGroupLock={state.toggleGroupLock}
-            onToggleGroupVisibility={state.toggleGroupVisibility}
-            onRenameGroup={state.renameGroup}
-            onQuickAction={handlers.handleQuickAction}
-            teamSettings={state.teamSettings}
-            onUpdateTeam={state.updateTeamSettings}
-            pitchSettings={state.pitchSettings ?? DEFAULT_PITCH_SETTINGS}
-            onUpdatePitch={state.updatePitchSettings}
-          />
+        <RightInspector
+          isOpen={state.inspectorOpen}
+          onToggle={state.toggleInspector}
+          selectedCount={state.selectedIds.length}
+          selectedElement={state.inspectorElement}
+          elements={state.elementsList}
+          layerVisibility={state.layerVisibility}
+          groups={state.groups}
+          onUpdateElement={handlers.handleUpdateElement}
+          onSelectElement={(id) => state.selectElement(id, false)}
+          onToggleLayerVisibility={state.toggleLayerVisibility}
+          onSelectGroup={state.selectGroup}
+          onToggleGroupLock={state.toggleGroupLock}
+          onToggleGroupVisibility={state.toggleGroupVisibility}
+          onRenameGroup={state.renameGroup}
+          onQuickAction={handlers.handleQuickAction}
+          teamSettings={state.teamSettings}
+          onUpdateTeam={state.updateTeamSettings}
+          pitchSettings={state.pitchSettings ?? DEFAULT_PITCH_SETTINGS}
+          onUpdatePitch={state.updatePitchSettings}
+          isPrintMode={state.isPrintMode}
+          onTogglePrintMode={state.togglePrintMode}
+        />
         )}
       </div>
 

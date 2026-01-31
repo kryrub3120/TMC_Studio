@@ -3,19 +3,7 @@
  */
 
 import type { TeamSettings, TeamSetting } from '@tmc/core';
-
-/** Color presets for quick selection */
-const COLOR_PRESETS = [
-  '#ef4444', // red
-  '#f97316', // orange
-  '#eab308', // yellow
-  '#22c55e', // green
-  '#3b82f6', // blue
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#ffffff', // white
-  '#1f2937', // dark gray
-];
+import { SHARED_COLORS } from './colors';
 
 export interface TeamsPanelProps {
   teamSettings: TeamSettings;
@@ -80,8 +68,8 @@ function TeamSection({
         </div>
 
         {/* Color presets grid */}
-        <div className="grid grid-cols-9 gap-1">
-          {COLOR_PRESETS.map((color) => (
+        <div className="grid grid-cols-8 gap-1">
+          {SHARED_COLORS.map((color) => (
             <button
               key={color}
               type="button"
@@ -123,8 +111,8 @@ function TeamSection({
         </div>
 
         {/* GK Color presets grid */}
-        <div className="grid grid-cols-9 gap-1">
-          {COLOR_PRESETS.map((color) => (
+        <div className="grid grid-cols-8 gap-1">
+          {SHARED_COLORS.map((color) => (
             <button
               key={`gk-${color}`}
               type="button"

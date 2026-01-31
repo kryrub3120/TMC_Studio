@@ -15,6 +15,238 @@ export interface PitchProps {
   gridVisible?: boolean;
 }
 
+/** Helper: Render a clean V4-minimal goal overlay */
+function renderGoalOverlay(params: {
+  orientation: 'landscape' | 'portrait';
+  side: 'left' | 'right' | 'top' | 'bottom';
+  centerX: number;
+  centerY: number;
+  goalMouthWidth: number;
+  lineColor: string;
+}): JSX.Element {
+  const { orientation, side, centerX, centerY, goalMouthWidth, lineColor } = params;
+  
+  // Geometry constants
+  const depth = Math.max(10, goalMouthWidth * 0.15);
+  const postInset = 8; // Small inset from pitch boundary
+  
+  // Perspective offsets for depth
+  let depthX = 0;
+  let depthY = 0;
+  let frontY = 0;
+  let frontX = 0;
+  
+  if (orientation === 'landscape') {
+    // Goals at LEFT/RIGHT
+    if (side === 'left') {
+      frontX = -postInset;
+      depthX = -depth;
+      depthY = -depth * 0.2; // Slight Y offset for perspective
+    } else { // right
+      frontX = postInset;
+      depthX = depth;
+      depthY = -depth * 0.2;
+    }
+  } else {
+    // Goals at TOP/BOTTOM (portrait)
+    if (side === 'top') {
+      frontY = -postInset;
+      depthY = -depth;
+      depthX = -depth * 0.2; // Slight X offset for perspective
+    } else { // bottom
+      frontY = postInset;
+      depthY = depth;
+      depthX = -depth * 0.2;
+    }
+  }
+  
+  const halfWidth = goalMouthWidth / 2;
+  
+  return (
+    <Group x={centerX} y={centerY} listening={false}>
+      {orientation === 'landscape' ? (
+        <>
+          {/* Front U-frame: Left post */}
+          <Line
+            points={[frontX, -halfWidth, frontX, halfWidth]}
+            stroke={lineColor}
+            strokeWidth={3}
+            lineCap="round"
+            listening={false}
+          />
+          {/* Front U-frame: Crossbar */}
+          <Line
+            points={[frontX, -halfWidth, 0, -halfWidth]}
+            stroke={lineColor}
+            strokeWidth={3}
+            lineCap="round"
+            listening={false}
+          />
+          {/* Front U-frame: Right post */}
+          <Line
+            points={[0, -halfWidth, 0, halfWidth]}
+            stroke={lineColor}
+            strokeWidth={3}
+            lineCap="round"
+            listening={false}
+          />
+          
+          {/* Back top bar (depth) */}
+          <Line
+            points={[
+              frontX + depthX, -halfWidth + depthY,
+              frontX + depthX, halfWidth + depthY
+            ]}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          
+          {/* Connectors: Front corners to back corners */}
+          <Line
+            points={[
+              frontX, -halfWidth,
+              frontX + depthX, -halfWidth + depthY
+            ]}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          <Line
+            points={[
+              frontX, halfWidth,
+              frontX + depthX, halfWidth + depthY
+            ]}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          
+          {/* Net lines: 2 diagonals for subtle depth */}
+          <Line
+            points={[
+              frontX, -halfWidth,
+              frontX + depthX * 0.6, 0
+            ]}
+            stroke={lineColor}
+            strokeWidth={1}
+            opacity={0.25}
+            listening={false}
+          />
+          <Line
+            points={[
+              frontX, halfWidth,
+              frontX + depthX * 0.6, 0
+            ]}
+            stroke={lineColor}
+            strokeWidth={1}
+            opacity={0.25}
+            listening={false}
+          />
+          
+          {/* Ground base line (subtle) */}
+          <Line
+            points={[0, halfWidth, frontX + depthX, halfWidth + depthY]}
+            stroke={lineColor}
+            strokeWidth={1}
+            opacity={0.2}
+            listening={false}
+          />
+        </>
+      ) : (
+        <>
+          {/* Portrait: Front U-frame - Crossbar */}
+          <Line
+            points={[-halfWidth, frontY, halfWidth, frontY]}
+            stroke={lineColor}
+            strokeWidth={3}
+            lineCap="round"
+            listening={false}
+          />
+          {/* Portrait: Front U-frame - Left post */}
+          <Line
+            points={[-halfWidth, frontY, -halfWidth, 0]}
+            stroke={lineColor}
+            strokeWidth={3}
+            lineCap="round"
+            listening={false}
+          />
+          {/* Portrait: Front U-frame - Right post */}
+          <Line
+            points={[halfWidth, frontY, halfWidth, 0]}
+            stroke={lineColor}
+            strokeWidth={3}
+            lineCap="round"
+            listening={false}
+          />
+          
+          {/* Back top bar */}
+          <Line
+            points={[
+              -halfWidth + depthX, frontY + depthY,
+              halfWidth + depthX, frontY + depthY
+            ]}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          
+          {/* Connectors */}
+          <Line
+            points={[
+              -halfWidth, frontY,
+              -halfWidth + depthX, frontY + depthY
+            ]}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          <Line
+            points={[
+              halfWidth, frontY,
+              halfWidth + depthX, frontY + depthY
+            ]}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          
+          {/* Net lines: 2 diagonals */}
+          <Line
+            points={[
+              -halfWidth, frontY,
+              0, frontY + depthY * 0.6
+            ]}
+            stroke={lineColor}
+            strokeWidth={1}
+            opacity={0.25}
+            listening={false}
+          />
+          <Line
+            points={[
+              halfWidth, frontY,
+              0, frontY + depthY * 0.6
+            ]}
+            stroke={lineColor}
+            strokeWidth={1}
+            opacity={0.25}
+            listening={false}
+          />
+          
+          {/* Ground base line */}
+          <Line
+            points={[-halfWidth, 0, -halfWidth + depthX, frontY + depthY]}
+            stroke={lineColor}
+            strokeWidth={1}
+            opacity={0.2}
+            listening={false}
+          />
+        </>
+      )}
+    </Group>
+  );
+}
+
 /** Football pitch with standard markings */
 export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings, gridVisible = false }) => {
   const { width, height, padding, gridSize } = config;
@@ -28,6 +260,11 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings, gridVisible
   
   // Check if view is 'plain' (no lines at all)
   const isPlainView = settings.view === 'plain';
+  
+  // Detect half-pitch views (reuse existing half-pitch signal)
+  const isHalfPitch = settings.view === 'half-left' || settings.view === 'half-right';
+  const showLeftGoalOnly = settings.view === 'half-left';
+  const showRightGoalOnly = settings.view === 'half-right';
   
   // Use theme colors
   const lineColor = settings.lineColor;
@@ -418,139 +655,47 @@ export const Pitch: React.FC<PitchProps> = ({ config, pitchSettings, gridVisible
           // Portrait: Goals at TOP and BOTTOM
           <>
             {/* TOP goal */}
-            <Group x={width / 2} y={0} listening={false}>
-              {/* Goal frame - U shape */}
-              <Line
-                points={[
-                  -goalMouthWidth / 2, -8,
-                  goalMouthWidth / 2, -8,
-                  goalMouthWidth / 2, 0,
-                  -goalMouthWidth / 2, 0,
-                ]}
-                stroke={lineColor}
-                strokeWidth={3}
-                lineCap="round"
-                lineJoin="round"
-                listening={false}
-              />
-              {/* Net depth suggestion - diagonal lines */}
-              <Line
-                points={[-goalMouthWidth / 2, -8, -goalMouthWidth / 2 + 8, -18]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-              <Line
-                points={[goalMouthWidth / 2, -8, goalMouthWidth / 2 - 8, -18]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-            </Group>
+            {!isHalfPitch && renderGoalOverlay({
+              orientation: 'portrait',
+              side: 'top',
+              centerX: width / 2,
+              centerY: 0,
+              goalMouthWidth,
+              lineColor,
+            })}
 
             {/* BOTTOM goal */}
-            <Group x={width / 2} y={height} listening={false}>
-              {/* Goal frame - U shape */}
-              <Line
-                points={[
-                  -goalMouthWidth / 2, 8,
-                  goalMouthWidth / 2, 8,
-                  goalMouthWidth / 2, 0,
-                  -goalMouthWidth / 2, 0,
-                ]}
-                stroke={lineColor}
-                strokeWidth={3}
-                lineCap="round"
-                lineJoin="round"
-                listening={false}
-              />
-              {/* Net depth suggestion - diagonal lines */}
-              <Line
-                points={[-goalMouthWidth / 2, 8, -goalMouthWidth / 2 + 8, 18]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-              <Line
-                points={[goalMouthWidth / 2, 8, goalMouthWidth / 2 - 8, 18]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-            </Group>
+            {!isHalfPitch && renderGoalOverlay({
+              orientation: 'portrait',
+              side: 'bottom',
+              centerX: width / 2,
+              centerY: height,
+              goalMouthWidth,
+              lineColor,
+            })}
           </>
         ) : (
           // Landscape: Goals at LEFT and RIGHT
           <>
             {/* LEFT goal */}
-            <Group x={0} y={height / 2} listening={false}>
-              {/* Goal frame - U shape */}
-              <Line
-                points={[
-                  -8, goalMouthWidth / 2,
-                  -8, -goalMouthWidth / 2,
-                  0, -goalMouthWidth / 2,
-                  0, goalMouthWidth / 2,
-                ]}
-                stroke={lineColor}
-                strokeWidth={3}
-                lineCap="round"
-                lineJoin="round"
-                listening={false}
-              />
-              {/* Net depth suggestion - diagonal lines */}
-              <Line
-                points={[-8, goalMouthWidth / 2, -18, goalMouthWidth / 2 - 8]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-              <Line
-                points={[-8, -goalMouthWidth / 2, -18, -goalMouthWidth / 2 + 8]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-            </Group>
+            {(!isHalfPitch || showLeftGoalOnly) && renderGoalOverlay({
+              orientation: 'landscape',
+              side: 'left',
+              centerX: 0,
+              centerY: height / 2,
+              goalMouthWidth,
+              lineColor,
+            })}
 
             {/* RIGHT goal */}
-            <Group x={width} y={height / 2} listening={false}>
-              {/* Goal frame - U shape */}
-              <Line
-                points={[
-                  8, goalMouthWidth / 2,
-                  8, -goalMouthWidth / 2,
-                  0, -goalMouthWidth / 2,
-                  0, goalMouthWidth / 2,
-                ]}
-                stroke={lineColor}
-                strokeWidth={3}
-                lineCap="round"
-                lineJoin="round"
-                listening={false}
-              />
-              {/* Net depth suggestion - diagonal lines */}
-              <Line
-                points={[8, goalMouthWidth / 2, 18, goalMouthWidth / 2 - 8]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-              <Line
-                points={[8, -goalMouthWidth / 2, 18, -goalMouthWidth / 2 + 8]}
-                stroke={lineColor}
-                strokeWidth={1}
-                opacity={0.3}
-                listening={false}
-              />
-            </Group>
+            {(!isHalfPitch || showRightGoalOnly) && renderGoalOverlay({
+              orientation: 'landscape',
+              side: 'right',
+              centerX: width,
+              centerY: height / 2,
+              goalMouthWidth,
+              lineColor,
+            })}
           </>
         )
       )}

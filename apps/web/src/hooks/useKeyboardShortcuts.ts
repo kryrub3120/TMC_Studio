@@ -13,7 +13,7 @@ import { useEffect, useCallback } from 'react';
 import { useBoardStore } from '../store';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { isTextElement, isPlayerElement, isZoneElement} from '@tmc/core';
+import { isTextElement, isPlayerElement, isZoneElement, PITCH_THEMES } from '@tmc/core';
 import { formations } from '@tmc/presets';
 import { useCommandRegistry } from './useCommandRegistry';
 
@@ -105,8 +105,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const zoomOut = useUIStore((s) => s.zoomOut);
   const isPlaying = useUIStore((s) => s.isPlaying);
   const play = useUIStore((s) => s.play);
-  const pause = useUIStore((s) => s.pause);
+  const pause = useUIStore ((s) => s.pause);
   const toggleLoop = useUIStore((s) => s.toggleLoop);
+  const togglePrintMode = useUIStore((s) => s.togglePrintMode);
+  const isPrintMode = useUIStore((s) => s.isPrintMode);
   
   // ===== Auth Store =====
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -483,21 +485,36 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'w':
-        // W = Toggle print friendly mode
+        // W = Toggle print mode (with pitch color change)
         if (!isCmd) {
           e.preventDefault();
-          const currentSettings = getPitchSettings();
-          const isPrintFriendly = currentSettings?.primaryColor === '#ffffff' && currentSettings?.lineColor === '#000000';
+          const currentPitchSettings = getPitchSettings();
+          const isPrintFriendly = currentPitchSettings?.primaryColor === '#ffffff';
+          
           if (isPrintFriendly) {
-            updatePitchSettings({ 
-              primaryColor: '#4ade80', stripeColor: '#22c55e', lineColor: '#ffffff', showStripes: true
+            // Toggle back to grass theme AND disable print mode
+            const grassTheme = PITCH_THEMES['grass'];
+            updatePitchSettings({
+              theme: 'grass',
+              ...grassTheme,
             });
-            showToast('Normal colors');
+            if (isPrintMode) {
+              togglePrintMode();
+            }
+            showToast('Print Mode OFF');
           } else {
-            updatePitchSettings({ 
-              primaryColor: '#ffffff', stripeColor: '#ffffff', lineColor: '#000000', showStripes: false
+            // Set to print-friendly mode AND enable print mode
+            updatePitchSettings({
+              theme: 'custom',
+              primaryColor: '#ffffff',
+              stripeColor: '#f5f5f5',
+              lineColor: '#000000',
+              showStripes: false,
             });
-            showToast('Print Friendly mode');
+            if (!isPrintMode) {
+              togglePrintMode();
+            }
+            showToast('Print Mode ON');
           }
         }
         break;
@@ -739,7 +756,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
     cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation,
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
-    zoomIn, zoomOut, isPlaying, play, pause, toggleLoop,
+    zoomIn, zoomOut, isPlaying, play, pause, toggleLoop, togglePrintMode, isPrintMode,
     removeStep, prevStep, nextStep, addStep,
     authIsAuthenticated,
     handleExportPNG, handleExportAllSteps, handleExportPDF, handleExportGIF,

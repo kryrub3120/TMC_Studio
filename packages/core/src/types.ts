@@ -37,6 +37,7 @@ export interface PlayerElement extends BoardElementBase {
   opacity?: number; // Element opacity 0-1 (default: 1)
   isGoalkeeper?: boolean; // Uses team's goalkeeperColor instead of primaryColor (takes precedence over number-based detection)
   radius?: number; // Custom player size (default: 18 from PlayerNode)
+  color?: string; // Per-player fill color override (if undefined, uses team color)
 }
 
 /** Ball element on the board */

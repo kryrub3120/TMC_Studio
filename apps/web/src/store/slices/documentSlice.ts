@@ -174,67 +174,126 @@ export const createDocumentSlice: StateCreator<
       
       // Check if orientation changed - transform element positions
       let transformedElements = elements;
+      let newSteps = document.steps;
+      
       if (settings.orientation && settings.orientation !== currentSettings.orientation) {
         const padding = DEFAULT_PITCH_CONFIG.padding;
-        const currentWidth = currentSettings.orientation === 'portrait' 
+        
+        // FROM dimensions (current orientation)
+        // Note: DEFAULT_PITCH_CONFIG.width/height ARE the inner pitch dimensions
+        // (the playable field area). Padding is added around them to create canvas.
+        const fromInnerW = currentSettings.orientation === 'portrait'
           ? DEFAULT_PITCH_CONFIG.height
           : DEFAULT_PITCH_CONFIG.width;
-        const currentHeight = currentSettings.orientation === 'portrait'
+        const fromInnerH = currentSettings.orientation === 'portrait'
           ? DEFAULT_PITCH_CONFIG.width
           : DEFAULT_PITCH_CONFIG.height;
         
-        transformedElements = elements.map((el) => {
-          if ('position' in el && el.position) {
-            const pos = el.position as Position;
-            const relX = pos.x - padding;
-            const relY = pos.y - padding;
-            
-            let newRelX: number, newRelY: number;
-            
-            if (settings.orientation === 'portrait') {
-              newRelX = relY;
-              newRelY = currentWidth - relX;
-            } else {
-              newRelX = currentHeight - relY;
-              newRelY = relX;
-            }
-            
-            return {
-              ...el,
-              position: {
-                x: newRelX + padding,
-                y: newRelY + padding,
-              },
-            };
+        // TO dimensions (new orientation)
+        const toInnerW = settings.orientation === 'portrait'
+          ? DEFAULT_PITCH_CONFIG.height
+          : DEFAULT_PITCH_CONFIG.width;
+        const toInnerH = settings.orientation === 'portrait'
+          ? DEFAULT_PITCH_CONFIG.width
+          : DEFAULT_PITCH_CONFIG.height;
+        
+        // Transform point: fromCenter → rotate 90° → toCenter
+        const transformInnerPoint = (x: number, y: number) => {
+          // 1. Move to fromCenter
+          const dx = x - fromInnerW / 2;
+          const dy = y - fromInnerH / 2;
+          
+          // 2. Rotate 90°
+          let rx: number, ry: number;
+          if (settings.orientation === 'portrait') {
+            // CCW
+            rx = -dy;
+            ry = dx;
+          } else {
+            // CW
+            rx = dy;
+            ry = -dx;
           }
           
-          if (isArrowElement(el)) {
-            const transformPoint = (p: Position): Position => {
-              const relX = p.x - padding;
-              const relY = p.y - padding;
-              
-              if (settings.orientation === 'portrait') {
-                return { x: relY + padding, y: currentWidth - relX + padding };
-              } else {
-                return { x: currentHeight - relY + padding, y: relX + padding };
-              }
+          // 3. Move to toCenter
+          return {
+            x: rx + toInnerW / 2,
+            y: ry + toInnerH / 2,
+          };
+        };
+        
+        const transformStagePoint = (p: Position): Position => {
+          const relX = p.x - padding;
+          const relY = p.y - padding;
+          const t = transformInnerPoint(relX, relY);
+          return { x: t.x + padding, y: t.y + padding };
+        };
+        
+        // Transform single element
+        const transformBoardElement = (el: BoardElement): BoardElement => {
+          // A) Position elements (except zone)
+          if ('position' in el && el.position && el.type !== 'zone') {
+            const next: any = {
+              ...el,
+              position: transformStagePoint(el.position as Position),
             };
+            
+            // Equipment: also rotate
+            if (el.type === 'equipment') {
+              const rotationDelta = settings.orientation === 'portrait' ? -90 : 90;
+              next.rotation = (el.rotation + rotationDelta + 360) % 360;
+            }
+            
+            return next;
+          }
+          
+          // B) Zone - transform center + swap + recalculate top-left
+          if (el.type === 'zone') {
+            const p = el.position as Position;
+            const w = el.width ?? 0;
+            const h = el.height ?? 0;
+            
+            const center = { x: p.x + w / 2, y: p.y + h / 2 };
+            const newCenter = transformStagePoint(center);
+            
+            const newW = h;
+            const newH = w;
             
             return {
               ...el,
-              startPoint: transformPoint(el.startPoint),
-              endPoint: transformPoint(el.endPoint),
-            };
+              position: { x: newCenter.x - newW / 2, y: newCenter.y - newH / 2 },
+              width: newW,
+              height: newH,
+            } as any;
+          }
+          
+          // C) Arrow - transform both endpoints
+          if (isArrowElement(el)) {
+            return {
+              ...el,
+              startPoint: transformStagePoint(el.startPoint),
+              endPoint: transformStagePoint(el.endPoint),
+            } as any;
           }
           
           return el;
-        });
+        };
+        
+        // Transform ALL steps to maintain consistency
+        const { currentStepIndex } = get();
+        newSteps = document.steps.map((step) => ({
+          ...step,
+          elements: step.elements.map(transformBoardElement),
+        }));
+        
+        transformedElements = newSteps[currentStepIndex]?.elements ?? [];
       }
       
       set({
-        elements: transformedElements,
+        elements: structuredClone(transformedElements),
         document: {
           ...document,
+          steps: newSteps,
           pitchSettings: updatedPitchSettings,
           updatedAt: new Date().toISOString(),
         },
