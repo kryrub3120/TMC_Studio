@@ -149,7 +149,7 @@ export function createText(
 /** Default colors for equipment types */
 const EQUIPMENT_COLORS: Record<EquipmentType, string> = {
   goal: '#ffffff',      // White goal posts
-  mannequin: '#1e40af', // Blue mannequin
+  mannequin: '#fbbf24', // Yellow mannequin (PTU-style)
   cone: '#f97316',      // Orange cone
   ladder: '#fbbf24',    // Yellow ladder
   hoop: '#ef4444',      // Red hoop

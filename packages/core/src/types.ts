@@ -98,7 +98,7 @@ export type DrawingType = 'freehand' | 'highlighter';
 export type EquipmentType = 'goal' | 'mannequin' | 'cone' | 'ladder' | 'hoop' | 'hurdle' | 'pole';
 
 /** Equipment variants */
-export type EquipmentVariant = 'standard' | 'mini' | 'tall' | 'flat';
+export type EquipmentVariant = 'standard' | 'mini' | 'tall' | 'flat' | 'wall_3';
 
 /** Drawing element for freehand/highlight strokes */
 export interface DrawingElement {

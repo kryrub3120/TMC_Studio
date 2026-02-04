@@ -5,6 +5,21 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-02-04
+
+### Changed
+- **Mannequin PTU-style redesign** - Training mannequin redesigned with "Pro Training Unit" aesthetics:
+  - Trapezoidal torso with equipment-like feel
+  - 4 thin leg rods instead of solid block
+  - Elliptical head shape
+  - Base plate at ground level (rotation pivot)
+  - New variant: `wall_3` (3 mannequins in a row)
+- **Mannequin default color** - Changed from blue (#1e40af) to yellow (#fbbf24)
+- **Print mode color handling** - Yellow equipment (mannequin/ladder) auto-converts to black for better paper visibility. Custom colors are preserved in both modes.
+
+### Added
+- Equipment variant `wall_3` for mannequin (3 mannequins with shared base)
+
 ## [0.2.0] - 2026-01-31
 
 ### Fixed

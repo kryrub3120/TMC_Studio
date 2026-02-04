@@ -187,9 +187,47 @@ export const GoalShape: React.FC<EquipmentShapeProps> = ({ color, scale, variant
 - `ladder.tsx` - LadderShape
 - `hurdle.tsx` - HurdleShape
 - `cone.tsx` - ConeShape
-- `mannequin.tsx` - MannequinShape
+- `mannequin.tsx` - MannequinShape (PTU-style, see below)
 - `hoop.tsx` - HoopShape
 - `pole.tsx` - PoleShape
+
+---
+
+### Mannequin Shape (PTU-style)
+
+**Updated 2026-02-04**
+
+The mannequin has been redesigned to a "Pro Training Unit" (PTU) style with equipment-like aesthetics:
+
+**Visual Design:**
+- Trapezoidal torso (18px top → 26px bottom, 36px height)
+- 4 thin leg rods (equipment-like, not humanoid)
+- Elliptical head (8.5×10px)
+- Base plate at y=0 (pivot point for rotation)
+- Subtle center line on torso (PTU vibe)
+
+**Variants:**
+- `standing` (default) - Single PTU mannequin
+- `flat` - Lying mannequin (horizontal ellipse)
+- `wall_3` - 3 mannequins in a row with shared base plank
+
+**Default Colors:**
+- Normal mode: Yellow (#fbbf24)
+- Print mode: Black (auto-converted for visibility)
+- Custom colors: Preserved in both modes
+
+**Geometry Constants (scale=1):**
+```typescript
+BASE_PLATE_W = 30;
+BASE_PLATE_H = 5;
+TORSO_W_BOTTOM = 26;
+TORSO_W_TOP = 18;
+TORSO_H = 36;
+LEGS_H = 20;
+LEG_ROD_COUNT = 4;
+HEAD_W = 8.5;
+HEAD_H = 10;
+```
 
 ---
 

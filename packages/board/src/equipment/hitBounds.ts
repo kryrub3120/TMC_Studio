@@ -61,20 +61,53 @@ export function getEquipmentHitBounds(element: EquipmentElement): {
     }
 
     case 'mannequin': {
+      // PTU-style geometry (scale=1 reference):
+      // BASE_PLATE_W=30, LEGS_H=20, TORSO_H=36, HEAD_H=10, HEAD_GAP=7
+      
       if (variant === 'flat') {
         const radiusX = 25 * scale;
         const radiusY = 8 * scale;
         return { x: -radiusX, y: -radiusY, width: radiusX * 2, height: radiusY * 2 };
       }
       
-      const bodyHeight = 45 * scale;
-      const bodyWidth = 12 * scale;
-      const headRadius = 8 * scale;
-      const baseWidth = 20 * scale;
+      if (variant === 'wall_3') {
+        // 3 mannequins in a row: gap=18, basePlateW=30
+        const gap = 18 * scale;
+        const basePlateW = 30 * scale;
+        const totalHeight = (20 + 36 + 7 + 10) * scale; // legs + torso + gap + head
+        const margin = 8 * scale;
+        
+        const width = (gap * 2 + basePlateW) + margin * 2;
+        const height = totalHeight + margin * 2;
+        
+        return { 
+          x: -width / 2, 
+          y: -height + margin, // pivot at y=0 (base)
+          width, 
+          height 
+        };
+      }
       
-      const width = Math.max(bodyWidth, baseWidth) + 10;
-      const height = bodyHeight + headRadius * 2 + 13; // head + body + base
-      return { x: -width/2, y: -height/2 - headRadius, width, height };
+      // Single standing mannequin
+      const basePlateW = 30 * scale;
+      const legsH = 20 * scale;
+      const torsoH = 36 * scale;
+      const headGap = 7 * scale;
+      const headH = 10 * scale;
+      const basePlateH = 5 * scale;
+      
+      const totalHeight = legsH + torsoH + headGap + headH;
+      const margin = 6 * scale;
+      
+      const width = basePlateW + margin * 2;
+      const height = totalHeight + basePlateH / 2 + margin * 2;
+      
+      return { 
+        x: -width / 2, 
+        y: -totalHeight - margin, // extends from head to base plate bottom
+        width, 
+        height 
+      };
     }
 
     case 'hoop': {

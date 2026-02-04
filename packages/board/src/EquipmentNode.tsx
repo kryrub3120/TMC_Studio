@@ -16,11 +16,28 @@ export interface EquipmentNodeProps {
   onDragEnd: (id: string, x: number, y: number) => void;
 }
 
-/** Sanitize white to black in print mode (inline, avoids cross-package import) */
+/** 
+ * Sanitize colors for print mode
+ * - White (#ffffff) → Black (always - invisible on paper)
+ * - Yellow (#fbbf24) → Black (default mannequin/ladder color)
+ * - Other custom colors → preserved
+ */
 function sanitizeForPrint(color: string, isPrintMode: boolean): string {
-  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') {
+  if (!isPrintMode) return color;
+  
+  const normalizedColor = color.trim().toLowerCase();
+  
+  // White always becomes black (invisible on paper)
+  if (normalizedColor === '#ffffff') {
     return '#000000';
   }
+  
+  // Default yellow (mannequin/ladder) becomes black for better print contrast
+  if (normalizedColor === '#fbbf24') {
+    return '#000000';
+  }
+  
+  // All other colors (custom) are preserved
   return color;
 }
 
