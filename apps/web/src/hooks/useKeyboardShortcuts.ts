@@ -33,6 +33,9 @@ export interface UseKeyboardShortcutsParams {
   // Text editing callbacks
   onStartEditingText?: (id: string, content: string) => void;
   
+  // Player number editing callback (H2)
+  onStartEditingPlayerNumber?: (id: string, currentNumber: number) => void;
+  
   // Step management (gated by entitlements)
   addStep: () => void;
   
@@ -51,6 +54,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     handleExportGIF,
     showToast,
     onStartEditingText,
+    onStartEditingPlayerNumber,
     addStep,
     contextMenuVisible,
   } = params;
@@ -306,10 +310,17 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         } else if (e.shiftKey) {
           // Shift+C = Clear all elements on this step
           e.preventDefault();
-          if (window.confirm('Clear all elements on this step? Undo available (Cmd+Z).')) {
-            setElements([]);
-            showToast('All elements cleared');
-          }
+          useUIStore.getState().showConfirmModal({
+            title: 'Clear All Elements?',
+            description: 'This will remove all elements from the current step. You can undo this action with Cmd+Z.',
+            confirmLabel: 'Clear All',
+            danger: true,
+            onConfirm: () => {
+              setElements([]);
+              showToast('All elements cleared');
+              useUIStore.getState().closeConfirmModal();
+            },
+          });
         } else {
           // C = Clear drawings only (no confirmation, undoable)
           e.preventDefault();
@@ -531,12 +542,17 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'enter':
-        // Enter on selected text = start editing
+        // H2: Enter on selected player = start editing number
+        // Enter on selected text = start editing text
         if (selectedIds.length === 1) {
-          const textEl = getSelectedText();
-          if (textEl && onStartEditingText) {
+          const el = elements.find((e) => e.id === selectedIds[0]);
+          
+          if (el && isPlayerElement(el) && onStartEditingPlayerNumber) {
             e.preventDefault();
-            onStartEditingText(textEl.id, textEl.content);
+            onStartEditingPlayerNumber(el.id, (el as any).number ?? 0);
+          } else if (el && isTextElement(el) && onStartEditingText) {
+            e.preventDefault();
+            onStartEditingText(el.id, (el as any).content);
           }
         }
         break;
@@ -760,7 +776,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     removeStep, prevStep, nextStep, addStep,
     authIsAuthenticated,
     handleExportPNG, handleExportAllSteps, handleExportPDF, handleExportGIF,
-    showToast, onStartEditingText,
+    showToast, onStartEditingText, onStartEditingPlayerNumber,
   ]);
   
   // Attach/detach event listener

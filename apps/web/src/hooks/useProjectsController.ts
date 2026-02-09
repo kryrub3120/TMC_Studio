@@ -293,20 +293,29 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
    * Delete a folder (projects remain)
    */
   const deleteFolderHandler = useCallback(async (folderId: string) => {
-    if (!window.confirm('Delete this folder? Projects will not be deleted.')) return;
-    try {
-      const success = await deleteFolder(folderId);
-      if (success) {
-        await fetchFoldersData();
-        await fetchCloudProjects();
-        showToast('Folder deleted 🗑️');
-      } else {
-        showToast('Failed to delete folder ❌');
-      }
-    } catch (error) {
-      console.error('Error deleting folder:', error);
-      showToast('Failed to delete folder ❌');
-    }
+    useUIStore.getState().showConfirmModal({
+      title: 'Delete Folder?',
+      description: 'This will delete the folder, but your projects will not be deleted. They will remain in your workspace.',
+      confirmLabel: 'Delete Folder',
+      cancelLabel: 'Cancel',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          const success = await deleteFolder(folderId);
+          if (success) {
+            await fetchFoldersData();
+            await fetchCloudProjects();
+            showToast('Folder deleted 🗑️');
+          } else {
+            showToast('Failed to delete folder ❌');
+          }
+        } catch (error) {
+          console.error('Error deleting folder:', error);
+          showToast('Failed to delete folder ❌');
+        }
+        useUIStore.getState().closeConfirmModal();
+      },
+    });
   }, [fetchFoldersData, fetchCloudProjects, showToast]);
   
   /**

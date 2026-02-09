@@ -65,6 +65,8 @@ export { CreateFolderModal } from './CreateFolderModal.js';
 export { SettingsModal } from './SettingsModal.js';
 export { UpgradeSuccessModal } from './UpgradeSuccessModal.js';
 export { LimitReachedModal } from './LimitReachedModal.js';
+export { ConfirmModal } from './ConfirmModal.js';
+export type { ConfirmModalProps } from './ConfirmModal.js';
 export { Footer } from './Footer.js';
 
 // Color utilities

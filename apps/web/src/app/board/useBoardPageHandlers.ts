@@ -218,13 +218,25 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   }, [selectElement, setEditingPlayerId, setEditingPlayerNumber]);
 
   const handlePlayerNumberSave = useCallback((editingPlayerId: string | null, editingPlayerNumber: string) => {
-    if (editingPlayerId && editingPlayerNumber.trim()) {
-      const numValue = parseInt(editingPlayerNumber.trim(), 10);
-      if (!isNaN(numValue) && numValue >= 0 && numValue <= 99) {
+    if (editingPlayerId) {
+      const trimmed = editingPlayerNumber.trim();
+      
+      if (!trimmed) {
+        // Empty input → remove number
+        selectElement(editingPlayerId, false);
+        updateSelectedElement({ number: undefined });
+        setEditingPlayerId(null);
+        setEditingPlayerNumber('');
+        return;
+      }
+      
+      const numValue = parseInt(trimmed, 10);
+      if (!isNaN(numValue) && numValue >= 1 && numValue <= 99) {
         selectElement(editingPlayerId, false);
         updateSelectedElement({ number: numValue });
         showToast(`#${numValue}`);
       }
+      // Invalid input (0 or out of range) → cancel edit, keep original number
     }
     setEditingPlayerId(null);
     setEditingPlayerNumber('');

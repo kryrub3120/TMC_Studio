@@ -127,15 +127,27 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
   );
 
   const savePlayerEdit = useCallback(() => {
-    if (editingPlayerId && editingPlayerNumber.trim()) {
-      const numValue = parseInt(editingPlayerNumber.trim(), 10);
-      if (!isNaN(numValue) && numValue >= 0 && numValue <= 99) {
+    if (editingPlayerId) {
+      const trimmed = editingPlayerNumber.trim();
+      
+      if (!trimmed) {
+        // Empty input → remove number
+        onSelectElement(editingPlayerId);
+        onUpdatePlayerNumber(editingPlayerId, 0); // 0 signals removal (will be converted to undefined in store)
+        setEditingPlayerId(null);
+        setEditingPlayerNumber('');
+        return;
+      }
+      
+      const numValue = parseInt(trimmed, 10);
+      if (!isNaN(numValue) && numValue >= 1 && numValue <= 99) {
         onSelectElement(editingPlayerId);
         onUpdatePlayerNumber(editingPlayerId, numValue);
         if (onToast) {
           onToast(`#${numValue}`);
         }
       }
+      // Invalid input (0 or out of range) → cancel edit, keep original number
     }
     setEditingPlayerId(null);
     setEditingPlayerNumber('');

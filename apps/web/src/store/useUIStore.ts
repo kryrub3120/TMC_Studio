@@ -31,6 +31,16 @@ export interface ToastMessage {
   duration?: number;
 }
 
+/** Confirm modal configuration */
+export interface ConfirmModalConfig {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+}
+
 /** Layer visibility types */
 export type LayerType = 'homePlayers' | 'awayPlayers' | 'ball' | 'arrows' | 'zones' | 'labels';
 
@@ -75,6 +85,9 @@ interface UIState {
   
   // Toast notifications
   activeToast: ToastMessage | null;
+  
+  // Confirm modal
+  confirmModal: ConfirmModalConfig | null;
   
   // Zoom
   zoom: number;
@@ -122,6 +135,10 @@ interface UIState {
   // Actions - Toast
   showToast: (message: string, duration?: number) => void;
   clearToast: () => void;
+  
+  // Actions - Confirm Modal
+  showConfirmModal: (config: ConfirmModalConfig) => void;
+  closeConfirmModal: () => void;
   
   // Actions - Zoom
   zoomIn: () => void;
@@ -195,6 +212,7 @@ export const useUIStore = create<UIState>()(
       },
       activeTool: null,
       activeToast: null,
+      confirmModal: null,
       zoom: 1,
       isPlaying: false,
       isLooping: false,
@@ -329,6 +347,10 @@ export const useUIStore = create<UIState>()(
       },
       
       clearToast: () => set({ activeToast: null }),
+      
+      // Confirm modal actions
+      showConfirmModal: (config) => set({ confirmModal: config }),
+      closeConfirmModal: () => set({ confirmModal: null }),
       
       // Zoom actions
       zoomIn: () => {

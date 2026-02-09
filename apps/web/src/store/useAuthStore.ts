@@ -115,31 +115,31 @@ export const useAuthStore = create<AuthState>()(
                   
                   // Small delay to let UI update first
                   setTimeout(async () => {
-                    const shouldSave = window.confirm(
-                      '💾 Save Your Work?\n\n' +
-                      'You have unsaved work from your guest session. ' +
-                      'Would you like to save it to your cloud account?'
-                    );
+                    const { useUIStore } = await import('./useUIStore');
                     
-                    if (shouldSave) {
-                      console.log('[Auth] User confirmed - saving guest work to cloud...');
-                      const success = await boardState.saveToCloud();
-                      
-                      if (success) {
-                        await boardState.fetchCloudProjects();
-                        console.log('[Auth] ✓ Guest work saved to cloud');
+                    useUIStore.getState().showConfirmModal({
+                      title: '💾 Save Your Work?',
+                      description: 'You have unsaved work from your guest session. Would you like to save it to your cloud account?',
+                      confirmLabel: 'Save to Cloud',
+                      cancelLabel: 'Discard',
+                      danger: false,
+                      onConfirm: async () => {
+                        console.log('[Auth] User confirmed - saving guest work to cloud...');
+                        const success = await boardState.saveToCloud();
                         
-                        // Show success toast
-                        const { useUIStore } = await import('./useUIStore');
-                        useUIStore.getState().showToast('✓ Your work has been saved to the cloud!');
-                      } else {
-                        console.error('[Auth] ✗ Failed to save guest work');
-                        const { useUIStore } = await import('./useUIStore');
-                        useUIStore.getState().showToast('⚠️ Failed to save. Try Cmd+S to save manually.');
-                      }
-                    } else {
-                      console.log('[Auth] User declined to save guest work');
-                    }
+                        if (success) {
+                          await boardState.fetchCloudProjects();
+                          console.log('[Auth] ✓ Guest work saved to cloud');
+                          
+                          // Show success toast
+                          useUIStore.getState().showToast('✓ Your work has been saved to the cloud!');
+                        } else {
+                          console.error('[Auth] ✗ Failed to save guest work');
+                          useUIStore.getState().showToast('⚠️ Failed to save. Try Cmd+S to save manually.');
+                        }
+                        useUIStore.getState().closeConfirmModal();
+                      },
+                    });
                   }, 500);
                 }
               } catch (error) {
@@ -273,6 +273,17 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           console.log('[Auth] Starting Google sign in...');
+          
+          // H4: Save current work to localStorage BEFORE OAuth redirect
+          // This prevents loss of unsaved work during the redirect flow
+          try {
+            const { useBoardStore } = await import('./index');
+            useBoardStore.getState().saveDocument();
+            console.log('[Auth] Board state saved before OAuth redirect');
+          } catch (e) {
+            console.error('[Auth] Failed to save before redirect:', e);
+          }
+          
           await supabaseSignInWithGoogle();
           // Redirect will happen, state will be set after return
         } catch (error) {
@@ -297,6 +308,26 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
           console.log('[Auth] Successfully signed out');
+
+          // PR-B1: Post-Logout Data Cleanup
+          // Clear board state and remove any previous user data
+          try {
+            const { useBoardStore } = await import('./index');
+            const boardState = useBoardStore.getState();
+            
+            // 1. Reset board to blank document (also resets cloudProjectId to null)
+            boardState.newDocument();
+            
+            // 2. Clear persisted board document from localStorage
+            localStorage.removeItem('tmc-studio-board');
+            
+            // 3. Clear any active autosave timer
+            boardState.clearAutoSaveTimer();
+            
+            console.log('[Auth] Board state cleaned up after logout');
+          } catch (error) {
+            console.error('[Auth] Failed to clean up board state:', error);
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign out failed';
           console.error('[Auth] Sign out error:', error);

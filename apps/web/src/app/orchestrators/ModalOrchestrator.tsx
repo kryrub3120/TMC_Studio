@@ -12,9 +12,11 @@ import {
   LimitReachedModal,
   CreateFolderModal,
   FolderOptionsModal,
+  ConfirmModal,
   type ProjectItem,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
+import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
   // Auth Modal
@@ -95,6 +97,10 @@ interface ModalOrchestratorProps {
 }
 
 export function ModalOrchestrator(props: ModalOrchestratorProps) {
+  // Get confirm modal state from UI store
+  const confirmModal = useUIStore((s) => s.confirmModal);
+  const closeConfirmModal = useUIStore((s) => s.closeConfirmModal);
+  
   return (
     <>
       {/* Auth Modal */}
@@ -215,6 +221,20 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         plan={props.upgradedTier}
         mode={props.subscriptionActivating ? 'activating' : 'success'}
       />
+      
+      {/* Confirm Modal (replaces window.confirm) */}
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmModal.title}
+          description={confirmModal.description}
+          confirmLabel={confirmModal.confirmLabel}
+          cancelLabel={confirmModal.cancelLabel}
+          danger={confirmModal.danger}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={closeConfirmModal}
+        />
+      )}
     </>
   );
 }
