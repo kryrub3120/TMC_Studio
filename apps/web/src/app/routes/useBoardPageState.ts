@@ -121,6 +121,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const activeTool = useUIStore((s) => s.activeTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
   const isPrintMode = useUIStore((s) => s.isPrintMode);
+  const isOnline = useUIStore((s) => s.isOnline);
   
   // UI store actions
   const toggleTheme = useUIStore((s) => s.toggleTheme);
@@ -433,6 +434,7 @@ export function useBoardPageState(props: BoardPageProps) {
     activeTool,
     gridVisible,
     isPrintMode,
+    isOnline,
     
     // UI actions
     toggleTheme,

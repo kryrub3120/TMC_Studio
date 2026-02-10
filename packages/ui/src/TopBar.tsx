@@ -20,6 +20,8 @@ export interface TopBarProps {
   isSyncing?: boolean;
   /** Step info badge (e.g., "Step 2/5") */
   stepInfo?: string;
+  /** Online/offline status (PR-L5-MINI) */
+  isOnline?: boolean;
   onExport: () => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
@@ -207,6 +209,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   userInitials = 'U',
   isSyncing = false,
   stepInfo,
+  isOnline = true,
   onExport,
   onToggleFocus,
   onToggleTheme,
@@ -309,12 +312,19 @@ export const TopBar: React.FC<TopBarProps> = ({
             </button>
           )}
           
-          {/* Sync indicator */}
-          {isSyncing ? (
-            <svg className="w-3 h-3 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
+          {/* Save status indicator (PR-L5-MINI) */}
+          {!isOnline ? (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">
+              Offline
+            </span>
+          ) : isSyncing ? (
+            <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+              <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span>Saving...</span>
+            </div>
           ) : (
             <span
               className={`text-xs px-1.5 py-0.5 rounded ${

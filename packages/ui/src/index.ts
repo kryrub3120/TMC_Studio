@@ -68,6 +68,8 @@ export { LimitReachedModal } from './LimitReachedModal.js';
 export { ConfirmModal } from './ConfirmModal.js';
 export type { ConfirmModalProps } from './ConfirmModal.js';
 export { Footer } from './Footer.js';
+export { OfflineBanner } from './OfflineBanner.js';
+export type { OfflineBannerProps } from './OfflineBanner.js';
 
 // Color utilities
 export { SHARED_COLORS, getColorsForMode, sanitizeColorForPrint } from './colors.js';

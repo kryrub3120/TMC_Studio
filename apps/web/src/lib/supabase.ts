@@ -303,6 +303,7 @@ export interface Project {
   folder_id: string | null;
   tags: string[];
   is_favorite: boolean;
+  is_pinned: boolean;
   position: number;
 }
 
@@ -337,6 +338,7 @@ export interface ProjectFolder {
   icon: string;
   description: string | null;
   parent_id: string | null;
+  is_pinned: boolean;
   position: number;
   created_at: string;
   updated_at: string;
@@ -594,6 +596,74 @@ export async function updateProjectTags(projectId: string, tags: string[]): Prom
   
   if (error) {
     console.error('Error updating tags:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Toggle project pinned status */
+export async function toggleProjectPinned(projectId: string, isPinned: boolean): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({ is_pinned: isPinned })
+    .eq('id', projectId);
+  
+  if (error) {
+    console.error('Error toggling pinned:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Toggle folder pinned status */
+export async function toggleFolderPinned(folderId: string, isPinned: boolean): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('project_folders')
+    .update({ is_pinned: isPinned })
+    .eq('id', folderId);
+  
+  if (error) {
+    console.error('Error toggling folder pinned:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Rename project */
+export async function renameProject(projectId: string, name: string): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('projects')
+    .update({ name })
+    .eq('id', projectId);
+  
+  if (error) {
+    console.error('Error renaming project:', error);
+    return false;
+  }
+  
+  return true;
+}
+
+/** Rename folder */
+export async function renameFolder(folderId: string, name: string): Promise<boolean> {
+  if (!supabase) return false;
+  
+  const { error } = await supabase
+    .from('project_folders')
+    .update({ name })
+    .eq('id', folderId);
+  
+  if (error) {
+    console.error('Error renaming folder:', error);
     return false;
   }
   

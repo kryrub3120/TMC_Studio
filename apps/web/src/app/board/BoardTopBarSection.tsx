@@ -19,6 +19,7 @@ export interface BoardTopBarSectionProps {
   // UI state
   focusMode: boolean;
   theme: 'light' | 'dark';
+  isOnline?: boolean; // PR-L5-MINI
   
   // Handlers
   onExport: () => void;
@@ -45,6 +46,7 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
     userInitials,
     focusMode,
     theme,
+    isOnline = true,
     onExport,
     onToggleFocus,
     onToggleTheme,
@@ -70,6 +72,7 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
       userInitials={userInitials}
       isSyncing={isSyncing}
       stepInfo={stepInfo}
+      isOnline={isOnline}
       onExport={onExport}
       onToggleFocus={onToggleFocus}
       onToggleTheme={onToggleTheme}

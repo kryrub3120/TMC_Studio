@@ -100,6 +100,10 @@ interface UIState {
   // Animation state (0 = at currentStep, 1 = at nextStep)
   animationProgress: number;
   
+  // Online/offline state (PR-L5-MINI)
+  isOnline: boolean;
+  lastSaveFailureAt: number | null;
+  
   // Actions - Theme
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -152,6 +156,10 @@ interface UIState {
   toggleLoop: () => void;
   setStepDuration: (duration: number) => void;
   setAnimationProgress: (progress: number) => void;
+  
+  // Actions - Online/offline (PR-L5-MINI)
+  setOnline: (online: boolean) => void;
+  showSaveFailureToast: () => void;
 }
 
 /** Get initial inspector state based on screen size */
@@ -218,6 +226,8 @@ export const useUIStore = create<UIState>()(
       isLooping: false,
       stepDuration: 0.8,
       animationProgress: 0,
+      isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+      lastSaveFailureAt: null,
 
       // Theme actions
       toggleTheme: () => {
@@ -381,6 +391,27 @@ export const useUIStore = create<UIState>()(
       toggleLoop: () => set((s) => ({ isLooping: !s.isLooping })),
       setStepDuration: (duration) => set({ stepDuration: Math.max(0.1, Math.min(5, duration)) }),
       setAnimationProgress: (progress) => set({ animationProgress: Math.max(0, Math.min(1, progress)) }),
+      
+      // Online/offline actions (PR-L5-MINI)
+      setOnline: (online) => {
+        set({ isOnline: online });
+        if (online) {
+          get().showToast('Back online', 1500);
+        } else {
+          get().showToast('You are offline', 1500);
+        }
+      },
+      
+      showSaveFailureToast: () => {
+        const now = Date.now();
+        const lastFailure = get().lastSaveFailureAt;
+        
+        // Rate limit: only show toast if last failure was >5 seconds ago
+        if (!lastFailure || now - lastFailure > 5000) {
+          get().showToast('Save failed — will retry when online', 3000);
+          set({ lastSaveFailureAt: now });
+        }
+      },
     }),
     {
       name: 'tmc-ui-settings',

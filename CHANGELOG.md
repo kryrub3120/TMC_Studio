@@ -5,6 +5,26 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **PR-L5-MINI: Offline/Online UX** (2026-02-09)
+  - Online/offline detection using window events
+  - TopBar save status indicator showing: Offline (red) / Saving... (blue) / Saved (green) / Unsaved (orange)
+  - Non-blocking offline banner at top of screen
+  - Smart cloud save that skips attempts when offline
+  - Rate-limited save failure toasts (max once per 5 seconds)
+
+### Improved
+- **H3: ConfirmModal Component** (2026-02-09)
+  - Replaced all `window.confirm()` calls with custom modal component
+  - Full keyboard navigation: ESC (cancel), ENTER (confirm), Tab (focus trap)
+  - Smart focus management: danger actions focus Cancel by default (safer)
+  - Double-click protection with loading states
+  - Focus returns to previous element after close
+  - Mobile-friendly and accessible
+  - Concrete copy with specific consequences (no generic "Are you sure?")
+
 ## [0.2.1] - 2026-02-04
 
 ### Changed

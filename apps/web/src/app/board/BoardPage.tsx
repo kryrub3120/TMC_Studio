@@ -12,6 +12,7 @@ import {
   EmptyStateOverlay, 
   ToastHint, 
   ZoomWidget,
+  OfflineBanner,
 } from '@tmc/ui';
 import { DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
@@ -103,6 +104,7 @@ export function BoardPage(props: BoardPageProps) {
         userInitials={state.authUser?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || (state.authIsAuthenticated ? 'U' : '?')}
         focusMode={state.focusMode}
         theme={state.theme}
+        isOnline={state.isOnline}
         onExport={state.exportController.exportPNG}
         onToggleFocus={state.toggleFocusMode}
         onToggleTheme={state.toggleTheme}
@@ -302,6 +304,9 @@ export function BoardPage(props: BoardPageProps) {
         focusMode={state.focusMode}
         onExitFocusMode={state.toggleFocusMode}
       />
+      
+      {/* Offline Banner (PR-L5-MINI) */}
+      <OfflineBanner isVisible={!state.isOnline} />
     </div>
   );
 }

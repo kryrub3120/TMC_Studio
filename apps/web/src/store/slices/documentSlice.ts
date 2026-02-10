@@ -309,6 +309,15 @@ export const createDocumentSlice: StateCreator<
     saveToCloud: async () => {
       if (!isSupabaseEnabled()) return false;
       
+      // PR-L5-MINI: Check if online before attempting save
+      const { useUIStore } = await import('../useUIStore');
+      const isOnline = useUIStore.getState().isOnline;
+      
+      if (!isOnline) {
+        console.log('[Cloud save] Skipped - offline');
+        return false;
+      }
+      
       const { document, elements, cloudProjectId, currentStepIndex } = get();
       set({ isSaving: true });
       
@@ -348,6 +357,11 @@ export const createDocumentSlice: StateCreator<
       } catch (error) {
         console.error('Cloud save error:', error);
         set({ isSaving: false });
+        
+        // PR-L5-MINI: Show save failure toast (rate-limited)
+        const { useUIStore } = await import('../useUIStore');
+        useUIStore.getState().showSaveFailureToast();
+        
         return false;
       }
     },

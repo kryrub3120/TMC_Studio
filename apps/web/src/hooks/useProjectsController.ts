@@ -22,7 +22,11 @@ import {
   updateFolder,
   deleteFolder,
   toggleProjectFavorite,
+  toggleProjectPinned,
+  toggleFolderPinned,
   moveProjectToFolder,
+  renameProject as renameProjectApi,
+  renameFolder as renameFolderApi,
   type ProjectFolder,
 } from '../lib/supabase';
 
@@ -44,15 +48,19 @@ export interface ProjectsController {
   deleteProject: (id: string) => Promise<void>;
   duplicateProject: (id: string) => Promise<void>;
   renameProject: (newName: string) => void;
+  renameProjectById: (projectId: string, newName: string) => Promise<void>;
   refreshProjects: () => Promise<void>;
   
   // Folder operations
   createFolder: (name: string, color: string) => Promise<void>;
   updateFolder: (folderId: string, name: string, color: string) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
+  renameFolderById: (folderId: string, newName: string) => Promise<void>;
   
   // Organization
   toggleFavorite: (projectId: string) => Promise<void>;
+  togglePinProject: (projectId: string) => Promise<void>;
+  togglePinFolder: (folderId: string) => Promise<void>;
   moveToFolder: (projectId: string, folderId: string | null) => Promise<void>;
 }
 
@@ -348,6 +356,68 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     }
   }, [fetchCloudProjects, showToast]);
   
+  /**
+   * Toggle project pin status
+   */
+  const togglePinProject = useCallback(async (projectId: string) => {
+    try {
+      const project = cloudProjects.find(p => p.id === projectId);
+      const newValue = project ? !(project.is_pinned ?? false) : true;
+      await toggleProjectPinned(projectId, newValue);
+      await fetchCloudProjects(); // Refresh projects
+      showToast(newValue ? 'Project pinned 📌' : 'Project unpinned');
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+      showToast('Failed to update pin ❌');
+    }
+  }, [cloudProjects, fetchCloudProjects, showToast]);
+  
+  /**
+   * Toggle folder pin status
+   */
+  const togglePinFolder = useCallback(async (folderId: string) => {
+    try {
+      const folder = folders.find(f => f.id === folderId);
+      const newValue = folder ? !(folder.is_pinned ?? false) : true;
+      await toggleFolderPinned(folderId, newValue);
+      await fetchFoldersData(); // Refresh folders
+      await fetchCloudProjects(); // Also refresh projects
+      showToast(newValue ? 'Folder pinned 📌' : 'Folder unpinned');
+    } catch (error) {
+      console.error('Error toggling folder pin:', error);
+      showToast('Failed to update folder pin ❌');
+    }
+  }, [folders, fetchFoldersData, fetchCloudProjects, showToast]);
+  
+  /**
+   * Rename project by ID (for drawer inline rename)
+   */
+  const renameProjectById = useCallback(async (projectId: string, newName: string) => {
+    try {
+      await renameProjectApi(projectId, newName);
+      await fetchCloudProjects(); // Refresh projects
+      showToast('Project renamed ✏️');
+    } catch (error) {
+      console.error('Error renaming project:', error);
+      showToast('Failed to rename project ❌');
+    }
+  }, [fetchCloudProjects, showToast]);
+  
+  /**
+   * Rename folder by ID (for drawer inline rename)
+   */
+  const renameFolderById = useCallback(async (folderId: string, newName: string) => {
+    try {
+      await renameFolderApi(folderId, newName);
+      await fetchFoldersData(); // Refresh folders
+      await fetchCloudProjects(); // Also refresh projects
+      showToast('Folder renamed ✏️');
+    } catch (error) {
+      console.error('Error renaming folder:', error);
+      showToast('Failed to rename folder ❌');
+    }
+  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+  
   return {
     // State
     folders,
@@ -360,15 +430,19 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     deleteProject,
     duplicateProject,
     renameProject,
+    renameProjectById,
     refreshProjects,
     
     // Folder operations
     createFolder: createFolderHandler,
     updateFolder: updateFolderHandler,
     deleteFolder: deleteFolderHandler,
+    renameFolderById,
     
     // Organization
     toggleFavorite,
+    togglePinProject,
+    togglePinFolder,
     moveToFolder: moveToFolderHandler,
   };
 }

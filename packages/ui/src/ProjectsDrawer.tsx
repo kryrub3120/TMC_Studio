@@ -13,6 +13,7 @@ export interface ProjectItem {
   thumbnailUrl?: string;
   isCloud: boolean;
   isFavorite?: boolean;
+  isPinned?: boolean;
   tags?: string[];
   folderId?: string | null;
 }
@@ -22,6 +23,7 @@ export interface FolderItem {
   name: string;
   color: string;
   icon: string;
+  isPinned?: boolean;
   projectCount?: number;
 }
 
@@ -42,9 +44,13 @@ interface ProjectsDrawerProps {
   onDuplicateProject: (id: string) => void;
   onCreateFolder?: () => void;
   onToggleFavorite?: (projectId: string) => void;
+  onTogglePinProject?: (projectId: string) => void;
+  onTogglePinFolder?: (folderId: string) => void;
   onMoveToFolder?: (projectId: string, folderId: string | null) => void;
   onEditFolder?: (folderId: string) => void;
   onDeleteFolder?: (folderId: string) => void;
+  onRenameProject?: (projectId: string, newName: string) => void;
+  onRenameFolder?: (folderId: string, newName: string) => void;
   onSignIn: () => void;
   onRefresh?: () => void;
 }
@@ -63,9 +69,13 @@ export function ProjectsDrawer({
   onDuplicateProject,
   onCreateFolder,
   onToggleFavorite,
+  onTogglePinProject,
+  onTogglePinFolder,
   onMoveToFolder,
   onEditFolder: _onEditFolder,
   onDeleteFolder: _onDeleteFolder,
+  onRenameProject,
+  onRenameFolder,
   onSignIn,
   onRefresh,
 }: ProjectsDrawerProps) {
@@ -76,6 +86,11 @@ export function ProjectsDrawer({
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
+  
+  // Inline rename states
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   
   // Drag & drop states
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
@@ -135,6 +150,14 @@ export function ProjectsDrawer({
   
   // Count favorites
   const favoritesCount = projects.filter(p => p.isFavorite).length;
+  
+  // Separate pinned and unpinned projects
+  const pinnedProjects = filteredAndSortedProjects.filter(p => p.isPinned);
+  const unpinnedProjects = filteredAndSortedProjects.filter(p => !p.isPinned);
+  
+  // Separate pinned and unpinned folders
+  const pinnedFolders = foldersWithCount.filter(f => f.isPinned);
+  const unpinnedFolders = foldersWithCount.filter(f => !f.isPinned);
 
   // Context menu handlers
   const handleProjectContextMenu = (e: React.MouseEvent, project: ProjectItem) => {
@@ -142,6 +165,11 @@ export function ProjectsDrawer({
     e.stopPropagation();
     
     const items: ContextMenuItem[] = [
+      {
+        label: project.isPinned ? 'Unpin' : 'Pin to Top',
+        icon: '📌',
+        onClick: () => onTogglePinProject?.(project.id),
+      },
       {
         label: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
         icon: '⭐',
@@ -169,6 +197,11 @@ export function ProjectsDrawer({
     e.stopPropagation();
     
     const items: ContextMenuItem[] = [
+      {
+        label: folder.isPinned ? 'Unpin' : 'Pin to Top',
+        icon: '📌',
+        onClick: () => onTogglePinFolder?.(folder.id),
+      },
       {
         label: 'Edit Folder',
         icon: '✏️',
@@ -388,42 +421,94 @@ export function ProjectsDrawer({
             {/* Folders Section */}
             {onCreateFolder && (
               <div className="py-2">
-                {foldersWithCount.length > 0 && (
-                  <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
-                    Folders
-                  </div>
+                {/* Pinned Folders */}
+                {pinnedFolders.length > 0 && (
+                  <>
+                    <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1">
+                      <span>📌</span>
+                      <span>Pinned</span>
+                    </div>
+                    {pinnedFolders.map((folder) => (
+                      <button
+                        key={folder.id}
+                        onClick={() => {
+                          setViewMode('folder');
+                          setSelectedFolderId(folder.id);
+                        }}
+                        onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                        onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                        onDragLeave={handleFolderDragLeave}
+                        onDrop={(e) => handleFolderDrop(e, folder.id)}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
+                          viewMode === 'folder' && selectedFolderId === folder.id
+                            ? 'bg-accent/10 text-accent'
+                            : 'hover:bg-surface2 text-muted'
+                        } ${dropTargetFolderId === folder.id ? 'bg-accent/20 ring-2 ring-accent' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: folder.color }} />
+                          <span className="text-sm font-medium truncate max-w-[160px]">{folder.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {folder.projectCount! > 0 && (
+                            <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
+                          )}
+                          {dropTargetFolderId === folder.id && (
+                            <span className="text-xs text-accent">Drop here</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </>
                 )}
-                {foldersWithCount.map((folder) => (
-                  <button
-                    key={folder.id}
-                    onClick={() => {
-                      setViewMode('folder');
-                      setSelectedFolderId(folder.id);
-                    }}
-                    onContextMenu={(e) => handleFolderContextMenu(e, folder)}
-                    onDragOver={(e) => handleFolderDragOver(e, folder.id)}
-                    onDragLeave={handleFolderDragLeave}
-                    onDrop={(e) => handleFolderDrop(e, folder.id)}
-                    className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
-                      viewMode === 'folder' && selectedFolderId === folder.id
-                        ? 'bg-accent/10 text-accent'
-                        : 'hover:bg-surface2 text-muted'
-                    } ${dropTargetFolderId === folder.id ? 'bg-accent/20 ring-2 ring-accent' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm" style={{ color: folder.color }}>📁</span>
-                      <span className="text-sm font-medium truncate max-w-[180px]">{folder.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {folder.projectCount! > 0 && (
-                        <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
-                      )}
-                      {dropTargetFolderId === folder.id && (
-                        <span className="text-xs text-accent">Drop here</span>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                
+                {/* Regular Folders */}
+                {unpinnedFolders.length > 0 && (
+                  <>
+                    {pinnedFolders.length > 0 && (
+                      <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider mt-2">
+                        Folders
+                      </div>
+                    )}
+                    {!pinnedFolders.length && foldersWithCount.length > 0 && (
+                      <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
+                        Folders
+                      </div>
+                    )}
+                    {unpinnedFolders.map((folder) => (
+                      <button
+                        key={folder.id}
+                        onClick={() => {
+                          setViewMode('folder');
+                          setSelectedFolderId(folder.id);
+                        }}
+                        onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                        onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                        onDragLeave={handleFolderDragLeave}
+                        onDrop={(e) => handleFolderDrop(e, folder.id)}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors ${
+                          viewMode === 'folder' && selectedFolderId === folder.id
+                            ? 'bg-accent/10 text-accent'
+                            : 'hover:bg-surface2 text-muted'
+                        } ${dropTargetFolderId === folder.id ? 'bg-accent/20 ring-2 ring-accent' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: folder.color }} />
+                          <span className="text-sm font-medium truncate max-w-[160px]">{folder.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {folder.projectCount! > 0 && (
+                            <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
+                          )}
+                          {dropTargetFolderId === folder.id && (
+                            <span className="text-xs text-accent">Drop here</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+                
                 {/* New Folder button */}
                 <button
                   onClick={onCreateFolder}
@@ -505,7 +590,137 @@ export function ProjectsDrawer({
             </div>
           ) : (
             <div className="p-2">
-              {filteredAndSortedProjects.map((project) => (
+              {/* Pinned Projects */}
+              {pinnedProjects.length > 0 && (
+                <>
+                  <div className="px-2 py-1 text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1">
+                    <span>📌</span>
+                    <span>Pinned</span>
+                  </div>
+                  {pinnedProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      draggable={onMoveToFolder !== undefined}
+                      onDragStart={(e) => handleProjectDragStart(e, project.id)}
+                      onDragEnd={handleProjectDragEnd}
+                      className={`relative group rounded-lg transition-all cursor-pointer mb-2 ${
+                        currentProjectId === project.id
+                          ? 'bg-accent/20 ring-1 ring-accent/50'
+                          : 'hover:bg-surface2'
+                      } ${draggedProjectId === project.id ? 'opacity-50' : ''}`}
+                      onClick={() => onSelectProject(project.id)}
+                      onContextMenu={(e) => handleProjectContextMenu(e, project)}
+                      onMouseEnter={() => setHoveredId(project.id)}
+                      onMouseLeave={() => {
+                        setHoveredId(null);
+                        if (deleteConfirmId === project.id) setDeleteConfirmId(null);
+                      }}
+                    >
+                      <div className="flex items-start gap-3 p-3">
+                        <div className="w-12 h-12 rounded-lg bg-surface2 flex-shrink-0 overflow-hidden">
+                          {project.thumbnailUrl ? (
+                            <img
+                              src={project.thumbnailUrl}
+                              alt={project.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-2xl">
+                              ⚽
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            {project.isFavorite && <span className="text-xs">⭐</span>}
+                            <h3 className="text-sm font-medium text-text truncate">{project.name}</h3>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-xs text-muted">{formatDate(project.updatedAt)}</span>
+                            {project.isCloud && (
+                              <span className="text-xs text-accent flex items-center gap-0.5">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                </svg>
+                                Cloud
+                              </span>
+                            )}
+                            {project.tags && project.tags.length > 0 && (
+                              <div className="flex gap-1">
+                                {project.tags.slice(0, 2).map((tag) => (
+                                  <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-surface2/50 text-muted">
+                                    #{tag}
+                                  </span>
+                                ))}
+                                {project.tags.length > 2 && (
+                                  <span className="text-xs text-muted">+{project.tags.length - 2}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {currentProjectId === project.id && (
+                          <span className="text-xs bg-accent text-white px-2 py-0.5 rounded-full">
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      {hoveredId === project.id && currentProjectId !== project.id && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDuplicateProject(project.id);
+                            }}
+                            className="p-1.5 hover:bg-surface rounded-md transition-colors"
+                            title="Duplicate"
+                          >
+                            <svg className="w-4 h-4 text-muted hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          {deleteConfirmId === project.id ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteProject(project.id);
+                                setDeleteConfirmId(null);
+                              }}
+                              className="p-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-md transition-colors"
+                              title="Confirm Delete"
+                            >
+                              <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmId(project.id);
+                              }}
+                              className="p-1.5 hover:bg-red-500/20 rounded-md transition-colors"
+                              title="Delete"
+                            >
+                              <svg className="w-4 h-4 text-muted hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Regular Projects */}
+              {unpinnedProjects.length > 0 && pinnedProjects.length > 0 && (
+                <div className="px-2 py-1 text-xs font-semibold text-muted uppercase tracking-wider mt-2">
+                  Projects
+                </div>
+              )}
+              {unpinnedProjects.map((project) => (
                 <div
                   key={project.id}
                   draggable={onMoveToFolder !== undefined}

@@ -4,7 +4,7 @@
  * Pure composition - no board/canvas logic
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Footer, type ProjectItem } from '@tmc/ui';
 import { type ProjectFolder } from '../lib/supabase';
@@ -133,6 +133,33 @@ export function AppShell() {
     setEditingFolder(null);
   }, [editingFolder, projectsController]);
   
+  // L1 Pin/Unpin handlers
+  const handleTogglePinProject = projectsController.togglePinProject;
+  const handleTogglePinFolder = projectsController.togglePinFolder;
+  
+  // L1 Inline rename handlers
+  const handleRenameProjectById = projectsController.renameProjectById;
+  const handleRenameFolderById = projectsController.renameFolderById;
+  
+  // PR-L5-MINI: Online/offline detection
+  useEffect(() => {
+    const handleOnline = () => {
+      useUIStore.getState().setOnline(true);
+    };
+    
+    const handleOffline = () => {
+      useUIStore.getState().setOnline(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
   // Convert cloud projects to ProjectItem format
   const projectItems: ProjectItem[] = cloudProjects.map((p) => ({
     id: p.id,
@@ -143,6 +170,7 @@ export function AppShell() {
     folderId: p.folder_id ?? undefined,
     tags: p.tags ?? undefined,
     isFavorite: p.is_favorite ?? false,
+    isPinned: p.is_pinned ?? false,
   }));
   
   return (
@@ -205,6 +233,7 @@ export function AppShell() {
           name: f.name,
           color: f.color,
           icon: f.icon,
+          isPinned: f.is_pinned ?? false,
         }))}
         currentProjectId={useBoardStore.getState().cloudProjectId}
         projectsIsLoading={projectsController.isLoading}
@@ -213,9 +242,13 @@ export function AppShell() {
         onDeleteProject={handleDeleteProject}
         onDuplicateProject={handleDuplicateProject}
         onToggleFavorite={handleToggleFavorite}
+        onTogglePinProject={handleTogglePinProject}
+        onTogglePinFolder={handleTogglePinFolder}
         onMoveToFolder={handleMoveToFolder}
         onEditFolder={handleEditFolder}
         onDeleteFolder={handleDeleteFolder}
+        onRenameProject={handleRenameProjectById}
+        onRenameFolder={handleRenameFolderById}
         onRefreshProjects={projectsController.refreshProjects}
         onOpenCreateFolderModal={() => setCreateFolderModalOpen(true)}
         
