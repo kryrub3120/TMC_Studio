@@ -71,7 +71,12 @@ function ThemeButton({
 }
 
 /** Main PitchPanel component */
-export function PitchPanel({ pitchSettings, onUpdatePitch, isPrintMode = false, onTogglePrintMode }: PitchPanelProps) {
+export function PitchPanel({ 
+  pitchSettings, 
+  onUpdatePitch, 
+  isPrintMode = false, 
+  onTogglePrintMode,
+}: PitchPanelProps) {
   const handleThemeSelect = (theme: PitchTheme) => {
     const themeColors = PITCH_THEMES[theme];
     onUpdatePitch({
@@ -289,6 +294,7 @@ export function PitchPanel({ pitchSettings, onUpdatePitch, isPrintMode = false, 
           </button>
         </div>
       </div>
+
 
       {/* Help text */}
       <div className="text-xs text-muted pt-2 border-t border-border">

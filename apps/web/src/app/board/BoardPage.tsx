@@ -130,6 +130,7 @@ export function BoardPage(props: BoardPageProps) {
             pitchConfig={state.pitchConfig}
             pitchSettings={state.pitchSettings}
             teamSettings={state.teamSettings ?? { home: { primaryColor: '#3b82f6', secondaryColor: '#1e40af', name: 'Home' }, away: { primaryColor: '#ef4444', secondaryColor: '#b91c1c', name: 'Away' } }}
+            playerOrientationSettings={state.playerOrientationSettings}
             gridVisible={state.gridVisible}
             layerVisibility={state.layerVisibility}
             hiddenByGroup={state.hiddenByGroup}
@@ -266,6 +267,8 @@ export function BoardPage(props: BoardPageProps) {
           onUpdatePitch={state.updatePitchSettings}
           isPrintMode={state.isPrintMode}
           onTogglePrintMode={state.togglePrintMode}
+          playerOrientationSettings={state.playerOrientationSettings}
+          onUpdatePlayerOrientation={state.updatePlayerOrientationSettings}
         />
         )}
       </div>

@@ -10,11 +10,13 @@ import type {
   TeamSettings,
   TeamSetting,
   PitchSettings,
+  PlayerOrientationSettings,
   Position,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
   DEFAULT_PITCH_SETTINGS,
+  DEFAULT_PLAYER_ORIENTATION_SETTINGS,
   createDocument,
   saveToLocalStorage,
   loadFromLocalStorage,
@@ -56,6 +58,10 @@ export interface DocumentSlice {
   // Pitch settings
   updatePitchSettings: (settings: Partial<PitchSettings>) => void;
   getPitchSettings: () => PitchSettings | undefined;
+  
+  // Player orientation settings
+  updatePlayerOrientationSettings: (settings: Partial<PlayerOrientationSettings>) => void;
+  getPlayerOrientationSettings: () => PlayerOrientationSettings;
   
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
@@ -231,21 +237,38 @@ export const createDocumentSlice: StateCreator<
         
         // Transform single element
         const transformBoardElement = (el: BoardElement): BoardElement => {
-          // A) Position elements (except zone)
+          // Compute rotation delta once (used for all rotating elements)
+          // Landscape → Portrait: -90° (CCW)
+          // Portrait → Landscape: +90° (CW)
+          const rotationDelta = settings.orientation === 'portrait' ? -90 : 90;
+          
+          // A) Position elements (except zone, arrow, drawing)
           if ('position' in el && el.position && el.type !== 'zone') {
             const next: any = {
               ...el,
               position: transformStagePoint(el.position as Position),
             };
             
-            // Equipment: also rotate
-            if (el.type === 'equipment') {
-              const rotationDelta = settings.orientation === 'portrait' ? -90 : 90;
-              next.rotation = (el.rotation + rotationDelta + 360) % 360;
+            // Unified rotation rule: rotate ANY element with numeric 'rotation' property
+            if ('rotation' in el && typeof (el as any).rotation === 'number') {
+              next.rotation = ((el as any).rotation + rotationDelta + 360) % 360;
+            }
+            
+            // Unified orientation rule: rotate ANY element with 'orientation' property
+            if ('orientation' in el && (el as any).orientation !== undefined) {
+              next.orientation = ((el as any).orientation + rotationDelta + 360) % 360;
+            }
+            
+            // Text exception: force rotation to 0 (text must remain readable/upright)
+            if (el.type === 'text') {
+              if ('rotation' in next) {
+                next.rotation = 0;
+              }
             }
             
             return next;
           }
+
           
           // B) Zone - transform center + swap + recalculate top-left
           if (el.type === 'zone') {
@@ -273,6 +296,21 @@ export const createDocumentSlice: StateCreator<
               ...el,
               startPoint: transformStagePoint(el.startPoint),
               endPoint: transformStagePoint(el.endPoint),
+            } as any;
+          }
+          
+          // D) Drawing - transform all points in the flat array [x1, y1, x2, y2, ...]
+          if (el.type === 'drawing') {
+            const transformedPoints: number[] = [];
+            for (let i = 0; i < el.points.length; i += 2) {
+              const x = el.points[i];
+              const y = el.points[i + 1];
+              const transformed = transformStagePoint({ x, y });
+              transformedPoints.push(transformed.x, transformed.y);
+            }
+            return {
+              ...el,
+              points: transformedPoints,
             } as any;
           }
           
@@ -305,6 +343,28 @@ export const createDocumentSlice: StateCreator<
     },
     
     getPitchSettings: () => get().document.pitchSettings,
+    
+    updatePlayerOrientationSettings: (settings) => {
+      const { document } = get();
+      const currentSettings = document.playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+      
+      const updatedSettings = {
+        ...currentSettings,
+        ...settings,
+      };
+      
+      set({
+        document: {
+          ...document,
+          playerOrientationSettings: updatedSettings,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    },
+    
+    getPlayerOrientationSettings: () => {
+      return get().document.playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+    },
     
     saveToCloud: async () => {
       if (!isSupabaseEnabled()) return false;

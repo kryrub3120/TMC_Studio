@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Layer, Line } from 'react-konva';
-import type { BoardElement, Position, PitchSettings, TeamSettings, EquipmentElement } from '@tmc/core';
+import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings, EquipmentElement } from '@tmc/core';
 import { isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 
@@ -27,7 +27,9 @@ export interface CanvasElementsProps {
   pitchConfig: ReturnType<typeof import('@tmc/core').getPitchDimensions>;
   pitchSettings: PitchSettings;
   teamSettings: TeamSettings;
+  playerOrientationSettings: PlayerOrientationSettings; // PR3
   gridVisible: boolean;
+  zoom: number; // PR3
   
   // Animation state
   isPlaying: boolean;
@@ -70,7 +72,9 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     pitchConfig,
     pitchSettings,
     teamSettings,
+    playerOrientationSettings, // PR3
     gridVisible,
+    zoom, // PR3
     isPlaying,
     activeTool,
     isPrintMode,
@@ -153,6 +157,8 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               player={animatedPlayer}
               pitchConfig={pitchConfig}
               teamSettings={teamSettings}
+              playerOrientationSettings={playerOrientationSettings}
+              zoom={Math.round(zoom * 100)}
               isPrintMode={isPrintMode}
               isSelected={!isPlaying && selectedIds.includes(player.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}

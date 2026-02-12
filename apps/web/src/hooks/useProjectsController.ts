@@ -25,6 +25,7 @@ import {
   toggleProjectPinned,
   toggleFolderPinned,
   moveProjectToFolder,
+  updateFolderPosition,
   renameProject as renameProjectApi,
   renameFolder as renameFolderApi,
   type ProjectFolder,
@@ -52,7 +53,7 @@ export interface ProjectsController {
   refreshProjects: () => Promise<void>;
   
   // Folder operations
-  createFolder: (name: string, color: string) => Promise<void>;
+  createFolder: (name: string, color: string, parentId?: string | null) => Promise<void>;
   updateFolder: (folderId: string, name: string, color: string) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
   renameFolderById: (folderId: string, newName: string) => Promise<void>;
@@ -62,6 +63,7 @@ export interface ProjectsController {
   togglePinProject: (projectId: string) => Promise<void>;
   togglePinFolder: (folderId: string) => Promise<void>;
   moveToFolder: (projectId: string, folderId: string | null) => Promise<void>;
+  moveFolderToParent: (folderId: string, parentId: string | null, position: number) => Promise<void>;
 }
 
 /**
@@ -270,9 +272,9 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   /**
    * Create a new folder
    */
-  const createFolderHandler = useCallback(async (name: string, color: string) => {
+  const createFolderHandler = useCallback(async (name: string, color: string, parentId?: string | null) => {
     try {
-      await createFolder({ name, color, icon: 'folder' });
+      await createFolder({ name, color, icon: 'folder', parent_id: parentId ?? undefined });
       await fetchFoldersData();
       await fetchCloudProjects(); // Refresh projects to get updated folder assignments
       showToast(`Folder "${name}" created 📁`);
@@ -303,7 +305,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   const deleteFolderHandler = useCallback(async (folderId: string) => {
     useUIStore.getState().showConfirmModal({
       title: 'Delete Folder?',
-      description: 'This will delete the folder, but your projects will not be deleted. They will remain in your workspace.',
+      description: 'This will delete the folder and any subfolders inside it. Your projects will not be deleted — they will remain in your workspace.',
       confirmLabel: 'Delete Folder',
       cancelLabel: 'Cancel',
       danger: true,
@@ -404,6 +406,24 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   }, [fetchCloudProjects, showToast]);
   
   /**
+   * Move folder to a new parent with position (for drag & drop)
+   */
+  const moveFolderToParent = useCallback(async (folderId: string, parentId: string | null, position: number) => {
+    try {
+      const success = await updateFolderPosition(folderId, parentId, position);
+      if (success) {
+        await fetchFoldersData();
+        showToast('Folder moved 📁');
+      } else {
+        showToast('Failed to move folder ❌');
+      }
+    } catch (error) {
+      console.error('Error moving folder:', error);
+      showToast('Failed to move folder ❌');
+    }
+  }, [fetchFoldersData, showToast]);
+
+  /**
    * Rename folder by ID (for drawer inline rename)
    */
   const renameFolderById = useCallback(async (folderId: string, newName: string) => {
@@ -444,5 +464,6 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     togglePinProject,
     togglePinFolder,
     moveToFolder: moveToFolderHandler,
+    moveFolderToParent,
   };
 }

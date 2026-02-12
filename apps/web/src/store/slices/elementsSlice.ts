@@ -101,6 +101,14 @@ export interface ElementsSlice {
   commitSetPlayersRadius: (ids: ElementId[], radius: number) => void;
   previewResetPlayersRadius: (ids: ElementId[]) => void;
   commitResetPlayersRadius: (ids: ElementId[]) => void;
+  
+  // Player orientation (PR1)
+  setPlayerOrientation: (ids: ElementId[], delta: number) => void;
+  resetPlayerOrientation: (ids: ElementId[]) => void;
+  
+  // Per-player vision toggle
+  togglePlayerVision: (ids: ElementId[]) => void;
+  setPlayerVision: (ids: ElementId[], value: boolean) => void;
 }
 
 export const createElementsSlice: StateCreator<
@@ -691,6 +699,64 @@ export const createElementsSlice: StateCreator<
         if (ids.includes(el.id) && isPlayerElement(el)) {
           const { radius: _removed, ...rest } = el as any;
           return { ...rest, radius: undefined };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  // PR1: Player orientation manipulation (delta mode - adds to current)
+  setPlayerOrientation: (ids, delta) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          const current = el.orientation ?? 0;
+          const newOrientation = ((current + delta) % 360 + 360) % 360;
+          return { ...el, orientation: newOrientation };
+        }
+        return el;
+      }),
+    }));
+    // NOTE: pushHistory removed - caller decides (keyboard already calls it, wheel debounces)
+  },
+  
+  resetPlayerOrientation: (ids) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          return { ...el, orientation: 0 };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  // Per-player vision toggle
+  togglePlayerVision: (ids) => {
+    if (ids.length === 0) return;
+    
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          // Toggle: undefined/true -> false, false -> true
+          const current = el.showVision !== false; // default true
+          return { ...el, showVision: !current };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  setPlayerVision: (ids, value) => {
+    if (ids.length === 0) return;
+    
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (ids.includes(el.id) && isPlayerElement(el)) {
+          return { ...el, showVision: value };
         }
         return el;
       }),

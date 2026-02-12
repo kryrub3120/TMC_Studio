@@ -39,6 +39,9 @@ export interface UseKeyboardShortcutsParams {
   // Step management (gated by entitlements)
   addStep: () => void;
   
+  // Pricing modal (PR3)
+  onOpenPricingModal?: () => void;
+  
   // Context menu state (for guards)
   contextMenuVisible: boolean;
 }
@@ -56,6 +59,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     onStartEditingText,
     onStartEditingPlayerNumber,
     addStep,
+    onOpenPricingModal, // PR3
     contextMenuVisible,
   } = params;
   
@@ -95,6 +99,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const removeStep = useBoardStore((s) => s.removeStep);
   const prevStep = useBoardStore((s) => s.prevStep);
   const nextStep = useBoardStore((s) => s.nextStep);
+  const setPlayerOrientation = useBoardStore((s) => s.setPlayerOrientation); // PR3
+  const resetPlayerOrientation = useBoardStore((s) => s.resetPlayerOrientation); // PR3
+  const updatePlayerOrientationSettings = useBoardStore((s) => s.updatePlayerOrientationSettings);
+  const togglePlayerVision = useBoardStore((s) => s.togglePlayerVision); // Per-player vision toggle
+  // setPlayerVision available if needed for future use
   
   // ===== UI Store State & Actions =====
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen);
@@ -116,6 +125,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   
   // ===== Auth Store =====
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authIsPro = useAuthStore((s) => s.isPro); // PR3
   
   // Main keyboard event handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -335,42 +345,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'v':
+        // Cmd+V = Paste only. Plain V vision toggle handled via e.code === 'KeyV' below.
         if (isCmd) {
           e.preventDefault();
           pasteClipboard();
           showToast('Pasted');
-        } else {
-          // V = Cycle pitch views
-          e.preventDefault();
-          const VIEWS = ['full', 'plain', 'half-left', 'half-right'] as const;
-          const currentView = getPitchSettings()?.view ?? 'full';
-          const currentIdx = VIEWS.indexOf(currentView as typeof VIEWS[number]);
-          const nextIdx = (currentIdx + 1) % VIEWS.length;
-          const nextView = VIEWS[nextIdx];
-          
-          if (nextView === 'plain') {
-            updatePitchSettings({
-              view: nextView,
-              lines: {
-                showOutline: false, showCenterLine: false, showCenterCircle: false,
-                showPenaltyAreas: false, showGoalAreas: false, showCornerArcs: false, showPenaltySpots: false,
-                showGoals: false,
-              },
-            });
-          } else {
-            updatePitchSettings({
-              view: nextView,
-              lines: {
-                showOutline: true, showCenterLine: true, showCenterCircle: true,
-                showPenaltyAreas: true, showGoalAreas: true, showCornerArcs: true, showPenaltySpots: true,
-                showGoals: true,
-              },
-            });
-          }
-          const viewNames: Record<string, string> = {
-            full: 'Full pitch', plain: 'Plain grass', 'half-left': 'Half (left)', 'half-right': 'Half (right)',
-          };
-          showToast(viewNames[nextView] ?? nextView);
         }
         break;
         
@@ -558,9 +537,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       // ===== STEPS & PLAYBACK =====
+      // Space is reserved for temporary hand pan (PR-FIX-4)
+      // Pan is handled in BoardCanvasSection via Space+drag
       case ' ':
         e.preventDefault();
-        isPlaying ? pause() : play();
+        // No action — Space is pan-only now
         break;
         
       case 'l':
@@ -712,37 +693,101 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       // ===== ROTATION =====
-      case '[':
-        if (!isCmd) {
+      // Note: Use e.code instead of e.key for bracket keys to support macOS Alt key
+      
+      case '0':
+        if (!isCmd && e.altKey && hasSelectedPlayer()) {
+          // Alt+0 = Reset player orientation
           e.preventDefault();
-          rotateSelected(-15);
-          showToast('Rotated -15°');
+          const playerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
+          resetPlayerOrientation(playerIds);
+          state.pushHistory();
+          showToast('Player orientation reset');
+        } else if (!isCmd && !e.altKey && !e.shiftKey) {
+          // 0 = Fit (reset zoom and pan)
+          e.preventDefault();
+          useUIStore.getState().zoomFit();
         }
         break;
-        
-      case ']':
-        if (!isCmd) {
-          e.preventDefault();
-          rotateSelected(15);
-          showToast('Rotated +15°');
+    }
+    
+    // ===== BRACKET ROTATION (e.code check for macOS compatibility) =====
+    // Priority: players first (orientation), then equipment (rotation)
+    if (e.code === 'BracketLeft' && !isCmd) {
+      // [ key - plain (no modifiers)
+      e.preventDefault();
+      if (hasSelectedPlayer()) {
+        // [ = Player orientation -15° (or -5° with Shift)
+        const playerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
+        const delta = e.shiftKey ? -5 : -15;
+        setPlayerOrientation(playerIds, delta);
+        state.pushHistory();
+        showToast(`Player orientation ${delta}°`);
+      } else if (hasSelectedEquipment()) {
+        // [ = Equipment rotation (fallback)
+        rotateSelected(-15);
+        showToast('Rotated -15°');
+      }
+    }
+    
+    if (e.code === 'BracketRight' && !isCmd) {
+      // ] key - plain (no modifiers)
+      e.preventDefault();
+      if (hasSelectedPlayer()) {
+        // ] = Player orientation +15° (or +5° with Shift)
+        const playerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
+        const delta = e.shiftKey ? 5 : 15;
+        setPlayerOrientation(playerIds, delta);
+        state.pushHistory();
+        showToast(`Player orientation +${delta}°`);
+      } else if (hasSelectedEquipment()) {
+        // ] = Equipment rotation (fallback)
+        rotateSelected(15);
+        showToast('Rotated +15°');
+      }
+    }
+    
+    // Shift+[ and Shift+] produce { and } - equipment 90° rotation
+    if (key === '{' && !isCmd && hasSelectedEquipment()) {
+      e.preventDefault();
+      rotateSelected(-90);
+      showToast('Rotated -90°');
+    }
+    
+    if (key === '}' && !isCmd && hasSelectedEquipment()) {
+      e.preventDefault();
+      rotateSelected(90);
+      showToast('Rotated +90°');
+    }
+    
+    // ===== PER-PLAYER VISION TOGGLE (e.code === 'KeyV') =====
+    if (e.code === 'KeyV' && !isCmd) {
+      e.preventDefault();
+      
+      // Vision requires orientation feature to be enabled
+      const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
+      if (!orientationSettings.enabled) {
+        showToast('Enable "Show orientation" first (Props → Player Orientation)');
+        return;
+      }
+      
+      if (e.shiftKey) {
+        // Shift+V = Toggle vision for ALL players on board
+        const allPlayerIds = elements.filter(el => isPlayerElement(el)).map(el => el.id);
+        if (allPlayerIds.length > 0) {
+          togglePlayerVision(allPlayerIds);
+          showToast('Vision toggled for all players');
+        } else {
+          showToast('No players on board');
         }
-        break;
-        
-      case '{':
-        if (!isCmd) {
-          e.preventDefault();
-          rotateSelected(-90);
-          showToast('Rotated -90°');
-        }
-        break;
-        
-      case '}':
-        if (!isCmd) {
-          e.preventDefault();
-          rotateSelected(90);
-          showToast('Rotated +90°');
-        }
-        break;
+      } else if (hasSelectedPlayer()) {
+        // V = Toggle vision for selected players
+        const selectedPlayerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
+        togglePlayerVision(selectedPlayerIds);
+        showToast(`Vision toggled for ${selectedPlayerIds.length} player(s)`);
+      } else {
+        showToast('Select player(s) first');
+      }
     }
     
     // ===== FORMATIONS (1-6, Shift+1-6) =====
@@ -774,9 +819,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
     zoomIn, zoomOut, isPlaying, play, pause, toggleLoop, togglePrintMode, isPrintMode,
     removeStep, prevStep, nextStep, addStep,
-    authIsAuthenticated,
+    authIsAuthenticated, authIsPro, // PR3
+    setPlayerOrientation, resetPlayerOrientation, updatePlayerOrientationSettings, togglePlayerVision, // Vision/orientation
     handleExportPNG, handleExportAllSteps, handleExportPDF, handleExportGIF,
-    showToast, onStartEditingText, onStartEditingPlayerNumber,
+    showToast, onStartEditingText, onStartEditingPlayerNumber, onOpenPricingModal, // PR3
   ]);
   
   // Attach/detach event listener
@@ -785,4 +831,54 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [handleKeyDown]);
+  
+  // Alt+wheel for player orientation with debounced history
+  useEffect(() => {
+    let debounceTimer: NodeJS.Timeout | null = null;
+    
+    const handleWheel = (e: WheelEvent) => {
+      // Only handle when Alt is pressed
+      if (!e.altKey) return;
+      
+      // Check if any players are selected
+      const state = useBoardStore.getState();
+      const { elements, selectedIds } = state;
+      const selectedPlayers = elements.filter(el => 
+        selectedIds.includes(el.id) && isPlayerElement(el)
+      );
+      
+      if (selectedPlayers.length === 0) return;
+      
+      // Prevent default zoom behavior when Alt + wheel on players
+      e.preventDefault();
+      
+      // Calculate rotation delta (+15 or -15 based on wheel direction)
+      const delta = e.deltaY > 0 ? 15 : -15;
+      
+      // Apply orientation change immediately
+      const playerIds = selectedPlayers.map(p => p.id);
+      setPlayerOrientation(playerIds, delta);
+      
+      // Clear existing debounce timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      
+      // Set new debounce timer for history commit (300ms)
+      debounceTimer = setTimeout(() => {
+        state.pushHistory();
+        debounceTimer = null;
+      }, 300);
+    };
+    
+    // Attach wheel listener
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [setPlayerOrientation, showToast]);
 }

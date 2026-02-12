@@ -182,7 +182,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
 
   // Update element handler
   const handleUpdateElement = useCallback(
-    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => {
+    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => {
       updateSelectedElement(updates as Partial<PlayerElementType>);
     },
     [updateSelectedElement]

@@ -14,6 +14,7 @@ import {
   FolderOptionsModal,
   ConfirmModal,
   type ProjectItem,
+  type FolderItem,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
 import { useUIStore } from '../../store/useUIStore';
@@ -48,7 +49,7 @@ interface ModalOrchestratorProps {
   projectsDrawerOpen: boolean;
   onCloseProjectsDrawer: () => void;
   projectItems: ProjectItem[];
-  projectsFolders: Array<{ id: string; name: string; color: string; icon: string }>;
+  projectsFolders: FolderItem[];
   currentProjectId: string | null;
   projectsIsLoading: boolean;
   onSelectProject: (projectId: string) => void;
@@ -63,8 +64,9 @@ interface ModalOrchestratorProps {
   onDeleteFolder: (folderId: string) => void;
   onRenameProject?: (projectId: string, newName: string) => void;
   onRenameFolder?: (folderId: string, newName: string) => void;
+  onMoveFolderToParent?: (folderId: string, parentId: string | null, position: number) => void;
   onRefreshProjects: () => void;
-  onOpenCreateFolderModal: () => void;
+  onOpenCreateFolderModal: (parentFolderId?: string | null) => void;
   
   // Create Folder Modal
   createFolderModalOpen: boolean;
@@ -178,6 +180,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onDeleteFolder={props.onDeleteFolder}
         onRenameProject={props.onRenameProject}
         onRenameFolder={props.onRenameFolder}
+        onMoveFolderToParent={props.onMoveFolderToParent}
         onSignIn={() => {
           props.onCloseProjectsDrawer();
           props.onOpenAuthModal();

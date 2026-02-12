@@ -4,10 +4,15 @@
  */
 
 import React, { useRef, useState, memo } from 'react';
-import { Group, Circle, Rect, RegularPolygon, Text } from 'react-konva';
+import { Group, Circle, Rect, RegularPolygon, Line, Text, Wedge } from 'react-konva';
 import type Konva from 'konva';
-import type { PlayerElement, Position, PitchConfig, TeamSettings } from '@tmc/core';
-import { snapToGrid, clampToBounds, DEFAULT_TEAM_SETTINGS } from '@tmc/core';
+import type { PlayerElement, Position, PitchConfig, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
+import {
+  snapToGrid,
+  clampToBounds,
+  DEFAULT_TEAM_SETTINGS,
+  DEFAULT_PLAYER_ORIENTATION_SETTINGS,
+} from '@tmc/core';
 
 /** Team color configuration */
 export interface TeamColors {
@@ -22,14 +27,13 @@ export interface PlayerNodeProps {
   isSelected: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
-  /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
-  /** Optional team settings for custom colors */
   teamSettings?: TeamSettings;
-  /** Called when user double-clicks to quick-edit number */
   onQuickEditNumber?: (id: string, currentNumber: number) => void;
-  /** Print mode flag for render-time color sanitization */
   isPrintMode?: boolean;
+  playerOrientationSettings?: PlayerOrientationSettings;
+  /** zoom in PERCENT, e.g. 100 */
+  zoom?: number;
 }
 
 /** Default goalkeeper color (yellow) */
@@ -37,10 +41,18 @@ const DEFAULT_GK_COLOR = '#fbbf24';
 
 /** Sanitize white to black in print mode (inline, avoids cross-package import) */
 function sanitizeForPrint(color: string, isPrintMode: boolean): string {
-  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') {
-    return '#000000';
-  }
+  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') return '#000000';
   return color;
+}
+
+/** Darken hex color by percentage */
+function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.max(0, (num >> 16) - amt);
+  const G = Math.max(0, ((num >> 8) & 0x00ff) - amt);
+  const B = Math.max(0, (num & 0x0000ff) - amt);
+  return `#${((1 << 24) | (R << 16) | (G << 8) | B).toString(16).slice(1)}`;
 }
 
 /** Convert team settings to render colors */
@@ -53,42 +65,25 @@ function getTeamColors(
 ): TeamColors {
   const settings = teamSettings ?? DEFAULT_TEAM_SETTINGS;
   const teamSetting = settings[team];
-  
-  // Priority: player.color > goalkeeper color > team primary color
-  let primaryHex = playerColorOverride ?? (
-    isGoalkeeper
-      ? (teamSetting.goalkeeperColor ?? DEFAULT_GK_COLOR)
-      : teamSetting.primaryColor
-  );
-  
-  // Sanitize white to black in print mode (render-time only)
+
+  // Priority: GK > player.color > team primary
+  let primaryHex = isGoalkeeper
+    ? (teamSetting.goalkeeperColor ?? DEFAULT_GK_COLOR)
+    : (playerColorOverride ?? teamSetting.primaryColor);
+
   primaryHex = sanitizeForPrint(primaryHex, isPrintMode ?? false);
-  
-  // Darken color for stroke
-  const darkenedStroke = darkenColor(primaryHex, 20);
-  
+
   return {
     fill: primaryHex,
-    stroke: darkenedStroke,
+    stroke: darkenColor(primaryHex, 20),
     text: teamSetting.secondaryColor,
   };
 }
 
-/** Darken hex color by percentage */
-function darkenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.max(0, (num >> 16) - amt);
-  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
-  const B = Math.max(0, (num & 0x0000FF) - amt);
-  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
-}
-
-const PLAYER_RADIUS = 18; // default only
+const PLAYER_RADIUS = 18;
 const SELECTED_STROKE_WIDTH = 3;
 const NORMAL_STROKE_WIDTH = 2;
 
-/** Draggable player circle with number */
 const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   player,
   pitchConfig,
@@ -99,14 +94,37 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   teamSettings,
   onQuickEditNumber,
   isPrintMode,
+  playerOrientationSettings,
+  zoom = 100,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
+
   const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper, player.color, isPrintMode);
-  
-  // Use stored radius or default
-  const effectiveRadius = player.radius ?? PLAYER_RADIUS;
+  const r = player.radius ?? PLAYER_RADIUS;
+
+  const orientationSettings = playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+
+  const hasOrientation = player.orientation !== undefined;
+  const orientationEnabled =
+    hasOrientation &&
+    orientationSettings.enabled === true &&
+    zoom >= orientationSettings.zoomThreshold;
+
+  const showArms = orientationEnabled && orientationSettings.showArms === true;
+
+  // Vision requires: orientation enabled + global showVision toggle + per-player showVision
+  const showVision = orientationEnabled && orientationSettings.showVision === true && player.showVision !== false;
+
+  // Konva: 0deg = RIGHT. My: 0deg = UP.
+  const facingDeg = player.orientation ?? 0;
+  const facingKonva = facingDeg - 90;
+
+  // Numer: obraca się z ciałem, ale flip 180 dla czytelności (TYLKO tekst)
+  const norm = ((facingDeg % 360) + 360) % 360;
+  const flipText = norm > 90 && norm < 270;
+  const textRotation = orientationEnabled ? (flipText ? facingKonva + 180 : facingKonva) : 0;
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
@@ -116,13 +134,10 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
 
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
-    if (onQuickEditNumber) {
-      onQuickEditNumber(player.id, player.number ?? 0);
-    }
+    onQuickEditNumber?.(player.id, player.number ?? 0);
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Check if multi-drag should handle this
     if (onDragStart) {
       const stage = e.target.getStage();
       const rect = stage?.container().getBoundingClientRect();
@@ -133,7 +148,6 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
           e.evt.clientY - rect.top
         );
         if (shouldMultiDrag) {
-          // Prevent default Konva drag
           e.cancelBubble = true;
           setMultiDragActive(true);
           return;
@@ -144,28 +158,162 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   };
 
   const handleDragStart = () => {
-    if (multiDragActive) return; // Skip if multi-drag is handling this
+    if (multiDragActive) return;
     setIsDragging(true);
-    // Visual feedback during drag
-    if (groupRef.current) {
-      groupRef.current.moveToTop();
-    }
+    groupRef.current?.moveToTop();
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     setIsDragging(false);
     const node = e.target;
-    const rawPosition: Position = { x: node.x(), y: node.y() };
-    
-    // Snap to grid and clamp to bounds
-    const snapped = snapToGrid(rawPosition, pitchConfig.gridSize);
+
+    const snapped = snapToGrid({ x: node.x(), y: node.y() }, pitchConfig.gridSize);
     const clamped = clampToBounds(snapped, pitchConfig);
-    
-    // Update node position to snapped location
+
     node.x(clamped.x);
     node.y(clamped.y);
-    
     onDragEnd(player.id, clamped);
+  };
+
+  // --- ARMS GEOMETRY (REAL BODY ORIENTATION) ---
+  // Ramiona mają “wyjść z barków”, ale NIE rozwalać hitboxa (listening=false).
+  // Skrócone o 25%: było 0.40r -> teraz 0.30r
+  const renderArms = () => {
+    if (!showArms) return null;
+
+    const rad = (facingKonva * Math.PI) / 180;
+    const fX = Math.cos(rad);
+    const fY = Math.sin(rad);
+
+    const sideRad = rad + Math.PI / 2;
+    const sX = Math.cos(sideRad);
+    const sY = Math.sin(sideRad);
+
+    // barki lekko “z przodu” korpusu
+    const shoulderForward = r * 0.22;
+    const shoulderSide = r * 0.52;
+
+    const sx = fX * shoulderForward;
+    const sy = fY * shoulderForward;
+
+    const slx = sx - sX * shoulderSide;
+    const sly = sy - sY * shoulderSide;
+
+    const srx = sx + sX * shoulderSide;
+    const sry = sy + sY * shoulderSide;
+
+    const armLen = r * 0.30; // <- 25% krótsze
+
+    const elx = slx - sX * armLen;
+    const ely = sly - sY * armLen;
+
+    const erx = srx + sX * armLen;
+    const ery = sry + sY * armLen;
+
+    // “czytelne” ramiona jak w Twoim mocku: ciemny rdzeń + delikatny highlight
+    const core = 'rgba(0,0,0,0.70)';
+    const highlight = 'rgba(255,255,255,0.18)';
+
+    return (
+      <>
+        <Line
+          points={[slx, sly, elx, ely]}
+          stroke={core}
+          strokeWidth={6}
+          lineCap="round"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        <Line
+          points={[srx, sry, erx, ery]}
+          stroke={core}
+          strokeWidth={6}
+          lineCap="round"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        <Line
+          points={[slx, sly, elx, ely]}
+          stroke={highlight}
+          strokeWidth={3}
+          lineCap="round"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        <Line
+          points={[srx, sry, erx, ery]}
+          stroke={highlight}
+          strokeWidth={3}
+          lineCap="round"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      </>
+    );
+  };
+
+  const renderVision = () => {
+    if (!showVision) return null;
+
+    // Vision cone: radius scales relative to player radius for consistency at all zoom levels.
+    // Stroke added for clear boundary on green pitch.
+    const visionRadius = r * 6;
+    const visionStrokeWidth = Math.max(1, r * 0.08);
+
+    return (
+      <Wedge
+        x={0}
+        y={0}
+        radius={visionRadius}
+        angle={60}
+        rotation={facingKonva - 30}
+        fill={colors.fill}
+        opacity={0.28}
+        stroke={colors.fill}
+        strokeWidth={visionStrokeWidth}
+        strokeEnabled={true}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+    );
+  };
+
+  const renderBodyShape = () => {
+    const common = {
+      fill: colors.fill,
+      stroke: isSelected ? '#ffd60a' : colors.stroke,
+      strokeWidth: isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH,
+      shadowColor: isDragging ? undefined : 'rgba(0,0,0,0.25)',
+      shadowBlur: isDragging ? 0 : 3,
+      shadowOffset: isDragging ? undefined : { x: 1, y: 1 },
+      shadowEnabled: !isDragging,
+      perfectDrawEnabled: false,
+    } as const;
+
+    if (!player.shape || player.shape === 'circle') {
+      return <Circle x={0} y={0} radius={r} {...common} />;
+    }
+
+    if (player.shape === 'square') {
+      return <Rect x={-r} y={-r} width={r * 2} height={r * 2} cornerRadius={4} {...common} />;
+    }
+
+    if (player.shape === 'triangle') {
+      return <RegularPolygon x={0} y={0} sides={3} radius={r + 2} {...common} />;
+    }
+
+    if (player.shape === 'diamond') {
+      return (
+        <Line
+          points={[0, -r, r, 0, 0, r, -r, 0]}
+          closed
+          {...common}
+        />
+      );
+    }
+
+    // fallback
+    return <Circle x={0} y={0} radius={r} {...common} />;
   };
 
   return (
@@ -184,118 +332,57 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Selection ring */}
+      {/* SELECTION — bardziej wyraźne, ale nie “oszukuje” bounds */}
       {isSelected && (
         <Circle
           x={0}
           y={0}
-          radius={effectiveRadius + 4}
-          stroke="#ffd60a"
-          strokeWidth={2}
-          dash={[4, 2]}
+          radius={r + 6}
+          stroke="#00e5ff"
+          strokeWidth={4}
+          dash={[10, 6]}
+          opacity={0.85}
           fill="transparent"
-          perfectDrawEnabled={false}
-        />
-      )}
-      
-      {/* Player shape - circle (default) */}
-      {(!player.shape || player.shape === 'circle') && (
-        <Circle
-          x={0}
-          y={0}
-          radius={effectiveRadius}
-          fill={colors.fill}
-          stroke={isSelected ? '#ffd60a' : colors.stroke}
-          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
-          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
-          shadowBlur={isDragging ? 0 : 3}
-          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
-          shadowEnabled={!isDragging}
-          perfectDrawEnabled={false}
-        />
-      )}
-      
-      {/* Player shape - square */}
-      {player.shape === 'square' && (
-        <Rect
-          x={-effectiveRadius}
-          y={-effectiveRadius}
-          width={effectiveRadius * 2}
-          height={effectiveRadius * 2}
-          cornerRadius={4}
-          fill={colors.fill}
-          stroke={isSelected ? '#ffd60a' : colors.stroke}
-          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
-          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
-          shadowBlur={isDragging ? 0 : 3}
-          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
-          shadowEnabled={!isDragging}
-          perfectDrawEnabled={false}
-        />
-      )}
-      
-      {/* Player shape - triangle (pointing up) */}
-      {player.shape === 'triangle' && (
-        <RegularPolygon
-          x={0}
-          y={0}
-          sides={3}
-          radius={effectiveRadius + 2}
-          fill={colors.fill}
-          stroke={isSelected ? '#ffd60a' : colors.stroke}
-          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
-          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
-          shadowBlur={isDragging ? 0 : 3}
-          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
-          shadowEnabled={!isDragging}
-          perfectDrawEnabled={false}
-        />
-      )}
-      
-      {/* Player shape - diamond (rotated square) */}
-      {player.shape === 'diamond' && (
-        <Rect
-          x={-effectiveRadius}
-          y={-effectiveRadius}
-          width={effectiveRadius * 2}
-          height={effectiveRadius * 2}
-          rotation={45}
-          offsetX={0}
-          offsetY={0}
-          fill={colors.fill}
-          stroke={isSelected ? '#ffd60a' : colors.stroke}
-          strokeWidth={isSelected ? SELECTED_STROKE_WIDTH : NORMAL_STROKE_WIDTH}
-          shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.25)'}
-          shadowBlur={isDragging ? 0 : 3}
-          shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
-          shadowEnabled={!isDragging}
-          perfectDrawEnabled={false}
-        />
-      )}
-      
-      {/* Player number or label (inside shape) */}
-      {(player.showLabel && player.label) || player.number != null ? (
-        <Text
-          x={-effectiveRadius}
-          y={-(player.fontSize ?? 14) / 2}
-          width={effectiveRadius * 2}
-          text={player.showLabel && player.label ? player.label : String(player.number)}
-          fontSize={player.fontSize ?? 14}
-          fontFamily="Inter, system-ui, sans-serif"
-          fontStyle="bold"
-          fill={player.textColor ?? colors.text}
-          align="center"
-          verticalAlign="middle"
           listening={false}
           perfectDrawEnabled={false}
         />
-      ) : null}
-      
-      {/* Additional label below shape (only if not showing label inside) */}
+      )}
+
+      {/* VISION (behind) */}
+      {renderVision()}
+
+      {/* ARMS (behind body) */}
+      {renderArms()}
+
+      {/* BODY */}
+      {renderBodyShape()}
+
+      {/* NUMBER (on top) — rotates with body, flips for readability */}
+      {((player.showLabel && player.label) || player.number != null) && (
+        <Group rotation={textRotation} listening={false}>
+          <Text
+            x={-r}
+            y={-(player.fontSize ?? 14) / 2}
+            width={r * 2}
+            height={player.fontSize ?? 14}
+            text={player.showLabel && player.label ? player.label : String(player.number)}
+            fontSize={player.fontSize ?? 14}
+            fontFamily="Inter, system-ui, sans-serif"
+            fontStyle="bold"
+            fill={player.textColor ?? colors.text}
+            align="center"
+            verticalAlign="middle"
+            listening={false}
+            perfectDrawEnabled={false}
+          />
+        </Group>
+      )}
+
+      {/* Label below (never rotated) */}
       {player.label && !player.showLabel && (
         <Text
           x={-30}
-          y={effectiveRadius + 4}
+          y={r + 4}
           width={60}
           text={player.label}
           fontSize={10}
@@ -310,15 +397,24 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   );
 };
 
-/** Memoized PlayerNode - only re-renders when props actually change */
 export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
-  // Check teamSettings colors (including goalkeeper color)
   const prevColors = prevProps.teamSettings?.[prevProps.player.team];
   const nextColors = nextProps.teamSettings?.[nextProps.player.team];
-  const colorsEqual = prevColors?.primaryColor === nextColors?.primaryColor &&
-                      prevColors?.secondaryColor === nextColors?.secondaryColor &&
-                      prevColors?.goalkeeperColor === nextColors?.goalkeeperColor;
-  
+
+  const colorsEqual =
+    prevColors?.primaryColor === nextColors?.primaryColor &&
+    prevColors?.secondaryColor === nextColors?.secondaryColor &&
+    prevColors?.goalkeeperColor === nextColors?.goalkeeperColor;
+
+  const pS = prevProps.playerOrientationSettings as any;
+  const nS = nextProps.playerOrientationSettings as any;
+
+  const settingsEqual =
+    pS?.enabled === nS?.enabled &&
+    pS?.showArms === nS?.showArms &&
+    pS?.zoomThreshold === nS?.zoomThreshold &&
+    pS?.showVision === nS?.showVision;
+
   return (
     prevProps.player.id === nextProps.player.id &&
     prevProps.player.position.x === nextProps.player.position.x &&
@@ -333,10 +429,14 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.opacity === nextProps.player.opacity &&
     prevProps.player.radius === nextProps.player.radius &&
     prevProps.player.isGoalkeeper === nextProps.player.isGoalkeeper &&
-    prevProps.player.color === nextProps.player.color && // Per-player color override
-    prevProps.isPrintMode === nextProps.isPrintMode && // Print mode affects rendering
+    prevProps.player.color === nextProps.player.color &&
+    prevProps.player.orientation === nextProps.player.orientation &&
+    prevProps.player.showVision === nextProps.player.showVision && // Per-player vision toggle
+    prevProps.isPrintMode === nextProps.isPrintMode &&
     prevProps.isSelected === nextProps.isSelected &&
-    colorsEqual
+    prevProps.zoom === nextProps.zoom &&
+    colorsEqual &&
+    settingsEqual
   );
 });
 

@@ -653,6 +653,27 @@ export async function renameProject(projectId: string, name: string): Promise<bo
   return true;
 }
 
+/** Update folder parent and position (for drag & drop reorder/reparent) */
+export async function updateFolderPosition(
+  folderId: string,
+  parentId: string | null,
+  position: number
+): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { error } = await supabase
+    .from('project_folders')
+    .update({ parent_id: parentId, position })
+    .eq('id', folderId);
+
+  if (error) {
+    console.error('Error updating folder position:', error);
+    return false;
+  }
+
+  return true;
+}
+
 /** Rename folder */
 export async function renameFolder(folderId: string, name: string): Promise<boolean> {
   if (!supabase) return false;

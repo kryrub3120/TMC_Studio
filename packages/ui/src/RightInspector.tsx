@@ -71,6 +71,8 @@ export interface RightInspectorProps {
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
   isPrintMode?: boolean;
   onTogglePrintMode?: () => void;
+  playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
+  onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
 }
 
 type TabType = 'props' | 'layers' | 'objects' | 'teams' | 'pitch';
@@ -195,7 +197,9 @@ const PropsTab: React.FC<{
   selectedElement?: InspectorElement;
   onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => void;
   onQuickAction?: (action: string) => void;
-}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction }) => {
+  playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
+  onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
+}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation }) => {
   if (selectedCount === 0) {
     return <QuickActionsPanel onAction={onQuickAction} />;
   }
@@ -353,6 +357,105 @@ const PropsTab: React.FC<{
               />
             </button>
           </div>
+
+          {/* Player Orientation Settings */}
+          {playerOrientationSettings && onUpdatePlayerOrientation && (
+            <>
+              <div className="pt-3 border-t border-border">
+                <h3 className="text-xs font-medium text-muted uppercase tracking-wide mb-3">Player Orientation</h3>
+                
+                {/* Show Orientation Toggle */}
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-medium text-text">Show orientation</label>
+                  <button
+                    onClick={() => onUpdatePlayerOrientation({ enabled: !playerOrientationSettings.enabled })}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      playerOrientationSettings.enabled ? 'bg-accent' : 'bg-surface2 border border-border'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                {/* Show Arms Toggle */}
+                <div className="flex items-center justify-between mb-3">
+                  <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Show arms</label>
+                  <button
+                    onClick={() => onUpdatePlayerOrientation({ showArms: !playerOrientationSettings.showArms })}
+                    disabled={!playerOrientationSettings.enabled}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      !playerOrientationSettings.enabled 
+                        ? 'bg-surface2 border border-border opacity-50 cursor-not-allowed'
+                        : playerOrientationSettings.showArms 
+                        ? 'bg-accent' 
+                        : 'bg-surface2 border border-border'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        playerOrientationSettings.showArms && playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                {/* Show Vision Toggle */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Show vision</label>
+                    <p className={`text-[10px] mt-0.5 ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'}`}>V / ⇧V shortcut</p>
+                  </div>
+                  <button
+                    onClick={() => onUpdatePlayerOrientation({ showVision: !playerOrientationSettings.showVision })}
+                    disabled={!playerOrientationSettings.enabled}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      !playerOrientationSettings.enabled 
+                        ? 'bg-surface2 border border-border opacity-50 cursor-not-allowed'
+                        : playerOrientationSettings.showVision 
+                        ? 'bg-accent' 
+                        : 'bg-surface2 border border-border'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        playerOrientationSettings.showVision && playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                {/* Zoom Threshold */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'} uppercase tracking-wide`}>
+                      Zoom threshold
+                    </label>
+                    <span className="text-xs text-accent">{playerOrientationSettings.zoomThreshold ?? 40}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={40}
+                    max={100}
+                    step={10}
+                    value={playerOrientationSettings.zoomThreshold ?? 40}
+                    onChange={(e) => onUpdatePlayerOrientation({ zoomThreshold: parseInt(e.target.value) })}
+                    disabled={!playerOrientationSettings.enabled}
+                    className={`w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent ${
+                      !playerOrientationSettings.enabled ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  />
+                  <div className="flex justify-between text-[10px] text-muted mt-1">
+                    <span>40%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -615,6 +718,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onUpdatePitch,
   isPrintMode,
   onTogglePrintMode,
+  playerOrientationSettings,
+  onUpdatePlayerOrientation,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
 
@@ -694,6 +799,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                 selectedElement={selectedElement}
                 onUpdateElement={onUpdateElement}
                 onQuickAction={onQuickAction}
+                playerOrientationSettings={playerOrientationSettings}
+                onUpdatePlayerOrientation={onUpdatePlayerOrientation}
               />
             )}
             {activeTab === 'layers' && (

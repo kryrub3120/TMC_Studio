@@ -56,7 +56,7 @@ export { AuthModal } from './AuthModal.js';
 export { UserMenu } from './UserMenu.js';
 export { PricingModal } from './PricingModal.js';
 export { ProjectsDrawer } from './ProjectsDrawer.js';
-export type { ProjectItem } from './ProjectsDrawer.js';
+export type { ProjectItem, FolderItem } from './ProjectsDrawer.js';
 export { ContextMenu } from './ContextMenu.js';
 export type { ContextMenuItem } from './ContextMenu.js';
 export { FolderColorPicker } from './FolderColorPicker.js';

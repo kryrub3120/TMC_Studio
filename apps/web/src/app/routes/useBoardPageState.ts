@@ -60,7 +60,9 @@ export function useBoardPageState(props: BoardPageProps) {
   const boardDoc = useBoardStore((s) => s.document);
   const teamSettings = useBoardStore((s) => s.getTeamSettings());
   const pitchSettings = useBoardStore((s) => s.getPitchSettings());
+  const playerOrientationSettings = useBoardStore((s) => s.getPlayerOrientationSettings()); // PR3
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
+  const updatePlayerOrientationSettings = useBoardStore((s) => s.updatePlayerOrientationSettings); // PR4
   
   // Board store actions
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
@@ -306,6 +308,7 @@ export function useBoardPageState(props: BoardPageProps) {
     showToast,
     onStartEditingText: editOverlay.text.start,
     addStep,
+    onOpenPricingModal, // PR3
     contextMenuVisible: contextMenu.menuState.visible,
   });
   
@@ -374,6 +377,7 @@ export function useBoardPageState(props: BoardPageProps) {
     boardDoc,
     teamSettings,
     pitchSettings: pitchSettings ?? DEFAULT_PITCH_SETTINGS,
+    playerOrientationSettings, // PR3
     groups,
     hiddenByGroup,
     cloudProjectId,
@@ -403,6 +407,7 @@ export function useBoardPageState(props: BoardPageProps) {
     moveElementById,
     pushHistory,
     updatePitchSettings,
+    updatePlayerOrientationSettings, // PR4
     updateTeamSettings,
     selectGroup,
     toggleGroupLock,

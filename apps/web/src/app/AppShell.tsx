@@ -28,6 +28,7 @@ export function AppShell() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
   const [createFolderModalOpen, setCreateFolderModalOpen] = useState(false);
+  const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
   const [folderOptionsModalOpen, setFolderOptionsModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   
@@ -234,6 +235,8 @@ export function AppShell() {
           color: f.color,
           icon: f.icon,
           isPinned: f.is_pinned ?? false,
+          parentId: f.parent_id ?? null,
+          sortOrder: f.position ?? 0,
         }))}
         currentProjectId={useBoardStore.getState().cloudProjectId}
         projectsIsLoading={projectsController.isLoading}
@@ -249,13 +252,20 @@ export function AppShell() {
         onDeleteFolder={handleDeleteFolder}
         onRenameProject={handleRenameProjectById}
         onRenameFolder={handleRenameFolderById}
+        onMoveFolderToParent={projectsController.moveFolderToParent}
         onRefreshProjects={projectsController.refreshProjects}
-        onOpenCreateFolderModal={() => setCreateFolderModalOpen(true)}
+        onOpenCreateFolderModal={(parentId?: string | null) => {
+          setCreateFolderParentId(parentId ?? null);
+          setCreateFolderModalOpen(true);
+        }}
         
         // Create Folder Modal
         createFolderModalOpen={createFolderModalOpen}
-        onCloseCreateFolderModal={() => setCreateFolderModalOpen(false)}
-        onCreateFolder={handleCreateFolder}
+        onCloseCreateFolderModal={() => {
+          setCreateFolderModalOpen(false);
+          setCreateFolderParentId(null);
+        }}
+        onCreateFolder={(name: string, color: string) => handleCreateFolder(name, color, createFolderParentId)}
         
         // Folder Options Modal
         folderOptionsModalOpen={folderOptionsModalOpen}

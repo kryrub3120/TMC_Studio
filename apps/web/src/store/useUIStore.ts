@@ -377,7 +377,7 @@ export const useUIStore = create<UIState>()(
       
       zoomFit: () => {
         set({ zoom: 1 });
-        get().showToast('Zoom: Fit (100%)', 800);
+        get().showToast('Zoom: Fit', 800);
       },
       
       setZoom: (zoom) => {

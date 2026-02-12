@@ -38,6 +38,8 @@ export interface PlayerElement extends BoardElementBase {
   isGoalkeeper?: boolean; // Uses team's goalkeeperColor instead of primaryColor (takes precedence over number-based detection)
   radius?: number; // Custom player size (default: 18 from PlayerNode)
   color?: string; // Per-player fill color override (if undefined, uses team color)
+  orientation?: number; // Player body orientation in degrees (0-359, 0 = north/top). undefined = feature OFF for this player
+  showVision?: boolean; // Per-player vision cone toggle (default true if orientation enabled, false hides vision)
 }
 
 /** Ball element on the board */
@@ -293,6 +295,22 @@ export const PLAIN_PITCH_LINES: PitchLineSettings = {
   showGoals: false,
 };
 
+/** Player orientation feature settings (Pro feature) */
+export interface PlayerOrientationSettings {
+  enabled: boolean;        // Master toggle for whole document
+  showArms: boolean;      // V1: cosmetic arms (listening=false)
+  showVision: boolean;    // Show vision cone behind player
+  zoomThreshold: number;  // Min zoom % to show orientation (default 40)
+}
+
+/** Default player orientation settings */
+export const DEFAULT_PLAYER_ORIENTATION_SETTINGS: PlayerOrientationSettings = {
+  enabled: false,
+  showArms: false,
+  showVision: false,
+  zoomThreshold: 40,
+};
+
 /** Board state containing all elements */
 export interface BoardState {
   elements: BoardElement[];
@@ -319,6 +337,7 @@ export interface BoardDocument {
   pitchConfig: PitchConfig;
   teamSettings?: TeamSettings; // Optional for backward compatibility
   pitchSettings?: PitchSettings; // Optional for backward compatibility
+  playerOrientationSettings?: PlayerOrientationSettings; // Optional for backward compatibility
 }
 
 /** History entry for undo/redo */

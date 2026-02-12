@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Stage } from 'react-konva';
 import type Konva from 'konva';
-import type { BoardElement, Position, PitchSettings, TeamSettings } from '@tmc/core';
+import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
 import { CanvasElements } from './CanvasElements';
 
 export interface CanvasAdapterProps {
@@ -14,10 +14,14 @@ export interface CanvasAdapterProps {
   stageRef: React.RefObject<Konva.Stage>;
   canvasWidth: number;
   canvasHeight: number;
+  stageScale?: number; // PR-FIX-4: applied to Stage scaleX/scaleY
+  stagePosition?: { x: number; y: number }; // PR-FIX-4: center + pan offset
   pitchConfig: ReturnType<typeof import('@tmc/core').getPitchDimensions>;
   pitchSettings: PitchSettings;
   teamSettings: TeamSettings;
+  playerOrientationSettings: PlayerOrientationSettings; // PR3
   gridVisible: boolean;
+  zoom: number; // PR3
   layerVisibility: {
     zones: boolean;
     arrows: boolean;
@@ -72,10 +76,14 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     stageRef,
     canvasWidth,
     canvasHeight,
+    stageScale = 1, // PR-FIX-4
+    stagePosition = { x: 0, y: 0 }, // PR-FIX-4
     pitchConfig,
     pitchSettings,
     teamSettings,
+    playerOrientationSettings, // PR3
     gridVisible,
+    zoom, // PR3
     layerVisibility,
     hiddenByGroup,
     elements,
@@ -121,6 +129,10 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
       ref={stageRef}
       width={canvasWidth}
       height={canvasHeight}
+      x={stagePosition.x}
+      y={stagePosition.y}
+      scaleX={stageScale}
+      scaleY={stageScale}
       onClick={onStageClick}
       onTap={onStageClick}
       onMouseDown={onStageMouseDown}
@@ -139,7 +151,9 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
         pitchConfig={pitchConfig}
         pitchSettings={pitchSettings}
         teamSettings={teamSettings}
+        playerOrientationSettings={playerOrientationSettings}
         gridVisible={gridVisible}
+        zoom={zoom}
         isPlaying={isPlaying}
         activeTool={activeTool}
         isPrintMode={isPrintMode}
