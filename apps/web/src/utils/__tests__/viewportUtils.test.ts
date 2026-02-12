@@ -94,7 +94,6 @@ describe('computeZoomToCursorPan', () => {
   });
 
   it('should return zero pan when zooming at center of canvas', () => {
-    const scale = 1;
     const newScale = 2;
 
     // Center of canvas in screen coords at scale=1

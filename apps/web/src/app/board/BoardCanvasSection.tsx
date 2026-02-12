@@ -142,7 +142,6 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   } = props;
 
   const setZoom = useUIStore((s) => s.setZoom);
-  const showToast = useUIStore((s) => s.showToast);
 
   // ─── Container measurement ───────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
