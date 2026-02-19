@@ -106,16 +106,23 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
 
   const orientationSettings = playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
 
-  const hasOrientation = player.orientation !== undefined;
-  const orientationEnabled =
-    hasOrientation &&
-    orientationSettings.enabled === true &&
-    zoom >= orientationSettings.zoomThreshold;
+  // orientationEnabled does NOT require player.orientation to be set —
+  // orientation defaults to 0 (north) when undefined, so the feature works
+  // for freshly-added players that have never had their angle adjusted.
+  //
+  // orientationMasterOn: master switch only (no zoom gating)
+  // orientationEnabled: master + zoom threshold gate (for arms + text rotation)
+  // Vision uses orientationMasterOn only — no zoom gating (lightweight, always visible when enabled)
+  const orientationMasterOn = orientationSettings.enabled === true;
+  const meetsZoomThreshold = zoom >= orientationSettings.zoomThreshold;
+  const orientationEnabled = orientationMasterOn && meetsZoomThreshold;
 
   const showArms = orientationEnabled && orientationSettings.showArms === true;
 
-  // Vision requires: orientation enabled + global showVision toggle + per-player showVision
-  const showVision = orientationEnabled && orientationSettings.showVision === true && player.showVision !== false;
+  // Vision: requires master ON + global showVision explicitly true + per-player not hidden.
+  // undefined → false (OFF by default). Old docs with undefined will now default to OFF.
+  const globalShowVision = orientationSettings.showVision === true;
+  const showVision = orientationMasterOn && globalShowVision && player.showVision !== false;
 
   // Konva: 0deg = RIGHT. My: 0deg = UP.
   const facingDeg = player.orientation ?? 0;
@@ -351,11 +358,11 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       {/* VISION (behind) */}
       {renderVision()}
 
-      {/* ARMS (behind body) */}
-      {renderArms()}
-
       {/* BODY */}
       {renderBodyShape()}
+
+      {/* ARMS (on top of body so circles don't hide them) */}
+      {renderArms()}
 
       {/* NUMBER (on top) — rotates with body, flips for readability */}
       {((player.showLabel && player.label) || player.number != null) && (

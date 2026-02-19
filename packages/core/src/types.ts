@@ -39,7 +39,14 @@ export interface PlayerElement extends BoardElementBase {
   radius?: number; // Custom player size (default: 18 from PlayerNode)
   color?: string; // Per-player fill color override (if undefined, uses team color)
   orientation?: number; // Player body orientation in degrees (0-359, 0 = north/top). undefined = feature OFF for this player
-  showVision?: boolean; // Per-player vision cone toggle (default true if orientation enabled, false hides vision)
+  /**
+   * Per-player vision override.
+   * - undefined: inherit global (show if playerOrientationSettings.showVision === true)
+   * - false:     explicitly hidden for this player (overrides global ON)
+   * - true:      explicitly shown (but still requires global to be ON)
+   * ALWAYS check via `=== false` (not !== true) to preserve global inheritance.
+   */
+  showVision?: boolean;
 }
 
 /** Ball element on the board */

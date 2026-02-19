@@ -10,6 +10,7 @@
  * Extracts ~45 lines from App.tsx
  */
 
+import { logger } from '../lib/logger';
 import { useCallback } from 'react';
 import { updateProfile, changePassword, deleteAccount } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
@@ -47,7 +48,7 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
       await useAuthStore.getState().initialize();
       showToast('Profile updated ✓');
     } catch (error) {
-      console.error('Profile update error:', error);
+      logger.error('Profile update error:', error);
       throw error;
     }
   }, [showToast]);
@@ -63,7 +64,7 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
       const avatarUrl = await uploadAvatar(authUser.id, file);
       return avatarUrl;
     } catch (error) {
-      console.error('Avatar upload error:', error);
+      logger.error('Avatar upload error:', error);
       return null;
     }
   }, [authUser]);
@@ -77,7 +78,7 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
       await changePassword(currentPassword, newPassword);
       showToast('Password changed ✓');
     } catch (error) {
-      console.error('Password change error:', error);
+      logger.error('Password change error:', error);
       throw error;
     }
   }, [showToast]);
@@ -95,7 +96,7 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
       }
       showToast('Account deleted. Goodbye! 👋');
     } catch (error) {
-      console.error('Account deletion error:', error);
+      logger.error('Account deletion error:', error);
       throw error;
     }
   }, [showToast, onCloseModal]);

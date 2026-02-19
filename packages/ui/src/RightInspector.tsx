@@ -403,30 +403,35 @@ const PropsTab: React.FC<{
                   </button>
                 </div>
                 
-                {/* Show Vision Toggle */}
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Show vision</label>
-                    <p className={`text-[10px] mt-0.5 ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'}`}>V / ⇧V shortcut</p>
-                  </div>
-                  <button
-                    onClick={() => onUpdatePlayerOrientation({ showVision: !playerOrientationSettings.showVision })}
-                    disabled={!playerOrientationSettings.enabled}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
-                      !playerOrientationSettings.enabled 
-                        ? 'bg-surface2 border border-border opacity-50 cursor-not-allowed'
-                        : playerOrientationSettings.showVision 
-                        ? 'bg-accent' 
-                        : 'bg-surface2 border border-border'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        playerOrientationSettings.showVision && playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
+                {/* Show Vision Toggle — undefined treated as false (OFF by default) */}
+                {(() => {
+                  const visionActive = playerOrientationSettings.showVision === true;
+                  return (
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Vision cone</label>
+                        <p className={`text-[10px] mt-0.5 ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'}`}>V / ⇧V shortcut</p>
+                      </div>
+                      <button
+                        onClick={() => onUpdatePlayerOrientation({ showVision: !visionActive })}
+                        disabled={!playerOrientationSettings.enabled}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${
+                          !playerOrientationSettings.enabled
+                            ? 'bg-surface2 border border-border opacity-50 cursor-not-allowed'
+                            : visionActive
+                            ? 'bg-accent'
+                            : 'bg-surface2 border border-border'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                            visionActive && playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })()}
                 
                 {/* Zoom Threshold */}
                 <div>

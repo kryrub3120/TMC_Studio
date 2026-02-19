@@ -5,6 +5,7 @@
 
 /// <reference types="vite/client" />
 
+import { logger } from './logger';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { BoardDocument } from '@tmc/core';
 
@@ -14,7 +15,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undef
 
 // Validate environment
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
+  logger.warn(
     '⚠️ Supabase credentials not found. Cloud features will be disabled.\n' +
     'To enable, create apps/web/.env.local with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY'
   );
@@ -83,7 +84,7 @@ export async function getCurrentUser(): Promise<User | null> {
   
   // If no profile exists, create one (for OAuth users)
   if (!profile && fetchError) {
-    console.log('Creating profile for new OAuth user:', user.id);
+    logger.debug('Creating profile for new OAuth user:', user.id);
     const newProfile = {
       id: user.id,
       email: user.email ?? '',
@@ -99,7 +100,7 @@ export async function getCurrentUser(): Promise<User | null> {
       .single();
     
     if (error) {
-      console.error('Error creating profile:', error);
+      logger.error('Error creating profile:', error);
       // Return basic user even without profile
       return {
         id: user.id,
@@ -114,7 +115,7 @@ export async function getCurrentUser(): Promise<User | null> {
   }
   
   // Log subscription tier for debugging
-  console.log(`[getCurrentUser] User ${user.email} - tier: ${profile?.subscription_tier ?? 'free'}`);
+  logger.debug(`[getCurrentUser] User ${user.email} - tier: ${profile?.subscription_tier ?? 'free'}`);
   
   return {
     id: profile.id,
@@ -190,7 +191,7 @@ export async function getPreferences(): Promise<UserPreferences | null> {
     .single();
   
   if (error) {
-    console.error('Error fetching preferences:', error);
+    logger.error('Error fetching preferences:', error);
     return null;
   }
   
@@ -372,7 +373,7 @@ export async function getProjects(): Promise<Project[]> {
     .order('updated_at', { ascending: false });
   
   if (error) {
-    console.error('Error fetching projects:', error);
+    logger.error('Error fetching projects:', error);
     return [];
   }
   
@@ -390,7 +391,7 @@ export async function getProject(id: string): Promise<Project | null> {
     .single();
   
   if (error) {
-    console.error('Error fetching project:', error);
+    logger.error('Error fetching project:', error);
     return null;
   }
   
@@ -412,7 +413,7 @@ export async function createProject(project: ProjectInsert): Promise<Project | n
     .single();
   
   if (error) {
-    console.error('Error creating project:', error);
+    logger.error('Error creating project:', error);
     throw error;
   }
   
@@ -431,7 +432,7 @@ export async function updateProject(id: string, updates: ProjectUpdate): Promise
     .single();
   
   if (error) {
-    console.error('Error updating project:', error);
+    logger.error('Error updating project:', error);
     throw error;
   }
   
@@ -448,7 +449,7 @@ export async function deleteProject(id: string): Promise<boolean> {
     .eq('id', id);
   
   if (error) {
-    console.error('Error deleting project:', error);
+    logger.error('Error deleting project:', error);
     return false;
   }
   
@@ -469,7 +470,7 @@ export async function getFolders(): Promise<ProjectFolder[]> {
     .order('position', { ascending: true });
   
   if (error) {
-    console.error('Error fetching folders:', error);
+    logger.error('Error fetching folders:', error);
     return [];
   }
   
@@ -487,7 +488,7 @@ export async function getFolder(id: string): Promise<ProjectFolder | null> {
     .single();
   
   if (error) {
-    console.error('Error fetching folder:', error);
+    logger.error('Error fetching folder:', error);
     return null;
   }
   
@@ -508,7 +509,7 @@ export async function createFolder(folder: ProjectFolderInsert): Promise<Project
     .single();
   
   if (error) {
-    console.error('Error creating folder:', error);
+    logger.error('Error creating folder:', error);
     throw error;
   }
   
@@ -527,7 +528,7 @@ export async function updateFolder(id: string, updates: ProjectFolderUpdate): Pr
     .single();
   
   if (error) {
-    console.error('Error updating folder:', error);
+    logger.error('Error updating folder:', error);
     throw error;
   }
   
@@ -544,7 +545,7 @@ export async function deleteFolder(id: string): Promise<boolean> {
     .eq('id', id);
   
   if (error) {
-    console.error('Error deleting folder:', error);
+    logger.error('Error deleting folder:', error);
     return false;
   }
   
@@ -561,7 +562,7 @@ export async function moveProjectToFolder(projectId: string, folderId: string | 
     .eq('id', projectId);
   
   if (error) {
-    console.error('Error moving project:', error);
+    logger.error('Error moving project:', error);
     return false;
   }
   
@@ -578,7 +579,7 @@ export async function toggleProjectFavorite(projectId: string, isFavorite: boole
     .eq('id', projectId);
   
   if (error) {
-    console.error('Error toggling favorite:', error);
+    logger.error('Error toggling favorite:', error);
     return false;
   }
   
@@ -595,7 +596,7 @@ export async function updateProjectTags(projectId: string, tags: string[]): Prom
     .eq('id', projectId);
   
   if (error) {
-    console.error('Error updating tags:', error);
+    logger.error('Error updating tags:', error);
     return false;
   }
   
@@ -612,7 +613,7 @@ export async function toggleProjectPinned(projectId: string, isPinned: boolean):
     .eq('id', projectId);
   
   if (error) {
-    console.error('Error toggling pinned:', error);
+    logger.error('Error toggling pinned:', error);
     return false;
   }
   
@@ -629,7 +630,7 @@ export async function toggleFolderPinned(folderId: string, isPinned: boolean): P
     .eq('id', folderId);
   
   if (error) {
-    console.error('Error toggling folder pinned:', error);
+    logger.error('Error toggling folder pinned:', error);
     return false;
   }
   
@@ -646,7 +647,7 @@ export async function renameProject(projectId: string, name: string): Promise<bo
     .eq('id', projectId);
   
   if (error) {
-    console.error('Error renaming project:', error);
+    logger.error('Error renaming project:', error);
     return false;
   }
   
@@ -667,7 +668,7 @@ export async function updateFolderPosition(
     .eq('id', folderId);
 
   if (error) {
-    console.error('Error updating folder position:', error);
+    logger.error('Error updating folder position:', error);
     return false;
   }
 
@@ -684,7 +685,7 @@ export async function renameFolder(folderId: string, name: string): Promise<bool
     .eq('id', folderId);
   
   if (error) {
-    console.error('Error renaming folder:', error);
+    logger.error('Error renaming folder:', error);
     return false;
   }
   
@@ -725,7 +726,7 @@ export async function getTemplates(category?: string): Promise<Template[]> {
   const { data, error } = await query;
   
   if (error) {
-    console.error('Error fetching templates:', error);
+    logger.error('Error fetching templates:', error);
     return [];
   }
   
@@ -744,7 +745,7 @@ export async function getFeaturedTemplates(): Promise<Template[]> {
     .limit(6);
   
   if (error) {
-    console.error('Error fetching featured templates:', error);
+    logger.error('Error fetching featured templates:', error);
     return [];
   }
   
@@ -766,7 +767,7 @@ export async function uploadThumbnail(projectId: string, file: Blob): Promise<st
     .upload(fileName, file, { upsert: true });
   
   if (error) {
-    console.error('Error uploading thumbnail:', error);
+    logger.error('Error uploading thumbnail:', error);
     return null;
   }
   
@@ -789,7 +790,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
     .upload(fileName, file, { upsert: true });
   
   if (error) {
-    console.error('Error uploading avatar:', error);
+    logger.error('Error uploading avatar:', error);
     return null;
   }
   

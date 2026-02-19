@@ -9,6 +9,7 @@
  * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-0
  */
 
+import { logger } from '../../lib/logger';
 import type { Position } from '@tmc/core';
 import type { CanvasCommands, SelectionCommands, HistoryCommands } from '../types';
 import { useBoardStore } from '../../store';
@@ -150,12 +151,12 @@ export function createSelectionEffectCommands(): Pick<
 
     groupSelected: () => {
       // TODO: Implement grouping in later PRs
-      console.warn('groupSelected not yet implemented');
+      logger.warn('groupSelected not yet implemented');
     },
 
     ungroupSelected: () => {
       // TODO: Implement ungrouping in later PRs
-      console.warn('ungroupSelected not yet implemented');
+      logger.warn('ungroupSelected not yet implemented');
     },
   };
 }

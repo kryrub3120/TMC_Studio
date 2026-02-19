@@ -50,6 +50,7 @@ export function createPlayer(
     number,
     shape: team === 'home' ? 'triangle' : 'circle', // Home=triangle, Away=circle for instant visual distinction
     isGoalkeeper: number === 1, // Nr 1 is always goalkeeper by default
+    orientation: 0, // Explicit default (north/up) — required for deterministic orientation transforms on pitch flip
   };
 }
 
@@ -72,25 +73,25 @@ export function createArrow(
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): ArrowElement {
   const snappedStart = snapToGrid(startPoint, gridSize);
-  // Default colors: pass = red, run = blue, shoot = orange
+  // Default colors: pass/run = white, shoot = red
   let defaultColor: string;
   let defaultStroke: number;
   
   switch (arrowType) {
     case 'pass':
-      defaultColor = '#ff0000'; // Red
+      defaultColor = '#ffffff'; // White
       defaultStroke = 4;
       break;
     case 'run':
-      defaultColor = '#3b82f6'; // Blue
+      defaultColor = '#ffffff'; // White
       defaultStroke = 3;
       break;
     case 'shoot':
-      defaultColor = '#f97316'; // Orange
+      defaultColor = '#ef4444'; // Red
       defaultStroke = 5; // Thicker for shoot
       break;
     default:
-      defaultColor = '#ff0000';
+      defaultColor = '#ffffff';
       defaultStroke = 4;
   }
   
@@ -121,7 +122,7 @@ export function createZone(
     width: 120,
     height: 80,
     shape,
-    fillColor: '#22c55e', // Green default
+    fillColor: '#ef4444', // Red default
     opacity: 0.25,
     borderStyle: 'none',
   };

@@ -17,11 +17,11 @@ export interface ArrowNodeProps {
   onEndpointDrag?: (id: string, endpoint: 'start' | 'end', position: Position) => void;
 }
 
-/** Arrow colors */
+/** Arrow colors - fallback when no color specified */
 const ARROW_COLORS = {
-  pass: '#3b82f6', // Blue
-  run: '#f97316', // Orange
-  shoot: '#f97316', // Orange (same as run for now)
+  pass: '#ffffff', // White
+  run: '#ffffff', // White
+  shoot: '#ef4444', // Red
 };
 
 type DraggingEndpoint = 'start' | 'end' | null;
@@ -216,54 +216,69 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
           );
         }
         
-        // Calculate perpendicular offset (3px each side)
-        const perpX = -dy / length * 3;
-        const perpY = dx / length * 3;
+        // Unit vectors for proper arrowhead geometry
+        const ux = dx / length;  // unit direction
+        const uy = dy / length;
+        const px = -uy;          // unit perpendicular
+        const py = ux;
         
-        // Arrowhead dimensions
-        const headLength = 12;
-        const headWidth = 8;
+        // Arrowhead dimensions - larger for prominent "shot" look
+        const headLength = 18;
+        const headWidth = 12;
+        
+        // Arrowhead tip
+        const tipX = endRelX;
+        const tipY = endRelY;
+        
+        // Arrowhead base center
+        const baseX = tipX - ux * headLength;
+        const baseY = tipY - uy * headLength;
+        
+        // Arrowhead base corners
+        const leftX = baseX + px * headWidth;
+        const leftY = baseY + py * headWidth;
+        const rightX = baseX - px * headWidth;
+        const rightY = baseY - py * headWidth;
+        
+        // Parallel lines offset (3px each side)
+        const perpX = px * 3;
+        const perpY = py * 3;
         
         return (
           <>
-            {/* First parallel line (shaft) */}
+            {/* First parallel line (shaft) - stops at arrowhead base */}
             <Line
               points={[
                 startRelX + perpX, startRelY + perpY,
-                endRelX + perpX, endRelY + perpY
+                baseX + perpX, baseY + perpY
               ]}
               stroke={color}
               strokeWidth={strokeWidth}
               lineCap="round"
+              lineJoin="round"
               hitStrokeWidth={15}
             />
             
-            {/* Second parallel line (shaft) */}
+            {/* Second parallel line (shaft) - stops at arrowhead base */}
             <Line
               points={[
                 startRelX - perpX, startRelY - perpY,
-                endRelX - perpX, endRelY - perpY
+                baseX - perpX, baseY - perpY
               ]}
               stroke={color}
               strokeWidth={strokeWidth}
               lineCap="round"
+              lineJoin="round"
               hitStrokeWidth={15}
             />
             
-            {/* Custom arrowhead (triangle polygon at endpoint) */}
+            {/* Arrowhead triangle - fill only, no stroke */}
             <Line
-              points={[
-                endRelX, endRelY,
-                endRelX - headLength * (dx/length) + headWidth * (perpY/length), 
-                endRelY - headLength * (dy/length) - headWidth * (perpX/length),
-                endRelX - headLength * (dx/length) - headWidth * (perpY/length), 
-                endRelY - headLength * (dy/length) + headWidth * (perpX/length),
-                endRelX, endRelY,
-              ]}
+              points={[tipX, tipY, leftX, leftY, rightX, rightY]}
               fill={color}
-              stroke={color}
-              strokeWidth={1}
+              strokeEnabled={false}
               closed={true}
+              listening={false}
             />
           </>
         );

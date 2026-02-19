@@ -10,6 +10,7 @@
  * Part of PR-REFACTOR-4: Extract billing logic from App.tsx
  */
 
+import { logger } from '../lib/logger';
 import { useState, useCallback } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { supabase } from '../lib/supabase';
@@ -99,7 +100,7 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
       if (!response.ok) throw new Error(data.error || 'Failed to open billing portal');
       if (data.url) window.location.href = data.url;
     } catch (error) {
-      console.error('Billing portal error:', error);
+      logger.error('Billing portal error:', error);
       showToast('Failed to open billing portal');
     }
   }, [showToast]);

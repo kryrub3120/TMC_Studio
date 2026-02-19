@@ -132,8 +132,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     const isCmd = e.metaKey || e.ctrlKey;
     const target = e.target as HTMLElement;
     
-    // === Guard: Skip if typing in input ===
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    // === Guard: Skip if typing in input / select / contentEditable ===
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable
+    ) {
       return;
     }
     
@@ -345,11 +350,54 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'v':
-        // Cmd+V = Paste only. Plain V vision toggle handled via e.code === 'KeyV' below.
         if (isCmd) {
+          // Cmd+V = Paste — handled here, no orientation guard needed.
           e.preventDefault();
           pasteClipboard();
           showToast('Pasted');
+          break;
+        }
+        // V / Shift+V = Vision / orientation toggle (requires orientation feature enabled).
+        // Handled ONLY here — no duplicate e.code block below.
+        e.preventDefault();
+        {
+          const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
+          if (!orientationSettings.enabled) {
+            showToast('Enable player orientation first (Inspector → Orientation)');
+            break;
+          }
+          if (e.shiftKey) {
+            // Shift+V = Toggle vision for ALL players on board
+            const allPlayerIds = elements
+              .filter((el) => isPlayerElement(el))
+              .map((el) => el.id);
+            if (allPlayerIds.length > 0) {
+              // Mirror togglePlayerVision logic: any explicitly-off → turns all ON; else all OFF
+              const anyExplicitlyOff = elements.some(
+                (el) => allPlayerIds.includes(el.id) && isPlayerElement(el) && el.showVision === false
+              );
+              const willTurnOn = anyExplicitlyOff;
+              togglePlayerVision(allPlayerIds);
+              showToast(
+                willTurnOn
+                  ? `Vision: ON — ${allPlayerIds.length} player(s)`
+                  : `Vision: OFF — ${allPlayerIds.length} player(s)`
+              );
+            } else {
+              showToast('No players on board');
+            }
+          } else {
+            // V = Toggle vision for SELECTED players only
+            const selectedPlayerIds = elements
+              .filter((el) => selectedIds.includes(el.id) && isPlayerElement(el))
+              .map((el) => el.id);
+            if (selectedPlayerIds.length > 0) {
+              togglePlayerVision(selectedPlayerIds);
+              showToast(`Vision toggled for ${selectedPlayerIds.length} player(s)`);
+            } else {
+              showToast('Select player(s) to toggle vision');
+            }
+          }
         }
         break;
         
@@ -758,36 +806,6 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       e.preventDefault();
       rotateSelected(90);
       showToast('Rotated +90°');
-    }
-    
-    // ===== PER-PLAYER VISION TOGGLE (e.code === 'KeyV') =====
-    if (e.code === 'KeyV' && !isCmd) {
-      e.preventDefault();
-      
-      // Vision requires orientation feature to be enabled
-      const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
-      if (!orientationSettings.enabled) {
-        showToast('Enable "Show orientation" first (Props → Player Orientation)');
-        return;
-      }
-      
-      if (e.shiftKey) {
-        // Shift+V = Toggle vision for ALL players on board
-        const allPlayerIds = elements.filter(el => isPlayerElement(el)).map(el => el.id);
-        if (allPlayerIds.length > 0) {
-          togglePlayerVision(allPlayerIds);
-          showToast('Vision toggled for all players');
-        } else {
-          showToast('No players on board');
-        }
-      } else if (hasSelectedPlayer()) {
-        // V = Toggle vision for selected players
-        const selectedPlayerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
-        togglePlayerVision(selectedPlayerIds);
-        showToast(`Vision toggled for ${selectedPlayerIds.length} player(s)`);
-      } else {
-        showToast('Select player(s) first');
-      }
     }
     
     // ===== FORMATIONS (1-6, Shift+1-6) =====

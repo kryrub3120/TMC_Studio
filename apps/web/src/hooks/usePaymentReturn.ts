@@ -10,6 +10,7 @@
  * - Calls back to App.tsx for UI updates (keeps App composition-only)
  */
 
+import { logger } from '../lib/logger';
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -71,7 +72,7 @@ export function usePaymentReturn(callbacks: PaymentReturnCallbacks): void {
       callbacks.onActivateStart();
 
       const checkSubscription = async (attempt: number): Promise<'free' | 'pro' | 'team'> => {
-        console.log(`[Payment] Checking subscription (attempt ${attempt}/3)...`);
+        logger.debug(`[Payment] Checking subscription (attempt ${attempt}/3)...`);
         await useAuthStore.getState().initialize();
         const user = useAuthStore.getState().user;
         return user?.subscription_tier ?? 'free';

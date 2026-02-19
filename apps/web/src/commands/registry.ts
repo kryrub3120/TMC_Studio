@@ -10,6 +10,7 @@
  * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-0
  */
 
+import { logger } from '../lib/logger';
 import type { CommandRegistry } from './types';
 import { createBoardCommands } from './board';
 
@@ -28,16 +29,16 @@ export function createCommandRegistry(): CommandRegistry {
     
     // Animation commands - placeholder for now (TODO: PR1+)
     animation: {
-      play: () => console.warn('animation.play not yet implemented'),
-      pause: () => console.warn('animation.pause not yet implemented'),
-      stop: () => console.warn('animation.stop not yet implemented'),
+      play: () => logger.warn('animation.play not yet implemented'),
+      pause: () => logger.warn('animation.pause not yet implemented'),
+      stop: () => logger.warn('animation.stop not yet implemented'),
     },
     
     // Edit commands - placeholder for now (TODO: PR1+)
     edit: {
-      cut: () => console.warn('edit.cut not yet implemented'),
-      copy: () => console.warn('edit.copy not yet implemented'),
-      paste: () => console.warn('edit.paste not yet implemented'),
+      cut: () => logger.warn('edit.cut not yet implemented'),
+      copy: () => logger.warn('edit.copy not yet implemented'),
+      paste: () => logger.warn('edit.paste not yet implemented'),
     },
   };
 }

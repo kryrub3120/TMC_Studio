@@ -733,16 +733,26 @@ export const createElementsSlice: StateCreator<
     get().pushHistory();
   },
   
-  // Per-player vision toggle
+  // Per-player vision toggle — deterministic "any-off → all-on, all-on → all-off"
+  // Avoids "random" appearance when players have mixed showVision states.
   togglePlayerVision: (ids) => {
     if (ids.length === 0) return;
-    
+
+    const { elements } = get();
+
+    // Check if ANY targeted player has vision explicitly OFF (showVision === false)
+    // undefined is treated as "follow global" (not explicitly off), so it counts as ON here
+    const anyExplicitlyOff = elements.some(
+      (el) => ids.includes(el.id) && isPlayerElement(el) && el.showVision === false
+    );
+
+    // Deterministic rule: if any is off → turn all on; if all on → turn all off
+    const newValue = anyExplicitlyOff; // true = turn on; false = turn off
+
     set((state) => ({
       elements: state.elements.map((el) => {
         if (ids.includes(el.id) && isPlayerElement(el)) {
-          // Toggle: undefined/true -> false, false -> true
-          const current = el.showVision !== false; // default true
-          return { ...el, showVision: !current };
+          return { ...el, showVision: newValue };
         }
         return el;
       }),

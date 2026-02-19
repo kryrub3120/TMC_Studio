@@ -5,6 +5,7 @@
  * SIMPLIFIED VERSION - let Supabase handle OAuth automatically
  */
 
+import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
@@ -54,10 +55,10 @@ export const useAuthStore = create<AuthState>()(
 
       // Initialize auth - call on app startup (EVENT-BASED, NON-BLOCKING)
       initialize: async () => {
-        console.log('[Auth] Initialize started (event-based)');
+        logger.debug('[Auth] Initialize started (event-based)');
         
         if (!isSupabaseEnabled() || !supabase) {
-          console.log('[Auth] Supabase disabled - using offline mode');
+          logger.debug('[Auth] Supabase disabled - using offline mode');
           set({ isInitialized: true, isLoading: false });
           return;
         }
@@ -70,13 +71,13 @@ export const useAuthStore = create<AuthState>()(
           const hasOAuthHash = window.location.hash && window.location.hash.includes('access_token');
           
           if (hasOAuthHash) {
-            console.log('[Auth] OAuth callback detected - will clean URL after processing');
+            logger.debug('[Auth] OAuth callback detected - will clean URL after processing');
           }
 
           // ✅ Setup listener for future auth changes
-          console.log('[Auth] Setting up auth listener...');
+          logger.debug('[Auth] Setting up auth listener...');
           onAuthStateChange(async (user) => {
-            console.log('[Auth] State changed - user:', user?.email ?? 'none');
+            logger.debug('[Auth] State changed - user:', user?.email ?? 'none');
             
             set({
               user,
@@ -87,7 +88,7 @@ export const useAuthStore = create<AuthState>()(
 
             // Load preferences from cloud if user is authenticated
             if (user) {
-              console.log('[Auth] Loading preferences from cloud...');
+              logger.debug('[Auth] Loading preferences from cloud...');
               try {
                 const { getPreferences } = await import('../lib/supabase');
                 const cloudPrefs = await getPreferences();
@@ -97,10 +98,10 @@ export const useAuthStore = create<AuthState>()(
                   if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
                   if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
                   if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                  console.log('[Auth] Preferences loaded from cloud');
+                  logger.debug('[Auth] Preferences loaded from cloud');
                 }
               } catch (error) {
-                console.error('[Auth] Failed to load preferences:', error);
+                logger.error('[Auth] Failed to load preferences:', error);
               }
 
               // PR-UX-1: Check for unsaved guest work and offer to save to cloud
@@ -111,7 +112,7 @@ export const useAuthStore = create<AuthState>()(
                 const notSavedToCloud = !boardState.cloudProjectId;
                 
                 if (hasLocalWork && notSavedToCloud) {
-                  console.log('[Auth] Detected unsaved guest work - prompting user to save');
+                  logger.debug('[Auth] Detected unsaved guest work - prompting user to save');
                   
                   // Small delay to let UI update first
                   setTimeout(async () => {
@@ -124,17 +125,17 @@ export const useAuthStore = create<AuthState>()(
                       cancelLabel: 'Discard',
                       danger: false,
                       onConfirm: async () => {
-                        console.log('[Auth] User confirmed - saving guest work to cloud...');
+                        logger.debug('[Auth] User confirmed - saving guest work to cloud...');
                         const success = await boardState.saveToCloud();
                         
                         if (success) {
                           await boardState.fetchCloudProjects();
-                          console.log('[Auth] ✓ Guest work saved to cloud');
+                          logger.debug('[Auth] ✓ Guest work saved to cloud');
                           
                           // Show success toast
                           useUIStore.getState().showToast('✓ Your work has been saved to the cloud!');
                         } else {
-                          console.error('[Auth] ✗ Failed to save guest work');
+                          logger.error('[Auth] ✗ Failed to save guest work');
                           useUIStore.getState().showToast('⚠️ Failed to save. Try Cmd+S to save manually.');
                         }
                         useUIStore.getState().closeConfirmModal();
@@ -143,31 +144,31 @@ export const useAuthStore = create<AuthState>()(
                   }, 500);
                 }
               } catch (error) {
-                console.error('[Auth] Error checking for guest work:', error);
+                logger.error('[Auth] Error checking for guest work:', error);
               }
             }
 
             // Clean OAuth hash from URL after successful login
             if (hasOAuthHash && user) {
-              console.log('[Auth] Cleaning OAuth hash from URL');
+              logger.debug('[Auth] Cleaning OAuth hash from URL');
               window.history.replaceState(null, '', window.location.pathname);
             }
           });
           
-          console.log('[Auth] Listener active');
+          logger.debug('[Auth] Listener active');
 
           // ✅ Check for existing session ONLY if NOT OAuth callback
           // (OAuth hash will be processed by Supabase and trigger onAuthStateChange)
           if (!hasOAuthHash) {
-            console.log('[Auth] Checking for existing session...');
+            logger.debug('[Auth] Checking for existing session...');
             try {
               const { data: { session } } = await supabase.auth.getSession();
               
               if (session?.user) {
-                console.log('[Auth] Existing session found:', session.user.email);
+                logger.debug('[Auth] Existing session found:', session.user.email);
                 const user = await getCurrentUser();
                 if (user) {
-                  console.log('[Auth] User profile loaded:', user.email);
+                  logger.debug('[Auth] User profile loaded:', user.email);
                   set({
                     user,
                     isAuthenticated: true,
@@ -184,29 +185,29 @@ export const useAuthStore = create<AuthState>()(
                       if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
                       if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
                       if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                      console.log('[Auth] Preferences loaded from cloud');
+                      logger.debug('[Auth] Preferences loaded from cloud');
                     }
                   } catch (error) {
-                    console.error('[Auth] Failed to load preferences:', error);
+                    logger.error('[Auth] Failed to load preferences:', error);
                   }
                 }
               } else {
-                console.log('[Auth] No existing session');
+                logger.debug('[Auth] No existing session');
               }
             } catch (error) {
               // Ignore AbortError - it's expected during OAuth processing
               if (error instanceof Error && error.name === 'AbortError') {
-                console.log('[Auth] AbortError (expected during OAuth) - ignored');
+                logger.debug('[Auth] AbortError (expected during OAuth) - ignored');
               } else {
-                console.error('[Auth] Session check error:', error);
+                logger.error('[Auth] Session check error:', error);
               }
             }
           } else {
-            console.log('[Auth] Skipping session check - OAuth callback will be handled by listener');
+            logger.debug('[Auth] Skipping session check - OAuth callback will be handled by listener');
           }
           
         } catch (error) {
-          console.error('[Auth] Initialization error:', error);
+          logger.error('[Auth] Initialization error:', error);
           set({
             error: 'Failed to initialize authentication',
           });
@@ -272,23 +273,23 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          console.log('[Auth] Starting Google sign in...');
+          logger.debug('[Auth] Starting Google sign in...');
           
           // H4: Save current work to localStorage BEFORE OAuth redirect
           // This prevents loss of unsaved work during the redirect flow
           try {
             const { useBoardStore } = await import('./index');
             useBoardStore.getState().saveDocument();
-            console.log('[Auth] Board state saved before OAuth redirect');
+            logger.debug('[Auth] Board state saved before OAuth redirect');
           } catch (e) {
-            console.error('[Auth] Failed to save before redirect:', e);
+            logger.error('[Auth] Failed to save before redirect:', e);
           }
           
           await supabaseSignInWithGoogle();
           // Redirect will happen, state will be set after return
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Google sign in failed';
-          console.error('[Auth] Google sign in error:', error);
+          logger.error('[Auth] Google sign in error:', error);
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -307,7 +308,7 @@ export const useAuthStore = create<AuthState>()(
             isTeam: false,
             isLoading: false,
           });
-          console.log('[Auth] Successfully signed out');
+          logger.debug('[Auth] Successfully signed out');
 
           // PR-B1: Post-Logout Data Cleanup
           // Clear board state and remove any previous user data
@@ -324,13 +325,13 @@ export const useAuthStore = create<AuthState>()(
             // 3. Clear any active autosave timer
             boardState.clearAutoSaveTimer();
             
-            console.log('[Auth] Board state cleaned up after logout');
+            logger.debug('[Auth] Board state cleaned up after logout');
           } catch (error) {
-            console.error('[Auth] Failed to clean up board state:', error);
+            logger.error('[Auth] Failed to clean up board state:', error);
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign out failed';
-          console.error('[Auth] Sign out error:', error);
+          logger.error('[Auth] Sign out error:', error);
           set({ isLoading: false, error: message });
         }
       },
@@ -352,7 +353,7 @@ export const useAuthStore = create<AuthState>()(
 if (typeof window !== 'undefined') {
   // Defer initialization slightly to let Supabase client process any OAuth hash
   setTimeout(() => {
-    console.log('[Auth] Auto-init triggered');
+    logger.debug('[Auth] Auto-init triggered');
     const { initialize } = useAuthStore.getState();
     initialize();
   }, 100);

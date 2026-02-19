@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **H6: Player Vision Toggle Stability** (2026-02-19)
+  - Fixed Shift+V deterministic behavior: now sets all players to same state (no more "random" toggling)
+  - Fixed default vision state for old documents: `undefined` now correctly normalized to `false` (opt-in)
+  - Fixed portrait flip transform bug: `createPlayer()` now sets explicit `orientation: 0` (prevents NaN)
+  - Toast feedback now shows player count: "Vision: ON — N player(s)"
+  - Added comprehensive unit tests for vision toggle logic and orientation transforms
+
 ### Added
 - **PR-L5-MINI: Offline/Online UX** (2026-02-09)
   - Online/offline detection using window events

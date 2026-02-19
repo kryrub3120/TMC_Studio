@@ -8,6 +8,7 @@
  * Part of PR-REFACTOR-2: Extract export logic from App.tsx
  */
 
+import { logger } from '../lib/logger';
 import { useCallback, type RefObject } from 'react';
 import type Konva from 'konva';
 import { useBoardStore } from '../store';
@@ -147,7 +148,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
       showToast('GIF exported!');
     } catch (error) {
       showToast('GIF export failed');
-      console.error('GIF export error:', error);
+      logger.error('GIF export error:', error);
     }
     
     goToStep(originalStep);
@@ -186,7 +187,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
       showToast('PDF exported!');
     } catch (error) {
       showToast('PDF export failed');
-      console.error('PDF export error:', error);
+      logger.error('PDF export error:', error);
     }
     
     goToStep(originalStep);
@@ -211,7 +212,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
       showToast('SVG exported!');
     } catch (error) {
       showToast('SVG export failed');
-      console.error('SVG export error:', error);
+      logger.error('SVG export error:', error);
     }
   }, [stageRef, canvasWidth, canvasHeight, boardDoc.name, showToast]);
   

@@ -10,6 +10,7 @@
  * Part of PR-REFACTOR-3: Extract project logic from App.tsx
  */
 
+import { logger } from '../lib/logger';
 import { useCallback, useState, useEffect } from 'react';
 import { useBoardStore } from '../store';
 import { useAuthStore } from '../store/useAuthStore';
@@ -101,7 +102,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       const data = await getFolders();
       setFolders(data);
     } catch (error) {
-      console.error('Error fetching folders:', error);
+      logger.error('Error fetching folders:', error);
     }
   }, [authIsAuthenticated]);
   
@@ -196,7 +197,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
           showToast('Failed to save to cloud ❌');
         }
       } catch (error) {
-        console.error('Cloud save error:', error);
+        logger.error('Cloud save error:', error);
         showToast('Cloud save error - check console ❌');
       }
     }
@@ -279,7 +280,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Refresh projects to get updated folder assignments
       showToast(`Folder "${name}" created 📁`);
     } catch (error) {
-      console.error('Error creating folder:', error);
+      logger.error('Error creating folder:', error);
       showToast('Failed to create folder ❌');
     }
   }, [fetchFoldersData, fetchCloudProjects, showToast]);
@@ -294,7 +295,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects();
       showToast(`Folder "${name}" updated 📁`);
     } catch (error) {
-      console.error('Error updating folder:', error);
+      logger.error('Error updating folder:', error);
       showToast('Failed to update folder ❌');
     }
   }, [fetchFoldersData, fetchCloudProjects, showToast]);
@@ -320,7 +321,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
             showToast('Failed to delete folder ❌');
           }
         } catch (error) {
-          console.error('Error deleting folder:', error);
+          logger.error('Error deleting folder:', error);
           showToast('Failed to delete folder ❌');
         }
         useUIStore.getState().closeConfirmModal();
@@ -339,7 +340,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Refresh projects
       showToast(newValue ? 'Added to favorites ⭐' : 'Removed from favorites');
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      logger.error('Error toggling favorite:', error);
       showToast('Failed to update favorite ❌');
     }
   }, [cloudProjects, fetchCloudProjects, showToast]);
@@ -353,7 +354,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Refresh projects
       showToast(folderId ? 'Project moved to folder 📁' : 'Project removed from folder');
     } catch (error) {
-      console.error('Error moving project:', error);
+      logger.error('Error moving project:', error);
       showToast('Failed to move project ❌');
     }
   }, [fetchCloudProjects, showToast]);
@@ -369,7 +370,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Refresh projects
       showToast(newValue ? 'Project pinned 📌' : 'Project unpinned');
     } catch (error) {
-      console.error('Error toggling pin:', error);
+      logger.error('Error toggling pin:', error);
       showToast('Failed to update pin ❌');
     }
   }, [cloudProjects, fetchCloudProjects, showToast]);
@@ -386,7 +387,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Also refresh projects
       showToast(newValue ? 'Folder pinned 📌' : 'Folder unpinned');
     } catch (error) {
-      console.error('Error toggling folder pin:', error);
+      logger.error('Error toggling folder pin:', error);
       showToast('Failed to update folder pin ❌');
     }
   }, [folders, fetchFoldersData, fetchCloudProjects, showToast]);
@@ -400,7 +401,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Refresh projects
       showToast('Project renamed ✏️');
     } catch (error) {
-      console.error('Error renaming project:', error);
+      logger.error('Error renaming project:', error);
       showToast('Failed to rename project ❌');
     }
   }, [fetchCloudProjects, showToast]);
@@ -418,7 +419,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
         showToast('Failed to move folder ❌');
       }
     } catch (error) {
-      console.error('Error moving folder:', error);
+      logger.error('Error moving folder:', error);
       showToast('Failed to move folder ❌');
     }
   }, [fetchFoldersData, showToast]);
@@ -433,7 +434,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects(); // Also refresh projects
       showToast('Folder renamed ✏️');
     } catch (error) {
-      console.error('Error renaming folder:', error);
+      logger.error('Error renaming folder:', error);
       showToast('Failed to rename folder ❌');
     }
   }, [fetchFoldersData, fetchCloudProjects, showToast]);

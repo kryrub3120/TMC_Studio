@@ -2,6 +2,7 @@
  * Document Slice - Document metadata, cloud sync, autosave
  */
 
+import { logger } from '../../lib/logger';
 import type { StateCreator } from 'zustand';
 import type {
   BoardDocument,
@@ -254,9 +255,15 @@ export const createDocumentSlice: StateCreator<
               next.rotation = ((el as any).rotation + rotationDelta + 360) % 360;
             }
             
-            // Unified orientation rule: rotate ANY element with 'orientation' property
-            if ('orientation' in el && (el as any).orientation !== undefined) {
-              next.orientation = ((el as any).orientation + rotationDelta + 360) % 360;
+            // Orientation transform: players always get transformed (even with undefined orientation —
+            // createPlayer omits the field, so 'orientation' in el is false, but we must still rotate).
+            // Default orientation 0 (north) must be explicitly rotated so cones align after pitch flip.
+            if (el.type === 'player') {
+              const currentOrientation = (el as any).orientation ?? 0;
+              next.orientation = ((currentOrientation + rotationDelta) % 360 + 360) % 360;
+            } else if ('orientation' in el && (el as any).orientation !== undefined) {
+              // Other element types with explicit orientation (future extensibility)
+              next.orientation = (((el as any).orientation + rotationDelta) % 360 + 360) % 360;
             }
             
             // Text exception: force rotation to 0 (text must remain readable/upright)
@@ -363,7 +370,12 @@ export const createDocumentSlice: StateCreator<
     },
     
     getPlayerOrientationSettings: () => {
-      return get().document.playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+      const settings = get().document.playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+      // Normalize: docs saved before showVision field existed have showVision=undefined.
+      // Contract: showVision must be an explicit boolean; undefined is treated as false (opt-in).
+      return settings.showVision === undefined
+        ? { ...settings, showVision: false }
+        : settings;
     },
     
     saveToCloud: async () => {
@@ -374,7 +386,7 @@ export const createDocumentSlice: StateCreator<
       const isOnline = useUIStore.getState().isOnline;
       
       if (!isOnline) {
-        console.log('[Cloud save] Skipped - offline');
+        logger.debug('[Cloud save] Skipped - offline');
         return false;
       }
       
@@ -415,7 +427,7 @@ export const createDocumentSlice: StateCreator<
         set({ isSaving: false, document: updatedDoc });
         return true;
       } catch (error) {
-        console.error('Cloud save error:', error);
+        logger.error('Cloud save error:', error);
         set({ isSaving: false });
         
         // PR-L5-MINI: Show save failure toast (rate-limited)
@@ -448,7 +460,7 @@ export const createDocumentSlice: StateCreator<
         
         return true;
       } catch (error) {
-        console.error('Cloud load error:', error);
+        logger.error('Cloud load error:', error);
         return false;
       }
     },
@@ -460,7 +472,7 @@ export const createDocumentSlice: StateCreator<
         const projects = await getProjects();
         set({ cloudProjects: projects });
       } catch (error) {
-        console.error('Fetch projects error:', error);
+        logger.error('Fetch projects error:', error);
       }
     },
     
@@ -471,7 +483,7 @@ export const createDocumentSlice: StateCreator<
         const folders = await getFolders();
         set({ cloudFolders: folders });
       } catch (error) {
-        console.error('Fetch folders error:', error);
+        logger.error('Fetch folders error:', error);
       }
     },
     
@@ -486,7 +498,7 @@ export const createDocumentSlice: StateCreator<
         }
         return false;
       } catch (error) {
-        console.error('Create folder error:', error);
+        logger.error('Create folder error:', error);
         return false;
       }
     },
@@ -514,16 +526,16 @@ export const createDocumentSlice: StateCreator<
       const state = get();
       if (!state.isDirty) return;
       
-      console.log('[Autosave] Saving...');
+      logger.debug('[Autosave] Saving...');
       
       state.saveDocument();
       
       if (isSupabaseEnabled()) {
         try {
           await state.saveToCloud();
-          console.log('[Autosave] Saved to cloud');
+          logger.debug('[Autosave] Saved to cloud');
         } catch (error) {
-          console.error('[Autosave] Cloud save failed:', error);
+          logger.error('[Autosave] Cloud save failed:', error);
         }
       }
       

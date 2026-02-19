@@ -2,6 +2,7 @@
  * UI State Store - manages theme, focus mode, command palette, and UI visibility
  */
 
+import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -191,7 +192,7 @@ const syncPreferencesToCloud = async (prefs: { theme?: Theme; gridVisible?: bool
       await updatePreferences(prefs);
     }
   } catch (error) {
-    console.error('Failed to sync preferences to cloud:', error);
+    logger.error('Failed to sync preferences to cloud:', error);
   }
 };
 
