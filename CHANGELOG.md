@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-02-20
+
 ### Fixed
-- **H6: Player Vision Toggle Stability** (2026-02-19)
-  - Fixed Shift+V deterministic behavior: now sets all players to same state (no more "random" toggling)
-  - Fixed default vision state for old documents: `undefined` now correctly normalized to `false` (opt-in)
-  - Fixed portrait flip transform bug: `createPlayer()` now sets explicit `orientation: 0` (prevents NaN)
-  - Toast feedback now shows player count: "Vision: ON — N player(s)"
-  - Added comprehensive unit tests for vision toggle logic and orientation transforms
+- **Player Vision System** - Vision now correctly defaults to OFF via normalization (`undefined` → `false` opt-in). Global and per-player vision settings work deterministically. Vision is not zoom-gated (always visible when enabled).
+- **Shift+V Keyboard Shortcut** - Deterministic all-players toggle: if ANY player has vision OFF → turn all ON, otherwise turn all OFF. Toast shows player count.
+- **Player Orientation** - Fixed portrait flip transform bug: players now default to `orientation: 0` (north), preventing NaN issues. Orientation transforms correctly on landscape/portrait rotation.
+- **Player Arms Rendering** - Arms now render ABOVE body (not behind), making them visible on all player shapes including circles (previously hidden by circle fill).
+- **Player Number Rotation** - Numbers always stay readable with 180° flip when player is upside-down.
+- **Arrow Colors** - Pass/Run arrows now white (#ffffff), Shoot arrows red (#ef4444).
+- **Shot Arrow Rendering** - Professional arrowhead with proper unit vector geometry, fill-only rendering (no stroke), shafts stop cleanly at base, larger dimensions (18×12px), smooth caps and consistent hitbox.
+- **Zone Default Color** - Changed from green (#22c55e) to red (#ef4444).
+
+### Added
+- Comprehensive unit tests for vision toggle logic and orientation transforms
+- Release documentation: `docs/releases/0.2.2-vision-orientation-arrows.md`
 
 ### Added
 - **PR-L5-MINI: Offline/Online UX** (2026-02-09)
