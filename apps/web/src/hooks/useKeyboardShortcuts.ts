@@ -16,6 +16,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { isTextElement, isPlayerElement, isZoneElement, PITCH_THEMES } from '@tmc/core';
 import { formations } from '@tmc/presets';
 import { useCommandRegistry } from './useCommandRegistry';
+import { ANIMATION_ENABLED } from '../config/featureFlags';
 
 /**
  * Props for useKeyboardShortcuts hook
@@ -592,25 +593,28 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         // No action — Space is pan-only now
         break;
         
+      // Animation shortcut (L = toggle loop) - gated behind feature flag for MVP
       case 'l':
-        if (!isCmd) {
+        if (ANIMATION_ENABLED && !isCmd) {
           e.preventDefault();
           toggleLoop();
           showToast(uiState.isLooping ? 'Loop disabled' : 'Loop enabled');
         }
         break;
         
+      // Animation shortcut (N = add step) - gated behind feature flag for MVP
       case 'n':
-        if (!isCmd) {
+        if (ANIMATION_ENABLED && !isCmd) {
           e.preventDefault();
           addStep();
           showToast('New step added');
         }
         break;
         
+      // Animation shortcut (X = delete current step) - gated behind feature flag for MVP
       case 'x':
         // X = Delete current step (only if more than 1 step)
-        if (!isCmd && boardDoc.steps.length > 1) {
+        if (ANIMATION_ENABLED && !isCmd && boardDoc.steps.length > 1) {
           e.preventDefault();
           removeStep(currentStepIndex);
           showToast('Step deleted');
@@ -678,7 +682,8 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           } else if (e.altKey) {
             adjustSelectedStrokeWidth(-1);
             showToast('Thinner stroke');
-          } else if (!isCmd && selectedIds.length === 0) {
+          } else if (ANIMATION_ENABLED && !isCmd && selectedIds.length === 0) {
+            // Animation: previous step (gated behind feature flag for MVP)
             prevStep();
           } else {
             nudgeSelected(e.shiftKey ? -1 : -5, 0);
@@ -696,7 +701,8 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           } else if (e.altKey) {
             adjustSelectedStrokeWidth(1);
             showToast('Thicker stroke');
-          } else if (!isCmd && selectedIds.length === 0) {
+          } else if (ANIMATION_ENABLED && !isCmd && selectedIds.length === 0) {
+            // Animation: next step (gated behind feature flag for MVP)
             nextStep();
           } else {
             nudgeSelected(e.shiftKey ? 1 : 5, 0);

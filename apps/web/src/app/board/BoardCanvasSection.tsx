@@ -80,6 +80,10 @@ export interface BoardCanvasSectionProps {
   onTextDoubleClick: (id: string) => void;
   pushHistory: () => void;
   
+  // ALT+Drag rotation
+  onOrientationPreview: (id: string, orientation: number) => void;
+  onOrientationCommit: (id: string, orientation: number) => void;
+  
   // Interpolation helpers
   getInterpolatedPosition: (elementId: string, currentPos: Position) => Position;
   getInterpolatedZone: (elementId: string, currentPos: Position, width: number, height: number) => { position: Position; width: number; height: number };
@@ -134,6 +138,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     onPlayerQuickEdit,
     onTextDoubleClick,
     pushHistory,
+    onOrientationPreview,
+    onOrientationCommit,
     getInterpolatedPosition,
     getInterpolatedZone,
     getInterpolatedArrowEndpoints,
@@ -497,6 +503,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             onPlayerQuickEdit={onPlayerQuickEdit}
             onTextDoubleClick={onTextDoubleClick}
             pushHistory={pushHistory}
+            onOrientationPreview={onOrientationPreview}
+            onOrientationCommit={onOrientationCommit}
             getInterpolatedPosition={getInterpolatedPosition}
             getInterpolatedZone={getInterpolatedZone}
             getInterpolatedArrowEndpoints={getInterpolatedArrowEndpoints}

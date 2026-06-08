@@ -8,6 +8,8 @@ import React from 'react';
 export interface CheatSheetOverlayProps {
   isVisible: boolean;
   onClose: () => void;
+  /** When false, the Steps & Playback section is hidden (animation feature flag off). Defaults to true. */
+  showAnimationShortcuts?: boolean;
 }
 
 /** Shortcut item */
@@ -16,8 +18,10 @@ interface ShortcutItem {
   description: string;
 }
 
-/** Shortcut sections */
-const shortcuts: { title: string; items: ShortcutItem[] }[] = [
+/** All shortcut sections. The animation section is filtered out at render time
+ *  when `showAnimationShortcuts` is false, keeping this list as the single
+ *  source of truth regardless of feature flags. */
+const shortcuts: { title: string; items: ShortcutItem[]; isAnimation?: boolean }[] = [
   {
     title: 'Elements',
     items: [
@@ -76,6 +80,7 @@ const shortcuts: { title: string; items: ShortcutItem[] }[] = [
   },
   {
     title: 'Steps & Playback',
+    isAnimation: true,
     items: [
       { key: '←/→', description: 'Prev/Next Step' },
       { key: 'Space', description: 'Play/Pause' },
@@ -114,8 +119,13 @@ const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
 export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
   isVisible,
   onClose,
+  showAnimationShortcuts = true,
 }) => {
   if (!isVisible) return null;
+
+  const visibleShortcuts = showAnimationShortcuts
+    ? shortcuts
+    : shortcuts.filter((s) => !s.isAnimation);
 
   return (
     <div className="absolute bottom-4 left-4 z-cheatsheet animate-slide-up">
@@ -140,7 +150,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
 
         {/* Shortcuts */}
         <div className="space-y-3">
-          {shortcuts.map((section) => (
+          {visibleShortcuts.map((section) => (
             <div key={section.title}>
               <h4 className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
                 {section.title}

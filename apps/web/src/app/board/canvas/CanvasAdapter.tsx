@@ -65,6 +65,10 @@ export interface CanvasAdapterProps {
   onTextDoubleClick: (id: string) => void;
   pushHistory: () => void;
   
+  // ALT+Drag rotation
+  onOrientationPreview: (id: string, orientation: number) => void;
+  onOrientationCommit: (id: string, orientation: number) => void;
+  
   // Interpolation helpers
   getInterpolatedPosition: (elementId: string, currentPos: Position) => Position;
   getInterpolatedZone: (elementId: string, currentPos: Position, width: number, height: number) => { position: Position; width: number; height: number };
@@ -109,6 +113,8 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     onPlayerQuickEdit,
     onTextDoubleClick,
     pushHistory,
+    onOrientationPreview,
+    onOrientationCommit,
     getInterpolatedPosition,
     getInterpolatedZone,
     getInterpolatedArrowEndpoints,
@@ -171,6 +177,8 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
         onPlayerQuickEdit={onPlayerQuickEdit}
         onTextDoubleClick={onTextDoubleClick}
         pushHistory={pushHistory}
+        onOrientationPreview={onOrientationPreview}
+        onOrientationCommit={onOrientationCommit}
       />
     </Stage>
   );

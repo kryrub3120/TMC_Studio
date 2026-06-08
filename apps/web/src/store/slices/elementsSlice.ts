@@ -109,6 +109,10 @@ export interface ElementsSlice {
   // Per-player vision toggle
   togglePlayerVision: (ids: ElementId[]) => void;
   setPlayerVision: (ids: ElementId[], value: boolean) => void;
+  
+  // ALT+Drag rotation (preview/commit pattern)
+  previewPlayerOrientationAbsolute: (id: ElementId, orientation: number) => void;
+  commitPlayerOrientationAbsolute: (id: ElementId, orientation: number) => void;
 }
 
 export const createElementsSlice: StateCreator<
@@ -767,6 +771,31 @@ export const createElementsSlice: StateCreator<
       elements: state.elements.map((el) => {
         if (ids.includes(el.id) && isPlayerElement(el)) {
           return { ...el, showVision: value };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+  
+  // ALT+Drag rotation — preview/commit pattern
+  previewPlayerOrientationAbsolute: (id, orientation) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (el.id === id && isPlayerElement(el)) {
+          return { ...el, orientation };
+        }
+        return el;
+      }),
+    }));
+    // NO pushHistory, NO markDirty
+  },
+  
+  commitPlayerOrientationAbsolute: (id, orientation) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (el.id === id && isPlayerElement(el)) {
+          return { ...el, orientation };
         }
         return el;
       }),

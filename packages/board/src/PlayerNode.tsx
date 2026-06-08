@@ -3,7 +3,7 @@
  * Performance optimized with React.memo
  */
 
-import React, { useRef, useState, memo } from 'react';
+import React, { useRef, useState, memo, useEffect } from 'react';
 import { Group, Circle, Rect, RegularPolygon, Line, Text, Wedge } from 'react-konva';
 import type Konva from 'konva';
 import type { PlayerElement, Position, PitchConfig, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
@@ -13,6 +13,17 @@ import {
   DEFAULT_TEAM_SETTINGS,
   DEFAULT_PLAYER_ORIENTATION_SETTINGS,
 } from '@tmc/core';
+
+/** Normalize angle to 0..360 */
+const norm360 = (a: number) => ((a % 360) + 360) % 360;
+
+/** Compute shortest angular delta (wrap-safe) - CORRECTION #1 */
+const deltaDeg = (from: number, to: number) => {
+  let d = norm360(to) - norm360(from);
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return d;
+};
 
 /** Team color configuration */
 export interface TeamColors {
@@ -34,6 +45,9 @@ export interface PlayerNodeProps {
   playerOrientationSettings?: PlayerOrientationSettings;
   /** zoom in PERCENT, e.g. 100 */
   zoom?: number;
+  /** ALT+drag rotation callbacks */
+  onOrientationPreview?: (id: string, orientation: number) => void;
+  onOrientationCommit?: (id: string, orientation: number) => void;
 }
 
 /** Default goalkeeper color (yellow) */
@@ -96,10 +110,19 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   isPrintMode,
   playerOrientationSettings,
   zoom = 100,
+  onOrientationPreview,
+  onOrientationCommit,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
+  
+  // Rotation state (CORRECTION #2, #5)
+  const isRotatingRef = useRef(false);
+  const startOrientationRef = useRef(0);
+  const startPointerAngleRef = useRef(0);
+  const lastAppliedAngleRef = useRef(0);
+  const wasDraggableRef = useRef(true);
 
   const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper, player.color, isPrintMode);
   const r = player.radius ?? PLAYER_RADIUS;
@@ -181,6 +204,124 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     node.y(clamped.y);
     onDragEnd(player.id, clamped);
   };
+
+  // --- ALT+DRAG ROTATION HANDLERS (CORRECTIONS #1-6) ---
+  const handleRotationMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Only handle ALT+click (CORRECTION #6)
+    if (!e.evt.altKey || !onOrientationPreview) return;
+    
+    e.cancelBubble = true;
+    
+    // Auto-select (single target for rotation)
+    onSelect(player.id, false);
+    
+    // CORRECTION #5: Store previous draggable state
+    const group = groupRef.current;
+    if (group) {
+      wasDraggableRef.current = group.draggable();
+      group.draggable(false);
+    }
+    
+    const stage = e.target.getStage();
+    if (!stage) return;
+    
+    // Get player center in stage coords
+    const centerX = player.position.x;
+    const centerY = player.position.y;
+    
+    // CORRECTION #3: Use rect-based coords (like ArrowNode)
+    const rect = stage.container().getBoundingClientRect();
+    const mouseX = e.evt.clientX - rect.left;
+    const mouseY = e.evt.clientY - rect.top;
+    
+    // Transform screen → stage coords (account for scale/pan)
+    const transform = stage.getAbsoluteTransform().copy().invert();
+    const stagePoint = transform.point({ x: mouseX, y: mouseY });
+    
+    // Compute angle from center to pointer
+    const dx = stagePoint.x - centerX;
+    const dy = stagePoint.y - centerY;
+    const angleRad = Math.atan2(dy, dx);
+    const angleDeg = (angleRad * 180) / Math.PI;
+    
+    // Store initial state
+    isRotatingRef.current = true;
+    startOrientationRef.current = player.orientation ?? 0;
+    startPointerAngleRef.current = angleDeg;
+    lastAppliedAngleRef.current = startOrientationRef.current;
+    
+    // Attach window listeners
+    window.addEventListener('mousemove', handleRotationMouseMove);
+    window.addEventListener('mouseup', handleRotationMouseUp);
+  };
+
+  const handleRotationMouseMove = (e: MouseEvent) => {
+    if (!isRotatingRef.current || !onOrientationPreview) return;
+    
+    const stage = groupRef.current?.getStage();
+    if (!stage) return;
+    
+    // CORRECTION #3: Use rect-based coords
+    const rect = stage.container().getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Transform screen → stage coords
+    const transform = stage.getAbsoluteTransform().copy().invert();
+    const stagePoint = transform.point({ x: mouseX, y: mouseY });
+    
+    // Compute current angle
+    const centerX = player.position.x;
+    const centerY = player.position.y;
+    const dx = stagePoint.x - centerX;
+    const dy = stagePoint.y - centerY;
+    const currentAngleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    
+    // CORRECTION #1: Use wrap-safe delta
+    const delta = deltaDeg(startPointerAngleRef.current, currentAngleDeg);
+    const rawOrientation = startOrientationRef.current + delta;
+    
+    // Apply snap (ALT+SHIFT = 1°, ALT only = 5°)
+    const snapResolution = e.shiftKey ? 1 : 5;
+    const snapped = Math.round(rawOrientation / snapResolution) * snapResolution;
+    const normalized = norm360(snapped);
+    
+    // CORRECTION #2: Only dispatch if changed
+    if (Math.abs(normalized - lastAppliedAngleRef.current) >= 0.5) {
+      lastAppliedAngleRef.current = normalized;
+      onOrientationPreview(player.id, normalized);
+    }
+  };
+
+  const handleRotationMouseUp = () => {
+    if (!isRotatingRef.current) return;
+    
+    // Commit final orientation
+    if (onOrientationCommit) {
+      onOrientationCommit(player.id, lastAppliedAngleRef.current);
+    }
+    
+    // CORRECTION #5: Restore previous draggable state
+    const group = groupRef.current;
+    if (group) {
+      group.draggable(wasDraggableRef.current);
+    }
+    
+    // Clear state
+    isRotatingRef.current = false;
+    
+    // Remove window listeners
+    window.removeEventListener('mousemove', handleRotationMouseMove);
+    window.removeEventListener('mouseup', handleRotationMouseUp);
+  };
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mousemove', handleRotationMouseMove);
+      window.removeEventListener('mouseup', handleRotationMouseUp);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- ARMS GEOMETRY (REAL BODY ORIENTATION) ---
   // Ramiona mają “wyjść z barków”, ale NIE rozwalać hitboxa (listening=false).
@@ -400,6 +541,22 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
           perfectDrawEnabled={false}
         />
       )}
+
+      {/* ROTATION HIT ZONE (CORRECTION #4) - simple large circle, on top for event priority */}
+      {onOrientationPreview && (
+        <Circle
+          x={0}
+          y={0}
+          radius={showVision ? r * 6 : r + 4}
+          fill="black"
+          opacity={0}
+          listening={true}
+          hitStrokeWidth={0}
+          cursor={isRotatingRef.current ? 'grabbing' : 'crosshair'}
+          onMouseDown={handleRotationMouseDown}
+          perfectDrawEnabled={false}
+        />
+      )}
     </Group>
   );
 };
@@ -442,6 +599,8 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.isPrintMode === nextProps.isPrintMode &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.zoom === nextProps.zoom &&
+    prevProps.onOrientationPreview === nextProps.onOrientationPreview &&
+    prevProps.onOrientationCommit === nextProps.onOrientationCommit &&
     colorsEqual &&
     settingsEqual
   );

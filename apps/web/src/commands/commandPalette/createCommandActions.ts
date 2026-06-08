@@ -55,10 +55,18 @@ export interface CreateCommandActionsDeps {
   stepsCount: number;
   isPlaying: boolean;
   isLooping: boolean;
+
+  /**
+   * When false, all Steps & Playback actions are excluded from the returned
+   * list so they never appear in the Command Palette.
+   * Defaults to `true` to preserve backward compatibility.
+   */
+  animationEnabled?: boolean;
 }
 
 export function createCommandActions(deps: CreateCommandActionsDeps): CommandAction[] {
   const cmd = deps.isMac ? '⌘' : 'Ctrl+';
+  const animationEnabled = deps.animationEnabled ?? true;
 
   return [
     // Elements
@@ -85,17 +93,19 @@ export function createCommandActions(deps: CreateCommandActionsDeps): CommandAct
     { id: 'toggle-snap', label: 'Toggle Snap', shortcut: 'S', category: 'view', onExecute: () => deps.showToast('Snap toggle coming soon') },
     { id: 'focus-mode', label: 'Focus Mode', shortcut: 'F', category: 'view', onExecute: deps.toggleFocusMode },
 
-    // Steps
-    { id: 'add-step', label: 'Add Step', shortcut: 'N', category: 'steps', onExecute: () => { deps.addStepWithGating(); deps.showToast('New step added'); } },
-    { id: 'prev-step', label: 'Previous Step', shortcut: '←', category: 'steps', onExecute: deps.prevStep, disabled: deps.currentStepIndex === 0 },
-    { id: 'next-step', label: 'Next Step', shortcut: '→', category: 'steps', onExecute: deps.nextStep, disabled: deps.currentStepIndex >= deps.stepsCount - 1 },
-    { id: 'play-pause', label: deps.isPlaying ? 'Pause' : 'Play', shortcut: 'Space', category: 'steps', onExecute: () => { deps.isPlaying ? deps.pause() : deps.play(); } },
-    { id: 'toggle-loop', label: 'Toggle Loop', shortcut: 'L', category: 'steps', onExecute: () => { deps.toggleLoop(); deps.showToast(deps.isLooping ? 'Loop disabled' : 'Loop enabled'); } },
+    // Steps & Playback (animation module — excluded when feature flag is off)
+    ...(animationEnabled ? [
+      { id: 'add-step', label: 'Add Step', shortcut: 'N', category: 'steps', onExecute: () => { deps.addStepWithGating(); deps.showToast('New step added'); } },
+      { id: 'prev-step', label: 'Previous Step', shortcut: '←', category: 'steps', onExecute: deps.prevStep, disabled: deps.currentStepIndex === 0 },
+      { id: 'next-step', label: 'Next Step', shortcut: '→', category: 'steps', onExecute: deps.nextStep, disabled: deps.currentStepIndex >= deps.stepsCount - 1 },
+      { id: 'play-pause', label: deps.isPlaying ? 'Pause' : 'Play', shortcut: 'Space', category: 'steps', onExecute: () => { deps.isPlaying ? deps.pause() : deps.play(); } },
+      { id: 'toggle-loop', label: 'Toggle Loop', shortcut: 'L', category: 'steps', onExecute: () => { deps.toggleLoop(); deps.showToast(deps.isLooping ? 'Loop disabled' : 'Loop enabled'); } },
+    ] as CommandAction[] : []),
 
     // Export
     { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: deps.exportPNG },
     { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: deps.exportAllStepsPNG },
-    { id: 'export-gif', label: 'Export Animated GIF', shortcut: `⇧${cmd}G`, category: 'export', onExecute: deps.exportGIF, disabled: deps.stepsCount < 2 },
+    { id: 'export-gif', label: 'Export Animated GIF', shortcut: `⇧${cmd}G`, category: 'export', onExecute: deps.exportGIF, disabled: !animationEnabled || deps.stepsCount < 2 },
     { id: 'export-pdf', label: 'Export PDF (all steps)', shortcut: `⇧${cmd}P`, category: 'export', onExecute: deps.exportPDF },
     { id: 'export-svg', label: 'Export SVG', category: 'export', onExecute: deps.exportSVG },
   ];

@@ -1,8 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  // Load env files (.env, .env.local, ...) from the monorepo root so that a
+  // single source of truth controls the environment. The root `.env.local`
+  // points at the DEV Supabase project; production builds (Netlify) inject
+  // VITE_* vars from the dashboard, which take precedence over any file.
+  envDir: path.resolve(__dirname, '../../'),
   server: {
     port: 3000,
     open: true,

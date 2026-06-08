@@ -90,3 +90,30 @@ Number (top)
 ### Rendering Fixes
 - Arms now visible on all shapes (v0.2.2 z-order fix)
 - Numbers always readable (auto-flip implementation)
+
+## ALT+Drag Rotation
+
+**Added:** 2026-02-20 (post v0.2.2)
+
+### Interaction
+- Hold **ALT** + **Left Mouse Drag** to rotate a player
+- Rotation can be initiated by clicking on:
+  - Player body (circle/triangle/square/diamond)
+  - Vision cone area (when vision is rendered)
+- Normal drag (no ALT) = move behavior (unchanged)
+
+### Snapping
+- Default: **5° snap**
+- Hold **SHIFT + ALT** for **1° snap** (fine control)
+
+### History
+- Preview updates during drag (no history commits)
+- Single history entry pushed on mouse-up
+- Undo/redo restores orientation in one step per rotation gesture
+
+### Implementation Notes
+- Hit zone covers body + vision cone (`radius * 6` when vision shown)
+- Transparent Circle with `listening={true}`, `opacity={0}`
+- Uses wrap-safe angle delta computation to avoid 0°↔360° jumps
+- Disables draggable during rotation, restores on mouse-up
+- Works on all player shapes (no shape-specific logic needed)

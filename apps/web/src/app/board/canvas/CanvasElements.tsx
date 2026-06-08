@@ -61,6 +61,10 @@ export interface CanvasElementsProps {
   onPlayerQuickEdit: (id: string, currentNumber: number) => void;
   onTextDoubleClick: (id: string) => void;
   pushHistory: () => void;
+  
+  // ALT+Drag rotation
+  onOrientationPreview: (id: string, orientation: number) => void;
+  onOrientationCommit: (id: string, orientation: number) => void;
 }
 
 export const CanvasElements = React.memo(function CanvasElements(props: CanvasElementsProps) {
@@ -92,6 +96,8 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     onPlayerQuickEdit,
     onTextDoubleClick,
     pushHistory,
+    onOrientationPreview,
+    onOrientationCommit,
   } = props;
 
   const { getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints } = interpolators;
@@ -165,6 +171,8 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
               onQuickEditNumber={isPlaying ? undefined : onPlayerQuickEdit}
+              onOrientationPreview={isPlaying ? undefined : onOrientationPreview}
+              onOrientationCommit={isPlaying ? undefined : onOrientationCommit}
             />
           );
         })}

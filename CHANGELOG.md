@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **ALT+Drag Player Rotation** (2026-02-21)
+  - Rotate players by holding ALT and dragging with mouse
+  - Works from both player body and vision cone area
+  - Default snap: 5° (coarse adjustments), SHIFT+ALT: 1° (fine precision)
+  - **Multi-selection support**: When multiple players selected, ALT+drag rotates all by same delta
+  - Single history entry per gesture for clean undo/redo
+  - Crosshair cursor for visual feedback
+  - Works with all player shapes (circle/triangle/square/diamond)
+  - Maintains relative orientations between players during group rotation
+
 ## [0.2.2] - 2026-02-20
 
 ### Fixed

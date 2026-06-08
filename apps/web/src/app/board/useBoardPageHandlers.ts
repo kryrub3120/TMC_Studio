@@ -3,12 +3,13 @@
  * Extracted from App.tsx for modularity
  */
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
 import { isPlayerElement, isTextElement, isZoneElement } from '@tmc/core';
 import type { CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
 import { useBoardStore } from '../../store';
+import { ANIMATION_ENABLED } from '../../config/featureFlags';
 
 // B5: Resize popover state
 type ResizePopoverState = {
@@ -253,6 +254,72 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   const previewSetPlayersRadius = useBoardStore(s => s.previewSetPlayersRadius);
   const commitSetPlayersRadius = useBoardStore(s => s.commitSetPlayersRadius);
   const previewResetPlayersRadius = useBoardStore(s => s.previewResetPlayersRadius);
+  
+  // ALT+Drag rotation hooks
+  const previewPlayerOrientationAbsolute = useBoardStore(s => s.previewPlayerOrientationAbsolute);
+  const commitPlayerOrientationAbsolute = useBoardStore(s => s.commitPlayerOrientationAbsolute);
+
+  // State to track start orientations for multi-selection rotation
+  const rotationStartRef = useRef<{ clickedId: string; startOrientations: Record<string, number> } | null>(null);
+
+  // ALT+Drag rotation handlers (with multi-selection support)
+  const handleOrientationPreview = useCallback((id: string, orientation: number) => {
+    // If clicked player is in selection, rotate all selected players
+    if (selectedIds.includes(id) && selectedIds.length > 1) {
+      // Initialize start orientations on first preview call for this rotation
+      if (!rotationStartRef.current || rotationStartRef.current.clickedId !== id) {
+        const startOrientations: Record<string, number> = {};
+        selectedIds.forEach(selectedId => {
+          const player = storeElements.find(el => el.id === selectedId);
+          if (player && isPlayerElement(player)) {
+            startOrientations[selectedId] = (player as any).orientation ?? 0;
+          }
+        });
+        rotationStartRef.current = { clickedId: id, startOrientations };
+      }
+      
+      const startOrientations = rotationStartRef.current.startOrientations;
+      const clickedStartOrientation = startOrientations[id] ?? 0;
+      const delta = orientation - clickedStartOrientation;
+      
+      // Apply same delta to all selected players
+      selectedIds.forEach(selectedId => {
+        const startOrientation = startOrientations[selectedId];
+        if (startOrientation !== undefined) {
+          const newOrientation = (startOrientation + delta + 360) % 360;
+          previewPlayerOrientationAbsolute(selectedId, newOrientation);
+        }
+      });
+    } else {
+      // Single player rotation
+      rotationStartRef.current = null;
+      previewPlayerOrientationAbsolute(id, orientation);
+    }
+  }, [selectedIds, storeElements, previewPlayerOrientationAbsolute]);
+
+  const handleOrientationCommit = useCallback((id: string, orientation: number) => {
+    // If clicked player is in selection, commit all selected players
+    if (selectedIds.includes(id) && selectedIds.length > 1 && rotationStartRef.current) {
+      const startOrientations = rotationStartRef.current.startOrientations;
+      const clickedStartOrientation = startOrientations[id] ?? 0;
+      const delta = orientation - clickedStartOrientation;
+      
+      // Commit same delta to all selected players
+      selectedIds.forEach(selectedId => {
+        const startOrientation = startOrientations[selectedId];
+        if (startOrientation !== undefined) {
+          const newOrientation = (startOrientation + delta + 360) % 360;
+          commitPlayerOrientationAbsolute(selectedId, newOrientation);
+        }
+      });
+    } else {
+      // Single player rotation
+      commitPlayerOrientationAbsolute(id, orientation);
+    }
+    
+    // Clear rotation state
+    rotationStartRef.current = null;
+  }, [selectedIds, commitPlayerOrientationAbsolute]);
 
   // B5: Open resize popover
   const openResizePopover = useCallback((ids: string[], anchor: { x: number; y: number }) => {
@@ -473,6 +540,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       stepsCount,
       isPlaying,
       isLooping,
+      animationEnabled: ANIMATION_ENABLED,
     });
   }, [
     addPlayerAtCursor,
@@ -528,5 +596,8 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     commitResize,
     previewReset,
     cancelResize,
+    // ALT+Drag rotation exports
+    handleOrientationPreview,
+    handleOrientationCommit,
   };
 }

@@ -16,6 +16,7 @@ import {
 } from '@tmc/ui';
 import { DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
+import { ANIMATION_ENABLED } from '../../config/featureFlags';
 
 import { BoardTopBarSection } from './BoardTopBarSection';
 import { BoardCanvasSection } from './BoardCanvasSection';
@@ -168,6 +169,8 @@ export function BoardPage(props: BoardPageProps) {
             onPlayerQuickEdit={handlers.handlePlayerQuickEdit}
             onTextDoubleClick={handlers.handleTextDoubleClick}
             pushHistory={state.pushHistory}
+            onOrientationPreview={handlers.handleOrientationPreview}
+            onOrientationCommit={handlers.handleOrientationCommit}
             getInterpolatedPosition={interpolation.getInterpolatedPosition}
             getInterpolatedZone={interpolation.getInterpolatedZone}
             getInterpolatedArrowEndpoints={interpolation.getInterpolatedArrowEndpoints}
@@ -192,6 +195,7 @@ export function BoardPage(props: BoardPageProps) {
             <CheatSheetOverlay
               isVisible={state.cheatSheetVisible}
               onClose={state.toggleCheatSheet}
+              showAnimationShortcuts={ANIMATION_ENABLED}
             />
           )}
 
@@ -273,24 +277,26 @@ export function BoardPage(props: BoardPageProps) {
         )}
       </div>
 
-      {/* Bottom Steps Bar */}
-      <BottomStepsBar
-        steps={state.stepsData}
-        currentStepIndex={state.currentStepIndex}
-        isPlaying={state.isPlaying}
-        isLooping={state.isLooping}
-        duration={state.stepDuration}
-        onStepSelect={state.goToStep}
-        onAddStep={state.addStep}
-        onDeleteStep={state.removeStep}
-        onRenameStep={state.renameStep}
-        onPlay={state.play}
-        onPause={state.pause}
-        onPrevStep={state.prevStep}
-        onNextStep={state.nextStep}
-        onToggleLoop={state.toggleLoop}
-        onDurationChange={state.setStepDuration}
-      />
+      {/* Bottom Steps Bar (animation module - hidden behind feature flag for MVP) */}
+      {ANIMATION_ENABLED && (
+        <BottomStepsBar
+          steps={state.stepsData}
+          currentStepIndex={state.currentStepIndex}
+          isPlaying={state.isPlaying}
+          isLooping={state.isLooping}
+          duration={state.stepDuration}
+          onStepSelect={state.goToStep}
+          onAddStep={state.addStep}
+          onDeleteStep={state.removeStep}
+          onRenameStep={state.renameStep}
+          onPlay={state.play}
+          onPause={state.pause}
+          onPrevStep={state.prevStep}
+          onNextStep={state.nextStep}
+          onToggleLoop={state.toggleLoop}
+          onDurationChange={state.setStepDuration}
+        />
+      )}
 
       {/* Command Palette */}
       <CommandPaletteModal
