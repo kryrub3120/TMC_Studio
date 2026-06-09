@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (Internal)
+- **Audyt wydajności `useBoardPageState`** (2026-06-09)
+  - **Etap 1 — Reaktywność stanu pochodnego:** `selectedElement`, `canUndo`/`canRedo`, `stepsData` przepisane na reaktywne selektory + `useMemo` zamiast wywoływania getterów w renderze. `playerOrientationSettings` stabilnie zmemoizowane z surowego `document.playerOrientationSettings`.
+  - **Etap 2 — Stabilizacja pętli animacji:** `getCurrentStepIndex`/`getStepsCount` owinięte w `useCallback([])` w `useBoardPageEffects.ts`, eliminując restart RAF przy każdym renderze.
+  - **Etap 3 — Twardy guard `ANIMATION_ENABLED`:** `useAnimationPlayback` nie startuje pętli ani nie wywołuje `setAnimationProgress`, gdy flaga `VITE_ANIMATION_ENABLED` jest wyłączona.
+  - **Etap 4 — Higiena:** `exhaustive-deps` w efekcie post-mount inspector; mechanizm abort w `exportAllSteps`; usunięte 8 martwych handlerów z `useBoardPageState` (duplikatów z `useBoardPageHandlers`); usunięty alias `effectiveZoom`; poprawione rzutowanie typu `InspectorElement` dla arrow.
+  - Zmodyfikowane pliki: `useBoardPageState.ts`, `useBoardPageEffects.ts`, `useAnimationPlayback.ts`, `useExportController.ts`, `useBoardPageHandlers.ts`.
+
 ### Added
 - **ALT+Drag Player Rotation** (2026-02-21)
   - Rotate players by holding ALT and dragging with mouse

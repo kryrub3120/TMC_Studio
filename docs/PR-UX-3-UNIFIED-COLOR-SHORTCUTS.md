@@ -53,6 +53,7 @@ cycleSelectedColor: (direction) => {
         
         // PR-UX-3: Players have textColor override (or team color)
         if (isPlayerElement(el)) {
+          // ✅ ETAP 1: getTeamSettings() → użyj `s.document.teamSettings` jako selektor w komponentach
           const teamSettings = get().getTeamSettings();
           const current = el.textColor ?? teamSettings?.[el.team].primaryColor ?? '#ffffff';
           const currentIndex = COLORS.indexOf(current);

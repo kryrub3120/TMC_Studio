@@ -173,6 +173,10 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   );
 
   // Element drag end handler
+  // TODO I5: Docelowo zastąpić cmdRegistry.canvas.moveElementLive +
+  //          cmdRegistry.history.commitUserAction (Intent/Effect pattern).
+  //          Aktualnie USE_NEW_CANVAS = false, więc ścieżka cmdRegistry jest
+  //          nieaktywna w produkcji — zachowujemy stary kontrakt.
   const handleElementDragEnd = useCallback(
     (id: string, position: Position) => {
       moveElementById(id, position);

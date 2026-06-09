@@ -164,6 +164,7 @@ case 'n': addStep(); showToast('New step added'); break;
 **Current:**  
 - `onSelect` - ✅ Zablokowany: `onSelect={isPlaying ? () => {} : handleElementSelect}`
 - `onDragEnd` - ❌ Nie zablokowany: `onDragEnd={handleElementDragEnd}` 
+<!-- ⚠️ ETAP 4 I5: handleElementSelect i handleElementDragEnd przeniesione do useBoardPageHandlers.ts --> 
 - `onDragStart` - ⚠️ Częściowo: `onDragStart={startMultiDrag}`
 
 **What should be:**

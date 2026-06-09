@@ -49,6 +49,7 @@
 **Pattern Applied to All Elements:**
 ```tsx
 // PlayerNode, BallNode, TextNode
+// ⚠️ ETAP 4 I5: handleElementDragEnd przeniesiony do useBoardPageHandlers.ts
 onDragEnd={isPlaying ? () => {} : handleElementDragEnd}
 onDragStart={isPlaying ? () => false : startMultiDrag}
 

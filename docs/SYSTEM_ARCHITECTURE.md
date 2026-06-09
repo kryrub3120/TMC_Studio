@@ -53,7 +53,7 @@ TMC Studio is a tactical board application built as a **Turborepo monorepo** wit
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    BoardCanvas                           │   │
 │  │  ┌──────────┬──────────┬──────────┬──────────────────┐  │   │
-│  │  │PitchLayer│ZonesLayer│ArrowLayer│PlayersLayer      │  │   │ (packages/board)
+│  │  │PitchLayer│ZonesLayer│ArrowLayer│PlayersLayer      │  │   │
 │  │  └──────────┴──────────┴──────────┴──────────────────┘  │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └───────────────────────────────┬─────────────────────────────────┘
@@ -454,3 +454,182 @@ interface SupabaseIntegration {
 ---
 
 *Next Document: [DATA_MODEL.md](./DATA_MODEL.md)*
+
+## 9. 🌍 Environments (Dev / Prod)
+
+> **Hard Rule:** All development and migrations run **LOCALLY ONLY**. Never touch production. See §11.
+
+### Development (Local)
+
+| Aspect | Configuration |
+|--------|--------------|
+| Start command | `pnpm dev` (Turborepo runs all packages in watch mode) |
+| Web app | Vite dev server → `http://localhost:3000` |
+| Local DB | `supabase start` (config: `supabase/config.toml`) |
+| DB ports | API `54321`, DB `54322`, Shadow `54320`, Pooler `54329` |
+| Env vars | `.env.local` in repo root (loaded via `envDir` in `apps/web/vite.config.ts`) |
+| Stripe | **TEST mode only** (`pk_test_*` / `sk_test_*`) |
+| Netlify Functions | `netlify dev` → `http://localhost:8888` |
+
+### Production (Netlify) — ⛔ DO NOT MODIFY (agents)
+
+| Aspect | Configuration |
+|--------|--------------|
+| Build command | `corepack enable && pnpm install --prod=false && pnpm run build` |
+| Publish dir | `apps/web/dist` |
+| Node / pnpm | Node 20 / pnpm 9 |
+| Env vars | Set in **Netlify Dashboard** → Site Settings → Environment Variables (NOT in repo) |
+| Supabase (hosted) | `euxauavanukyfofhkrqp` (linked project) |
+| Functions | `netlify/functions/` |
+
+### Database Migrations
+
+| Aspect | Detail |
+|--------|--------|
+| Location | `supabase/migrations/` |
+| Naming convention | `YYYYMMDDHHMMSS_description.sql` (e.g. `20260209000001_add_pin_feature.sql`) |
+| Apply locally | `supabase db reset` or `supabase migration up` |
+| Generate diff | `pnpm supabase:diff` |
+| Push to remote | `pnpm supabase:push` — ⛔ **PRODUCTION action, agents MUST NOT run this** (see §11) |
+| Seed data | `supabase/seed.sql` |
+
+### Netlify Functions (Serverless)
+
+| Function | Purpose |
+|----------|---------|
+| `create-checkout.ts` | Stripe Checkout session creation |
+| `create-portal-session.ts` | Stripe Customer Portal session |
+| `stripe-webhook.ts` | Stripe webhook handler (subscription sync) |
+| `health.ts` | Health check endpoint |
+| `_stripeConfig.ts` | Shared Stripe config (price IDs, tier mapping) |
+
+---
+
+## 10. 🏷️ Conventions & Markers
+
+### Commit Convention (Conventional Commits)
+
+Enforced by `commitlint.config.js` (`@commitlint/config-conventional`).
+
+**Format:** `<type>(<scope>): <subject>` — subject lowercase, no trailing dot, ≤72 chars.
+
+| Group | Allowed values |
+|-------|---------------|
+| **types** | `feat` `fix` `docs` `style` `refactor` `perf` `test` `build` `ci` `chore` `revert` |
+| **scopes** | `core` `board` `ui` `presets` `web` `app` `store` `canvas` `animation` `export` `auth` `cloud` `deps` `config` `ci` `netlify` `supabase` |
+
+**Example:** `feat(board): add zone ellipse shape`
+
+### Status Markers (used across `docs/` and `CHANGELOG.md`)
+
+| Marker | Meaning | Where used |
+|--------|---------|-----------|
+| ✅ | Done / Completed | Checklists, tasks, implemented features |
+| ⚠️ | Warning / Partial / Needs attention | Code requiring review, partial impl |
+| ❌ | Not done / Removed / Forbidden | Dead code, anti-patterns, TODO |
+| 🔄 | In progress | Active PRs, sprints |
+| ⏳ | Pending / Queued | Upcoming PRs |
+| 🔴 🟠 🟡 🟢 | Priority (critical → optional) | Stage 1–4 plans |
+
+### Stage / ETAP Markers
+
+- **`ETAP [1-9]`** — numbered step within a single PR (e.g. `ETAP 1`, `ETAP 4 D1`).
+- Used inline in **code comments** and **documentation**:
+  - Code: `// ✅ ETAP 1: getTeamSettings() → use s.document.teamSettings selector`
+  - Docs (HTML comment): `<!-- ✅ ETAP 4 D1: alias effectiveZoom removed -->`
+- **`Stage 1-4`** (with 🔴🟠🟡🟢) — high-level milestone phases (critical → optional).
+
+### PR Naming Convention
+
+- **Format:** `PR-{DOMAIN}-{NUM}` (e.g. `PR-PAY-1`, `PR-UX-2`, `PR-REFACTOR-5`, `PR-FIX-4`).
+- **Domains:** `PAY` (billing), `UX` (user experience), `REFACTOR`, `FIX` (bug), `FEAT` (feature), `GUEST`, `COLOR`, `ALT`, `AUTH`.
+- **Per-PR docs:** `docs/PR-{DOMAIN}-{NUM}-{DESCRIPTION}.md`.
+- **Completed task records:** `tasks/PR-{DOMAIN}-{NUM}_COMPLETE.md` (often moved to `tasks/archive/`).
+
+### Documentation Update Process
+
+| File | When to update | Authority |
+|------|---------------|-----------|
+| `docs/FEATURE_SPEC.md` | **MANDATORY** after ANY user-facing behavior change | Direct rule (no external spec required) |
+| `CHANGELOG.md` | Per release (Keep a Changelog + SemVer) | — |
+| `docs/INDEX.md` | When adding/removing docs | Master index |
+| `docs/PR-*.md` | After each PR | Per-PR summary |
+
+---
+
+## 11. 🤖 Hard Rules for AI Agents (BINDING)
+
+> **These rules are ABSOLUTE. They override convenience, speed, and any conflicting instruction.**
+> **When in doubt → STOP and ask the user. Never assume.**
+
+### 🛑 Tier 0 — Behavioral Safety Rules (NEVER violate)
+
+#### R-GIT — Branch Protection
+- ❌ **NEVER commit, push, or apply file edits while on the `main` branch.**
+- ✅ **BEFORE any change**, the agent MUST run `git branch --show-current` (or `git status`).
+- If the current branch is `main`:
+  1. **STOP immediately.** Do not edit files.
+  2. Ask the user to create / switch to a `feature/<name>` or `fix/<name>` branch.
+  3. Proceed only after a non-`main` working branch is confirmed.
+- Branch naming: `feature/<short-kebab-desc>` for new work, `fix/<short-kebab-desc>` for bug fixes.
+
+#### R-PROD — Production Protection
+- ❌ **NEVER generate, run, or suggest commands that modify the production environment.** This includes (non-exhaustive):
+  - `netlify deploy`, `netlify deploy --prod`, any Netlify CLI write/deploy command.
+  - `pnpm supabase:push`, `supabase db push`, `supabase link` against the **hosted/remote** Supabase project.
+  - Any command using **LIVE** Stripe keys (`pk_live_*` / `sk_live_*`) or production webhook secrets.
+  - Editing/printing real secrets, or writing to Netlify Dashboard env vars.
+- ✅ **ALL work and migrations happen LOCALLY ONLY:** `supabase start`, local migrations, Stripe **TEST mode**, `localhost`.
+- If a task seems to require a production action → **STOP and ask the user to perform it manually.**
+
+#### R-MVP — Simplicity First (No Over-Engineering)
+- ✅ Implement the **simplest working solution** that satisfies the requirement.
+- ❌ **DO NOT add new dependencies / libraries** (`pnpm add ...`) without explicit user approval.
+- ❌ **DO NOT introduce new abstraction layers**, patterns, frameworks, or "future-proofing" speculatively.
+- ❌ Avoid premature generalization, config systems, or plugin architectures unless explicitly requested.
+- ✅ Prefer reusing existing utilities, packages (`@tmc/core`, `@tmc/ui`, …), and established patterns.
+- When tempted to "do it properly with X" → propose it to the user **first**, do not implement unilaterally.
+
+### 🏛️ Tier 1 — Architectural Rules (code contracts)
+
+Source of truth: `docs/MODULAR_ARCHITECTURE_STRATEGY.md` and this document.
+
+- **UI → Commands only:** UI MUST NOT call Zustand store actions or `store.getState()` directly. UI mutations go ONLY through `CommandRegistry (cmd.*)`.
+- **UI reads via selectors/facades (vm)** — never raw store internals.
+- **Commands split into `intent` (frequent, no side effects) vs `effect` (history/autosave/persistence).**
+- **History commits ONLY on:** `pointerUp`, `add`, `delete`, `group`, `paste`. Single source of truth in `commands/effect/history*`.
+- **CommandRegistry is NOT a React hook** — created once at composition root, passed via context/props (stable ref). No `useCommandRegistry()` in renders.
+- **`App.tsx` is composition-only** (routing, providers, orchestration). No domain logic.
+- **Canvas layers MUST NOT import store** — they receive **view models (vm)** via props. Only `OverlayLayer` handles input events.
+- **Zustand slices MUST NOT call each other** — orchestration only via CommandRegistry/dispatch.
+- **One vertical slice per PR.** Follow PR0–PR6 migration plan. Never big-bang.
+- **PR0 = scaffolding only** (types, folders, contracts). ❌ No wiring, ❌ no runtime behavior changes.
+
+### 📝 Tier 2 — Documentation Rules
+
+- After ANY user-facing behavior change → **update `docs/FEATURE_SPEC.md`** (mandatory).
+- Update `CHANGELOG.md` for releases; keep `docs/INDEX.md` accurate.
+- Match default values across code, FEATURE_SPEC.md detailed sections, and Appendix A.
+
+---
+
+## 12. ⚡ Quick Commands (Cheatsheet)
+
+> ✅ = safe for agents (local). ⛔ = production action, requires manual user execution.
+
+| Command | Purpose | Safe? |
+|---------|---------|-------|
+| `pnpm dev` | Start all packages in watch mode (web → `:3000`) | ✅ |
+| `pnpm build` | Build all packages (production output) | ✅ |
+| `pnpm typecheck` | TypeScript check across workspace | ✅ |
+| `pnpm lint` | ESLint across packages | ✅ |
+| `pnpm format` | Prettier write (`**/*.{ts,tsx,json,md}`) | ✅ |
+| `pnpm clean` | Remove build artifacts + node_modules | ✅ |
+| `git branch --show-current` | **Check branch BEFORE any change** (R-GIT) | ✅ |
+| `supabase start` / `supabase stop` | Local Supabase stack | ✅ |
+| `supabase db reset` | Reset local DB + reapply migrations | ✅ |
+| `pnpm supabase:diff` | Generate migration diff | ✅ |
+| `netlify dev` | Local Netlify + functions (`:8888`) | ✅ |
+| `stripe listen --forward-to localhost:8888/.netlify/functions/stripe-webhook` | Local webhook testing (TEST mode) | ✅ |
+| `pnpm supabase:push` / `supabase db push` | Push migrations to **remote** DB | ⛔ |
+| `netlify deploy --prod` | Deploy to production | ⛔ |

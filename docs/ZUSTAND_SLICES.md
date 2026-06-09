@@ -277,6 +277,9 @@ export interface SelectionSlice {
   setCursorPosition: (position: Position | null) => void;
   
   // Computed
+  // ⚠️ ETAP 1: Te gettery są wewnętrzne (używane tylko w slice'ach).
+  // W komponentach używaj selektorów pól (s.document.teamSettings)
+  // lub useMemo z elements/selectedIds zamiast wywoływać je w renderze.
   getSelectedElements: () => BoardElement[];
   getSelectedElement: () => BoardElement | undefined;
 }

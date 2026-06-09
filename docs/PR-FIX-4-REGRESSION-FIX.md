@@ -105,6 +105,7 @@ Also removed explicit container sizing:
     ref={containerRef}
     className="shadow-canvas rounded-[20px] border border-border/50 p-3 bg-surface/50 backdrop-blur-sm"
 -   style={{ 
+-     // ⚠️ ETAP 4 D1: effectiveZoom alias usunięty — użyj bezpośrednio `zoom` lub `effectiveZoom: zoom` w return
 -     width: canvasWidth * effectiveZoom + 24,
 -     height: canvasHeight * effectiveZoom + 24,
 -     maxWidth: '100%',

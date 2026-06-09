@@ -5,8 +5,7 @@
 
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, hasPosition } from '@tmc/core';
-import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, hasPosition } from '@tmc/core';
 import type { InspectorElement, ElementInList } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -44,6 +43,9 @@ export function useBoardPageState(props: BoardPageProps) {
   // Initialize theme
   useInitializeTheme();
   
+  // Pozyskane wcześnie, by efekt post-mount mógł spełnić exhaustive-deps
+  const setInspectorOpen = useUIStore((s) => s.setInspectorOpen);
+  
   // Post-mount inspector correction (Hard Rule B)
   useEffect(() => {
     const stored = localStorage.getItem('tmc-ui-settings');
@@ -52,15 +54,16 @@ export function useBoardPageState(props: BoardPageProps) {
       const shouldBeOpen = window.innerWidth >= 1280;
       setInspectorOpen(shouldBeOpen);
     }
-  }, []);
+  }, [setInspectorOpen]);
   
   // Board store state
   const elements = useBoardStore((s) => s.elements);
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const boardDoc = useBoardStore((s) => s.document);
-  const teamSettings = useBoardStore((s) => s.getTeamSettings());
-  const pitchSettings = useBoardStore((s) => s.getPitchSettings());
-  const playerOrientationSettings = useBoardStore((s) => s.getPlayerOrientationSettings()); // PR3
+  // Reaktywne selektory pól (zamiast wywoływania getterów w renderze)
+  const teamSettings = useBoardStore((s) => s.document.teamSettings);
+  const pitchSettings = useBoardStore((s) => s.document.pitchSettings);
+  const playerOrientationSettingsRaw = useBoardStore((s) => s.document.playerOrientationSettings); // PR3
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
   const updatePlayerOrientationSettings = useBoardStore((s) => s.updatePlayerOrientationSettings); // PR4
   
@@ -81,9 +84,9 @@ export function useBoardPageState(props: BoardPageProps) {
   const updateSelectedElement = useBoardStore((s) => s.updateSelectedElement);
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
-  const getSelectedElement = useBoardStore((s) => s.getSelectedElement);
-  const canUndoFn = useBoardStore((s) => s.canUndo);
-  const canRedoFn = useBoardStore((s) => s.canRedo);
+  // Reaktywne selektory wartości (re-render przy zmianie historii)
+  const canUndo = useBoardStore((s) => s.historyIndex > 0);
+  const canRedo = useBoardStore((s) => s.historyIndex < s.history.length - 1);
   const pushHistory = useBoardStore((s) => s.pushHistory);
   const selectAll = useBoardStore((s) => s.selectAll);
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
@@ -108,7 +111,6 @@ export function useBoardPageState(props: BoardPageProps) {
   const goToStep = useBoardStore((s) => s.goToStep);
   const nextStep = useBoardStore((s) => s.nextStep);
   const prevStep = useBoardStore((s) => s.prevStep);
-  const getSteps = useBoardStore((s) => s.getSteps);
   
   // UI store state
   const theme = useUIStore((s) => s.theme);
@@ -138,7 +140,6 @@ export function useBoardPageState(props: BoardPageProps) {
   const zoomOut = useUIStore((s) => s.zoomOut);
   const zoomFit = useUIStore((s) => s.zoomFit);
   const setHasSeenShortcutsHint = useUIStore((s) => s.setHasSeenShortcutsHint);
-  const setInspectorOpen = useUIStore((s) => s.setInspectorOpen);
   const setCheatSheetVisible = useUIStore((s) => s.setCheatSheetVisible);
   const togglePrintMode = useUIStore((s) => s.togglePrintMode);
   
@@ -153,10 +154,20 @@ export function useBoardPageState(props: BoardPageProps) {
   const setStepDuration = useUIStore((s) => s.setStepDuration);
   const setAnimationProgress = useUIStore((s) => s.setAnimationProgress);
   
-  // Derived state
-  const selectedElement = getSelectedElement();
-  const canUndo = canUndoFn();
-  const canRedo = canRedoFn();
+  // Normalizacja orientacji (kontrakt: showVision musi być jawnym boolean; undefined => false)
+  const playerOrientationSettings = useMemo(() => {
+    const settings = playerOrientationSettingsRaw ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+    return settings.showVision === undefined
+      ? { ...settings, showVision: false }
+      : settings;
+  }, [playerOrientationSettingsRaw]);
+
+  // Derived state (reaktywne — liczone z elements/selectedIds zamiast getterów w renderze)
+  const selectedElement = useMemo(() => {
+    if (selectedIds.length !== 1) return undefined;
+    return elements.find((el) => el.id === selectedIds[0]);
+  }, [elements, selectedIds]);
+  // TODO: Podpiąć realny mechanizm autozapisu / dirty flag stanu
   const isSaved = true;
   
   // Hidden by group
@@ -178,7 +189,6 @@ export function useBoardPageState(props: BoardPageProps) {
   
   const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
   const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
-  const effectiveZoom = zoom;
   
   // Export controller
   const exportController = useExportController({
@@ -188,15 +198,14 @@ export function useBoardPageState(props: BoardPageProps) {
     onOpenPricingModal,
   });
   
-  // Steps data
+  // Steps data (liczone bezpośrednio z boardDoc.steps — jedno źródło prawdy)
   const stepsData = useMemo(() => {
-    const stepsList = getSteps();
-    return stepsList.map((s) => ({
-      id: s.id,
-      label: s.name,
-      index: s.index,
+    return boardDoc.steps.map((step, index) => ({
+      id: step.id,
+      label: step.name ?? `Step ${index + 1}`,
+      index,
     }));
-  }, [getSteps, boardDoc.steps]);
+  }, [boardDoc.steps]);
   
   // Gated step addition
   const addStep = useCallback(() => {
@@ -243,10 +252,10 @@ export function useBoardPageState(props: BoardPageProps) {
     if (isArrowElement(selectedElement)) {
       return {
         id: selectedElement.id,
-        type: 'arrow' as unknown as 'player' | 'ball',
+        type: 'arrow' as const,
         x: selectedElement.startPoint.x,
         y: selectedElement.startPoint.y,
-      };
+      } satisfies InspectorElement as InspectorElement;
     }
     
     return undefined;
@@ -311,52 +320,12 @@ export function useBoardPageState(props: BoardPageProps) {
     onOpenPricingModal, // PR3
     contextMenuVisible: contextMenu.menuState.visible,
   });
-  
-  // Quick action handler
-  const handleQuickAction = useCallback((action: string) => {
-    switch (action) {
-      case 'add-home-player': addPlayerAtCursor('home'); break;
-      case 'add-away-player': addPlayerAtCursor('away'); break;
-      case 'add-ball': addBallAtCursor(); break;
-      case 'add-pass-arrow': addArrowAtCursor('pass'); break;
-      case 'add-run-arrow': addArrowAtCursor('run'); break;
-      case 'add-zone': addZoneAtCursor(); break;
-      case 'add-text': addTextAtCursor(); break;
-      case 'open-palette': openCommandPalette(); break;
-    }
-  }, [addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor, addTextAtCursor, openCommandPalette]);
-  
-  // Element handlers
-  const handleElementSelect = useCallback(
-    (id: string, addToSelection: boolean) => selectElement(id, addToSelection),
-    [selectElement]
-  );
-  
-  const handleElementDragEnd = useCallback(
-    (id: string, position: Position) => {
-      moveElementById(id, position);
-      pushHistory();
-    },
-    [moveElementById, pushHistory]
-  );
-  
-  const handleUpdateElement = useCallback(
-    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number }) => {
-      updateSelectedElement(updates as Partial<PlayerElementType>);
-    },
-    [updateSelectedElement]
-  );
-  
-  // Text editing handlers (using controller)
-  const handleTextDoubleClick = useCallback((id: string) => {
-    editOverlay.text.start(id);
-  }, [editOverlay.text]);
-  
-  const handleTextEditSave = editOverlay.text.save;
-  
-  // Player quick-edit handlers (using controller)
-  const handlePlayerQuickEdit = editOverlay.player.start;
-  const handlePlayerNumberSave = editOverlay.player.save;
+
+  // NOTE: Handler functions (handleQuickAction, handleElementSelect,
+  // handleElementDragEnd, handleUpdateElement, handleTextDoubleClick,
+  // handleTextEditSave, handlePlayerQuickEdit, handlePlayerNumberSave)
+  // were removed from this file in I5. BoardPage now uses
+  // useBoardPageHandlers as the single source of truth for all handlers.
   
   return {
     // Refs
@@ -434,7 +403,7 @@ export function useBoardPageState(props: BoardPageProps) {
     activeToast,
     layerVisibility,
     zoom,
-    effectiveZoom,
+    effectiveZoom: zoom,
     hasSeenShortcutsHint,
     activeTool,
     gridVisible,
@@ -488,16 +457,6 @@ export function useBoardPageState(props: BoardPageProps) {
     activeCanvasInteraction,
     contextMenu,
     editOverlay,
-    
-    // Handlers
-    handleQuickAction,
-    handleElementSelect,
-    handleElementDragEnd,
-    handleUpdateElement,
-    handleTextDoubleClick,
-    handleTextEditSave,
-    handlePlayerQuickEdit,
-    handlePlayerNumberSave,
     
     // Text editing (from controller)
     editingTextId: editOverlay.text.editingId,

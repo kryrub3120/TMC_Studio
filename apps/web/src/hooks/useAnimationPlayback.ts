@@ -7,6 +7,7 @@
  */
 
 import { useEffect } from 'react';
+import { ANIMATION_ENABLED } from '../config/featureFlags';
 
 /**
  * Easing function for smooth animations
@@ -41,6 +42,10 @@ export function useAnimationPlayback(opts: UseAnimationPlaybackOptions): void {
   } = opts;
 
   useEffect(() => {
+    // Twardy guard MVP: gdy moduł animacji jest wyłączony, pętla RAF
+    // ani onSetProgress nie uruchamiają się wcale (K3).
+    if (!ANIMATION_ENABLED) return;
+
     // If not playing, reset progress and exit
     if (!isPlaying) {
       onSetProgress(0);
@@ -104,6 +109,7 @@ export function useAnimationPlayback(opts: UseAnimationPlaybackOptions): void {
       onSetProgress(0);
     };
   }, [
+    ANIMATION_ENABLED,
     isPlaying,
     isLooping,
     stepDurationSec,

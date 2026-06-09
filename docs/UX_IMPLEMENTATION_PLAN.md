@@ -428,6 +428,7 @@ Extend `cycleSelectedColor()` to handle all element types.
 
 ```typescript
 cycleSelectedColor: (direction) => {
+  // ✅ ETAP 1: getTeamSettings() → użyj `s.document.teamSettings` w komponentach
   const { selectedIds, elements, getTeamSettings } = get();
   if (selectedIds.length === 0) return;
   

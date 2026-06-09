@@ -25,13 +25,25 @@ export interface AnimationPlaybackInput {
 export function useAnimationPlayback(input: AnimationPlaybackInput) {
   const { isPlaying, isLooping, stepDuration, pause, goToStep, nextStep, setAnimationProgress } = input;
 
+  // Stabilne gettery — czytają najnowszy stan przez useBoardStore.getState(),
+  // więc pusta tablica zależności jest poprawna. Dzięki temu pętla RAF
+  // w useAnimationPlayback nie restartuje się przy każdym renderze (K2).
+  const getCurrentStepIndex = useCallback(
+    () => useBoardStore.getState().currentStepIndex,
+    []
+  );
+  const getStepsCount = useCallback(
+    () => useBoardStore.getState().document.steps.length,
+    []
+  );
+
   // Use the core hook with getters pattern to avoid stale closures
   useAnimationPlaybackCore({
     isPlaying,
     isLooping,
     stepDurationSec: stepDuration,
-    getCurrentStepIndex: () => useBoardStore.getState().currentStepIndex,
-    getStepsCount: () => useBoardStore.getState().document.steps.length,
+    getCurrentStepIndex,
+    getStepsCount,
     onSetProgress: setAnimationProgress,
     onNextStep: nextStep,
     onGoToStep: goToStep,

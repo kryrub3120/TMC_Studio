@@ -124,6 +124,7 @@ if (el.type === 'text' && 'rotation' in next) {
 
 **Viewport architecture (validated):**
 - `effectiveZoom = userZoom * fitZoom`
+<!-- ✅ ETAP 4 D1: Alias `effectiveZoom` usunięty jako zmienna pośrednia; klucz `effectiveZoom` w return zachowany -->
 - `stagePosition = { centerX + panX, centerY + panY }`
 - `getWorldPointer()` available in `viewportUtils.ts` for any new features needing world-space coords
 - `screenToWorld()` used in zoom-to-cursor math

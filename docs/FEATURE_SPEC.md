@@ -682,6 +682,7 @@ Same as freehand, with different defaults:
 | Zoom Widget buttons | +/- 25% or Fit |
 
 **Effective zoom calculation:**
+<!-- ✅ ETAP 4 D1: Alias `effectiveZoom` usunięty; obliczenie nadal poprawne koncepcyjnie -->
 ```
 effectiveZoom = userZoom × fitZoom
 ```

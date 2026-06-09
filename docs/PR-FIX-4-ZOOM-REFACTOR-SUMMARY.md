@@ -34,6 +34,7 @@ const fitZoom = containerSize.width > 0 && containerSize.height > 0
   : 1;
 
 // Effective zoom: userZoom * fitZoom
+// ✅ ETAP 4 D1: Alias `const effectiveZoom = ...` usunięty. Obliczenie inline lub `effectiveZoom: zoom` w return.
 const effectiveZoom = zoom * fitZoom;
 ```
 

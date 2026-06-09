@@ -291,6 +291,8 @@ apps/web/src/hooks/
 **Kontrakt (poprawiony - getters pattern):**
 ```typescript
 // useAnimationPlayback - używa getters żeby uniknąć closure bugs w RAF
+// ✅ ETAP 2: getCurrentStepIndex/getStepsCount owinięte w useCallback([]) w useBoardPageEffects.ts
+// ✅ ETAP 3: Twardy guard ANIMATION_ENABLED — pętla nie startuje przy fladze off
 interface AnimationPlaybackOptions {
   isPlaying: boolean;
   isLooping: boolean;
@@ -423,6 +425,8 @@ apps/web/src/app/board/
 
 **Pliki usunięte (cleanup):**
 - `apps/web/src/app/board/useEditOverlayController.ts` (obsolete, replaced by useTextEditController)
+
+<!-- ✅ ETAP 4 I5: handleTextDoubleClick, handleTextEditSave, handlePlayerQuickEdit, handlePlayerNumberSave — usunięte z useBoardPageState (martwy kod). Edycja tekstu przez useTextEditController. -->
 
 **Kontrakt:**
 ```typescript

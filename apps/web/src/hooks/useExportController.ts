@@ -9,7 +9,7 @@
  */
 
 import { logger } from '../lib/logger';
-import { useCallback, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type Konva from 'konva';
 import { useBoardStore } from '../store';
 import { useUIStore } from '../store/useUIStore';
@@ -51,6 +51,16 @@ export function useExportController(params: UseExportControllerParams): ExportCo
   // Entitlements
   const { can } = useEntitlements();
   
+  // I4: flaga przerwania długiej operacji eksportu po odmontowaniu widoku.
+  // Pętla exportAllSteps sprawdza ją po każdym await i bezpiecznie przerywa.
+  const isAbortedRef = useRef(false);
+  useEffect(() => {
+    isAbortedRef.current = false;
+    return () => {
+      isAbortedRef.current = true;
+    };
+  }, []);
+  
   /**
    * Export current step as PNG
    */
@@ -89,6 +99,9 @@ export function useExportController(params: UseExportControllerParams): ExportCo
       // Wait for render
       await new Promise((resolve) => setTimeout(resolve, 150));
       
+      // I4: przerwij, jeśli widok został odmontowany w trakcie oczekiwania
+      if (isAbortedRef.current || !stageRef.current) return;
+      
       // Export PNG
       const dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 });
       if (dataUrl) {
@@ -100,9 +113,13 @@ export function useExportController(params: UseExportControllerParams): ExportCo
       
       // Small delay between downloads
       await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      // I4: przerwij, jeśli widok został odmontowany w trakcie oczekiwania
+      if (isAbortedRef.current) return;
     }
     
-    // Return to original step
+    // Return to original step (tylko gdy nadal zamontowane)
+    if (isAbortedRef.current) return;
     goToStep(originalStep);
     showToast(`Exported ${totalSteps} PNGs!`);
   }, [stageRef, boardDoc.name, boardDoc.steps.length, currentStepIndex, goToStep, showToast]);
