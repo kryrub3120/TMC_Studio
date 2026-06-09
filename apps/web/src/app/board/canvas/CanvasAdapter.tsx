@@ -1,12 +1,26 @@
 /**
  * CanvasAdapter - Wiring layer for legacy Konva canvas
- * 
- * True Virtual Canvas Model:
- * - Stage fills the container (width/height = containerWidth/Height), scale=1, x=y=0
- * - CanvasElements renders a single <Layer> with scaleX/Y=groupZoom, x/y=groupPan
- * - World coordinate mapping: worldX = (stagePointerX - groupPanX) / groupZoom
- * 
- * NO store imports. Bundles interpolators and passes props to CanvasElements
+ *
+ * ╔═══════════════════ True Virtual Canvas Invariants (ETAP 2) ══════════════════╗
+ * ║  1. Stage ALWAYS fills the container:                                        ║
+ * ║       width={containerWidth}  height={containerHeight}                       ║
+ * ║       scaleX={1}  scaleY={1}  x={0}  y={0}                                  ║
+ * ║     → Stage MUST NOT be resized physically or scaled.                        ║
+ * ║                                                                               ║
+ * ║  2. All zoom/pan lives on the root Layer (via CanvasElements):               ║
+ * ║       <Layer x={groupPan.x} y={groupPan.y}                                   ║
+ * ║              scaleX={groupZoom} scaleY={groupZoom}>                          ║
+ * ║                                                                               ║
+ * ║  3. NO <div> or HTML inside <Stage>. DOM overlays (empty-state, edit inputs) ║
+ * ║     are rendered OUTSIDE Stage, in CanvasShell's sibling DOM nodes.          ║
+ * ║     Violation causes: "Konva error: You may only add groups and shapes to    ║
+ * ║     groups" — which is a React crash, not a graceful error.                  ║
+ * ║                                                                               ║
+ * ║  4. World coords: worldX = (stagePointerX - groupPanX) / groupZoom           ║
+ * ║     Use getCanvasWorldCoords(stage, panX, panY, zoom) from viewportUtils.ts   ║
+ * ╚═══════════════════════════════════════════════════════════════════════════════╝
+ *
+ * NO store imports. Bundles interpolators and passes props to CanvasElements.
  */
 
 import { useMemo } from 'react';
