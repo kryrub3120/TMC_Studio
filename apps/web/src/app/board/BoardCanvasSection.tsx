@@ -11,7 +11,7 @@
  * - Fit resets panOffset to {0,0}
  */
 
-import { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
+import { ReactNode, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type Konva from 'konva';
 import { DEFAULT_PITCH_SETTINGS, isPlayerElement } from '@tmc/core';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
@@ -95,9 +95,8 @@ export interface BoardCanvasSectionProps {
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────
-const CONTAINER_PADDING = 24;
 const MIN_CONTAINER_SIZE = 200;
-const MAX_FIT_UPSCALE = 1.3;
+const MAX_FIT_UPSCALE = 1.5;
 const PAN_CLAMP_MARGIN = 80;
 const WHEEL_ZOOM_FACTOR = 0.001; // sensitivity for Ctrl+wheel zoom
 
@@ -166,11 +165,16 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     return () => observer.disconnect();
   }, []);
 
+  // ─── Responsive container padding ────────────────────────────────────
+  const containerPadding = useMemo(() => {
+    return containerSize.width < 768 ? 16 : 24;
+  }, [containerSize.width]);
+
   // ─── Fit-zoom computation ────────────────────────────────────────────
   const fitZoom = containerSize.width > MIN_CONTAINER_SIZE && containerSize.height > MIN_CONTAINER_SIZE
     ? Math.min(
-        (containerSize.width - CONTAINER_PADDING) / canvasWidth,
-        (containerSize.height - CONTAINER_PADDING) / canvasHeight,
+        (containerSize.width - containerPadding) / canvasWidth,
+        (containerSize.height - containerPadding) / canvasHeight,
         MAX_FIT_UPSCALE,
       )
     : 1;

@@ -46,7 +46,7 @@ export const ShortcutsHint: React.FC<ShortcutsHintProps> = ({
   return (
     <div
       onClick={handleClick}
-      className={`fixed top-20 right-6 z-[100] cursor-pointer transition-all duration-300 ${
+      className={`fixed top-20 right-6 z-cheatsheet cursor-pointer transition-all duration-slow ${
         isAnimatingOut ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
       }`}
     >

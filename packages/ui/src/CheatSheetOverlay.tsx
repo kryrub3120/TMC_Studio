@@ -137,8 +137,8 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
     : shortcuts.filter((s) => !s.isAnimation);
 
   return (
-    <div className="absolute bottom-4 left-4 z-cheatsheet animate-slide-up">
-      <div className="bg-surface/95 backdrop-blur-sm rounded-xl shadow-lg border border-border p-4 w-[320px]">
+    <div className="absolute bottom-4 right-4 z-cheatsheet animate-slide-up max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:z-modal max-sm:m-0 max-sm:animate-slide-up">
+      <div className="bg-surface/95 backdrop-blur-sm rounded-xl shadow-lg border border-border p-4 w-[320px] max-sm:w-full max-sm:rounded-t-xl max-sm:rounded-b-none">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-text flex items-center gap-2">

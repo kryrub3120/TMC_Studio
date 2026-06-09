@@ -21,11 +21,11 @@ export const CanvasShell: React.FC<CanvasShellProps> = ({
   emptyStateOverlay,
 }) => {
   return (
-    <div className="relative">
+    <div className="relative aspect-[4/3]">
       {/* BoardCanvas (Konva) */}
       {children}
       
- {/* Empty State Overlay (absolute, center) */}
+      {/* Empty State Overlay (absolute, center) */}
       {emptyStateOverlay}
     </div>
   );
