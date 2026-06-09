@@ -22,6 +22,7 @@ import {
   createZone,
   createText,
   createEquipment,
+  createDrawing,
   moveElement,
   duplicateElements,
   removeElementsByIds,
@@ -582,15 +583,7 @@ export const createElementsSlice: StateCreator<
       return;
     }
     
-    const drawing = {
-      id: `drawing-${Date.now()}`,
-      type: 'drawing' as const,
-      drawingType: freehandType,
-      points: freehandPoints,
-      color: freehandType === 'highlighter' ? '#ffff00' : '#ff0000',
-      strokeWidth: freehandType === 'highlighter' ? 20 : 3,
-      opacity: freehandType === 'highlighter' ? 0.4 : 1,
-    };
+    const drawing = createDrawing(freehandType, freehandPoints);
     
     set((state) => ({
       elements: [...state.elements, drawing],

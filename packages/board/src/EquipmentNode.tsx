@@ -17,28 +17,13 @@ export interface EquipmentNodeProps {
 }
 
 /** 
- * Sanitize colors for print mode
- * - White (#ffffff) → Black (always - invisible on paper)
- * - Yellow (#fbbf24) → Black (default mannequin/ladder color)
- * - Other custom colors → preserved
+ * Sanitize colors for print mode — ALL equipment renders as black on paper
+ * to ensure crisp B/W output regardless of equipment type or custom color.
  */
 function sanitizeForPrint(color: string, isPrintMode: boolean): string {
   if (!isPrintMode) return color;
-  
-  const normalizedColor = color.trim().toLowerCase();
-  
-  // White always becomes black (invisible on paper)
-  if (normalizedColor === '#ffffff') {
-    return '#000000';
-  }
-  
-  // Default yellow (mannequin/ladder) becomes black for better print contrast
-  if (normalizedColor === '#fbbf24') {
-    return '#000000';
-  }
-  
-  // All other colors (custom) are preserved
-  return color;
+  // In print mode, every color becomes black — pure B/W output
+  return '#000000';
 }
 
 export const EquipmentNode: React.FC<EquipmentNodeProps> = ({

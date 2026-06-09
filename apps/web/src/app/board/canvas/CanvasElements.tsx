@@ -139,6 +139,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               isSelected={!isPlaying && selectedIds.includes(arrow.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
+              isPrintMode={isPrintMode}
               onEndpointDrag={(id, endpoint, pos) => {
                 onUpdateArrowEndpoint(id, endpoint, pos);
                 pushHistory();

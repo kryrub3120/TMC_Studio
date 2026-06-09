@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (User-Facing)
+- **Aktualizacja domyślnych stylów wizualnych elementów** (2026-06-09)
+  - **Text:** fontSize zmienione z 18 → 22, dodany domyślny backgroundColor `#ef4444` (czerwony)
+  - **Arrow:** pass → `#1a1a1a` (ciemnoszary), run → `#f97316` (pomarańczowy), shoot → `#ef4444` (bez zmian, poprawiono dokumentację)
+  - **Equipment:** ladder → `#eab308` (żółty), hurdle → `#4a4a4a` (ciemnoszary), goal → `#ffffff` (bez zmian)
+  - Zmodyfikowane pliki: `packages/core/src/board.ts`, `packages/board/src/ArrowNode.tsx`, `packages/board/src/EquipmentNode.tsx` (komentarz), `docs/FEATURE_SPEC.md`
+- **Refaktor Ball: SSOT kolorów piłki** (2026-06-09)
+  - Rozszerzono typ `BallElement` o pola `color`, `strokeColor`, `strokeWidth`
+  - Fabryka `createBall()` ustawia teraz domyślne wartości wizualne (`#ffffff`, `#1a1a1a`, `2`)
+  - `BallNode.tsx` czyta kolory z elementu zamiast hardcoded w JSX — pełna personalizacja przez Inspector
+  - Zmodyfikowane pliki: `packages/core/src/types.ts`, `packages/core/src/board.ts`, `packages/board/src/BallNode.tsx`
+- **Refaktor Drawing: fabryka `createDrawing()`** (2026-06-09)
+  - Utworzono `createDrawing(type, points)` w `packages/core/src/board.ts` — spójna fabryka z `DRAWING_DEFAULTS`
+  - Zastąpiono inline'ową konstrukcję w `elementsSlice.ts` wywołaniem fabryki
+  - Zmodyfikowane pliki: `packages/core/src/board.ts`, `apps/web/src/store/slices/elementsSlice.ts`
+- **Print Friendly (W): full B/W sanitization** (2026-06-09)
+  - **ArrowNode.tsx**: dodano `isPrintMode` do propsów. W trybie druku wszystkie strzałki renderują się na czarno (`#000000`), shoot ma 1.5× grubszą linię dla rozróżnienia
+  - **TextNode.tsx**: `sanitizeTextColor()` zamienia TERAZ wszystkie kolory na czarny (nie tylko white). `backgroundColor` i shadow są wyłączone w print mode
+  - **EquipmentNode.tsx**: `sanitizeForPrint()` zamienia WSZYSTKIE kolory na czarny (nie tylko white/yellow) — czysty B/W output
+  - Propagacja `isPrintMode` → `ArrowNode` przez `CanvasElements.tsx` i `ArrowsLayer.tsx`
+  - Zmodyfikowane pliki: `packages/board/src/ArrowNode.tsx`, `packages/board/src/TextNode.tsx`, `packages/board/src/EquipmentNode.tsx`, `apps/web/src/app/board/canvas/CanvasElements.tsx`, `apps/web/src/components/Canvas/layers/ArrowsLayer.tsx`
+
 ### Changed (Internal)
 - **Audyt wydajności `useBoardPageState`** (2026-06-09)
   - **Etap 1 — Reaktywność stanu pochodnego:** `selectedElement`, `canUndo`/`canRedo`, `stepsData` przepisane na reaktywne selektory + `useMemo` zamiast wywoływania getterów w renderze. `playerOrientationSettings` stabilnie zmemoizowane z surowego `document.playerOrientationSettings`.

@@ -10,6 +10,7 @@ import {
   ZoneElement,
   TextElement,
   EquipmentElement,
+  DrawingElement,
   Position,
   Team,
   ElementId,
@@ -19,6 +20,7 @@ import {
   ZoneShape,
   EquipmentType,
   EquipmentVariant,
+  DrawingType,
   isArrowElement,
 } from './types.js';
 
@@ -63,6 +65,9 @@ export function createBall(
     id: generateId(),
     type: 'ball',
     position: snapToGrid(position, gridSize),
+    color: '#ffffff',
+    strokeColor: '#1a1a1a',
+    strokeWidth: 2,
   };
 }
 
@@ -73,17 +78,17 @@ export function createArrow(
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): ArrowElement {
   const snappedStart = snapToGrid(startPoint, gridSize);
-  // Default colors: pass/run = white, shoot = red
+  // Default colors: pass = dark gray, run = orange, shoot = red
   let defaultColor: string;
   let defaultStroke: number;
   
   switch (arrowType) {
     case 'pass':
-      defaultColor = '#ffffff'; // White
+      defaultColor = '#1a1a1a'; // Dark gray
       defaultStroke = 4;
       break;
     case 'run':
-      defaultColor = '#ffffff'; // White
+      defaultColor = '#f97316'; // Orange
       defaultStroke = 3;
       break;
     case 'shoot':
@@ -91,7 +96,7 @@ export function createArrow(
       defaultStroke = 5; // Thicker for shoot
       break;
     default:
-      defaultColor = '#ffffff';
+      defaultColor = '#1a1a1a';
       defaultStroke = 4;
   }
   
@@ -139,11 +144,35 @@ export function createText(
     type: 'text',
     position,
     content,
-    fontSize: options?.fontSize ?? 18,
+    fontSize: options?.fontSize ?? 22,
     fontFamily: options?.fontFamily ?? 'Inter',
     color: options?.color ?? '#ffffff',
+    backgroundColor: options?.backgroundColor ?? '#ef4444',
     bold: options?.bold ?? false,
     italic: options?.italic ?? false,
+  };
+}
+
+/** Default drawing colors */
+const DRAWING_DEFAULTS: Record<DrawingType, Pick<DrawingElement, 'color' | 'strokeWidth' | 'opacity'>> = {
+  freehand: { color: '#ff0000', strokeWidth: 3, opacity: 1.0 },
+  highlighter: { color: '#ffff00', strokeWidth: 20, opacity: 0.4 },
+};
+
+/** Create a new drawing element (freehand / highlighter) */
+export function createDrawing(
+  drawingType: DrawingType,
+  points: number[],
+): DrawingElement {
+  const defaults = DRAWING_DEFAULTS[drawingType];
+  return {
+    id: generateId(),
+    type: 'drawing',
+    drawingType,
+    points,
+    color: defaults.color,
+    strokeWidth: defaults.strokeWidth,
+    opacity: defaults.opacity,
   };
 }
 
@@ -152,9 +181,9 @@ const EQUIPMENT_COLORS: Record<EquipmentType, string> = {
   goal: '#ffffff',      // White goal posts
   mannequin: '#fbbf24', // Yellow mannequin (PTU-style)
   cone: '#f97316',      // Orange cone
-  ladder: '#fbbf24',    // Yellow ladder
+  ladder: '#eab308',    // Yellow ladder
   hoop: '#ef4444',      // Red hoop
-  hurdle: '#22c55e',    // Green hurdle
+  hurdle: '#4a4a4a',    // Dark gray hurdle
   pole: '#f97316',      // Orange pole
 };
 

@@ -15,12 +15,14 @@ export interface ArrowNodeProps {
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   onEndpointDrag?: (id: string, endpoint: 'start' | 'end', position: Position) => void;
+  /** Print mode: all arrows render as black, shoot gets 1.5x stroke */
+  isPrintMode?: boolean;
 }
 
 /** Arrow colors - fallback when no color specified */
 const ARROW_COLORS = {
-  pass: '#ffffff', // White
-  run: '#ffffff', // White
+  pass: '#1a1a1a', // Dark gray
+  run: '#f97316',  // Orange
   shoot: '#ef4444', // Red
 };
 
@@ -34,6 +36,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   onSelect,
   onDragEnd,
   onEndpointDrag,
+  isPrintMode,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   
@@ -53,6 +56,12 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   const color = arrow.color || ARROW_COLORS[arrow.arrowType];
   const strokeWidth = arrow.strokeWidth || (arrow.arrowType === 'pass' ? 3 : 2);
   const dash = arrow.arrowType === 'run' ? [8, 4] : undefined;
+
+  // Print mode: all arrows black, shoot gets 1.5x stroke for visual distinction
+  const effectiveColor = isPrintMode ? '#000000' : color;
+  const effectiveStrokeWidth = isPrintMode && arrow.arrowType === 'shoot'
+    ? strokeWidth * 1.5
+    : strokeWidth;
 
   // Use preview positions if dragging, otherwise use arrow positions
   const displayStart = previewStart || arrow.startPoint;
@@ -204,9 +213,9 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
           return (
             <Arrow
               points={[startRelX, startRelY, endRelX, endRelY]}
-              stroke={color}
-              strokeWidth={strokeWidth}
-              fill={color}
+              stroke={effectiveColor}
+              strokeWidth={effectiveStrokeWidth}
+              fill={effectiveColor}
               pointerLength={10}
               pointerWidth={8}
               lineCap="round"
@@ -252,8 +261,8 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
                 startRelX + perpX, startRelY + perpY,
                 baseX + perpX, baseY + perpY
               ]}
-              stroke={color}
-              strokeWidth={strokeWidth}
+              stroke={effectiveColor}
+              strokeWidth={effectiveStrokeWidth}
               lineCap="round"
               lineJoin="round"
               hitStrokeWidth={15}
@@ -265,8 +274,8 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
                 startRelX - perpX, startRelY - perpY,
                 baseX - perpX, baseY - perpY
               ]}
-              stroke={color}
-              strokeWidth={strokeWidth}
+              stroke={effectiveColor}
+              strokeWidth={effectiveStrokeWidth}
               lineCap="round"
               lineJoin="round"
               hitStrokeWidth={15}
@@ -275,7 +284,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
             {/* Arrowhead triangle - fill only, no stroke */}
             <Line
               points={[tipX, tipY, leftX, leftY, rightX, rightY]}
-              fill={color}
+              fill={effectiveColor}
               strokeEnabled={false}
               closed={true}
               listening={false}
@@ -286,9 +295,9 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
         /* Standard arrow (pass/run) */
         <Arrow
           points={[startRelX, startRelY, endRelX, endRelY]}
-          stroke={color}
-          strokeWidth={strokeWidth}
-          fill={color}
+          stroke={effectiveColor}
+          strokeWidth={effectiveStrokeWidth}
+          fill={effectiveColor}
           pointerLength={10}
           pointerWidth={8}
           dash={dash}
@@ -307,7 +316,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
             y={startRelY}
             radius={8}
             fill="#fff"
-            stroke={color}
+            stroke={effectiveColor}
             strokeWidth={2}
             onMouseDown={(e) => handleEndpointMouseDown('start', e)}
             onMouseEnter={(e) => {
@@ -326,7 +335,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
             y={endRelY}
             radius={8}
             fill="#fff"
-            stroke={color}
+            stroke={effectiveColor}
             strokeWidth={2}
             onMouseDown={(e) => handleEndpointMouseDown('end', e)}
             onMouseEnter={(e) => {

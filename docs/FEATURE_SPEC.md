@@ -323,10 +323,23 @@ Bottom to top:
 
 **Properties:**
 - `position`: {x, y} canvas coordinates
-- `radius`: fixed at 8px
-- Visual: Orange circle (#ff8c42) with black stroke
+- Visual properties stored in element data (not hardcoded in renderer):
+  - `color`: #ffffff (white) — configurable via Inspector
+  - `strokeColor`: #1a1a1a (dark gray) — configurable via Inspector
+  - `strokeWidth`: 2px — configurable via Inspector
+- Pentagon pattern details (center + 5 outer patches) use `strokeColor` for center fill
 
 **Interactions:** Standard (select, drag, nudge, copy, delete) — no special behaviors
+
+**Ball element type fields (since refactor):**
+```
+interface BallElement extends BoardElementBase {
+  type: 'ball';
+  color?: string;         // fill (default: #ffffff)
+  strokeColor?: string;   // stroke (default: #1a1a1a)
+  strokeWidth?: number;   // stroke width (default: 2)
+}
+```
 
 ---
 
@@ -336,9 +349,9 @@ Bottom to top:
 
 | Type | Visual | Default Color | Default Stroke |
 |------|--------|---------------|----------------|
-| `pass` | Solid line + arrowhead | #ffffff (white) | 4px |
-| `run` | Dashed line + arrowhead | #ffffff (white) | 3px |
-| `shoot` | Double parallel lines + filled triangle | #ff0000 (red) | 5px |
+| `pass` | Solid line + arrowhead | #1a1a1a (dark gray) | 4px |
+| `run` | Dashed line + arrowhead | #f97316 (orange) | 3px |
+| `shoot` | Double parallel lines + filled triangle | #ef4444 (red) | 5px |
 
 #### 1.4.2 Creation & Tool Activation
 
@@ -383,9 +396,9 @@ Bottom to top:
 #### 1.4.5 Default Values
 
 ```
-pass:  { color: '#ffffff', strokeWidth: 4, dash: [] }
-run:   { color: '#ffffff', strokeWidth: 3, dash: [8, 4] }
-shoot: { color: '#ff0000', strokeWidth: 5, dash: [] }
+pass:  { color: '#1a1a1a', strokeWidth: 4, dash: [] }
+run:   { color: '#f97316', strokeWidth: 3, dash: [8, 4] }
+shoot: { color: '#ef4444', strokeWidth: 5, dash: [] }
 ```
 
 ---
@@ -468,12 +481,12 @@ shoot: { color: '#ff0000', strokeWidth: 5, dash: [] }
 
 ```
 content: 'Text'
-fontSize: 18
+fontSize: 22
 fontFamily: 'Inter, system-ui, sans-serif'
 color: '#ffffff'
+backgroundColor: '#ef4444'
 bold: false
 italic: false
-backgroundColor: undefined
 ```
 
 ---
@@ -1448,27 +1461,28 @@ showLabel: false
 
 **Ball:**
 ```
-radius: 8 (fixed)
-color: '#ff8c42'
+color: '#ffffff'       (fill)
+strokeColor: '#1a1a1a' (stroke)
+strokeWidth: 2
 ```
 
 **Arrow (pass):**
 ```
-color: '#ffffff'
+color: '#1a1a1a'
 strokeWidth: 4
 dash: []
 ```
 
 **Arrow (run):**
 ```
-color: '#ffffff'
+color: '#f97316'
 strokeWidth: 3
 dash: [8, 4]
 ```
 
 **Arrow (shoot):**
 ```
-color: '#ff0000'
+color: '#ef4444'
 strokeWidth: 5
 dash: []
 ```
@@ -1486,12 +1500,12 @@ borderWidth: 2
 **Text:**
 ```
 content: 'Text'
-fontSize: 18
+fontSize: 22
 fontFamily: 'Inter, system-ui, sans-serif'
 color: '#ffffff'
+backgroundColor: '#ef4444'
 bold: false
 italic: false
-backgroundColor: undefined
 ```
 
 **Drawing (freehand):**
@@ -1516,9 +1530,9 @@ color: varies by type:
   - goal: '#ffffff' (white)
   - mannequin: '#fbbf24' (yellow)
   - cone: '#f97316' (orange)
-  - ladder: '#fbbf24' (yellow)
+  - ladder: '#eab308' (yellow)
   - hoop: '#ef4444' (red)
-  - hurdle: '#22c55e' (green)
+  - hurdle: '#4a4a4a' (dark gray)
   - pole: '#f97316' (orange)
 ```
 

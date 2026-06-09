@@ -84,6 +84,11 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
     onDragEnd(ball.id, clamped);
   };
 
+  // Resolve visual properties from ball element with fallbacks
+  const fillColor = ball.color || '#ffffff';
+  const strokeColor = ball.strokeColor || '#1a1a1a';
+  const strokeWidth = ball.strokeWidth ?? 2;
+
   // Pentagon positions for ball pattern (5 around center)
   const pentagonPositions = [
     { x: 0, y: -5 },      // top
@@ -133,30 +138,30 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
         />
       )}
       
-      {/* Ball base - white circle */}
+      {/* Ball base */}
       <Circle
         x={0}
         y={0}
         radius={BALL_RADIUS}
-        fill="#ffffff"
-        stroke={isSelected ? '#ffd60a' : '#1a1a1a'}
-        strokeWidth={isSelected ? 2.5 : 2}
+        fill={fillColor}
+        stroke={isSelected ? '#ffd60a' : strokeColor}
+        strokeWidth={isSelected ? 2.5 : strokeWidth}
         perfectDrawEnabled={false}
       />
       
-      {/* Center pentagon - black */}
+      {/* Center pentagon */}
       <RegularPolygon
         x={0}
         y={0}
         sides={5}
         radius={4}
         rotation={-18}
-        fill="#1a1a1a"
+        fill={strokeColor}
         listening={false}
         perfectDrawEnabled={false}
       />
       
-      {/* Outer pentagon patches - gray */}
+      {/* Outer pentagon patches */}
       {pentagonPositions.map((pos, i) => (
         <RegularPolygon
           key={i}
@@ -192,6 +197,9 @@ export const BallNode = memo(BallNodeComponent, (prevProps, nextProps) => {
     prevProps.ball.id === nextProps.ball.id &&
     prevProps.ball.position.x === nextProps.ball.position.x &&
     prevProps.ball.position.y === nextProps.ball.position.y &&
+    prevProps.ball.color === nextProps.ball.color &&
+    prevProps.ball.strokeColor === nextProps.ball.strokeColor &&
+    prevProps.ball.strokeWidth === nextProps.ball.strokeWidth &&
     prevProps.isSelected === nextProps.isSelected
   );
 });

@@ -24,15 +24,20 @@ export interface TextNodeProps {
 
 const SELECTION_PADDING = 6;
 
-/** Sanitize white to black in print mode (inline, avoids cross-package import) */
+/** Sanitize color for print mode — map all colors to solid black for B/W output */
 function sanitizeTextColor(color: string | undefined, isPrintMode: boolean): string {
   // Default: black in print mode, white otherwise
   if (!color) {
     return isPrintMode ? '#000000' : '#ffffff';
   }
   
-  // Sanitize white to black in print mode
-  if (isPrintMode && color.trim().toLowerCase() === '#ffffff') {
+  // In print mode, ALL colors → black (pure B/W output)
+  if (isPrintMode) {
+    return '#000000';
+  }
+  
+  // Normal mode: sanitize white fallback (defensive — white on white bg is invisible)
+  if (color.trim().toLowerCase() === '#ffffff') {
     return '#000000';
   }
   
@@ -129,6 +134,10 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   // Build font style string
   const fontStyle = `${text.bold ? 'bold ' : ''}${text.italic ? 'italic' : ''}`.trim() || 'normal';
 
+  // Print mode: force no background and no shadow
+  const effectiveBgColor = isPrintMode ? undefined : (text.backgroundColor || undefined);
+  const showShadow = !isDragging && !isPrintMode;
+
   return (
     <Group id={text.id}
       ref={groupRef}
@@ -143,14 +152,14 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Background rectangle for visibility */}
-      {text.backgroundColor && (
+      {/* Background rectangle for visibility (disabled in print mode) */}
+      {effectiveBgColor && (
         <Rect
           x={-4}
           y={-2}
           width={textSize.width + 8}
           height={textSize.height + 4}
-          fill={text.backgroundColor}
+          fill={effectiveBgColor}
           opacity={0.85}
           cornerRadius={4}
           perfectDrawEnabled={false}
@@ -173,7 +182,7 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
         />
       )}
       
-      {/* Text content with shadow for readability */}
+      {/* Text content with shadow for readability (no shadow in print mode) */}
       <Text
         ref={textRef}
         x={0}
@@ -183,10 +192,10 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
         fontFamily={text.fontFamily}
         fontStyle={fontStyle}
         fill={effectiveColor}
-        shadowColor={isDragging ? undefined : 'rgba(0,0,0,0.5)'}
-        shadowBlur={isDragging ? 0 : 2}
-        shadowOffset={isDragging ? undefined : { x: 1, y: 1 }}
-        shadowEnabled={!isDragging}
+        shadowColor={showShadow ? 'rgba(0,0,0,0.5)' : undefined}
+        shadowBlur={showShadow ? 2 : 0}
+        shadowOffset={showShadow ? { x: 1, y: 1 } : undefined}
+        shadowEnabled={showShadow}
         perfectDrawEnabled={false}
       />
     </Group>

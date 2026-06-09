@@ -14,6 +14,7 @@ export interface ArrowsLayerProps {
   pitchConfig: PitchConfig;
   isPlaying: boolean;
   visible: boolean;
+  isPrintMode?: boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
   onEndpointDrag?: (id: string, endpoint: 'start' | 'end', pos: { x: number; y: number }) => void;
@@ -25,6 +26,7 @@ export const ArrowsLayer = memo<ArrowsLayerProps>(({
   pitchConfig,
   isPlaying,
   visible,
+  isPrintMode,
   onSelect,
   onDragEnd,
   onEndpointDrag,
@@ -43,6 +45,7 @@ export const ArrowsLayer = memo<ArrowsLayerProps>(({
           isSelected={!isPlaying && selectedIds.includes(arrow.id)}
           onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
           onDragEnd={isPlaying ? () => {} : (onDragEnd || (() => {}))}
+          isPrintMode={isPrintMode}
           onEndpointDrag={onEndpointDrag || (() => {})}
         />
       ))}

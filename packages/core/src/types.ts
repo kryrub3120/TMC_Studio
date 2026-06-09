@@ -52,6 +52,12 @@ export interface PlayerElement extends BoardElementBase {
 /** Ball element on the board */
 export interface BallElement extends BoardElementBase {
   type: 'ball';
+  /** Fill color (default: #ffffff) */
+  color?: string;
+  /** Stroke color (default: #1a1a1a) */
+  strokeColor?: string;
+  /** Stroke width in pixels (default: 2) */
+  strokeWidth?: number;
 }
 
 /** Arrow types for tactical movements */
