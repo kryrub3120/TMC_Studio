@@ -157,6 +157,10 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const setZoom = useUIStore((s) => s.setZoom);
   const viewportLocked = useUIStore((s) => s.viewportLocked); // ETAP 4
 
+  // ─── zoomRef: always-fresh snapshot for ResizeObserver callback ────
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+
   // ─── Container measurement ───────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -179,10 +183,12 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
           MAX_FIT_UPSCALE,
         );
         if (newFitZoom > 0) {
-          const currentZoom = useUIStore.getState().zoom;
-          // currentZoom > newFitZoom → pitch bleeds outside visible viewport
-          if (currentZoom > newFitZoom) {
-            const forcedZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newFitZoom));
+          // Read FRESH current zoom via ref (never stale)
+          const curZoom = zoomRef.current;
+          // Correct check: effectiveZoom > 1 means pitch overflows
+          if (curZoom * newFitZoom > 1) {
+            // We need zoom such that zoom * newFitZoom = 1 → zoom = 1 / newFitZoom
+            const forcedZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, 1 / newFitZoom));
             useUIStore.getState().setZoom(forcedZoom);
           }
         }
@@ -192,7 +198,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     });
     observer.observe(container);
     return () => observer.disconnect();
-  }, [canvasWidth, canvasHeight]);
+  }, [canvasWidth, canvasHeight, zoomRef]);
 
   // ─── Responsive container padding ────────────────────────────────────
   const containerPadding = useMemo(() => {

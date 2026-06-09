@@ -203,21 +203,6 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
 
   const activeGroup = tabDefs.find(t => t.id === activeTab);
 
-  // Keyboard navigation between tabs
-  const handleTabKeyDown = useCallback((e: React.KeyboardEvent, tabId: string) => {
-    const idx = tabDefs.findIndex(t => t.id === tabId);
-    if (idx === -1) return;
-
-    let nextIdx: number | null = null;
-    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabDefs.length;
-    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabDefs.length) % tabDefs.length;
-
-    if (nextIdx !== null) {
-      e.preventDefault();
-      setActiveTab(tabDefs[nextIdx].id);
-    }
-  }, [tabDefs]);
-
   return (
     <div className="absolute bottom-4 right-4 z-cheatsheet flex flex-col items-end pointer-events-none">
       {/* Expanded Shortcuts Panel */}
@@ -248,7 +233,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
               </button>
             </div>
 
-            {/* Tab Bar (responsive pill row) */}
+            {/* Tab Bar — click only, no keyboard hijack */}
             {tabDefs.length > 1 && (
               <div
                 className="flex gap-1 mb-3 overflow-x-auto scrollbar-none"
@@ -261,7 +246,6 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
                     role="tab"
                     aria-selected={activeTab === tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
                     className={`px-3 py-1 text-xs font-medium rounded-full transition-colors duration-fast whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                       activeTab === tab.id
                         ? 'bg-accent text-white'
@@ -274,9 +258,10 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
               </div>
             )}
 
-            {/* Active tab content */}
-            <div className="space-y-3 max-h-[55vh] overflow-y-auto" role="tabpanel">
-              {activeGroup?.sections.map((section) => (
+            {/* Active tab content — flex-grow to fill available height */}
+            <div className="flex flex-col min-h-0 max-h-[55vh]">
+              <div className="flex-1 overflow-y-auto space-y-3">
+                {activeGroup?.sections.map((section) => (
                 <div key={section.title}>
                   <h4 className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
                     {section.title}
@@ -293,6 +278,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
                   </div>
                 </div>
               ))}
+              </div>
             </div>
 
             {/* Footer */}
