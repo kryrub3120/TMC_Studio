@@ -739,11 +739,31 @@ Same as freehand, with different defaults:
 |---------|----------|
 | `Cmd+=` (plus) | Zoom in +25% |
 | `Cmd+-` (minus) | Zoom out -25% |
+| `+` / `=` (plain) | Zoom in +25% (gdy nie zaznaczono sprzętu) |
+| `-` (plain) | Zoom out -25% (gdy nie zaznaczono sprzętu) |
 | `Ctrl+Scroll wheel` | Zoom to cursor position |
 | `0` (zero key) | Fit view (reset zoom + pan) |
 | Zoom Widget buttons | +/- 25% or Fit |
 
-**Effective zoom calculation:**
+**Note:** Plain `+`/`-` zoom shortcuts are disabled when equipment is selected (equipment scaling takes priority) and when viewport is locked.
+
+**Auto-scale on browser resize:**
+- ResizeObserver on the measuring container detects container size changes
+- If current user zoom exceeds the fit zoom for the new container, zoom is clamped to fit and pan is re-centered
+- Bypasses viewport lock (the board must never be clipped by window resize)
+
+**DOM layout (flex containment chain):**
+```
+BoardPage div (flex flex-col min-h-0 h-screen)
+  └── TopBar
+  └── div (flex-1 flex min-w-0 min-h-0 overflow-hidden p-4 relative)
+       └── BoardCanvasSection div (absolute inset-0 overflow-hidden flex items-center justify-center)
+            └── CanvasShell (w-full h-full)
+                 └── Konva Stage + overlays
+```
+- `min-w-0` / `min-h-0` override the default flex min-size:auto, allowing flex children to shrink
+- The measuring div uses `absolute inset-0` so the Konva Stage's intrinsic dimensions cannot force the parent open
+- Overlays (CheatSheet, ZoomWidget, ShortcutsHint) render outside the absolute container
 <!-- ✅ ETAP 4 D1: Alias `effectiveZoom` usunięty; obliczenie nadal poprawne koncepcyjnie -->
 ```
 effectiveZoom = userZoom × fitZoom
@@ -1242,6 +1262,12 @@ Located in right sidebar (toggle with `I` key):
 - `Shift+C` — Clear ALL elements (with confirmation)
 
 #### View & Display (11)
+- `Cmd+=` — Zoom in
+- `Cmd+-` — Zoom out
+- `+` / `=` (plain) — Zoom in
+- `-` (plain) — Zoom out
+- `Ctrl+Scroll` — Zoom to cursor
+- `Space+Drag` — Pan canvas
 - `I` — Toggle inspector panel
 - `F` — Toggle focus mode
 - `?` — Toggle cheat sheet (help overlay)
@@ -1249,10 +1275,6 @@ Located in right sidebar (toggle with `I` key):
 - `W` — Toggle print-friendly mode
 - `G` — Toggle grid visibility
 - `0` (zero) — Fit view (reset zoom + pan)
-- `Cmd+=` — Zoom in
-- `Cmd+-` — Zoom out
-- `Ctrl+Scroll` — Zoom to cursor
-- `Space+Drag` — Pan canvas
 
 #### Steps & Playback (4)
 - `N` — Add new step
@@ -1289,8 +1311,10 @@ Located in right sidebar (toggle with `I` key):
 #### Equipment (5)
 - `[` / `]` — Rotate ±15°
 - `{` / `}` (Shift+[ / ]) — Rotate ±90°
-- `+` — Scale +15%
-- `-` — Scale -15%
+- `+` (no Cmd, equipment selected) — Scale +15%
+- `-` (no Cmd, equipment selected) — Scale -15%
+- `+` (no Cmd, no selection) — Zoom In (fallback gdy brak sprzętu)
+- `-` (no Cmd, no selection) — Zoom Out (fallback gdy brak sprzętu)
 - `Alt+↑/↓` — Cycle color
 
 #### Context-Dependent (Player Selected) (3)

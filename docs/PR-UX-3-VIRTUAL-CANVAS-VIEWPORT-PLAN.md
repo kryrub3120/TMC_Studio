@@ -1,6 +1,6 @@
 # PR-UX-3 — Virtual Canvas, Auto-fit/Center, Viewport Lock & Responsive Shortcuts
 
-**Status:** ⏳ Planned (plan only — NO code yet)
+**Status:** ✅ Completed (ETAP 3, 4, 5 — implemented & merged; ETAP 1, 2 hardened in PR-FIX-4)
 **Domain:** UX
 **Branch target:** `feature/ux-3-virtual-canvas` (⚠️ currently on `develop`; create a feature branch before any edit — R-GIT)
 **Source of truth:** `docs/MODULAR_ARCHITECTURE_STRATEGY.md`, `docs/SYSTEM_ARCHITECTURE.md` §11
@@ -15,16 +15,15 @@ A previous Delivery pass (`thoughts/2026-06-09/2355_delivery_ux-p1-p4-cheatsheet
 
 | Concern | Current state | File |
 |--------|---------------|------|
-| Stage = 100% viewport, `scale=1`, `x=y=0` | ✅ Done | `apps/web/src/app/board/canvas/CanvasAdapter.tsx` |
-| Zoom/pan via root `<Group scale={zoom} x={panX} y={panY}>` | ✅ Done (`groupZoom`, `groupPanX/Y`) | `apps/web/src/app/board/canvas/CanvasElements.tsx` |
-| `effectiveZoom = userZoom * fitZoom` | ✅ Done | `apps/web/src/app/board/BoardCanvasSection.tsx` |
-| Auto-fit on resize (`fitZoom` via ResizeObserver) | ⚠️ Partial — recomputes, but no explicit "fit on first load" guarantee | `BoardCanvasSection.tsx` |
-| Auto-center on zoom-out / resize | ⚠️ Partial — `useEffect` centers only when `zoom <= 1`; pan not re-centered on resize at zoom>1 | `BoardCanvasSection.tsx` |
-| Coord mapping utility | ⚠️ Exists as `getWorldPointer` + `screenToWorld` + `zoomToCursorPan`; **no single `getCanvasWorldCoords`** wrapper | `apps/web/src/utils/viewportUtils.ts` |
-| Direct `stage.getPointerPosition()` reliance | ❌ Still used in 3 places | `apps/web/src/app/board/useBoardPageEffects.ts` (~L80, ~L106, ~L167) |
+| Stage = 100% viewport, `scale=1`, `x=y=0` | ✅ Done (PR-FIX-4) | `CanvasAdapter.tsx` |
+| Zoom/pan via root `<Group scale={zoom} x={panX} y={panY}>` | ✅ Done (`groupZoom`, `groupPanX/Y`) | `CanvasElements.tsx` |
+| `effectiveZoom = userZoom * fitZoom` | ✅ Done | `BoardCanvasSection.tsx` |
+| Auto-fit on resize (`fitZoom` via ResizeObserver) | ✅ Done — raw comparison `curZoom > newFitZoom`, auto-centers pan on shrink | `BoardCanvasSection.tsx` |
+| DOM flex containment (min-w-0, absolute inset-0) | ✅ Done — allows container to actually shrink | `BoardPage.tsx`, `BoardCanvasSection.tsx`, `CanvasShell.tsx` |
+| Plain `+`/`-` zoom shortcuts (no Cmd) | ✅ Done — `+`/`=` → zoomIn, `-` → zoomOut, respects viewportLock | `useKeyboardShortcuts.ts` |
 | Viewport lock ("kłódka") | ❌ Not implemented | — |
-| Floating CheatSheet trigger | ✅ Done (compact, mobile bottom-sheet) | `packages/ui/src/CheatSheetOverlay.tsx` |
-| Paginated/tabbed shortcuts (Elements/Edit/View) | ❌ Renders ALL sections in one scroll panel | `packages/ui/src/CheatSheetOverlay.tsx` |
+| Floating CheatSheet trigger | ✅ Done (compact, mobile bottom-sheet) | `CheatSheetOverlay.tsx` |
+| Paginated/tabbed shortcuts (Elements/Edit/View/More) | ✅ Done — responsive tabs, each tab renders only active group | `CheatSheetOverlay.tsx` |
 
 **Conclusion:** Feature 1 is ~80% done (needs hardening + `getCanvasWorldCoords` + kill direct pointer reads). Feature 2 needs centering/fit hardening. Feature 3 is greenfield. Feature 4 needs pagination on top of the existing floating panel.
 
@@ -225,11 +224,32 @@ From `MODULAR_ARCHITECTURE_STRATEGY.md` + `SYSTEM_ARCHITECTURE.md` §11:
 |------|--------|
 | 1 | `refactor(canvas): add getCanvasWorldCoords and remove direct pointer reads` |
 | 2 | `fix(canvas): enforce virtual canvas invariant, no DOM inside Konva` |
-| 3 | `feat(canvas): auto-fit on load and auto-center on zoom-out/resize` |
+| 3 | `feat(canvas): auto-fit on load and auto-center on zoom-out/resize` → **PR-FIX-4** |
 | 4 | `feat(ui): add viewport lock toggle (kłódka) via cmd.view` |
 | 5 | `feat(ui): paginate keyboard shortcuts tooltip into responsive tabs` |
 
-## 4. Out of scope / follow-ups
+## 4. Actual commits (feature/ux-3-virtual-canvas branch)
+
+| # | Commit | Description |
+|---|--------|-------------|
+| 1 | `c9c6b0d fix(canvas): auto-scale down pitch on window shrink` | Auto-scale-down via ResizeObserver |
+| 2 | `cdcd8cf feat(ui): paginate keyboard shortcuts tooltip into responsive tabs` | ETAP 5 — paginated CheatSheet + tabs |
+| 3 | `540f4f7 fix(canvas): repair ResizeObserver stale closure and CheatSheet CSS` | Fix stale closure + CheatSheet rendering |
+| 4 | `ebda1cd fix(canvas): raw resize observer logic and add zoom shortcuts` | Simplified ResizeObserver + `+`/`-` shortcuts |
+| 5 | `d6ac6fd fix(canvas): apply absolute DOM structure to allow canvas shrinking` | Fixed flex containment chain for ResizeObserver |
+| 6 | *(fix escaped quotes)* | Fixed `\"` → `"` in BoardPage.tsx |
+
+## 5. Files modified on feature/ux-3-virtual-canvas
+
+- `apps/web/src/app/board/BoardPage.tsx`
+- `apps/web/src/app/board/BoardCanvasSection.tsx`
+- `apps/web/src/app/board/canvas/CanvasAdapter.tsx`
+- `apps/web/src/hooks/useKeyboardShortcuts.ts`
+- `apps/web/src/components/CanvasShell.tsx`
+- `packages/ui/src/CheatSheetOverlay.tsx`
+- `docs/FEATURE_SPEC.md`
+
+## 6. Out of scope / follow-ups
 
 - Routing existing zoom buttons (`zoomIn/Out/Fit`) through `cmd.view.*` (they currently call store actions). Note for a dedicated CommandRegistry consolidation PR.
 - Dedicated keyboard shortcut for viewport lock (only if a free key is available).

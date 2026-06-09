@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Skróty zoomu `+`/`-` (bez Cmd)** (2026-06-09)
+  - Plain `+`/`=` → zoomIn, plain `-` → zoomOut
+  - Działają tylko gdy nie zaznaczono sprzętu (sprzęt ma priorytet scale)
+  - Respektują `viewportLocked` — gdy zablokowane, skróty nie działają
+  - CheatSheet zaktualizowany: Zoom In (+), Zoom Out (-) w zakładce View
+- **Auto-scale-down na resize okna** (2026-06-09)
+  - ResizeObserver z prostym porównaniem `curZoom > newFitZoom`
+  - Przy overflow: setZoom do fitZoom + wycentrowanie pana
+  - Działa nawet gdy viewportLocked (boiska nie może uciąć resize)
+- **Poprawiona struktura DOM flex (min-w-0, absolute inset-0)** (2026-06-09)
+  - `BoardPage.tsx`: canvas wrapper `min-w-0 min-h-0 overflow-hidden` — pozwala flex childowi faktycznie się kurczyć
+  - `BoardCanvasSection.tsx`: containerRef `absolute inset-0 overflow-hidden` — odseparowuje Konvę od layoutu
+  - `CanvasShell.tsx`: usunięto `aspect-[4/3]`, zastąpiono `w-full h-full`
 - **System numeracji strzałek (PR-ARROW-NUMBER)** (2026-06-09)
   - Nowe opcjonalne pola `number` i `showNumber` w `ArrowElement` (`packages/core`)
   - Tryb **Auto-Numbering Mode** (`Shift+N`) — każda nowa strzałka przez drag dostaje kolejny numer
