@@ -453,7 +453,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   return (
     <div
       ref={containerRef}
-      className={`shadow-canvas rounded-[20px] border border-border/50 p-3 bg-surface/50 backdrop-blur-sm ${cursorClass}`}
+      className={`absolute inset-0 overflow-hidden flex items-center justify-center shadow-canvas rounded-[20px] border border-border/50 bg-surface/50 backdrop-blur-sm ${cursorClass}`}
       style={{ touchAction: 'manipulation' }}
       onPointerDown={handleContainerPointerDown}
       onPointerMove={handleContainerPointerMove}
