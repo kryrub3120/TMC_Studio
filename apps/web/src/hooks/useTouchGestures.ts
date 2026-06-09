@@ -32,10 +32,10 @@ export interface TouchGesturesOptions {
   onDoubleTap?: () => void;
 }
 
-const PINCH_ZOOM_SENSITIVITY = 0.005;
+const PINCH_ZOOM_SENSITIVITY_BASE = 0.005;
 const DOUBLE_TAP_DELAY = 300; // ms
 const DOUBLE_TAP_DISTANCE_THRESHOLD = 30; // px — max movement allowed between taps
-const PAN_CLAMP_MARGIN = 80;
+const PAN_CLAMP_MARGIN = 200;
 
 export function useTouchGestures(options: TouchGesturesOptions) {
   const {
@@ -139,9 +139,10 @@ export function useTouchGestures(options: TouchGesturesOptions) {
         if (!pinch.active) return;
 
         // ── Delta-based pinch zoom ──
-        // delta = (currentDist - startDist) * sensitivity
+        // delta = (currentDist - startDist) * sensitivity * DPR
+        const dpr = window.devicePixelRatio || 1;
         const deltaPixels = dist - pinch.startDist;
-        const zoomDelta = deltaPixels * PINCH_ZOOM_SENSITIVITY;
+        const zoomDelta = deltaPixels * PINCH_ZOOM_SENSITIVITY_BASE * Math.sqrt(dpr);
         const newUserZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, pinch.startZoom * (1 + zoomDelta)));
         useUIStore.getState().setZoom(newUserZoom);
 

@@ -98,7 +98,7 @@ export interface BoardCanvasSectionProps {
 // ─── Constants ──────────────────────────────────────────────────────────
 const MIN_CONTAINER_SIZE = 200;
 const MAX_FIT_UPSCALE = 1.5;
-const PAN_CLAMP_MARGIN = 80;
+const PAN_CLAMP_MARGIN = 200;
 const WHEEL_ZOOM_FACTOR = 0.001; // sensitivity for Ctrl+wheel zoom
 
 export function BoardCanvasSection(props: BoardCanvasSectionProps) {
@@ -348,7 +348,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     y: centerY + panOffset.y,
   };
 
-  // ─── Cursor style ───────────────────────────────────────────────────
+  // ─── Cursor style ────────────────────────────────────────────────────
   const cursorClass = spaceHeld
     ? (isPanningRef.current ? 'cursor-grabbing' : 'cursor-grab')
     : '';
@@ -357,7 +357,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     <div
       ref={containerRef}
       className={`shadow-canvas rounded-[20px] border border-border/50 p-3 bg-surface/50 backdrop-blur-sm ${cursorClass}`}
-      style={{ touchAction: 'manipulation' /* browser tap gestures, manual pinch */ }}
+      style={{ touchAction: 'manipulation' }}
       onPointerDown={handleContainerPointerDown}
       onPointerMove={handleContainerPointerMove}
       onPointerUp={handleContainerPointerUp}

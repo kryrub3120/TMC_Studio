@@ -21,7 +21,7 @@ export const CanvasShell: React.FC<CanvasShellProps> = ({
   emptyStateOverlay,
 }) => {
   return (
-    <div className="relative aspect-[4/3]">
+    <div className="relative aspect-[4/3] transition-transform duration-slow will-change-transform">
       {/* BoardCanvas (Konva) */}
       {children}
       
