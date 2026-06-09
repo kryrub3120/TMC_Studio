@@ -84,6 +84,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const updateSelectedElement = useBoardStore((s) => s.updateSelectedElement);
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
+  const isAutoNumbering = useBoardStore((s) => s.isAutoNumbering); // PR-ARROW-NUMBER
   // Reaktywne selektory wartości (re-render przy zmianie historii)
   const canUndo = useBoardStore((s) => s.historyIndex > 0);
   const canRedo = useBoardStore((s) => s.historyIndex < s.history.length - 1);
@@ -444,6 +445,7 @@ export function useBoardPageState(props: BoardPageProps) {
     isSaved,
     inspectorElement,
     elementsList,
+    isAutoNumbering, // PR-ARROW-NUMBER
     
     // Canvas
     pitchConfig,

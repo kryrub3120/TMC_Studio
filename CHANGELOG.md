@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **System numeracji strzałek (PR-ARROW-NUMBER)** (2026-06-09)
+  - Nowe opcjonalne pola `number` i `showNumber` w `ArrowElement` (`packages/core`)
+  - Tryb **Auto-Numbering Mode** (`Shift+N`) — każda nowa strzałka przez drag dostaje kolejny numer
+  - **One-shot auto-number** (`Shift+A` / `Shift+R`) — aktywuje narzędzie + flagę, numer nadawany post-draw
+  - **Smart Sequencing** — `→` (ArrowRight) na zaznaczonej strzałce przełącza numer z auto-inkrementacją
+  - **Discard threshold 20px** — krótkie kliknięcia nie marnują numeru sekwencji
+  - Globalny stan `isAutoNumbering` w `documentSlice`, flaga `nextArrowShouldBeNumbered` w `drawingSlice`
+  - Menu kontekstowe: przełącznik "Auto-numeracja: ON/OFF", "Dodaj/Edytuj numer" → Smart Sequencing
+  - Renderowanie numerka na środku strzałki (okrąg + biały tekst, `ArrowNode.tsx`)
+  - Skróty w `CheatSheetOverlay` + pełna dokumentacja w `FEATURE_SPEC.md` (sekcja 1.4.6)
+  - Zmodyfikowane pliki: `packages/core/src/types.ts`, `packages/core/src/board.ts`, `packages/board/src/ArrowNode.tsx`, `packages/ui/src/CheatSheetOverlay.tsx`, `apps/web/src/store/slices/drawingSlice.ts`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/store/slices/documentSlice.ts`, `apps/web/src/hooks/useKeyboardShortcuts.ts`, `apps/web/src/utils/canvasContextMenu.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/app/routes/useBoardPageState.ts`, `docs/FEATURE_SPEC.md`
+
 ### Changed (User-Facing)
 - **Refaktor `createPlayer` — options-based, brak numeru dla pojedynczego zawodnika** (2026-06-09)
   - `createPlayer` zmienione na `options`-based (`CreatePlayerOptions`) — `number` stał się opcjonalny

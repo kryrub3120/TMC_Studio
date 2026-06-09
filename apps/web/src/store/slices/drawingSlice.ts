@@ -3,8 +3,8 @@
  */
 
 import type { StateCreator } from 'zustand';
-import type { Position, ElementId, ArrowType, ZoneShape, DrawingType } from '@tmc/core';
-import { createArrow, createZone } from '@tmc/core';
+import type { Position, ElementId, ArrowType, ZoneShape, DrawingType, BoardElement } from '@tmc/core';
+import { createArrow, createZone, isArrowElement } from '@tmc/core';
 import type { AppState } from '../types';
 
 export interface DrawingSlice {
@@ -19,12 +19,18 @@ export interface DrawingSlice {
   // Multi-drag state
   multiDragOffsets: Map<ElementId, Position> | null;
   
+  // PR-ARROW-NUMBER: One-shot auto-number flag for next arrow drawn via drag
+  nextArrowShouldBeNumbered: boolean;
+  
   // Click-drag drawing actions
   startDrawing: (position: Position) => void;
   updateDrawing: (position: Position) => void;
   finishArrowDrawing: (arrowType: ArrowType) => void;
   finishZoneDrawing: (shape: ZoneShape) => void;
   cancelDrawing: () => void;
+  
+  // PR-ARROW-NUMBER: Set one-shot auto-number flag
+  setNextArrowShouldBeNumbered: (value: boolean) => void;
   
   // Freehand drawing actions
   startFreehandDrawing: (type: DrawingType, position: Position) => void;
@@ -42,6 +48,7 @@ export const createDrawingSlice: StateCreator<
   freehandPoints: null,
   freehandType: null,
   multiDragOffsets: null,
+  nextArrowShouldBeNumbered: false,
   
   startDrawing: (position) => {
     set({ drawingStart: position, drawingEnd: position });
@@ -52,8 +59,17 @@ export const createDrawingSlice: StateCreator<
   },
   
   finishArrowDrawing: (arrowType) => {
-    const { drawingStart, drawingEnd } = get();
+    const { drawingStart, drawingEnd, nextArrowShouldBeNumbered, elements, isAutoNumbering } = get();
     if (!drawingStart || !drawingEnd) return;
+    
+    // PR-ARROW-NUMBER: Discard threshold — ignore mini-arrows (taps/clicks)
+    const dx = drawingEnd.x - drawingStart.x;
+    const dy = drawingEnd.y - drawingStart.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < 20) {
+      set({ drawingStart: null, drawingEnd: null, nextArrowShouldBeNumbered: false });
+      return;
+    }
     
     const arrow = {
       ...createArrow(drawingStart, arrowType),
@@ -61,11 +77,23 @@ export const createDrawingSlice: StateCreator<
       endPoint: drawingEnd,
     };
     
+    // PR-ARROW-NUMBER: Auto-number if flag is set or global mode is on
+    if (nextArrowShouldBeNumbered || isAutoNumbering) {
+      const numbers = elements
+        .filter(isArrowElement)
+        .map((a: BoardElement) => (a as any).number)
+        .filter((n): n is number => n != null);
+      const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+      arrow.number = nextNumber;
+      arrow.showNumber = true;
+    }
+    
     set((state) => ({
       elements: [...state.elements, arrow],
       selectedIds: [arrow.id],
       drawingStart: null,
       drawingEnd: null,
+      nextArrowShouldBeNumbered: false,
     }));
     get().pushHistory();
   },
@@ -100,7 +128,12 @@ export const createDrawingSlice: StateCreator<
   },
   
   cancelDrawing: () => {
-    set({ drawingStart: null, drawingEnd: null });
+    set({ drawingStart: null, drawingEnd: null, nextArrowShouldBeNumbered: false });
+  },
+  
+  // PR-ARROW-NUMBER: Set one-shot auto-number flag
+  setNextArrowShouldBeNumbered: (value) => {
+    set({ nextArrowShouldBeNumbered: value });
   },
   
   startFreehandDrawing: (type, position) => {

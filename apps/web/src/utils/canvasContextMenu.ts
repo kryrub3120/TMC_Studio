@@ -26,11 +26,15 @@ interface ContextMenuHandlers {
   onChangePlayerColor?: () => void;
   onChangeTextColor?: () => void;
   onResize?: () => void; // B5: PPM Resize Slider
+  onEditArrowNumber?: () => void; // PR-ARROW-NUMBER — toggles auto-numbering mode
   // Empty space actions
   onAddPlayer?: () => void;
   onAddBall?: () => void;
   onAddArrow?: () => void;
   onAddZone?: () => void;
+  // PR-ARROW-NUMBER: Auto-numbering mode toggle for empty space
+  onToggleAutoNumbering?: () => void;
+  isAutoNumbering?: boolean;
 }
 
 // Detect platform for correct shortcuts
@@ -98,6 +102,7 @@ export function getCanvasContextMenuItems(
   
   // Empty space menu (no element selected)
   if (!element) {
+    const autoNumLabel = handlers.isAutoNumbering ? '🔢 Auto-numeracja: ON' : '🔢 Auto-numeracja: OFF';
     return [
       { label: 'Paste', icon: '📋', onClick: handlers.onPaste, shortcut: `${cmd}V` },
       { label: 'Select All', icon: '☑️', onClick: handlers.onSelectAll, shortcut: `${cmd}A` },
@@ -106,6 +111,8 @@ export function getCanvasContextMenuItems(
       { label: 'Add Ball', icon: '⚽', onClick: handlers.onAddBall ?? (() => {}), shortcut: 'B' },
       { label: 'Add Arrow', icon: '➡️', onClick: handlers.onAddArrow ?? (() => {}), shortcut: 'A' },
       { label: 'Add Zone', icon: '🟦', onClick: handlers.onAddZone ?? (() => {}), shortcut: 'Z' },
+      { label: '', icon: '', onClick: () => {}, divider: true },
+      { label: autoNumLabel, icon: '🔄', onClick: handlers.onToggleAutoNumbering ?? (() => {}), shortcut: 'Shift+N' },
     ];
   }
 
@@ -161,7 +168,10 @@ export function getCanvasContextMenuItems(
 
   // Arrow-specific menu
   if (isArrowElement(element)) {
+    const autoNumLabel = handlers.isAutoNumbering ? '🔢 Auto-numeracja: ON' : '🔢 Auto-numeracja: OFF';
     return [
+      { label: 'Dodaj/Edytuj numer', icon: '🔢', onClick: handlers.onEditArrowNumber!, shortcut: '→' },
+      { label: autoNumLabel, icon: '🔄', onClick: handlers.onToggleAutoNumbering!, shortcut: 'Shift+N' },
       { label: 'Change Color', icon: '🎨', onClick: handlers.onCycleColor!, shortcut: 'Alt+↓' },
       ...layerItems,
       ...commonItems,

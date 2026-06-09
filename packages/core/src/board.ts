@@ -145,6 +145,7 @@ export function createArrow(
     },
     color: defaultColor,
     strokeWidth: defaultStroke,
+    showNumber: false,
   };
 }
 

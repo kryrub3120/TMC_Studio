@@ -74,6 +74,10 @@ export interface ArrowElement {
   color?: string;
   strokeWidth?: number;
   zIndex?: number; // PR-UX-2
+  /** Optional sequence number for tactical arrow labeling */
+  number?: number;
+  /** Whether to display the sequence number on the arrow */
+  showNumber?: boolean;
 }
 
 /** Zone shape types */

@@ -240,7 +240,10 @@ export function BoardPage(props: BoardPageProps) {
             header={getContextMenuHeader(state.elements.find(el => el.id === state.contextMenu.menuState.elementId) ?? null)}
             items={getCanvasContextMenuItems(
               state.elements.find(el => el.id === state.contextMenu.menuState.elementId) ?? null,
-              handlers.contextMenuActions,
+              {
+                ...handlers.contextMenuActions,
+                isAutoNumbering: state.isAutoNumbering,
+              },
               state.selectedIds.length
             )}
             onClose={state.contextMenu.hideMenu}

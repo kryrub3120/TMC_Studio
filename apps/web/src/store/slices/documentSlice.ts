@@ -49,6 +49,9 @@ export interface DocumentSlice {
   isDirty: boolean;
   lastSavedAt: string | null;
   
+  // PR-ARROW-NUMBER: Auto-Numbering mode
+  isAutoNumbering: boolean;
+  
   // Document actions
   saveDocument: () => void;
   loadDocument: () => boolean;
@@ -69,6 +72,9 @@ export interface DocumentSlice {
   // Player defaults (creation preferences)
   updatePlayerDefaults: (updates: Partial<PlayerDefaults>) => void;
   getPlayerDefaults: () => PlayerDefaults;
+  
+  // PR-ARROW-NUMBER: Auto-numbering toggle
+  toggleAutoNumbering: () => void;
   
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
@@ -103,6 +109,7 @@ export const createDocumentSlice: StateCreator<
     autoSaveTimer: null,
     isDirty: false,
     lastSavedAt: null,
+    isAutoNumbering: false,
     
     saveDocument: () => {
       const { document, elements } = get();
@@ -398,6 +405,13 @@ export const createDocumentSlice: StateCreator<
 
     getPlayerDefaults: () => {
       return get().document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
+    },
+
+    // PR-ARROW-NUMBER: Auto-numbering toggle
+    toggleAutoNumbering: () => {
+      set((state) => ({
+        isAutoNumbering: !state.isAutoNumbering,
+      }));
     },
 
     saveToCloud: async () => {

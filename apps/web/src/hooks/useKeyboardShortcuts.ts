@@ -13,7 +13,7 @@ import { useEffect, useCallback } from 'react';
 import { useBoardStore } from '../store';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { isTextElement, isPlayerElement, isZoneElement, PITCH_THEMES } from '@tmc/core';
+import { isTextElement, isPlayerElement, isZoneElement, isArrowElement, PITCH_THEMES } from '@tmc/core';
 import { formations } from '@tmc/presets';
 import { useCommandRegistry } from './useCommandRegistry';
 import { ANIMATION_ENABLED } from '../config/featureFlags';
@@ -104,6 +104,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const resetPlayerOrientation = useBoardStore((s) => s.resetPlayerOrientation); // PR3
   const updatePlayerOrientationSettings = useBoardStore((s) => s.updatePlayerOrientationSettings);
   const togglePlayerVision = useBoardStore((s) => s.togglePlayerVision); // Per-player vision toggle
+  const toggleArrowNumber = useBoardStore((s) => s.toggleArrowNumber); // PR-ARROW-NUMBER
+  const toggleAutoNumbering = useBoardStore((s) => s.toggleAutoNumbering); // PR-ARROW-NUMBER
+  const setNextArrowShouldBeNumbered = useBoardStore((s) => s.setNextArrowShouldBeNumbered); // PR-ARROW-NUMBER
   // setPlayerVision available if needed for future use
   
   // ===== UI Store State & Actions =====
@@ -183,6 +186,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     // Helper: Check if selected element is equipment
     const hasSelectedEquipment = () => elements.some((el) => 
       selectedIds.includes(el.id) && el.type === 'equipment'
+    );
+    
+    // Helper: Check if selected element is arrow (PR-ARROW-NUMBER)
+    const hasSelectedArrow = () => selectedIds.length === 1 && elements.some((el) =>
+      selectedIds.includes(el.id) && isArrowElement(el)
     );
     
     const key = e.key.toLowerCase();
@@ -422,6 +430,12 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd) {
           e.preventDefault();
           cmdRegistry.board.selection.selectAll();
+        } else if (e.shiftKey) {
+          // Shift+A = activate pass arrow tool + auto-number one-shot (PR-ARROW-NUMBER)
+          e.preventDefault();
+          setNextArrowShouldBeNumbered(true);
+          setActiveTool('arrow-pass');
+          showToast('Pass arrow (auto-number)');
         } else {
           e.preventDefault();
           setActiveTool('arrow-pass');
@@ -430,8 +444,16 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         
       case 'r':
         if (!isCmd) {
-          e.preventDefault();
-          setActiveTool('arrow-run');
+          if (e.shiftKey) {
+            // Shift+R = activate run arrow tool + auto-number one-shot (PR-ARROW-NUMBER)
+            e.preventDefault();
+            setNextArrowShouldBeNumbered(true);
+            setActiveTool('arrow-run');
+            showToast('Run arrow (auto-number)');
+          } else {
+            e.preventDefault();
+            setActiveTool('arrow-run');
+          }
         }
         break;
         
@@ -604,7 +626,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         
       // Animation shortcut (N = add step) - gated behind feature flag for MVP
       case 'n':
-        if (ANIMATION_ENABLED && !isCmd) {
+        if (!isCmd && e.shiftKey) {
+          // Shift+N = toggle auto-numbering mode (PR-ARROW-NUMBER)
+          e.preventDefault();
+          toggleAutoNumbering();
+          const isOn = useBoardStore.getState().isAutoNumbering;
+          showToast(isOn ? 'Auto-numbering ON' : 'Auto-numbering OFF');
+        } else if (ANIMATION_ENABLED && !isCmd) {
           e.preventDefault();
           addStep();
           showToast('New step added');
@@ -694,6 +722,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       case 'arrowright':
         e.preventDefault();
         {
+          // PR-ARROW-NUMBER: ArrowRight on selected arrow toggles numbering
+          if (hasSelectedArrow()) {
+            const arrowId = selectedIds[0];
+            toggleArrowNumber(arrowId);
+            showToast('Arrow number toggled');
+            break;
+          }
           const textEl = getSelectedText();
           if (textEl) {
             updateTextProperties(textEl.id, { italic: !textEl.italic });

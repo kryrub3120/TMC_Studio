@@ -105,6 +105,15 @@ const shortcuts: { title: string; items: ShortcutItem[]; isAnimation?: boolean }
       { key: '⇧1-6', description: 'Apply Away Formation' },
     ],
   },
+  {
+    title: 'Arrow Numbering',
+    items: [
+      { key: '⇧A', description: 'Pass + Num' },
+      { key: '⇧R', description: 'Run + Num' },
+      { key: '⇧N', description: 'Toggle Auto-Num' },
+      { key: '→', description: 'Toggle Number' },
+    ],
+  },
 ];
 
 /** Close icon */

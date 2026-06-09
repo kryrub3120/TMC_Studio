@@ -494,6 +494,19 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
         hideMenu();
         showToast('Text color changed (use Alt+↓/↑ to cycle)');
       },
+      onEditArrowNumber: () => {
+        // PR-ARROW-NUMBER: Simply toggle numbering via Smart Sequencing — no prompt
+        const store = useBoardStore.getState();
+        if (menuElementId) store.toggleArrowNumber(menuElementId);
+        hideMenu();
+      },
+      onToggleAutoNumbering: () => {
+        useBoardStore.getState().toggleAutoNumbering();
+        const isOn = useBoardStore.getState().isAutoNumbering;
+        showToast(isOn ? 'Auto-numbering ON — new arrows get sequential numbers' : 'Auto-numbering OFF');
+        hideMenu();
+      },
+      get isAutoNumbering() { return useBoardStore.getState().isAutoNumbering; },
     };
   }, [
     deleteSelected, duplicateSelected, copySelection, pasteClipboard, selectAll,

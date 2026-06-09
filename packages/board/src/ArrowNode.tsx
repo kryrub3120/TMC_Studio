@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Group, Arrow, Circle, Line } from 'react-konva';
+import { Group, Arrow, Circle, Line, Text } from 'react-konva';
 import type Konva from 'konva';
 import type { ArrowElement, Position, PitchConfig } from '@tmc/core';
 
@@ -306,6 +306,38 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
           hitStrokeWidth={15}
         />
       )}
+
+      {/* Arrow number label (PR-ARROW-NUMBER) */}
+      {arrow.showNumber && arrow.number !== undefined && (() => {
+        const midX = (startRelX + endRelX) / 2;
+        const midY = (startRelY + endRelY) / 2;
+        const radius = 12;
+        return (
+          <Group listening={false}>
+            <Circle
+              x={midX}
+              y={midY}
+              radius={radius}
+              fill="#1a1a1a"
+              stroke="#ffffff"
+              strokeWidth={1.5}
+              opacity={0.85}
+            />
+            <Text
+              x={midX - radius}
+              y={midY - radius}
+              width={radius * 2}
+              height={radius * 2}
+              text={String(arrow.number)}
+              fontSize={13}
+              fontStyle="bold"
+              fill="#ffffff"
+              align="center"
+              verticalAlign="middle"
+            />
+          </Group>
+        );
+      })()}
 
       {/* Selection highlight and endpoint handles */}
       {isSelected && (

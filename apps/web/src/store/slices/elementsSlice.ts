@@ -72,6 +72,15 @@ function resolvePlayerDefaults(
   return result;
 }
 
+/** PR-ARROW-NUMBER: Get highest arrow number across all arrows (0 if none) */
+function getHighestArrowNumber(elements: BoardElement[]): number {
+  const numbers = elements
+    .filter(isArrowElement)
+    .map((a) => a.number)
+    .filter((n): n is number => n != null);
+  return numbers.length > 0 ? Math.max(...numbers) : 0;
+}
+
 export interface ElementsSlice {
   // State
   elements: BoardElement[];
@@ -96,6 +105,10 @@ export interface ElementsSlice {
   moveElementById: (id: ElementId, position: Position) => void;
   resizeZone: (id: ElementId, position: Position, width: number, height: number) => void;
   updateArrowEndpoint: (id: ElementId, endpoint: 'start' | 'end', position: Position) => void;
+  
+  // Arrow numbering (PR-ARROW-NUMBER)
+  toggleArrowNumber: (id: ElementId) => void;
+  setArrowNumber: (id: ElementId, number: number | undefined) => void;
   
   // Batch operations on selected
   deleteSelected: () => void;
@@ -192,12 +205,17 @@ export const createElementsSlice: StateCreator<
   },
   
   addArrowAtCursor: (arrowType) => {
-    const { cursorPosition } = get();
+    const { cursorPosition, elements, isAutoNumbering } = get();
     const position = cursorPosition ?? { 
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
     const arrow = createArrow(position, arrowType);
+    if (isAutoNumbering) {
+      const nextNum = getHighestArrowNumber(elements) + 1;
+      arrow.number = nextNum;
+      arrow.showNumber = true;
+    }
     get().addElement(arrow);
   },
   
@@ -314,6 +332,55 @@ export const createElementsSlice: StateCreator<
       }),
     }));
     // ⚠️ Don't push history during drag - only on drag end
+  },
+  
+  toggleArrowNumber: (id) => {
+    const { elements } = get();
+    const arrow = elements.find((el) => el.id === id);
+    if (!arrow || !isArrowElement(arrow)) return;
+    
+    const currentlyShown = arrow.showNumber === true && arrow.number !== undefined;
+    
+    if (currentlyShown) {
+      // Toggle OFF — keep the number but hide it
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (el.id === id && isArrowElement(el)) {
+            return { ...el, showNumber: false };
+          }
+          return el;
+        }),
+      }));
+    } else {
+      // Toggle ON — Smart Sequencing: find max number across ALL arrows, assign +1
+      const nextNumber = getHighestArrowNumber(elements) + 1;
+      
+      set((state) => ({
+        elements: state.elements.map((el) => {
+          if (el.id === id && isArrowElement(el)) {
+            return { ...el, showNumber: true, number: nextNumber };
+          }
+          return el;
+        }),
+      }));
+    }
+    get().pushHistory();
+  },
+  
+  setArrowNumber: (id, number) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (el.id === id && isArrowElement(el)) {
+          return {
+            ...el,
+            number: number,
+            showNumber: number !== undefined,
+          };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
   },
   
   deleteSelected: () => {

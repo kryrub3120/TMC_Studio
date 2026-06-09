@@ -6,8 +6,8 @@
 
 ## Meta
 
-- **Version:** 0.3.1
-- **Last Updated:** 2026-02-21
+- **Version:** 0.4.0
+- **Last Updated:** 2026-06-09
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -142,6 +142,10 @@ Available shapes (cycle with `Shift+S` when player selected):
 | Arrow keys | Nudge ±5px (Shift = ±1px) |
 | `Shift+S` | Cycle shape |
 | `Alt+↑/↓` | Cycle fill color through shared palette |
+| `→` (arrow selected) | Toggle arrow numbering (Smart Sequencing) |
+| `Shift+N` | Toggle Auto-Numbering Mode ON/OFF |
+| `Shift+A` | Pass arrow tool (one-shot auto-number) |
+| `Shift+R` | Run arrow tool (one-shot auto-number) |
 | `Delete` / `Backspace` | Delete selected |
 | `Cmd+C` / `Cmd+V` | Copy / Paste (offset +12px) |
 | `Cmd+D` | Duplicate (offset +12px) |
@@ -400,6 +404,51 @@ pass:  { color: '#1a1a1a', strokeWidth: 4, dash: [] }
 run:   { color: '#f97316', strokeWidth: 3, dash: [8, 4] }
 shoot: { color: '#ef4444', strokeWidth: 5, dash: [] }
 ```
+
+#### 1.4.6 Arrow Numbering (PR-ARROW-NUMBER)
+
+Each arrow can display an optional sequence number for tactical annotation.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `number` | `number \| undefined` | `undefined` | Sequence number (1-999) |
+| `showNumber` | `boolean` | `false` | Whether to display the number on the arrow |
+
+**Auto-Numbering Mode (PR-ARROW-NUMBER):**
+When enabled via `Shift+N`, every newly created arrow automatically receives the next sequential number (`max(existing arrow numbers) + 1`) and `showNumber: true`. Toggle OFF returns arrows to unnumbered creation.
+
+| State | Behavior | Visual indicator |
+|-------|----------|-----------------|
+| OFF (default) | New arrows → `showNumber: false`, no number | — |
+| ON | New arrows → `showNumber: true`, `number = max+1` | "Auto-numeracja: ON" in context menu |
+
+**Per-arrow toggle (Quick Sequencing):**
+- `→` (ArrowRight) on a selected arrow toggles its number ON/OFF.
+- Toggle ON assigns the next available number (`max(existing) + 1`).
+- Toggle OFF preserves the `number` value but hides the label.
+
+**One-shot auto-number via drag (post-draw action):**
+- `Shift+A` activates the pass arrow tool AND sets a one-shot flag. After drawing a valid arrow (≥20px), the flag triggers auto-numbering.
+- `Shift+R` same as above for run arrows.
+- If the drawn arrow is discarded (too short, <20px threshold), the flag is preserved for the next drawn arrow.
+- The flag resets to `false` after any arrow is successfully created (regardless of mode).
+
+**Triggers:**
+
+| Trigger | Action |
+|---------|--------|
+| `→` (ArrowRight, arrow selected) | Toggle arrow numbering (Smart Sequencing) |
+| `Shift+A` | Activate pass arrow tool + one-shot auto-number flag |
+| `Shift+R` | Activate run arrow tool + one-shot auto-number flag |
+| `Shift+N` | Toggle Auto-Numbering Mode ON/OFF |
+| Context Menu (arrow) → `Dodaj/Edytuj numer` | Toggle per-arrow number (Smart Sequencing) |
+| Context Menu (any) → `Auto-numeracja` | Toggle global Auto-Numbering Mode |
+
+**Rendering:**
+- Position: midpoint of the arrow line
+- Visual: dark circle (ø24px, 85% opacity) with white border, bold white number centered
+- Layer: above the arrow shaft, below selection handles
+- Print mode: rendered as-is (black circle with white text)
 
 ---
 
