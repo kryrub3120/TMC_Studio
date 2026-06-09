@@ -30,6 +30,8 @@ export interface TouchGesturesOptions {
   onSingleTap?: () => void;
   /** Double tap → zoom-to-fit callback */
   onDoubleTap?: () => void;
+  /** Viewport lock — when true, pinch zoom & two-finger pan are disabled (PR-UX-3 ETAP 4) */
+  locked?: boolean;
 }
 
 const PINCH_ZOOM_SENSITIVITY_BASE = 0.005;
@@ -48,6 +50,7 @@ export function useTouchGestures(options: TouchGesturesOptions) {
     setPanOffset,
     onSingleTap,
     onDoubleTap,
+    locked = false,
   } = options;
 
   // ─── Refs for gesture tracking (avoid re-renders) ───────────────────
@@ -73,7 +76,8 @@ export function useTouchGestures(options: TouchGesturesOptions) {
 
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
-        // ── Start pinch ──
+        // ETAP 4: lock prevents pinch zoom & two-finger pan
+        if (locked) return;
         e.preventDefault();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
@@ -197,6 +201,6 @@ export function useTouchGestures(options: TouchGesturesOptions) {
     };
   }, [
     containerRef, canvasWidth, canvasHeight, containerSize,
-    fitZoom, panOffset, setPanOffset, onSingleTap, onDoubleTap,
+    fitZoom, panOffset, setPanOffset, onSingleTap, onDoubleTap, locked,
   ]);
 }

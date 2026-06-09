@@ -19,6 +19,7 @@ export interface CommandRegistry {
   board: BoardCommands;
   animation: AnimationCommands;
   edit: EditCommands;
+  view: ViewCommands; // PR-UX-3 ETAP 4
 }
 
 // ============================================================================
@@ -186,6 +187,22 @@ export interface HistoryCommands {
    * Check if redo is available
    */
   canRedo: () => boolean;
+}
+
+// ============================================================================
+// View Commands (PR-UX-3 ETAP 4)
+// ============================================================================
+
+export interface ViewCommands {
+  /**
+   * Toggle viewport lock (disables zoom/pan)
+   */
+  toggleViewportLock: () => void;
+
+  /**
+   * Explicitly set viewport lock state
+   */
+  setViewportLock: (locked: boolean) => void;
 }
 
 // ============================================================================

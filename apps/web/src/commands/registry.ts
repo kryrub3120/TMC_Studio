@@ -11,6 +11,7 @@
  */
 
 import { logger } from '../lib/logger';
+import { useUIStore } from '../store/useUIStore';
 import type { CommandRegistry } from './types';
 import { createBoardCommands } from './board';
 
@@ -39,6 +40,12 @@ export function createCommandRegistry(): CommandRegistry {
       cut: () => logger.warn('edit.cut not yet implemented'),
       copy: () => logger.warn('edit.copy not yet implemented'),
       paste: () => logger.warn('edit.paste not yet implemented'),
+    },
+
+    // View commands (PR-UX-3 ETAP 4)
+    view: {
+      toggleViewportLock: () => useUIStore.getState().toggleViewportLock(),
+      setViewportLock: (locked) => useUIStore.getState().setViewportLock(locked),
     },
   };
 }

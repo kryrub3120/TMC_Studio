@@ -155,6 +155,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   } = props;
 
   const setZoom = useUIStore((s) => s.setZoom);
+  const viewportLocked = useUIStore((s) => s.viewportLocked); // ETAP 4
 
   // ─── Container measurement ───────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -236,13 +237,14 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   // ─── Space+drag panning (desktop) ───────────────────────────────────
   const handleContainerPointerDown = useCallback((e: React.PointerEvent) => {
     if (!spaceHeld) return;
+    if (viewportLocked) return; // ETAP 4: lock prevents pan
     isPanningRef.current = true;
     panStartRef.current = { x: e.clientX, y: e.clientY };
     panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
     e.stopPropagation();
-  }, [spaceHeld, panOffset]);
+  }, [spaceHeld, panOffset, viewportLocked]);
 
   const handleContainerPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isPanningRef.current) return;
@@ -267,6 +269,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     const handleWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       if (e.altKey) return;
+      // ETAP 4: lock prevents wheel zoom
+      if (useUIStore.getState().viewportLocked) return;
       e.preventDefault();
       e.stopPropagation();
 
@@ -314,6 +318,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     fitZoom,
     panOffset,
     setPanOffset,
+    locked: viewportLocked, // ETAP 4: lock prevents pinch & two-finger pan
     onDoubleTap: useCallback(() => {
       useUIStore.getState().zoomFit();
     }, []),

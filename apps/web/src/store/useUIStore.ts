@@ -104,6 +104,9 @@ interface UIState {
   // Zoom
   zoom: number;
   
+  // Viewport lock (PR-UX-3 ETAP 4)
+  viewportLocked: boolean;
+  
   // Playback state
   isPlaying: boolean;
   isLooping: boolean;
@@ -161,6 +164,10 @@ interface UIState {
   zoomOut: () => void;
   zoomFit: () => void;
   setZoom: (zoom: number) => void;
+  
+  // Actions - Viewport Lock (PR-UX-3 ETAP 4)
+  toggleViewportLock: () => void;
+  setViewportLock: (locked: boolean) => void;
   
   // Actions - Playback
   play: () => void;
@@ -238,6 +245,7 @@ export const useUIStore = create<UIState>()(
       activeToast: null,
       confirmModal: null,
       zoom: 1,
+      viewportLocked: false,
       isPlaying: false,
       isLooping: false,
       stepDuration: 0.8,
@@ -402,6 +410,10 @@ export const useUIStore = create<UIState>()(
         set({ zoom: clampedZoom });
       },
       
+      // Viewport Lock actions (PR-UX-3 ETAP 4)
+      toggleViewportLock: () => set((s) => ({ viewportLocked: !s.viewportLocked })),
+      setViewportLock: (locked) => set({ viewportLocked: locked }),
+      
       // Playback actions
       play: () => set({ isPlaying: true, animationProgress: 0 }),
       pause: () => set({ isPlaying: false }),
@@ -443,6 +455,7 @@ export const useUIStore = create<UIState>()(
         snapEnabled: state.snapEnabled,
         footerVisible: state.footerVisible,
         inspectorOpen: state.inspectorOpen,
+        viewportLocked: state.viewportLocked, // PR-UX-3 ETAP 4
       }),
       onRehydrateStorage: () => (state) => {
         // Apply theme on rehydration

@@ -122,6 +122,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const activeToast = useUIStore((s) => s.activeToast);
   const layerVisibility = useUIStore((s) => s.layerVisibility);
   const zoom = useUIStore((s) => s.zoom);
+  const viewportLocked = useUIStore((s) => s.viewportLocked); // ETAP 4
   const hasSeenShortcutsHint = useUIStore((s) => s.hasSeenShortcutsHint);
   const activeTool = useUIStore((s) => s.activeTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
@@ -144,6 +145,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const setHasSeenShortcutsHint = useUIStore((s) => s.setHasSeenShortcutsHint);
   const setCheatSheetVisible = useUIStore((s) => s.setCheatSheetVisible);
   const togglePrintMode = useUIStore((s) => s.togglePrintMode);
+  const toggleViewportLock = useUIStore((s) => s.toggleViewportLock); // ETAP 4
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -428,6 +430,8 @@ export function useBoardPageState(props: BoardPageProps) {
     setHasSeenShortcutsHint,
     setCheatSheetVisible,
     togglePrintMode,
+    viewportLocked, // ETAP 4
+    toggleViewportLock, // ETAP 4
     setInspectorOpen,
     
     // Playback

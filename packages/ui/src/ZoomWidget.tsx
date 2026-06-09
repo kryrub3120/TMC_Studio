@@ -8,10 +8,14 @@ import React from 'react';
 export interface ZoomWidgetProps {
   /** Current zoom level (0.25 - 2) */
   zoom: number;
+  /** Viewport lock state (PR-UX-3 ETAP 4) */
+  locked?: boolean;
   /** Callbacks */
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomFit: () => void;
+  /** Viewport lock toggle (PR-UX-3 ETAP 4) */
+  onToggleLock?: () => void;
 }
 
 const ZOOM_MIN = 0.25;
@@ -32,12 +36,30 @@ const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+/** Lock icon (closed padlock) */
+const LockIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+  </svg>
+);
+
+/** Unlock icon (open padlock) */
+const UnlockIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 7.83-1" />
+  </svg>
+);
+
 /** ZoomWidget Component */
 export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
   zoom,
+  locked = false,
   onZoomIn,
   onZoomOut,
   onZoomFit,
+  onToggleLock,
 }) => {
   const zoomPercent = Math.round(zoom * 100);
   const isAtMin = zoom <= ZOOM_MIN;
@@ -105,6 +127,26 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
 
       {/* Divider */}
       <div className="w-px h-5 bg-border mx-0.5" />
+
+      {/* Divider */}
+      <div className="w-px h-5 bg-border mx-0.5" />
+
+      {/* Lock toggle button (PR-UX-3 ETAP 4) */}
+      {onToggleLock && (
+        <button
+          onClick={onToggleLock}
+          title={locked ? 'Unlock view (enable zoom/pan)' : 'Lock view (prevent zoom/pan)'}
+          aria-label={locked ? 'Unlock viewport' : 'Lock viewport'}
+          aria-pressed={locked}
+          className={`p-1.5 rounded-md transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            locked
+              ? 'text-accent bg-accent/10'
+              : 'text-muted hover:text-text hover:bg-surface2'
+          }`}
+        >
+          {locked ? <LockIcon className="w-3.5 h-3.5" /> : <UnlockIcon className="w-3.5 h-3.5" />}
+        </button>
+      )}
 
       {/* Fit button */}
       <button

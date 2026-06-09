@@ -6,6 +6,7 @@
  */
 
 import { useBoardStore } from '../store';
+import { useUIStore } from '../store/useUIStore';
 import { autosaveService } from '../services';
 import type { BoardElement, Position } from '@tmc/core';
 
@@ -186,4 +187,10 @@ export const effectCommands = {
 export const cmd = {
   intent: intentCommands,
   effect: effectCommands,
+
+  /** View commands (PR-UX-3 ETAP 4) */
+  view: {
+    toggleViewportLock: () => useUIStore.getState().toggleViewportLock(),
+    setViewportLock: (locked: boolean) => useUIStore.getState().setViewportLock(locked),
+  },
 };

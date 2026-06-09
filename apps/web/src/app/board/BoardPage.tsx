@@ -221,9 +221,11 @@ export function BoardPage(props: BoardPageProps) {
           {/* Zoom Widget */}
           <ZoomWidget
             zoom={state.zoom}
+            locked={state.viewportLocked}
             onZoomIn={state.zoomIn}
             onZoomOut={state.zoomOut}
             onZoomFit={state.zoomFit}
+            onToggleLock={() => state.toggleViewportLock?.()}
           />
 
           {/* Edit overlays (text + player number) */}
