@@ -20,6 +20,7 @@ import { BoardCanvas } from '../../components/Canvas/BoardCanvas';
 import { CanvasAdapter } from './canvas/CanvasAdapter';
 import { useUIStore, ZOOM_MIN, ZOOM_MAX } from '../../store/useUIStore';
 import { computeZoomToCursorPan, clampPanOffset, screenToWorld } from '../../utils/viewportUtils';
+import { useTouchGestures } from '../../hooks/useTouchGestures';
 
 export interface BoardCanvasSectionProps {
   // Canvas config
@@ -189,10 +190,6 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const panStartRef = useRef({ x: 0, y: 0 });
   const panOffsetStartRef = useRef({ x: 0, y: 0 });
   const [spaceHeld, setSpaceHeld] = useState(false);
-  
-  // Mobile pinch state
-  const lastPinchDistRef = useRef<number | null>(null);
-  const lastPinchCenterRef = useRef<{ x: number; y: number } | null>(null);
 
   // ─── Space key tracking ──────────────────────────────────────────────
   useEffect(() => {
@@ -318,76 +315,20 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [fitZoom, canvasWidth, canvasHeight, containerSize, panOffset, setZoom]);
 
-  // ─── Mobile: pinch zoom + two-finger pan ─────────────────────────────
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
-        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-        const center = {
-          x: (t1.clientX + t2.clientX) / 2,
-          y: (t1.clientY + t2.clientY) / 2,
-        };
-        lastPinchDistRef.current = dist;
-        lastPinchCenterRef.current = center;
-        panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2 || lastPinchDistRef.current === null) return;
-      e.preventDefault();
-
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const center = {
-        x: (t1.clientX + t2.clientX) / 2,
-        y: (t1.clientY + t2.clientY) / 2,
-      };
-
-      // Pinch zoom
-      const scale = dist / lastPinchDistRef.current;
-      const currentZoom = useUIStore.getState().zoom;
-      const newUserZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, currentZoom * scale));
-      setZoom(newUserZoom);
-      lastPinchDistRef.current = dist;
-
-      // Two-finger pan
-      if (lastPinchCenterRef.current) {
-        const dx = center.x - lastPinchCenterRef.current.x;
-        const dy = center.y - lastPinchCenterRef.current.y;
-        const newEffective = newUserZoom * fitZoom;
-        const clamped = clampPanOffset(
-          panOffset.x + dx, panOffset.y + dy,
-          canvasWidth * newEffective, canvasHeight * newEffective,
-          containerSize.width, containerSize.height,
-          PAN_CLAMP_MARGIN,
-        );
-        setPanOffset(clamped);
-      }
-      lastPinchCenterRef.current = center;
-    };
-
-    const handleTouchEnd = () => {
-      lastPinchDistRef.current = null;
-      lastPinchCenterRef.current = null;
-    };
-
-    container.addEventListener('touchstart', handleTouchStart, { passive: false });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd);
-    return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [fitZoom, canvasWidth, canvasHeight, containerSize, panOffset, setZoom]);
+  // ─── Mobile: pinch zoom + two-finger pan (via hook) ────────────────
+  useTouchGestures({
+    containerRef,
+    canvasWidth,
+    canvasHeight,
+    containerSize,
+    fitZoom,
+    panOffset,
+    setPanOffset,
+    // Single tap handled by Konva Stage events; double tap → zoom fit
+    onDoubleTap: useCallback(() => {
+      useUIStore.getState().zoomFit();
+    }, []),
+  });
 
   // ─── Reset pan when zoom returns to fit ──────────────────────────────
   useEffect(() => {
@@ -416,7 +357,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     <div
       ref={containerRef}
       className={`shadow-canvas rounded-[20px] border border-border/50 p-3 bg-surface/50 backdrop-blur-sm ${cursorClass}`}
-      style={{ touchAction: 'none' /* prevent browser gestures on canvas */ }}
+      style={{ touchAction: 'manipulation' /* browser tap gestures, manual pinch */ }}
       onPointerDown={handleContainerPointerDown}
       onPointerMove={handleContainerPointerMove}
       onPointerUp={handleContainerPointerUp}

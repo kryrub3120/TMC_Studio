@@ -178,7 +178,7 @@ export function BoardPage(props: BoardPageProps) {
             activeCanvasInteraction={state.activeCanvasInteraction}
           />
 
-          {/* Shortcuts Hint */}
+          {/* Shortcuts Hint (one-time) */}
           {!state.focusMode && (
             <ShortcutsHint
               isVisible={!state.hasSeenShortcutsHint && !state.cheatSheetVisible}
@@ -190,7 +190,7 @@ export function BoardPage(props: BoardPageProps) {
             />
           )}
 
-          {/* Cheat Sheet */}
+          {/* Floating Cheat Sheet — trigger always visible outside focus mode */}
           {!state.focusMode && (
             <CheatSheetOverlay
               isVisible={state.cheatSheetVisible}
