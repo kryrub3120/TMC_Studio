@@ -135,7 +135,7 @@ const KeyboardIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-/** CheatSheet Overlay Component — floating compact modal */
+/** CheatSheet Overlay Component — floating compact modal with paginated tabs */
 export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
   isVisible,
   onClose,
@@ -143,10 +143,9 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
 }) => {
   // isVisible from parent (e.g. "?" key toggles between trigger-only and expanded)
   const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('Elements');
 
-  // Sync expanded state bidirectionally with parent's isVisible:
-  // isVisible=true  → open panel (e.g. from "?" key)
-  // isVisible=false → close panel
+  // Sync expanded state bidirectionally with parent's isVisible
   React.useEffect(() => {
     setExpanded(isVisible);
   }, [isVisible]);
@@ -165,9 +164,59 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
     onClose();
   }, [onClose]);
 
-  const visibleShortcuts = showAnimationShortcuts
-    ? shortcuts
-    : shortcuts.filter((s) => !s.isAnimation);
+  // ─── Build tabs from the shortcuts data (single source of truth) ──
+  const tabDefs = React.useMemo(() => {
+    const all = showAnimationShortcuts
+      ? shortcuts
+      : shortcuts.filter((s) => !s.isAnimation);
+
+    // Group into tabs: Elements, Edit, View, More
+    const groups: { id: string; label: string; sections: typeof all }[] = [];
+
+    const elementsSections = all.filter(s =>
+      ['Elements'].includes(s.title)
+    );
+    const editSections = all.filter(s =>
+      ['Edit'].includes(s.title)
+    );
+    const viewSections = all.filter(s =>
+      ['View & Pitch'].includes(s.title)
+    );
+    const moreSections = all.filter(s =>
+      !['Elements', 'Edit', 'View & Pitch'].includes(s.title)
+    );
+
+    if (elementsSections.length > 0) groups.push({ id: 'Elements', label: 'Elements', sections: elementsSections });
+    if (editSections.length > 0) groups.push({ id: 'Edit', label: 'Edit', sections: editSections });
+    if (viewSections.length > 0) groups.push({ id: 'View', label: 'View', sections: viewSections });
+    if (moreSections.length > 0) groups.push({ id: 'More', label: 'More', sections: moreSections });
+
+    return groups;
+  }, [showAnimationShortcuts]);
+
+  // Reset active tab if current one is no longer available
+  React.useEffect(() => {
+    if (!tabDefs.find(t => t.id === activeTab)) {
+      setActiveTab(tabDefs[0]?.id ?? 'Elements');
+    }
+  }, [tabDefs, activeTab]);
+
+  const activeGroup = tabDefs.find(t => t.id === activeTab);
+
+  // Keyboard navigation between tabs
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent, tabId: string) => {
+    const idx = tabDefs.findIndex(t => t.id === tabId);
+    if (idx === -1) return;
+
+    let nextIdx: number | null = null;
+    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabDefs.length;
+    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabDefs.length) % tabDefs.length;
+
+    if (nextIdx !== null) {
+      e.preventDefault();
+      setActiveTab(tabDefs[nextIdx].id);
+    }
+  }, [tabDefs]);
 
   return (
     <div className="absolute bottom-4 right-4 z-cheatsheet flex flex-col items-end pointer-events-none">
@@ -199,9 +248,35 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
               </button>
             </div>
 
-            {/* Shortcuts */}
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              {visibleShortcuts.map((section) => (
+            {/* Tab Bar (responsive pill row) */}
+            {tabDefs.length > 1 && (
+              <div
+                className="flex gap-1 mb-3 overflow-x-auto scrollbar-none"
+                role="tablist"
+                aria-label="Shortcut categories"
+              >
+                {tabDefs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
+                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors duration-fast whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      activeTab === tab.id
+                        ? 'bg-accent text-white'
+                        : 'bg-surface2 text-muted hover:text-text hover:bg-surface2/80'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Active tab content */}
+            <div className="space-y-3 max-h-[55vh] overflow-y-auto" role="tabpanel">
+              {activeGroup?.sections.map((section) => (
                 <div key={section.title}>
                   <h4 className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
                     {section.title}
