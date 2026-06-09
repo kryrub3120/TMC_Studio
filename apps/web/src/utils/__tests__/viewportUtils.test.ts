@@ -9,6 +9,7 @@ import {
   screenToWorld,
   computeZoomToCursorPan,
   clampPanOffset,
+  centerPanOffset,
 } from '../viewportUtils';
 
 // ─── getCanvasWorldCoords ───────────────────────────────────────────────────
@@ -233,5 +234,57 @@ describe('clampPanOffset', () => {
     // maxPanY = max(0, (1200-600)/2 + 0) = 300
     expect(result.x).toBe(200);
     expect(result.y).toBe(200);
+  });
+});
+
+// ─── centerPanOffset (PR-UX-3 ETAP 3) ──────────────────────────────────────
+
+describe('centerPanOffset', () => {
+  it('returns {0,0} when canvas matches container at zoom=1', () => {
+    // canvas(1000,800) fits exactly in container(1000,800) at zoom=1
+    const result = centerPanOffset(1000, 800, 1000, 800, 1);
+    expect(result).toEqual({ x: 0, y: 0 });
+  });
+
+  it('computes positive center offset when container is larger than canvas', () => {
+    // container(1200, 900), canvas(1000, 800), zoom=1
+    // center.x = (1200 - 1000)/2 = 100, center.y = (900 - 800)/2 = 50
+    const result = centerPanOffset(1200, 900, 1000, 800, 1);
+    expect(result).toEqual({ x: 100, y: 50 });
+  });
+
+  it('computes negative center offset when zoom makes canvas larger than container', () => {
+    // container(1200, 900), canvas(1000, 800), zoom=1.5
+    // scaled = (1500, 1200)
+    // center.x = (1200 - 1500)/2 = -150, center.y = (900 - 1200)/2 = -150
+    const result = centerPanOffset(1200, 900, 1000, 800, 1.5);
+    expect(result.x).toBeCloseTo(-150, 5);
+    expect(result.y).toBeCloseTo(-150, 5);
+  });
+
+  it('centers at fractional zoom (< 1)', () => {
+    // container(1200, 900), canvas(1000, 800), zoom=0.5
+    // scaled = (500, 400)
+    // center.x = (1200 - 500)/2 = 350, center.y = (900 - 400)/2 = 250
+    const result = centerPanOffset(1200, 900, 1000, 800, 0.5);
+    expect(result).toEqual({ x: 350, y: 250 });
+  });
+
+  it('round-trips: center offset brings pitch center to viewport center', () => {
+    const cw = 1200, ch = 900;
+    const pw = 1050, ph = 680;
+    const z = 0.8;
+    const result = centerPanOffset(cw, ch, pw, ph, z);
+
+    // After centering, scaled pitch center should be at viewport center
+    const scaledPitchCenterWorldX = pw / 2;
+    const scaledPitchCenterWorldY = ph / 2;
+    const scaledCenterScreenX = scaledPitchCenterWorldX * z + result.x;
+    const scaledCenterScreenY = scaledPitchCenterWorldY * z + result.y;
+    const viewportCenterX = cw / 2;
+    const viewportCenterY = ch / 2;
+
+    expect(scaledCenterScreenX).toBeCloseTo(viewportCenterX, 5);
+    expect(scaledCenterScreenY).toBeCloseTo(viewportCenterY, 5);
   });
 });

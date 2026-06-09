@@ -194,3 +194,29 @@ export function clampPanOffset(
     y: Math.max(-maxPanY, Math.min(maxPanY, panY)),
   };
 }
+
+/**
+ * Compute the panOffset that centers the (scaled) canvas in the container.
+ * 
+ * True Virtual Canvas formula (Stage scale=1, Group transform):
+ *   panOffset.x = (containerW - scaledW) / 2
+ *   panOffset.y = (containerH - scaledH) / 2
+ *
+ * @param containerW  - Container viewport width (px)
+ * @param containerH  - Container viewport height (px)
+ * @param canvasW     - Base canvas (pitch) width (world units)
+ * @param canvasH     - Base canvas (pitch) height (world units)
+ * @param zoom        - Current effective zoom (= userZoom * fitZoom)
+ */
+export function centerPanOffset(
+  containerW: number,
+  containerH: number,
+  canvasW: number,
+  canvasH: number,
+  zoom: number,
+): { x: number; y: number } {
+  return {
+    x: (containerW - canvasW * zoom) / 2,
+    y: (containerH - canvasH * zoom) / 2,
+  };
+}

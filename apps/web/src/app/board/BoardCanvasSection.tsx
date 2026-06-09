@@ -19,7 +19,7 @@ import { CanvasShell } from '../../components/CanvasShell';
 import { BoardCanvas } from '../../components/Canvas/BoardCanvas';
 import { CanvasAdapter } from './canvas/CanvasAdapter';
 import { useUIStore, ZOOM_MIN, ZOOM_MAX } from '../../store/useUIStore';
-import { zoomToCursorPan, clampPanOffset } from '../../utils/viewportUtils';
+import { zoomToCursorPan, clampPanOffset, centerPanOffset } from '../../utils/viewportUtils';
 import { useTouchGestures } from '../../hooks/useTouchGestures';
 
 export interface BoardCanvasSectionProps {
@@ -190,7 +190,6 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const effectiveZoom = zoom * fitZoom;
 
   // ─── Pan state (= Group x/y offset) ─────────────────────────────────
-  // Initial value: {0,0}; first ResizeObserver fires and centering effect sets it
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
   // Refs for pan interaction (avoid re-renders during drag)
@@ -198,6 +197,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const panStartRef = useRef({ x: 0, y: 0 });
   const panOffsetStartRef = useRef({ x: 0, y: 0 });
   const [spaceHeld, setSpaceHeld] = useState(false);
+  // ─── ETAP 3: Track first valid container measurement for initial center ──
+  const hasInitializedRef = useRef(false);
 
   // ─── Space key tracking ──────────────────────────────────────────────
   useEffect(() => {
@@ -321,13 +322,57 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   // ─── Reset pan to center when zoom returns to fit ────────────────────
   useEffect(() => {
     if (zoom <= 1) {
-      // Center: Group origin at (containerW/2 - canvasW/2, containerH/2 - canvasH/2) * fitZoom
       const eff = 1 * fitZoom;
       const centerX = (containerSize.width - canvasWidth * eff) / 2;
       const centerY = (containerSize.height - canvasHeight * eff) / 2;
       setPanOffset({ x: centerX, y: centerY });
     }
   }, [zoom, fitZoom, canvasWidth, canvasHeight, containerSize]);
+
+  // ─── ETAP 3: Auto-fit on first valid container measurement ─────────
+  // Centers the pitch on first load so it never sticks to top-left.
+  useEffect(() => {
+    if (hasInitializedRef.current) return;
+    if (containerSize.width <= MIN_CONTAINER_SIZE || containerSize.height <= MIN_CONTAINER_SIZE) return;
+
+    hasInitializedRef.current = true;
+    const centerPan = centerPanOffset(
+      containerSize.width, containerSize.height,
+      canvasWidth, canvasHeight,
+      effectiveZoom,
+    );
+    setPanOffset(centerPan);
+  }, [containerSize, canvasWidth, canvasHeight, effectiveZoom]);
+
+  // ─── ETAP 3: Auto-center on window resize when zoom ≤ 1 ────────────
+  // When user shrinks the window below 100% zoom level, re-center so
+  // the pitch doesn't stick to top-left corner.
+  useEffect(() => {
+    const handleResize = () => {
+      // Use store's zoom (userZoom, not effective) to check if at/below fit
+      const userZoom = useUIStore.getState().zoom;
+      if (userZoom > 1) return; // only center when zoomed out
+
+      // Need a rAF to let ResizeObserver update containerSize first
+      // — but our centering effect above runs on containerSize dependency.
+      // This resize handler just triggers a setState no-op to force re-render
+      // with the already-updated containerSize from ResizeObserver.
+      // Actually the existing fitZoom + centering effect already runs.
+      // We just need to setPanOffset back to center.
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const cw = rect.width;
+      const ch = rect.height;
+      if (cw <= MIN_CONTAINER_SIZE || ch <= MIN_CONTAINER_SIZE) return;
+
+      const eff = userZoom * fitZoom;
+      const centerPan = centerPanOffset(cw, ch, canvasWidth, canvasHeight, eff);
+      setPanOffset(centerPan);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [fitZoom, canvasWidth, canvasHeight]);
 
   // ─── Group transform (panOffset IS groupPan directly) ───────────────
   // In True Virtual Canvas: panOffset = {x: groupPanX, y: groupPanY}
