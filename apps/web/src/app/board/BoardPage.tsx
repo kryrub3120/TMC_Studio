@@ -114,7 +114,13 @@ export function BoardPage(props: BoardPageProps) {
         onToggleFocus={state.toggleFocusMode}
         onToggleTheme={state.toggleTheme}
         onOpenPalette={state.openCommandPalette}
-        onOpenHelp={state.toggleCheatSheet}
+        onOpenHelp={() => {
+            // Mutex: close Inspector on mobile when opening CheatSheet
+            if (!state.cheatSheetVisible && state.inspectorOpen && (state.breakpoint === 'sm' || state.breakpoint === 'md')) {
+              state.setInspectorOpen(false);
+            }
+            state.toggleCheatSheet();
+          }}
         onOpenProjects={onOpenProjectsDrawer}
         onRenameProject={onRenameProject}
         onToggleInspector={state.toggleInspector}
@@ -258,7 +264,13 @@ export function BoardPage(props: BoardPageProps) {
         {!state.focusMode && (
         <RightInspector
           isOpen={state.inspectorOpen}
-          onToggle={state.toggleInspector}
+          onToggle={() => {
+            // Mutex: close CheatSheet when Inspector opens
+            if (!state.inspectorOpen && state.cheatSheetVisible) {
+              state.setCheatSheetVisible(false);
+            }
+            state.toggleInspector();
+          }}
           breakpoint={state.breakpoint}
           selectedCount={state.selectedIds.length}
           selectedElement={state.inspectorElement}

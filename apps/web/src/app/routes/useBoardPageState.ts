@@ -428,6 +428,7 @@ export function useBoardPageState(props: BoardPageProps) {
     setHasSeenShortcutsHint,
     setCheatSheetVisible,
     togglePrintMode,
+    setInspectorOpen,
     
     // Playback
     isPlaying,

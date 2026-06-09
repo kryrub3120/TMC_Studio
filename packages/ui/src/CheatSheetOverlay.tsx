@@ -144,13 +144,11 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
   // isVisible from parent (e.g. "?" key toggles between trigger-only and expanded)
   const [expanded, setExpanded] = useState(false);
 
-  // Sync expanded state with parent's isVisible
-  // When parent says isVisible=false and we're expanded, collapse
-  // When parent says isVisible=true, expand
+  // Sync expanded state bidirectionally with parent's isVisible:
+  // isVisible=true  → open panel (e.g. from "?" key)
+  // isVisible=false → close panel
   React.useEffect(() => {
-    if (!isVisible) {
-      setExpanded(false);
-    }
+    setExpanded(isVisible);
   }, [isVisible]);
 
   const handleToggle = useCallback(() => {
@@ -184,7 +182,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
 
           {/* Panel */}
           <div
-            className="pointer-events-auto bg-surface/95 backdrop-blur-sm rounded-xl shadow-lg border border-border p-4 w-[320px] animate-slide-up max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:w-full max-sm:rounded-b-none max-sm:rounded-t-xl max-sm:animate-slide-up max-sm:z-[51]"
+            className="pointer-events-auto bg-surface/95 backdrop-blur-sm rounded-xl shadow-lg border border-border p-4 w-[320px] animate-slide-up max-sm:fixed max-sm:bottom-4 max-sm:left-4 max-sm:right-4 max-sm:w-auto max-sm:max-w-sm max-sm:rounded-xl max-sm:z-cheatsheet"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-3">

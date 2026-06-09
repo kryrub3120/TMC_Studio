@@ -730,7 +730,13 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onUpdatePlayerOrientation,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
+  // isSheetOpen syncs with isOpen prop on md/sm (TopBar toggle → open BottomSheet)
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  // Sync sheet open state with isOpen prop for md/sm breakpoints
+  React.useEffect(() => {
+    setIsSheetOpen(isOpen);
+  }, [isOpen]);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'props', label: 'Props' },
