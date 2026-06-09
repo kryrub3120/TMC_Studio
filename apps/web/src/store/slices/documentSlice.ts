@@ -12,12 +12,14 @@ import type {
   TeamSetting,
   PitchSettings,
   PlayerOrientationSettings,
+  PlayerDefaults,
   Position,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
   DEFAULT_PITCH_SETTINGS,
   DEFAULT_PLAYER_ORIENTATION_SETTINGS,
+  DEFAULT_PLAYER_DEFAULTS,
   createDocument,
   saveToLocalStorage,
   loadFromLocalStorage,
@@ -63,6 +65,10 @@ export interface DocumentSlice {
   // Player orientation settings
   updatePlayerOrientationSettings: (settings: Partial<PlayerOrientationSettings>) => void;
   getPlayerOrientationSettings: () => PlayerOrientationSettings;
+  
+  // Player defaults (creation preferences)
+  updatePlayerDefaults: (updates: Partial<PlayerDefaults>) => void;
+  getPlayerDefaults: () => PlayerDefaults;
   
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
@@ -377,7 +383,23 @@ export const createDocumentSlice: StateCreator<
         ? { ...settings, showVision: false }
         : settings;
     },
-    
+
+    updatePlayerDefaults: (updates) => {
+      const { document } = get();
+      const currentDefaults = document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
+      set({
+        document: {
+          ...document,
+          playerDefaults: { ...currentDefaults, ...updates },
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    },
+
+    getPlayerDefaults: () => {
+      return get().document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
+    },
+
     saveToCloud: async () => {
       if (!isSupabaseEnabled()) return false;
       

@@ -69,6 +69,17 @@ function darkenColor(hex: string, percent: number): string {
   return `#${((1 << 24) | (R << 16) | (G << 8) | B).toString(16).slice(1)}`;
 }
 
+/** Resolve goalkeeper status with backward-compatible priority:
+ * 1. Explicit isGoalkeeper flag (if set) — new behavior
+ * 2. number === 1 fallback — legacy behavior for old documents
+ */
+function resolveIsGoalkeeper(
+  playerIsGoalkeeper: boolean | undefined,
+  playerNumber: number | null | undefined
+): boolean {
+  return playerIsGoalkeeper !== undefined ? playerIsGoalkeeper : playerNumber === 1;
+}
+
 /** Convert team settings to render colors */
 function getTeamColors(
   team: 'home' | 'away',
@@ -124,7 +135,8 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   const lastAppliedAngleRef = useRef(0);
   const wasDraggableRef = useRef(true);
 
-  const colors = getTeamColors(player.team, teamSettings, player.isGoalkeeper, player.color, isPrintMode);
+  const isGK = resolveIsGoalkeeper(player.isGoalkeeper, player.number);
+  const colors = getTeamColors(player.team, teamSettings, isGK, player.color, isPrintMode);
   const r = player.radius ?? PLAYER_RADIUS;
 
   const orientationSettings = playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;

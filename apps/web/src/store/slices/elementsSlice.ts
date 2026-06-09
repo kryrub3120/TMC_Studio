@@ -13,9 +13,12 @@ import type {
   ZoneShape,
   EquipmentType,
   EquipmentVariant,
+  PlayerDefaults,
+  PlayerShape,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
+  DEFAULT_PLAYER_DEFAULTS,
   createPlayer,
   createBall,
   createArrow,
@@ -35,18 +38,38 @@ import type { AppState } from '../types';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 import { SHARED_COLORS } from '@tmc/ui';
 
-/** Get next available player number */
-function getNextPlayerNumber(elements: BoardElement[], team: Team): number {
+/** Get next available player number, with optional offset */
+function getNextPlayerNumber(elements: BoardElement[], team: Team, offset: number = 0): number {
   const teamPlayers = elements.filter(
     (el) => isPlayerElement(el) && el.team === team
   ) as PlayerElement[];
   // Filter out null/undefined numbers before checking
   const numbers = teamPlayers.map((p) => p.number).filter((n): n is number => n != null);
-  let next = 1;
+  let next = 1 + offset;
   while (numbers.includes(next)) {
     next++;
   }
   return next;
+}
+
+/** Resolve player creation defaults from document settings */
+function resolvePlayerDefaults(
+  team: Team,
+  defaults: PlayerDefaults
+): { number?: number | null; shape?: PlayerShape; color?: string } {
+  const result: { number?: number | null; shape?: PlayerShape; color?: string } = {};
+  
+  if (defaults.autoNumber) {
+    // number resolved at call site (needs elements array)
+    result.number = undefined; // signal "will be resolved later"
+  } else {
+    result.number = null;
+  }
+  
+  result.shape = team === 'home' ? defaults.homeShape : defaults.awayShape;
+  result.color = team === 'home' ? defaults.homeColor : defaults.awayColor;
+  
+  return result;
 }
 
 export interface ElementsSlice {
@@ -138,13 +161,23 @@ export const createElementsSlice: StateCreator<
   },
   
   addPlayerAtCursor: (team) => {
-    const { cursorPosition, elements } = get();
+    const { cursorPosition, elements, document } = get();
     const position = cursorPosition ?? { 
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
-    const number = getNextPlayerNumber(elements, team);
-    const player = createPlayer(position, team, number);
+    const defaults = document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
+    const prefs = resolvePlayerDefaults(team, defaults);
+    const number = prefs.number === undefined
+      ? getNextPlayerNumber(elements, team, defaults.numberOffset)
+      : prefs.number;
+    const player = createPlayer({
+      position,
+      team,
+      number,
+      shape: prefs.shape,
+      color: prefs.color,
+    });
     get().addElement(player);
   },
   
@@ -640,9 +673,17 @@ export const createElementsSlice: StateCreator<
       (el) => !isPlayerElement(el) || el.team !== team
     );
     
-    const newPlayers = positions.map((pos: { x: number; y: number; number: number }) => 
-      createPlayer({ x: pos.x, y: pos.y }, team, pos.number)
-    );
+    const newPlayers = positions.map((pos: { x: number; y: number; number: number }) => {
+      const prefs = resolvePlayerDefaults(team, document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS);
+      // Formations always assign numbers from formation definition (autoNumber-independent)
+      return createPlayer({
+        position: { x: pos.x, y: pos.y },
+        team,
+        number: pos.number,
+        shape: prefs.shape,
+        color: prefs.color,
+      });
+    });
     
     set({
       elements: [...filteredElements, ...newPlayers],

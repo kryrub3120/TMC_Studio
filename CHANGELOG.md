@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed (User-Facing)
+- **Refaktor `createPlayer` — options-based, brak numeru dla pojedynczego zawodnika** (2026-06-09)
+  - `createPlayer` zmienione na `options`-based (`CreatePlayerOptions`) — `number` stał się opcjonalny
+  - Domyślnie `number: undefined` → zawodnik tworzony skrótem **P** nie ma numeru
+  - `isGoalkeeper: false` domyślnie, z backward-compat w renderze (stare projekty → `number === 1`)
+  - Nowa sekcja `playerDefaults` w `BoardDocument` z flagą `autoNumber` (domyślnie `false`)
+  - **Formacje** (`applyFormation`) zawsze nadają numery 1-11 z definicji — niezależnie od `autoNumber`
+  - Nowe akcje w `documentSlice`: `updatePlayerDefaults()`, `getPlayerDefaults()`
+  - Priorytetowa detekcja GK w `PlayerNode.tsx`: `flag !== undefined ? flag : number === 1`
+  - Zmodyfikowane pliki: `packages/core/src/board.ts`, `packages/core/src/types.ts`, `packages/core/src/serialization.ts`, `packages/board/src/PlayerNode.tsx`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/store/slices/documentSlice.ts`, `apps/web/src/store/slices/__tests__/vision.logic.test.ts`, `docs/PLAYER_CREATION_AND_PREFS_AUDIT.md`
 - **Aktualizacja domyślnych stylów wizualnych elementów** (2026-06-09)
   - **Text:** fontSize zmienione z 18 → 22, dodany domyślny backgroundColor `#ef4444` (czerwony)
   - **Arrow:** pass → `#1a1a1a` (ciemnoszary), run → `#f97316` (pomarańczowy), shoot → `#ef4444` (bez zmian, poprawiono dokumentację)

@@ -21,6 +21,7 @@ import {
   EquipmentType,
   EquipmentVariant,
   DrawingType,
+  PlayerShape,
   isArrowElement,
 } from './types.js';
 
@@ -37,23 +38,56 @@ export function snapToGrid(position: Position, gridSize: number): Position {
   };
 }
 
+/** Options for creating a new player element */
+export interface CreatePlayerOptions {
+  position: Position;
+  team: Team;
+  number?: number | null; // undefined/null = no number displayed
+  isGoalkeeper?: boolean; // undefined = backward-compat (renderer falls back to number===1)
+  shape?: PlayerShape;
+  color?: string;
+  orientation?: number | null; // null = feature OFF, number = explicit degrees
+  radius?: number;
+  label?: string;
+  showLabel?: boolean;
+  gridSize?: number;
+}
+
 /** Create a new player element */
-export function createPlayer(
-  position: Position,
-  team: Team,
-  number: number,
-  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
-): PlayerElement {
-  return {
+export function createPlayer(options: CreatePlayerOptions): PlayerElement {
+  const {
+    position,
+    team,
+    number,
+    isGoalkeeper,
+    shape,
+    color,
+    orientation,
+    radius,
+    label,
+    showLabel,
+    gridSize = DEFAULT_PITCH_CONFIG.gridSize,
+  } = options;
+
+  const result: PlayerElement = {
     id: generateId(),
     type: 'player',
     position: snapToGrid(position, gridSize),
     team,
-    number,
-    shape: team === 'home' ? 'triangle' : 'circle', // Home=triangle, Away=circle for instant visual distinction
-    isGoalkeeper: number === 1, // Nr 1 is always goalkeeper by default
-    orientation: 0, // Explicit default (north/up) — required for deterministic orientation transforms on pitch flip
+    number: number ?? undefined,
+    shape: shape ?? (team === 'home' ? 'triangle' : 'circle'),
+    isGoalkeeper: isGoalkeeper ?? false,
+    orientation: orientation ?? 0, // Explicit default (north/up) — required for deterministic orientation transforms on pitch flip
   };
+
+  // Only include defined optional fields
+  if (color !== undefined) result.color = color;
+  if (radius !== undefined) result.radius = radius;
+  if (label !== undefined) result.label = label;
+  if (showLabel !== undefined) result.showLabel = showLabel;
+  if (orientation === null) result.orientation = undefined;
+
+  return result;
 }
 
 /** Create a new ball element */
@@ -373,7 +407,12 @@ export function createTeamLineup(
 ): PlayerElement[] {
   const positions = getInitialFormation442(team, pitchConfig);
   return positions.map((pos, index) =>
-    createPlayer(pos, team, index + 1, pitchConfig.gridSize)
+    createPlayer({
+      position: pos,
+      team,
+      number: index + 1,
+      gridSize: pitchConfig.gridSize,
+    })
   );
 }
 

@@ -9,6 +9,7 @@ import {
   DEFAULT_PITCH_CONFIG,
   TeamSettings,
   DEFAULT_TEAM_SETTINGS,
+  DEFAULT_PLAYER_DEFAULTS,
 } from './types.js';
 import { createInitialBoard } from './board.js';
 import { createStep } from './step.js';
@@ -38,6 +39,7 @@ export function createDocument(
     steps: [initialStep],
     pitchConfig,
     teamSettings,
+    playerDefaults: DEFAULT_PLAYER_DEFAULTS,
   };
 }
 

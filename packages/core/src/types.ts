@@ -339,6 +339,28 @@ export interface Step {
   duration: number; // milliseconds
 }
 
+/** Default player creation preferences (per-document) */
+export interface PlayerDefaults {
+  /** If true, new players get auto-numbered (uses getNextPlayerNumber). If false, no number assigned. */
+  autoNumber: boolean;
+  /** Starting number offset (0 = start from 1, 50 = start from 51). Only applies when autoNumber=true. */
+  numberOffset: number;
+  /** Default shape for new home players (undefined = team-based fallback: triangle for home) */
+  homeShape?: PlayerShape;
+  /** Default shape for new away players (undefined = team-based fallback: circle for away) */
+  awayShape?: PlayerShape;
+  /** Default fill color override for new home players (undefined = team primaryColor) */
+  homeColor?: string;
+  /** Default fill color override for new away players (undefined = team primaryColor) */
+  awayColor?: string;
+}
+
+/** Default player defaults */
+export const DEFAULT_PLAYER_DEFAULTS: PlayerDefaults = {
+  autoNumber: false,
+  numberOffset: 0,
+};
+
 /** Complete board document for save/load */
 export interface BoardDocument {
   version: string;
@@ -351,6 +373,7 @@ export interface BoardDocument {
   teamSettings?: TeamSettings; // Optional for backward compatibility
   pitchSettings?: PitchSettings; // Optional for backward compatibility
   playerOrientationSettings?: PlayerOrientationSettings; // Optional for backward compatibility
+  playerDefaults?: PlayerDefaults; // Optional for backward compatibility
 }
 
 /** History entry for undo/redo */

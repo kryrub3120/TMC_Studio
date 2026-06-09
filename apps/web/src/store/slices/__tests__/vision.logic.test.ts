@@ -67,15 +67,30 @@ describe('DEFAULT_PLAYER_ORIENTATION_SETTINGS', () => {
 
 describe('createPlayer factory', () => {
   it('should set orientation: 0 explicitly on new players', () => {
-    const player = createPlayer({ x: 100, y: 100 }, 'home', 7);
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'home', number: 7 });
     expect(player.orientation).toBe(0);
   });
 
   it('should NOT set showVision (showVision is per-player opt-in; default undefined = OFF via normalization)', () => {
-    const player = createPlayer({ x: 100, y: 100 }, 'away', 9);
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'away', number: 9 });
     // showVision is NOT set on the player element itself — it defaults to undefined,
     // which renderer normalizes to false. This is the correct default.
     expect((player as any).showVision).toBeUndefined();
+  });
+
+  it('should set isGoalkeeper: false for non-GK players', () => {
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'home', number: 7 });
+    expect(player.isGoalkeeper).toBe(false);
+  });
+
+  it('should set isGoalkeeper: true when explicitly passed', () => {
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'home', number: 1, isGoalkeeper: true });
+    expect(player.isGoalkeeper).toBe(true);
+  });
+
+  it('should set number: undefined when not provided', () => {
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'home' });
+    expect(player.number).toBeUndefined();
   });
 });
 
@@ -196,7 +211,7 @@ describe('normalizeOrientationSettings', () => {
 // ---------------------------------------------------------------------------
 describe('createPlayer orientation: 0 regression (portrait flip)', () => {
   it('player created with orientation: 0 transforms correctly on portrait flip', () => {
-    const player = createPlayer({ x: 100, y: 100 }, 'home', 7);
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'home', number: 7 });
     expect(player.orientation).toBe(0);
     
     // Simulate portrait flip transform: landscape → portrait (CCW -90°)
@@ -206,7 +221,7 @@ describe('createPlayer orientation: 0 regression (portrait flip)', () => {
   });
 
   it('player created with orientation: 0 transforms correctly on landscape flip', () => {
-    const player = createPlayer({ x: 100, y: 100 }, 'away', 9);
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'away', number: 9 });
     expect(player.orientation).toBe(0);
     
     // Simulate portrait flip transform: portrait → landscape (CW +90°)
@@ -223,7 +238,7 @@ describe('createPlayer orientation: 0 regression (portrait flip)', () => {
     expect(badResult).toBeNaN(); // This is the bug we prevented
 
     // New code: createPlayer sets explicit orientation: 0
-    const player = createPlayer({ x: 100, y: 100 }, 'home', 1);
+    const player = createPlayer({ position: { x: 100, y: 100 }, team: 'home', number: 1 });
     const goodResult = ((player.orientation! + rotationDelta) % 360 + 360) % 360;
     expect(goodResult).toBe(270); // Correct!
   });
