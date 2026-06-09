@@ -1,14 +1,15 @@
 /**
  * BoardCanvasSection - Canvas rendering section for BoardPage
- * Contains CanvasShell, Stage, and all canvas layers.
- * 
- * Viewport model (PR-FIX-4):
- * - effectiveZoom = userZoom * fitZoom
- * - pitch always centered in container: centerX = (containerW - scaledW) / 2
- * - stagePosition = { x: centerX + panX, y: centerY + panY }
- * - pan via Space+drag (desktop) or two-finger drag (mobile)
- * - Ctrl/Cmd+wheel = zoom to cursor
- * - Fit resets panOffset to {0,0}
+ *
+ * Viewport model (Figma/Miro scroll-based):
+ * - Stage physical size = canvasWidth * effectiveZoom × canvasHeight * effectiveZoom
+ * - Stage scaleX/scaleY = effectiveZoom (Konva coords always in world-space)
+ * - Stage x=0, y=0 (no Konva-level pan offset)
+ * - Container has overflow:auto → viewport scrolls naturally
+ * - Scroll position replaces panOffset for pan behavior
+ * - Ctrl/Cmd+wheel zooms and repositions scroll to keep cursor point stable
+ * - Space+drag = scroll pan (desktop)
+ * - Pinch = zoom + scroll
  */
 
 import { ReactNode, useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -19,7 +20,7 @@ import { CanvasShell } from '../../components/CanvasShell';
 import { BoardCanvas } from '../../components/Canvas/BoardCanvas';
 import { CanvasAdapter } from './canvas/CanvasAdapter';
 import { useUIStore, ZOOM_MIN, ZOOM_MAX } from '../../store/useUIStore';
-import { computeZoomToCursorPan, clampPanOffset, screenToWorld } from '../../utils/viewportUtils';
+// viewportUtils retained for future use (getWorldPointer still used by other modules)
 import { useTouchGestures } from '../../hooks/useTouchGestures';
 
 export interface BoardCanvasSectionProps {
@@ -98,8 +99,8 @@ export interface BoardCanvasSectionProps {
 // ─── Constants ──────────────────────────────────────────────────────────
 const MIN_CONTAINER_SIZE = 200;
 const MAX_FIT_UPSCALE = 1.5;
-const PAN_CLAMP_MARGIN = 200;
-const WHEEL_ZOOM_FACTOR = 0.001; // sensitivity for Ctrl+wheel zoom
+const WHEEL_ZOOM_FACTOR = 0.001; // sensitivity for Ctrl+Cmd+wheel zoom
+const CANVAS_PADDING = 40; // padding around pitch in scrollable area
 
 export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const {
@@ -149,12 +150,12 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   const setZoom = useUIStore((s) => s.setZoom);
 
-  // ─── Container measurement ───────────────────────────────────────────
-  const containerRef = useRef<HTMLDivElement>(null);
+  // ─── Outer scroll container ─────────────────────────────────────────
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = scrollRef.current;
     if (!container) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -166,12 +167,9 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     return () => observer.disconnect();
   }, []);
 
-  // ─── Responsive container padding ────────────────────────────────────
-  const containerPadding = useMemo(() => {
-    return containerSize.width < 768 ? 16 : 24;
-  }, [containerSize.width]);
+  // ─── Fit-zoom computation (scale that fits pitch to viewport) ────────
+  const containerPadding = useMemo(() => containerSize.width < 768 ? 16 : 24, [containerSize.width]);
 
-  // ─── Fit-zoom computation ────────────────────────────────────────────
   const fitZoom = containerSize.width > MIN_CONTAINER_SIZE && containerSize.height > MIN_CONTAINER_SIZE
     ? Math.min(
         (containerSize.width - containerPadding) / canvasWidth,
@@ -182,22 +180,20 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   const effectiveZoom = zoom * fitZoom;
 
-  // ─── Pan state ───────────────────────────────────────────────────────
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  
-  // Refs for pan interaction (avoid re-renders during drag)
+  // ─── Physical Stage size in pixels ──────────────────────────────────
+  // Stage renders at full world size * effectiveZoom so viewport can scroll
+  const stagePixelWidth = Math.round(canvasWidth * effectiveZoom);
+  const stagePixelHeight = Math.round(canvasHeight * effectiveZoom);
+
+  // ─── Space+drag: convert to scroll pan ──────────────────────────────
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
-  const panOffsetStartRef = useRef({ x: 0, y: 0 });
+  const panScrollStartRef = useRef({ left: 0, top: 0 });
   const [spaceHeld, setSpaceHeld] = useState(false);
 
-  // ─── Space key tracking ──────────────────────────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat) {
-        // Don't prevent default here — let useKeyboardShortcuts handle that
-        setSpaceHeld(true);
-      }
+      if (e.code === 'Space' && !e.repeat) setSpaceHeld(true);
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
@@ -213,37 +209,28 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     };
   }, []);
 
-  // ─── Clamp helper ────────────────────────────────────────────────────
-  const clampPan = useCallback((px: number, py: number, scale?: number) => {
-    const s = scale ?? effectiveZoom;
-    return clampPanOffset(
-      px, py,
-      canvasWidth * s, canvasHeight * s,
-      containerSize.width, containerSize.height,
-      PAN_CLAMP_MARGIN,
-    );
-  }, [canvasWidth, canvasHeight, effectiveZoom, containerSize]);
-
-  // ─── Space+drag panning (desktop) ───────────────────────────────────
-  const handleContainerPointerDown = useCallback((e: React.PointerEvent) => {
+  const handleScrollPointerDown = useCallback((e: React.PointerEvent) => {
     if (!spaceHeld) return;
     isPanningRef.current = true;
     panStartRef.current = { x: e.clientX, y: e.clientY };
-    panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
+    panScrollStartRef.current = {
+      left: scrollRef.current?.scrollLeft ?? 0,
+      top: scrollRef.current?.scrollTop ?? 0,
+    };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
     e.stopPropagation();
-  }, [spaceHeld, panOffset]);
+  }, [spaceHeld]);
 
-  const handleContainerPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isPanningRef.current) return;
+  const handleScrollPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isPanningRef.current || !scrollRef.current) return;
     const dx = e.clientX - panStartRef.current.x;
     const dy = e.clientY - panStartRef.current.y;
-    const clamped = clampPan(panOffsetStartRef.current.x + dx, panOffsetStartRef.current.y + dy);
-    setPanOffset(clamped);
-  }, [clampPan]);
+    scrollRef.current.scrollLeft = panScrollStartRef.current.left - dx;
+    scrollRef.current.scrollTop = panScrollStartRef.current.top - dy;
+  }, []);
 
-  const handleContainerPointerUp = useCallback((e: React.PointerEvent) => {
+  const handleScrollPointerUp = useCallback((e: React.PointerEvent) => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
@@ -252,101 +239,84 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   // ─── Ctrl/Cmd+Wheel zoom-to-cursor ──────────────────────────────────
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const el = scrollRef.current;
+    if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
-      // Only handle Ctrl/Cmd+wheel for zoom
       if (!e.ctrlKey && !e.metaKey) return;
-      
-      // Don't handle if Alt is pressed (Alt+wheel = player orientation)
       if (e.altKey) return;
-      
       e.preventDefault();
-      e.stopPropagation();
-      
-      // Get current zoom state
+
       const currentZoom = useUIStore.getState().zoom;
-      const currentFitZoom = fitZoom; // captured from closure
+      const currentFitZoom = fitZoom;
       const currentEffective = currentZoom * currentFitZoom;
-      
-      // Compute new zoom
+
       const delta = -e.deltaY * WHEEL_ZOOM_FACTOR;
       const newUserZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, currentZoom * (1 + delta)));
       const newEffective = newUserZoom * currentFitZoom;
-      
-      // Get container-relative pointer position
-      const rect = container.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
-      
-      // Compute world point under cursor at OLD scale
-      const scaledW = canvasWidth * currentEffective;
-      const scaledH = canvasHeight * currentEffective;
-      const centerX = (containerSize.width - scaledW) / 2;
-      const centerY = (containerSize.height - scaledH) / 2;
-      const stageX = centerX + panOffset.x;
-      const stageY = centerY + panOffset.y;
-      
-      const world = screenToWorld(screenX, screenY, stageX, stageY, currentEffective);
-      
-      // Compute new panOffset to keep world point under cursor
-      const newPan = computeZoomToCursorPan(
-        screenX, screenY,
-        world.x, world.y,
-        newEffective,
-        containerSize.width, containerSize.height,
-        canvasWidth, canvasHeight,
-      );
-      
-      // Clamp and apply
-      const clamped = clampPanOffset(
-        newPan.x, newPan.y,
-        canvasWidth * newEffective, canvasHeight * newEffective,
-        containerSize.width, containerSize.height,
-        PAN_CLAMP_MARGIN,
-      );
-      
-      setPanOffset(clamped);
+
+      // Cursor position relative to scroll container
+      const rect = el.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      // World point under cursor (in canvas world coords)
+      const worldX = (cursorX + el.scrollLeft) / currentEffective;
+      const worldY = (cursorY + el.scrollTop) / currentEffective;
+
+      // New scroll to keep world point under cursor
+      const newScrollLeft = worldX * newEffective - cursorX;
+      const newScrollTop = worldY * newEffective - cursorY;
+
       setZoom(newUserZoom);
+
+      // Apply scroll on next frame (after Stage resizes)
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollLeft = newScrollLeft;
+          scrollRef.current.scrollTop = newScrollTop;
+        }
+      });
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [fitZoom, canvasWidth, canvasHeight, containerSize, panOffset, setZoom]);
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [fitZoom, setZoom]);
 
-  // ─── Mobile: pinch zoom + two-finger pan (via hook) ────────────────
+  // ─── Touch: pinch zoom + two-finger pan ─────────────────────────────
+  // Reuse useTouchGestures but scroll-based pan
+  const containerRefAlias = scrollRef as React.RefObject<HTMLDivElement | null>;
+  const [_panOffset, _setPanOffset] = useState({ x: 0, y: 0 });
+
   useTouchGestures({
-    containerRef,
+    containerRef: containerRefAlias,
     canvasWidth,
     canvasHeight,
     containerSize,
     fitZoom,
-    panOffset,
-    setPanOffset,
-    // Single tap handled by Konva Stage events; double tap → zoom fit
+    panOffset: _panOffset,
+    setPanOffset: useCallback(({ x, y }: { x: number; y: number }) => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollLeft = -x;
+        scrollRef.current.scrollTop = -y;
+      }
+    }, []),
     onDoubleTap: useCallback(() => {
       useUIStore.getState().zoomFit();
     }, []),
   });
 
-  // ─── Reset pan when zoom returns to fit ──────────────────────────────
+  // ─── Reset scroll to center when zoom returns to fit ─────────────────
   useEffect(() => {
-    if (zoom <= 1) {
-      setPanOffset({ x: 0, y: 0 });
+    if (zoom <= 1 && scrollRef.current) {
+      const el = scrollRef.current;
+      // Center the pitch
+      const overflowX = Math.max(0, stagePixelWidth - el.clientWidth);
+      const overflowY = Math.max(0, stagePixelHeight - el.clientHeight);
+      el.scrollLeft = overflowX / 2;
+      el.scrollTop = overflowY / 2;
     }
-  }, [zoom]);
-
-  // ─── Center + pan → Stage position ──────────────────────────────────
-  const scaledW = canvasWidth * effectiveZoom;
-  const scaledH = canvasHeight * effectiveZoom;
-  const centerX = (containerSize.width - scaledW) / 2;
-  const centerY = (containerSize.height - scaledH) / 2;
-
-  const stagePosition = {
-    x: centerX + panOffset.x,
-    y: centerY + panOffset.y,
-  };
+  }, [zoom, stagePixelWidth, stagePixelHeight]);
 
   // ─── Cursor style ────────────────────────────────────────────────────
   const cursorClass = spaceHeld
@@ -355,18 +325,36 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   return (
     <div
-      ref={containerRef}
-      className={`shadow-canvas rounded-[20px] border border-border/50 p-3 bg-surface/50 backdrop-blur-sm ${cursorClass}`}
-      style={{ touchAction: 'manipulation' }}
-      onPointerDown={handleContainerPointerDown}
-      onPointerMove={handleContainerPointerMove}
-      onPointerUp={handleContainerPointerUp}
+      ref={scrollRef}
+      className={`shadow-canvas rounded-[20px] border border-border/50 bg-surface/50 backdrop-blur-sm overflow-auto ${cursorClass}`}
+      style={{
+        touchAction: 'manipulation',
+        // Fill parent flex container
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+      }}
+      onPointerDown={handleScrollPointerDown}
+      onPointerMove={handleScrollPointerMove}
+      onPointerUp={handleScrollPointerUp}
     >
-      <CanvasShell emptyStateOverlay={emptyStateOverlay}>
-        {useNewCanvas ? (
-          <BoardCanvas
-            ref={stageRef}
-            width={canvasWidth}
+      {/* Inner div sized to the full zoomed canvas — scroll happens here */}
+      <div
+        style={{
+          width: stagePixelWidth,
+          height: stagePixelHeight,
+          minWidth: stagePixelWidth,
+          minHeight: stagePixelHeight,
+          padding: CANVAS_PADDING,
+          boxSizing: 'content-box',
+          position: 'relative',
+        }}
+      >
+        <CanvasShell emptyStateOverlay={emptyStateOverlay}>
+          {useNewCanvas ? (
+            <BoardCanvas
+              ref={stageRef}
+              width={canvasWidth}
             height={canvasHeight}
             elements={elements}
             selectedIds={selectedIds}
@@ -416,7 +404,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
             stageScale={effectiveZoom}
-            stagePosition={stagePosition}
+            stagePosition={{ x: 0, y: 0 }}
             pitchConfig={pitchConfig}
             pitchSettings={pitchSettings}
             teamSettings={teamSettings}
@@ -456,6 +444,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
           />
         )}
       </CanvasShell>
+      </div>
     </div>
   );
 }
