@@ -25,6 +25,7 @@ import { CanvasContextMenuOverlay, FocusModeExitBar } from './BoardOverlays';
 import { useBoardPageState, type BoardPageProps } from '../routes/useBoardPageState';
 import { useBoardPageHandlers } from './useBoardPageHandlers';
 import { useAnimationPlayback, useInterpolation, useStageEventHandlers, useContextMenuHandler } from './useBoardPageEffects';
+import { useViewportSync } from '../../hooks/useViewportSync';
 
 export { type BoardPageProps } from '../routes/useBoardPageState';
 
@@ -91,6 +92,9 @@ export function BoardPage(props: BoardPageProps) {
     clearSelection: state.clearSelection,
     showMenu: state.contextMenu.showMenu,
   });
+
+  // Viewport sync (responsive breakpoints)
+  useViewportSync();
 
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
@@ -255,6 +259,7 @@ export function BoardPage(props: BoardPageProps) {
         <RightInspector
           isOpen={state.inspectorOpen}
           onToggle={state.toggleInspector}
+          breakpoint={state.breakpoint}
           selectedCount={state.selectedIds.length}
           selectedElement={state.inspectorElement}
           elements={state.elementsList}

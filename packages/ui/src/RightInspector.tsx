@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import type { TeamSettings, TeamSetting, PitchSettings } from '@tmc/core';
 import { TeamsPanel } from './TeamsPanel.js';
 import { PitchPanel } from './PitchPanel.js';
+import { BottomSheet } from './BottomSheet.js';
 
 export interface InspectorElement {
   id: string;
@@ -73,6 +74,8 @@ export interface RightInspectorProps {
   onTogglePrintMode?: () => void;
   playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
   onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
+  /** Viewport breakpoint for responsive layout */
+  breakpoint?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 type TabType = 'props' | 'layers' | 'objects' | 'teams' | 'pitch';
@@ -727,6 +730,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onUpdatePlayerOrientation,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'props', label: 'Props' },
@@ -747,103 +751,200 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onToggle]);
 
+  // ─── Shared tab content renderer ─────────────────────────────────────
+  const renderTabContent = () => {
+    return activeTab === 'props' ? (
+      <PropsTab
+        selectedCount={selectedCount}
+        selectedElement={selectedElement}
+        onUpdateElement={onUpdateElement}
+        onQuickAction={onQuickAction}
+        playerOrientationSettings={playerOrientationSettings}
+        onUpdatePlayerOrientation={onUpdatePlayerOrientation}
+      />
+    ) : activeTab === 'layers' ? (
+      <LayersTab
+        layerVisibility={layerVisibility}
+        groups={groups}
+        onToggle={onToggleLayerVisibility}
+        onSelectGroup={onSelectGroup}
+        onToggleGroupLock={onToggleGroupLock}
+        onToggleGroupVisibility={onToggleGroupVisibility}
+        onRenameGroup={onRenameGroup}
+      />
+    ) : activeTab === 'objects' ? (
+      <ObjectsTab
+        elements={elements}
+        selectedElement={selectedElement}
+        layerVisibility={layerVisibility}
+        onSelectElement={onSelectElement}
+      />
+    ) : activeTab === 'teams' && teamSettings && onUpdateTeam ? (
+      <TeamsPanel teamSettings={teamSettings} onUpdateTeam={onUpdateTeam} />
+    ) : activeTab === 'pitch' && pitchSettings && onUpdatePitch ? (
+      <PitchPanel pitchSettings={pitchSettings} onUpdatePitch={onUpdatePitch} isPrintMode={isPrintMode} onTogglePrintMode={onTogglePrintMode} />
+    ) : null;
+  };
+
+  // ─── Tab navigation row ──────────────────────────────────────────────
+  const renderTabs = () => (
+    <div className="grid grid-cols-3 gap-1 p-2 border-b border-border flex-shrink-0">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
+          className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            activeTab === tab.id
+              ? 'bg-accent/10 text-accent'
+              : 'text-muted hover:text-text hover:bg-surface2'
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  // ─── FAB button for tablet/mobile ────────────────────────────────────
+  const FABButton = () => (
+    <button
+      onClick={() => setIsSheetOpen(true)}
+      className="fixed bottom-20 right-4 z-30 w-10 h-10 rounded-full bg-accent shadow-lg flex items-center justify-center text-white hover:bg-accent-hover active:scale-95 transition-all duration-fast"
+      aria-label="Open inspector"
+      title="Inspector (I)"
+    >
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+        <line x1="15" y1="3" x2="15" y2="21" />
+      </svg>
+    </button>
+  );
+
+  // ─── Sheet content ──────────────────────────────────────────────────
+  const SheetContent = () => (
+    <>
+      {renderTabs()}
+      <div className="flex-1 overflow-y-auto">
+        {renderTabContent()}
+      </div>
+    </>
+  );
+
   return (
     <>
-      {/* Backdrop - only on <xl when drawer is open */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-modal xl:hidden"
-          onClick={onToggle}
-        />
-      )}
+      {/* ── DESKTOP xl (≥1280px): full sidebar ── */}
+      <div className="hidden xl:flex flex-col bg-surface border-l border-border z-inspector relative transition-all duration-normal">
+        {/* Collapse Toggle Button */}
+        {isOpen && (
+          <button
+            onClick={onToggle}
+            className="hidden xl:block absolute -left-8 top-3 z-canvas w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border text-muted hover:text-text transition-colors"
+            title={isOpen ? 'Close Inspector (I)' : 'Open Inspector (I)'}
+          >
+            <CollapseIcon className="w-4 h-4" collapsed={false} />
+          </button>
+        )}
 
-      {/* Inspector Panel - Responsive: sidebar on xl, drawer on <xl */}
-      <div
-        className={`
-          flex flex-col bg-surface border-l border-border z-inspector
-          xl:relative xl:transition-all xl:duration-normal xl:z-canvas
-          max-xl:fixed max-xl:top-0 max-xl:right-0 max-xl:h-full max-xl:shadow-2xl
-          ${isOpen ? 'w-[280px]' : 'xl:w-0 max-xl:translate-x-full'}
-          max-xl:transition-transform max-xl:duration-300
-        `}
-      >
-        {/* Collapse Toggle Button - only visible on xl (desktop sidebar mode) */}
-        <button
-          onClick={onToggle}
-          className="hidden xl:block absolute -left-8 top-3 z-canvas w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border text-muted hover:text-text transition-colors"
-          title={isOpen ? 'Close Inspector (I)' : 'Open Inspector (I)'}
-        >
-          <CollapseIcon className="w-4 h-4" collapsed={!isOpen} />
-        </button>
+        <div className={`flex flex-col h-full ${isOpen ? 'w-[280px]' : 'w-0 overflow-hidden'}`}>
+          {isOpen && (
+            <>
+              {/* Tab Headers */}
+              <div className="grid grid-cols-3 gap-1 p-2 border-b border-border">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-muted hover:text-text hover:bg-surface2'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-      {/* Content */}
-      {isOpen && (
-        <>
-          {/* Tab Headers - Two-row grid for 5 tabs */}
-          <div className="grid grid-cols-3 gap-1 p-2 border-b border-border">
-            {tabs.map((tab) => (
+              {/* Tab Content */}
+              <div className="flex-1 overflow-hidden">
+                {renderTabContent()}
+              </div>
+            </>
+          )}
+          {/* Collapse toggle when closed */}
+          {!isOpen && (
+            <button
+              onClick={onToggle}
+              className="h-full w-6 flex items-center justify-center text-muted hover:text-text transition-colors"
+              title="Open Inspector (I)"
+            >
+              <CollapseIcon className="w-4 h-4" collapsed={true} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── LAPTOP lg (1024-1280px): collapsible icon bar ── */}
+      <div className="hidden lg:block xl:hidden">
+        {!isOpen ? (
+          /* Closed: thin icon strip */
+          <div className="flex flex-col items-center gap-2 py-3 px-1 bg-surface border-l border-border z-inspector transition-all duration-normal w-12 hover:w-[200px] group">
+            {tabs.slice(0, 3).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-muted hover:text-text hover:bg-surface2'
-                }`}
+                onClick={() => { setActiveTab(tab.id); onToggle(); }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium text-muted hover:text-text hover:bg-surface2 transition-colors whitespace-nowrap"
+                title={tab.label}
               >
-                {tab.label}
+                <span className="w-4 text-center flex-shrink-0">
+                  {tab.label === 'Props' ? '⚙' : tab.label === 'Layers' ? '👁' : tab.label === 'Objects' ? '📋' : '•'}
+                </span>
+                <span className="hidden group-hover:inline text-xs">{tab.label}</span>
               </button>
             ))}
           </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'props' && (
-              <PropsTab
-                selectedCount={selectedCount}
-                selectedElement={selectedElement}
-                onUpdateElement={onUpdateElement}
-                onQuickAction={onQuickAction}
-                playerOrientationSettings={playerOrientationSettings}
-                onUpdatePlayerOrientation={onUpdatePlayerOrientation}
-              />
-            )}
-            {activeTab === 'layers' && (
-              <LayersTab
-                layerVisibility={layerVisibility}
-                groups={groups}
-                onToggle={onToggleLayerVisibility}
-                onSelectGroup={onSelectGroup}
-                onToggleGroupLock={onToggleGroupLock}
-                onToggleGroupVisibility={onToggleGroupVisibility}
-                onRenameGroup={onRenameGroup}
-              />
-            )}
-            {activeTab === 'objects' && (
-              <ObjectsTab
-                elements={elements}
-                selectedElement={selectedElement}
-                layerVisibility={layerVisibility}
-                onSelectElement={onSelectElement}
-              />
-            )}
-            {activeTab === 'teams' && teamSettings && onUpdateTeam && (
-              <TeamsPanel
-                teamSettings={teamSettings}
-                onUpdateTeam={onUpdateTeam}
-              />
-            )}
-            {activeTab === 'pitch' && pitchSettings && onUpdatePitch && (
-              <PitchPanel
-                pitchSettings={pitchSettings}
-                onUpdatePitch={onUpdatePitch}
-                isPrintMode={isPrintMode}
-                onTogglePrintMode={onTogglePrintMode}
-              />
-            )}
+        ) : (
+          <div className="flex flex-col bg-surface border-l border-border z-inspector shadow-2xl w-[240px]">
+            <div className="fixed inset-0 bg-black/40 z-40" onClick={onToggle} />
+            <div className="relative z-50 flex flex-col h-full">
+              <div className="flex items-center justify-between p-2 border-b border-border">
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">Inspector</span>
+                <button onClick={onToggle} className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors" title="Close">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-1 p-2 border-b border-border">
+                  {tabs.map((tab) => (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                      className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                        activeTab === tab.id ? 'bg-accent/10 text-accent' : 'text-muted hover:text-text hover:bg-surface2'
+                      }`}>{tab.label}</button>
+                  ))}
+                </div>
+                {renderTabContent()}
+              </div>
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
+
+      {/* TABLET md: FAB + BottomSheet */}
+      <div className="hidden md:block lg:hidden">
+        <FABButton />
+        <BottomSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} maxHeight="md">
+          <SheetContent />
+        </BottomSheet>
+      </div>
+
+      {/* ── MOBILE sm (<768px): FAB + BottomSheet 75vh ── */}
+      <div className="block md:hidden">
+        <FABButton />
+        <BottomSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} maxHeight="sm">
+          <SheetContent />
+        </BottomSheet>
       </div>
     </>
   );

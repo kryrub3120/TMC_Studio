@@ -60,6 +60,17 @@ export const ZOOM_MIN = 0.25;
 export const ZOOM_MAX = 2;
 export const ZOOM_STEP = 0.25;
 
+/** Viewport breakpoint type */
+export type Breakpoint = 'sm' | 'md' | 'lg' | 'xl';
+
+/** Get breakpoint from viewport width */
+export function getBreakpoint(width: number): Breakpoint {
+  if (width >= 1280) return 'xl';
+  if (width >= 1024) return 'lg';
+  if (width >= 768) return 'md';
+  return 'sm';
+}
+
 /** UI Store state */
 interface UIState {
   // Theme
@@ -161,6 +172,10 @@ interface UIState {
   // Actions - Online/offline (PR-L5-MINI)
   setOnline: (online: boolean) => void;
   showSaveFailureToast: () => void;
+  
+  // Breakpoint
+  breakpoint: Breakpoint;
+  setBreakpoint: (bp: Breakpoint) => void;
 }
 
 /** Get initial inspector state based on screen size */
@@ -229,6 +244,7 @@ export const useUIStore = create<UIState>()(
       animationProgress: 0,
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       lastSaveFailureAt: null,
+      breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
       toggleTheme: () => {
@@ -402,6 +418,8 @@ export const useUIStore = create<UIState>()(
           get().showToast('You are offline', 1500);
         }
       },
+      
+      setBreakpoint: (bp) => set({ breakpoint: bp }),
       
       showSaveFailureToast: () => {
         const now = Date.now();
