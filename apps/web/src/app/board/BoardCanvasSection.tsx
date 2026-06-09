@@ -1,14 +1,14 @@
 /**
  * BoardCanvasSection - Canvas rendering section for BoardPage
  * Contains CanvasShell, Stage, and all canvas layers.
- * 
- * Viewport model (PR-FIX-4):
- * - effectiveZoom = userZoom * fitZoom
- * - pitch always centered in container: centerX = (containerW - scaledW) / 2
- * - stagePosition = { x: centerX + panX, y: centerY + panY }
- * - pan via Space+drag (desktop) or two-finger drag (mobile)
- * - Ctrl/Cmd+wheel = zoom to cursor
- * - Fit resets panOffset to {0,0}
+ *
+ * True Virtual Canvas Model:
+ * - Stage fills the container (width=containerW, height=containerH), scale=1, x=y=0
+ * - Root Group inside Stage holds transform: scaleX/Y=effectiveZoom, x/y=panOffset
+ * - World coords stable: worldX = (screenX - panX) / zoom
+ * - Ctrl/Cmd+wheel = zoom to cursor point
+ * - Space+drag = pan (modifies panOffset directly)
+ * - Fit = reset pan so pitch centered, zoom=1
  */
 
 import { ReactNode, useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -19,7 +19,7 @@ import { CanvasShell } from '../../components/CanvasShell';
 import { BoardCanvas } from '../../components/Canvas/BoardCanvas';
 import { CanvasAdapter } from './canvas/CanvasAdapter';
 import { useUIStore, ZOOM_MIN, ZOOM_MAX } from '../../store/useUIStore';
-import { computeZoomToCursorPan, clampPanOffset, screenToWorld } from '../../utils/viewportUtils';
+import { zoomToCursorPan, clampPanOffset } from '../../utils/viewportUtils';
 import { useTouchGestures } from '../../hooks/useTouchGestures';
 
 export interface BoardCanvasSectionProps {
@@ -182,7 +182,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   const effectiveZoom = zoom * fitZoom;
 
-  // ─── Pan state ───────────────────────────────────────────────────────
+  // ─── Pan state (= Group x/y offset) ─────────────────────────────────
+  // Initial value: {0,0}; first ResizeObserver fires and centering effect sets it
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
   // Refs for pan interaction (avoid re-renders during drag)
@@ -250,63 +251,44 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     }
   }, []);
 
-  // ─── Ctrl/Cmd+Wheel zoom-to-cursor ──────────────────────────────────
+  // ─── Ctrl/Cmd+Wheel zoom-to-cursor (True Virtual Canvas) ────────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
-      // Only handle Ctrl/Cmd+wheel for zoom
       if (!e.ctrlKey && !e.metaKey) return;
-      
-      // Don't handle if Alt is pressed (Alt+wheel = player orientation)
       if (e.altKey) return;
-      
       e.preventDefault();
       e.stopPropagation();
-      
-      // Get current zoom state
+
       const currentZoom = useUIStore.getState().zoom;
-      const currentFitZoom = fitZoom; // captured from closure
-      const currentEffective = currentZoom * currentFitZoom;
-      
-      // Compute new zoom
+      const currentEffective = currentZoom * fitZoom;
+
       const delta = -e.deltaY * WHEEL_ZOOM_FACTOR;
       const newUserZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, currentZoom * (1 + delta)));
-      const newEffective = newUserZoom * currentFitZoom;
-      
-      // Get container-relative pointer position
+      const newEffective = newUserZoom * fitZoom;
+
+      // Cursor position relative to container
       const rect = container.getBoundingClientRect();
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
-      
-      // Compute world point under cursor at OLD scale
-      const scaledW = canvasWidth * currentEffective;
-      const scaledH = canvasHeight * currentEffective;
-      const centerX = (containerSize.width - scaledW) / 2;
-      const centerY = (containerSize.height - scaledH) / 2;
-      const stageX = centerX + panOffset.x;
-      const stageY = centerY + panOffset.y;
-      
-      const world = screenToWorld(screenX, screenY, stageX, stageY, currentEffective);
-      
-      // Compute new panOffset to keep world point under cursor
-      const newPan = computeZoomToCursorPan(
-        screenX, screenY,
-        world.x, world.y,
-        newEffective,
-        containerSize.width, containerSize.height,
-        canvasWidth, canvasHeight,
-      );
-      
-      // Clamp and apply
+
+      // World point under cursor at OLD zoom (using current groupPan)
+      const worldX = (screenX - groupPan.x) / currentEffective;
+      const worldY = (screenY - groupPan.y) / currentEffective;
+
+      // New pan so same world point stays under cursor
+      const newPan = zoomToCursorPan(screenX, screenY, worldX, worldY, newEffective);
+
+      // Clamp pan
       const clamped = clampPanOffset(
         newPan.x, newPan.y,
         canvasWidth * newEffective, canvasHeight * newEffective,
         containerSize.width, containerSize.height,
         PAN_CLAMP_MARGIN,
       );
-      
+
       setPanOffset(clamped);
       setZoom(newUserZoom);
     };
@@ -324,29 +306,25 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     fitZoom,
     panOffset,
     setPanOffset,
-    // Single tap handled by Konva Stage events; double tap → zoom fit
     onDoubleTap: useCallback(() => {
       useUIStore.getState().zoomFit();
     }, []),
   });
 
-  // ─── Reset pan when zoom returns to fit ──────────────────────────────
+  // ─── Reset pan to center when zoom returns to fit ────────────────────
   useEffect(() => {
     if (zoom <= 1) {
-      setPanOffset({ x: 0, y: 0 });
+      // Center: Group origin at (containerW/2 - canvasW/2, containerH/2 - canvasH/2) * fitZoom
+      const eff = 1 * fitZoom;
+      const centerX = (containerSize.width - canvasWidth * eff) / 2;
+      const centerY = (containerSize.height - canvasHeight * eff) / 2;
+      setPanOffset({ x: centerX, y: centerY });
     }
-  }, [zoom]);
+  }, [zoom, fitZoom, canvasWidth, canvasHeight, containerSize]);
 
-  // ─── Center + pan → Stage position ──────────────────────────────────
-  const scaledW = canvasWidth * effectiveZoom;
-  const scaledH = canvasHeight * effectiveZoom;
-  const centerX = (containerSize.width - scaledW) / 2;
-  const centerY = (containerSize.height - scaledH) / 2;
-
-  const stagePosition = {
-    x: centerX + panOffset.x,
-    y: centerY + panOffset.y,
-  };
+  // ─── Group transform (panOffset IS groupPan directly) ───────────────
+  // In True Virtual Canvas: panOffset = {x: groupPanX, y: groupPanY}
+  const groupPan = panOffset;
 
   // ─── Cursor style ────────────────────────────────────────────────────
   const cursorClass = spaceHeld
@@ -415,8 +393,10 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             stageRef={stageRef}
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
-            stageScale={effectiveZoom}
-            stagePosition={stagePosition}
+            containerWidth={containerSize.width || canvasWidth}
+            containerHeight={containerSize.height || canvasHeight}
+            groupZoom={effectiveZoom}
+            groupPan={groupPan}
             pitchConfig={pitchConfig}
             pitchSettings={pitchSettings}
             teamSettings={teamSettings}

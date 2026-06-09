@@ -37,6 +37,36 @@ export function getWorldPointer(stage: Konva.Stage | null): WorldPoint | null {
 }
 
 /**
+ * True Virtual Canvas: convert Stage pointer position to world coords.
+ * 
+ * In the True Virtual Canvas model, the Stage has no transform (scale=1, x=0, y=0).
+ * Instead, a root Group inside the Stage has scaleX/Y={zoom} and x/y={panX/Y}.
+ * 
+ * Formula:
+ *   worldX = (stagePointerX - panX) / zoom
+ *   worldY = (stagePointerY - panY) / zoom
+ *
+ * @param stage - Konva Stage (scale=1)
+ * @param zoom  - Current zoom level applied on the root Group
+ * @param panX  - Group x offset
+ * @param panY  - Group y offset
+ */
+export function groupPointerToWorld(
+  stage: Konva.Stage | null,
+  zoom: number,
+  panX: number,
+  panY: number,
+): WorldPoint | null {
+  if (!stage) return null;
+  const pos = stage.getPointerPosition();
+  if (!pos) return null;
+  return {
+    x: (pos.x - panX) / zoom,
+    y: (pos.y - panY) / zoom,
+  };
+}
+
+/**
  * Convert screen coordinates to world coordinates given stage transform.
  * Useful when you have screen coords from a DOM event rather than Konva.
  */
@@ -50,6 +80,33 @@ export function screenToWorld(
   return {
     x: (screenX - stageX) / scale,
     y: (screenY - stageY) / scale,
+  };
+}
+
+/**
+ * Compute the new panOffset so that a given world point stays fixed
+ * under the cursor when zoom changes.
+ * 
+ * zoomToPoint formula (True Virtual Canvas / Group transform):
+ *   screenPos = worldPoint * zoom + panOffset
+ *   → newPanOffset = screenPos - worldPoint * newZoom
+ *
+ * @param screenX - Cursor X relative to Stage (= container)
+ * @param screenY - Cursor Y relative to Stage (= container)
+ * @param worldX  - World X under cursor before zoom change
+ * @param worldY  - World Y under cursor before zoom change
+ * @param newZoom - New zoom level
+ */
+export function zoomToCursorPan(
+  screenX: number,
+  screenY: number,
+  worldX: number,
+  worldY: number,
+  newZoom: number,
+): { x: number; y: number } {
+  return {
+    x: screenX - worldX * newZoom,
+    y: screenY - worldY * newZoom,
   };
 }
 
