@@ -3,15 +3,14 @@
  * 
  * True Virtual Canvas Model:
  * - Stage fills the container (width/height = containerWidth/Height), scale=1, x=y=0
- * - Root <Group> inside Stage holds zoom (scaleX/Y) and pan (x/y)
- * - World coordinates are stable regardless of zoom/pan
- * - Pointer coords: groupPointerToWorld(stage, zoom, panX, panY)
+ * - CanvasElements renders a single <Layer> with scaleX/Y=groupZoom, x/y=groupPan
+ * - World coordinate mapping: worldX = (stagePointerX - groupPanX) / groupZoom
  * 
  * NO store imports. Bundles interpolators and passes props to CanvasElements
  */
 
 import { useMemo } from 'react';
-import { Stage, Group } from 'react-konva';
+import { Stage } from 'react-konva';
 import type Konva from 'konva';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
 import { CanvasElements } from './CanvasElements';
@@ -161,45 +160,40 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
       onTouchEnd={onStageMouseUp}
       onContextMenu={onContextMenu}
     >
-      {/* Root Group: applies zoom + pan (True Virtual Canvas transform) */}
-      <Group
-        x={groupPan.x}
-        y={groupPan.y}
-        scaleX={groupZoom}
-        scaleY={groupZoom}
-      >
-        <CanvasElements
-          elements={elements}
-          selectedIds={selectedIds}
-          hiddenByGroup={hiddenByGroup}
-          layerVisibility={layerVisibility}
-          pitchConfig={pitchConfig}
-          pitchSettings={pitchSettings}
-          teamSettings={teamSettings}
-          playerOrientationSettings={playerOrientationSettings}
-          gridVisible={gridVisible}
-          zoom={zoom}
-          isPlaying={isPlaying}
-          activeTool={activeTool}
-          isPrintMode={isPrintMode}
-          marqueeStart={marqueeStart}
-          marqueeEnd={marqueeEnd}
-          drawingStart={drawingStart}
-          drawingEnd={drawingEnd}
-          freehandPoints={freehandPoints}
-          interpolators={interpolators}
-          onElementSelect={onElementSelect}
-          onElementDragEnd={onElementDragEnd}
-          onElementDragStart={onElementDragStart}
-          onResizeZone={onResizeZone}
-          onUpdateArrowEndpoint={onUpdateArrowEndpoint}
-          onPlayerQuickEdit={onPlayerQuickEdit}
-          onTextDoubleClick={onTextDoubleClick}
-          pushHistory={pushHistory}
-          onOrientationPreview={onOrientationPreview}
-          onOrientationCommit={onOrientationCommit}
-        />
-      </Group>
+      <CanvasElements
+        elements={elements}
+        selectedIds={selectedIds}
+        hiddenByGroup={hiddenByGroup}
+        layerVisibility={layerVisibility}
+        pitchConfig={pitchConfig}
+        pitchSettings={pitchSettings}
+        teamSettings={teamSettings}
+        playerOrientationSettings={playerOrientationSettings}
+        gridVisible={gridVisible}
+        zoom={zoom}
+        groupZoom={groupZoom}
+        groupPanX={groupPan.x}
+        groupPanY={groupPan.y}
+        isPlaying={isPlaying}
+        activeTool={activeTool}
+        isPrintMode={isPrintMode}
+        marqueeStart={marqueeStart}
+        marqueeEnd={marqueeEnd}
+        drawingStart={drawingStart}
+        drawingEnd={drawingEnd}
+        freehandPoints={freehandPoints}
+        interpolators={interpolators}
+        onElementSelect={onElementSelect}
+        onElementDragEnd={onElementDragEnd}
+        onElementDragStart={onElementDragStart}
+        onResizeZone={onResizeZone}
+        onUpdateArrowEndpoint={onUpdateArrowEndpoint}
+        onPlayerQuickEdit={onPlayerQuickEdit}
+        onTextDoubleClick={onTextDoubleClick}
+        pushHistory={pushHistory}
+        onOrientationPreview={onOrientationPreview}
+        onOrientationCommit={onOrientationCommit}
+      />
     </Stage>
   );
 }

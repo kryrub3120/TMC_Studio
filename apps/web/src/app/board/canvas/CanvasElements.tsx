@@ -52,6 +52,11 @@ export interface CanvasElementsProps {
     getInterpolatedArrowEndpoints: (elementId: string, start: Position, end: Position) => { start: Position; end: Position };
   };
   
+  // True Virtual Canvas: Group transform applied to Layer
+  groupZoom?: number;
+  groupPanX?: number;
+  groupPanY?: number;
+  
   // Handlers
   onElementSelect: (id: string, addToSelection: boolean) => void;
   onElementDragEnd: (id: string, position: Position) => void;
@@ -88,6 +93,9 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     drawingEnd,
     freehandPoints,
     interpolators,
+    groupZoom = 1,
+    groupPanX = 0,
+    groupPanY = 0,
     onElementSelect,
     onElementDragEnd,
     onElementDragStart,
@@ -103,7 +111,12 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
   const { getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints } = interpolators;
 
   return (
-    <Layer>
+    <Layer
+      x={groupPanX}
+      y={groupPanY}
+      scaleX={groupZoom}
+      scaleY={groupZoom}
+    >
       <Pitch config={pitchConfig} pitchSettings={pitchSettings} gridVisible={gridVisible} />
 
       {/* Zones */}
