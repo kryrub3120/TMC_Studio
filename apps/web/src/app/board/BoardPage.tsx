@@ -140,7 +140,7 @@ export function BoardPage(props: BoardPageProps) {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Canvas area */}
-      <div className=\"flex-1 flex min-w-0 min-h-0 overflow-hidden p-4 relative\">
+      <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden p-4 relative">
           <BoardCanvasSection
             stageRef={state.stageRef}
             canvasWidth={state.canvasWidth}
