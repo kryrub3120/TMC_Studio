@@ -131,8 +131,8 @@ export function BoardPage(props: BoardPageProps) {
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Canvas area - flex-1 fill; BoardCanvasSection handles its own scroll/zoom */}
-        <div className="flex-1 flex bg-bg overflow-hidden relative">
+        {/* Canvas area */}
+        <div className="flex-1 flex items-center justify-center bg-bg p-4 overflow-auto relative">
           <BoardCanvasSection
             stageRef={state.stageRef}
             canvasWidth={state.canvasWidth}
