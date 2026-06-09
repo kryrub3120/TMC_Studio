@@ -167,12 +167,32 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
+
+        // 🎯 Auto-scale-down: when container shrinks enough that the
+        // pitch would bleed outside, force zoom to fit + center.
+        // Bypasses viewportLocked — even locked, the board must never
+        // be cut off by browser window changes.
+        const pad = width < 768 ? 16 : 24;
+        const newFitZoom = Math.min(
+          (width - pad) / canvasWidth,
+          (height - pad) / canvasHeight,
+          MAX_FIT_UPSCALE,
+        );
+        if (newFitZoom > 0) {
+          const currentZoom = useUIStore.getState().zoom;
+          // currentZoom > newFitZoom → pitch bleeds outside visible viewport
+          if (currentZoom > newFitZoom) {
+            const forcedZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newFitZoom));
+            useUIStore.getState().setZoom(forcedZoom);
+          }
+        }
+
         setContainerSize({ width, height });
       }
     });
     observer.observe(container);
     return () => observer.disconnect();
-  }, []);
+  }, [canvasWidth, canvasHeight]);
 
   // ─── Responsive container padding ────────────────────────────────────
   const containerPadding = useMemo(() => {
@@ -375,35 +395,32 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     setPanOffset(centerPan);
   }, [containerSize, canvasWidth, canvasHeight, effectiveZoom]);
 
-  // ─── ETAP 3: Auto-center on window resize when zoom ≤ 1 ────────────
-  // When user shrinks the window below 100% zoom level, re-center so
-  // the pitch doesn't stick to top-left corner.
+  // ─── 🎯 Auto-scale-down: on resize, if effectiveZoom > 1, force zoom & center ──
+  // This runs AFTER containerSize state updates (from ResizeObserver above),
+  // guaranteeing the new dimensions are available.
+  // Bypasses viewportLocked — window resize must never clip the board.
   useEffect(() => {
-    const handleResize = () => {
-      // Use store's zoom (userZoom, not effective) to check if at/below fit
-      const userZoom = useUIStore.getState().zoom;
-      if (userZoom > 1) return; // only center when zoomed out
+    if (!hasInitializedRef.current) return;
+    const eff = zoom * fitZoom;
+    if (eff <= 1) return; // already fits — auto-center in BUG 2 effect handles it
 
-      // Need a rAF to let ResizeObserver update containerSize first
-      // — but our centering effect above runs on containerSize dependency.
-      // This resize handler just triggers a setState no-op to force re-render
-      // with the already-updated containerSize from ResizeObserver.
-      // Actually the existing fitZoom + centering effect already runs.
-      // We just need to setPanOffset back to center.
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const cw = rect.width;
-      const ch = rect.height;
-      if (cw <= MIN_CONTAINER_SIZE || ch <= MIN_CONTAINER_SIZE) return;
+    // Even if effective > 1, we should NOT force-zoom unless container actually shrank.
+    // But this effect will also fire on user zoom-in, which is intentional.
+    // So we only act when the new fitZoom makes effective > 1.
+    // Actually the ResizeObserver already forced the zoom down.
+    // This is just for centering after the forced zoom.
+    const physW = canvasWidth * eff;
+    const physH = canvasHeight * eff;
+    const cw = containerSize.width;
+    const ch = containerSize.height;
 
-      const eff = userZoom * fitZoom;
-      const centerPan = centerPanOffset(cw, ch, canvasWidth, canvasHeight, eff);
-      setPanOffset(centerPan);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [fitZoom, canvasWidth, canvasHeight]);
+    if (physW < cw || physH < ch) {
+      setPanOffset((prev) => ({
+        x: physW < cw ? (cw - physW) / 2 : prev.x,
+        y: physH < ch ? (ch - physH) / 2 : prev.y,
+      }));
+    }
+  }, [containerSize, zoom, fitZoom, canvasWidth, canvasHeight]);
 
   // ─── Group transform (panOffset IS groupPan directly) ───────────────
   // In True Virtual Canvas: panOffset = {x: groupPanX, y: groupPanY}
