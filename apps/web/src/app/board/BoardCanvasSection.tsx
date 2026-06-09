@@ -237,17 +237,23 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   // ─── Space+drag panning (desktop) ───────────────────────────────────
   const handleContainerPointerDown = useCallback((e: React.PointerEvent) => {
     if (!spaceHeld) return;
-    if (viewportLocked) return; // ETAP 4: lock prevents pan
+    // ✅ IMPERATIVE read — stale closure proof
+    if (useUIStore.getState().viewportLocked) return;
     isPanningRef.current = true;
     panStartRef.current = { x: e.clientX, y: e.clientY };
     panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
     e.stopPropagation();
-  }, [spaceHeld, panOffset, viewportLocked]);
+  }, [spaceHeld, panOffset]);
 
   const handleContainerPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isPanningRef.current) return;
+    // ✅ IMPERATIVE read — catch mid-pan lock toggle
+    if (useUIStore.getState().viewportLocked) {
+      isPanningRef.current = false;
+      return;
+    }
     const dx = e.clientX - panStartRef.current.x;
     const dy = e.clientY - panStartRef.current.y;
     const clamped = clampPan(panOffsetStartRef.current.x + dx, panOffsetStartRef.current.y + dy);
@@ -291,13 +297,25 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
       const worldY = (screenY - groupPan.y) / currentEffective;
 
       // New pan so same world point stays under cursor
-      const newPan = zoomToCursorPan(screenX, screenY, worldX, worldY, newEffective);
+      let newPan = zoomToCursorPan(screenX, screenY, worldX, worldY, newEffective);
+
+      // 🎯 BUG 2: Enforce auto-center when scaled pitch fits in container
+      const physW = canvasWidth * newEffective;
+      const physH = canvasHeight * newEffective;
+      const cw = containerSize.width;
+      const ch = containerSize.height;
+      if (physW < cw) {
+        newPan = { ...newPan, x: (cw - physW) / 2 };
+      }
+      if (physH < ch) {
+        newPan = { ...newPan, y: (ch - physH) / 2 };
+      }
 
       // Clamp pan
       const clamped = clampPanOffset(
         newPan.x, newPan.y,
-        canvasWidth * newEffective, canvasHeight * newEffective,
-        containerSize.width, containerSize.height,
+        physW, physH,
+        cw, ch,
         PAN_CLAMP_MARGIN,
       );
 
@@ -324,13 +342,21 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     }, []),
   });
 
-  // ─── Reset pan to center when zoom returns to fit ────────────────────
+  // ─── 🎯 BUG 2: Auto-center whenever zoom changes and scaled pitch fits ──
+  // Runs on zoom change (wheel, buttons, shortcuts) to force the pitch
+  // back to viewport center whenever the scaled dimensions are smaller.
   useEffect(() => {
-    if (zoom <= 1) {
-      const eff = 1 * fitZoom;
-      const centerX = (containerSize.width - canvasWidth * eff) / 2;
-      const centerY = (containerSize.height - canvasHeight * eff) / 2;
-      setPanOffset({ x: centerX, y: centerY });
+    const eff = zoom * fitZoom;
+    const physW = canvasWidth * eff;
+    const physH = canvasHeight * eff;
+    const cw = containerSize.width;
+    const ch = containerSize.height;
+
+    if (physW < cw || physH < ch) {
+      setPanOffset((prev) => ({
+        x: physW < cw ? (cw - physW) / 2 : prev.x,
+        y: physH < ch ? (ch - physH) / 2 : prev.y,
+      }));
     }
   }, [zoom, fitZoom, canvasWidth, canvasHeight, containerSize]);
 

@@ -748,6 +748,8 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       // ===== ZOOM & RESIZE =====
       case '=':
       case '+':
+        // ✅ IMPERATIVE guard — lock disables zoom shortcuts
+        if (useUIStore.getState().viewportLocked) break;
         if (isCmd && e.altKey) {
           // Option+Cmd+= = Resize up +10%
           e.preventDefault();
@@ -765,6 +767,8 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case '-':
+        // ✅ IMPERATIVE guard — lock disables zoom shortcuts
+        if (useUIStore.getState().viewportLocked) break;
         if (isCmd && e.altKey) {
           // Option+Cmd+- = Resize down -10%
           e.preventDefault();
@@ -793,6 +797,8 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           state.pushHistory();
           showToast('Player orientation reset');
         } else if (!isCmd && !e.altKey && !e.shiftKey) {
+          // ✅ IMPERATIVE guard — lock disables zoom shortcuts
+          if (useUIStore.getState().viewportLocked) break;
           // 0 = Fit (reset zoom and pan)
           e.preventDefault();
           useUIStore.getState().zoomFit();

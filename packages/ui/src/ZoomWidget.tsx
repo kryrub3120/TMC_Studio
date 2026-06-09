@@ -83,10 +83,10 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       {/* Zoom Out */}
       <button
         onClick={onZoomOut}
-        disabled={isAtMin}
+        disabled={locked || isAtMin}
         title="Zoom Out (Cmd -)"
         className={`p-1.5 rounded-md transition-colors duration-fast ${
-          isAtMin
+          locked || isAtMin
             ? 'text-muted/50 cursor-not-allowed'
             : 'text-muted hover:text-text hover:bg-surface2'
         }`}
@@ -114,19 +114,16 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       {/* Zoom In */}
       <button
         onClick={onZoomIn}
-        disabled={isAtMax}
+        disabled={locked || isAtMax}
         title="Zoom In (Cmd +)"
         className={`p-1.5 rounded-md transition-colors duration-fast ${
-          isAtMax
+          locked || isAtMax
             ? 'text-muted/50 cursor-not-allowed'
             : 'text-muted hover:text-text hover:bg-surface2'
         }`}
       >
         <PlusIcon className="w-3.5 h-3.5" />
       </button>
-
-      {/* Divider */}
-      <div className="w-px h-5 bg-border mx-0.5" />
 
       {/* Divider */}
       <div className="w-px h-5 bg-border mx-0.5" />
@@ -151,9 +148,12 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       {/* Fit button */}
       <button
         onClick={onZoomFit}
+        disabled={locked || isAtFit}
         title="Fit to View (Shift+1)"
         className={`px-2 py-1 text-xs font-medium rounded-md transition-colors duration-fast ${
-          isAtFit
+          locked || isAtFit
+            ? 'text-muted/50 cursor-not-allowed'
+            : isAtFit
             ? 'text-accent bg-accent/10'
             : 'text-muted hover:text-text hover:bg-surface2'
         }`}

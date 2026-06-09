@@ -76,8 +76,8 @@ export function useTouchGestures(options: TouchGesturesOptions) {
 
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
-        // ETAP 4: lock prevents pinch zoom & two-finger pan
-        if (locked) return;
+        // ✅ IMPERATIVE read — stale closure proof
+        if (useUIStore.getState().viewportLocked) return;
         e.preventDefault();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
@@ -129,6 +129,8 @@ export function useTouchGestures(options: TouchGesturesOptions) {
 
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2) {
+        // ✅ IMPERATIVE read — catch mid-pinch lock toggle
+        if (useUIStore.getState().viewportLocked) return;
         e.preventDefault();
 
         const t1 = e.touches[0];
