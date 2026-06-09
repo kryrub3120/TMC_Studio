@@ -3,6 +3,12 @@
  * 
  * Provides world-space pointer position from Konva Stage,
  * accounting for scale and translation (zoom + pan).
+ * 
+ * True Virtual Canvas model (PR-UX-3 ETAP 1):
+ * - Stage always fills the container: scale=1, x=0, y=0.
+ * - All zoom/pan lives on the root Group: scaleX/Y={zoom}, x/y={panX, panY}.
+ * - World coordinates: worldX = (screenX - panX) / zoom
+ * - Public API: getCanvasWorldCoords() — single source of truth for screen→world.
  */
 
 import type Konva from 'konva';
@@ -13,14 +19,41 @@ export interface WorldPoint {
 }
 
 /**
- * Get the pointer position in world (unscaled) coordinates.
- * 
- * Uses Stage.getPointerPosition() (screen coords) and the inverse
- * of the Stage's absolute transform to convert to world space.
- * 
- * Usage:
- *   const world = getWorldPointer(stageRef.current);
- *   // world.x, world.y are in pitch coordinate space
+ * Convert a Stage pointer position to world (canvas) coordinates.
+ *
+ * True Virtual Canvas formula:
+ *   worldX = (stagePointerX - panX) / zoom
+ *   worldY = (stagePointerY - panY) / zoom
+ *
+ * This is the **primary public API** for screen→world conversion.
+ * Use this everywhere in place of `stage.getPointerPosition()` + manual math.
+ *
+ * @param stage - Konva Stage (must have scale=1, x=0, y=0)
+ * @param panX  - Root Group x offset (= panOffset.x from BoardCanvasSection)
+ * @param panY  - Root Group y offset (= panOffset.y from BoardCanvasSection)
+ * @param zoom  - Root Group zoom (= effectiveZoom = userZoom * fitZoom)
+ */
+export function getCanvasWorldCoords(
+  stage: Konva.Stage | null,
+  panX: number,
+  panY: number,
+  zoom: number,
+): WorldPoint | null {
+  if (!stage) return null;
+  const pos = stage.getPointerPosition();
+  if (!pos) return null;
+  return {
+    x: (pos.x - panX) / zoom,
+    y: (pos.y - panY) / zoom,
+  };
+}
+
+/**
+ * @deprecated Use `getCanvasWorldCoords(stage, panX, panY, zoom)` instead.
+ *
+ * Legacy: uses Stage absolute transform inverse — only correct when Stage
+ * itself holds the scale (old model). In True Virtual Canvas the Stage has
+ * no transform; use getCanvasWorldCoords instead.
  */
 export function getWorldPointer(stage: Konva.Stage | null): WorldPoint | null {
   if (!stage) return null;
@@ -37,19 +70,10 @@ export function getWorldPointer(stage: Konva.Stage | null): WorldPoint | null {
 }
 
 /**
- * True Virtual Canvas: convert Stage pointer position to world coords.
- * 
- * In the True Virtual Canvas model, the Stage has no transform (scale=1, x=0, y=0).
- * Instead, a root Group inside the Stage has scaleX/Y={zoom} and x/y={panX/Y}.
- * 
- * Formula:
- *   worldX = (stagePointerX - panX) / zoom
- *   worldY = (stagePointerY - panY) / zoom
+ * @deprecated Use `getCanvasWorldCoords(stage, panX, panY, zoom)` instead.
  *
- * @param stage - Konva Stage (scale=1)
- * @param zoom  - Current zoom level applied on the root Group
- * @param panX  - Group x offset
- * @param panY  - Group y offset
+ * True Virtual Canvas: convert Stage pointer position to world coords.
+ * Kept for backward compatibility; identical logic to getCanvasWorldCoords.
  */
 export function groupPointerToWorld(
   stage: Konva.Stage | null,
@@ -57,13 +81,7 @@ export function groupPointerToWorld(
   panX: number,
   panY: number,
 ): WorldPoint | null {
-  if (!stage) return null;
-  const pos = stage.getPointerPosition();
-  if (!pos) return null;
-  return {
-    x: (pos.x - panX) / zoom,
-    y: (pos.y - panY) / zoom,
-  };
+  return getCanvasWorldCoords(stage, panX, panY, zoom);
 }
 
 /**

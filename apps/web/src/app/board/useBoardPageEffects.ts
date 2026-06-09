@@ -1,6 +1,11 @@
 /**
  * useBoardPageEffects - Animation, interpolation, and event handling hooks
  * Extracted from App.tsx for modularity
+ *
+ * PR-UX-3 ETAP 1: Stage event handlers now convert screen→world via
+ * getCanvasWorldCoords() instead of passing raw Stage pointer positions.
+ * The caller provides getViewportTransform() — a stable getter (via useRef)
+ * that returns the current { panX, panY, zoom } without causing re-renders.
  */
 
 import { useCallback } from 'react';
@@ -9,6 +14,7 @@ import type { Position, BoardElement } from '@tmc/core';
 import { useBoardStore } from '../../store';
 import { useAnimationPlayback as useAnimationPlaybackCore } from '../../hooks/useAnimationPlayback';
 import { useAnimationInterpolation } from '../../hooks/useAnimationInterpolation';
+import { getCanvasWorldCoords } from '../../utils/viewportUtils';
 
 // Animation playback hook (wrapper for backward compatibility)
 export interface AnimationPlaybackInput {
@@ -69,18 +75,29 @@ export interface StageEventHandlersInput {
   activeTool: string | null;
   clearSelection: () => void;
   marqueeStart: Position | null;
+  /**
+   * PR-UX-3 ETAP 1: Stable getter (via useRef) returning the current viewport
+   * transform from BoardCanvasSection. Used to convert Stage screen coords
+   * to world coords without causing re-renders.
+   *
+   * Returns { panX, panY, zoom } where zoom = effectiveZoom (userZoom * fitZoom).
+   */
+  getViewportTransform: () => { panX: number; panY: number; zoom: number };
 }
 
 export function useStageEventHandlers(input: StageEventHandlersInput) {
-  const { drawingController, canvasEventsController, activeTool, clearSelection, marqueeStart } = input;
+  const { drawingController, canvasEventsController, activeTool, clearSelection, marqueeStart, getViewportTransform } = input;
 
   const handleStageMouseDown = useCallback(
     (e: any) => {
       const stage = e.target.getStage();
-      const pos = stage?.getPointerPosition();
-      if (!pos) return;
+      // ✅ ETAP 1: Convert Stage screen coords → world coords via True Virtual Canvas formula.
+      // Stage has scale=1, x=0, y=0. Zoom/pan live on the root Group.
+      const { panX, panY, zoom } = getViewportTransform();
+      const worldPos = getCanvasWorldCoords(stage, panX, panY, zoom);
+      if (!worldPos) return;
       
-      const handled = drawingController.handleDrawingMouseDown(pos);
+      const handled = drawingController.handleDrawingMouseDown(worldPos);
       if (handled) return;
       
       const target = e.target;
@@ -95,21 +112,23 @@ export function useStageEventHandlers(input: StageEventHandlersInput) {
       );
       const clickedOnInteractive = isInteractive || !(isStage || isLayer || isPitchElement);
       
-      canvasEventsController.handleStageMouseDown(pos, clickedOnInteractive);
+      canvasEventsController.handleStageMouseDown(worldPos, clickedOnInteractive);
     },
-    [drawingController, canvasEventsController]
+    [drawingController, canvasEventsController, getViewportTransform]
   );
 
   const handleStageMouseMove = useCallback(
     (e: any) => {
       const stage = e.target.getStage();
-      const pos = stage?.getPointerPosition();
-      if (!pos) return;
+      // ✅ ETAP 1: Convert Stage screen coords → world coords via True Virtual Canvas formula.
+      const { panX, panY, zoom } = getViewportTransform();
+      const worldPos = getCanvasWorldCoords(stage, panX, panY, zoom);
+      if (!worldPos) return;
       
-      drawingController.handleDrawingMouseMove(pos);
-      canvasEventsController.handleStageMouseMove(pos);
+      drawingController.handleDrawingMouseMove(worldPos);
+      canvasEventsController.handleStageMouseMove(worldPos);
     },
-    [drawingController, canvasEventsController]
+    [drawingController, canvasEventsController, getViewportTransform]
   );
 
   const handleStageMouseUp = useCallback(

@@ -1,14 +1,84 @@
 /**
  * Unit tests for viewport utility functions
- * Part of canvas stabilization pass
+ * Part of canvas stabilization pass + PR-UX-3 ETAP 1.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
+  getCanvasWorldCoords,
   screenToWorld,
   computeZoomToCursorPan,
   clampPanOffset,
 } from '../viewportUtils';
+
+// ─── getCanvasWorldCoords ───────────────────────────────────────────────────
+
+describe('getCanvasWorldCoords', () => {
+  /** Helper: create a minimal Konva.Stage mock with a given pointer position */
+  function makeStage(screenX: number, screenY: number) {
+    return {
+      getPointerPosition: vi.fn().mockReturnValue({ x: screenX, y: screenY }),
+    } as any;
+  }
+
+  it('returns null when stage is null', () => {
+    expect(getCanvasWorldCoords(null, 0, 0, 1)).toBeNull();
+  });
+
+  it('returns null when getPointerPosition returns null', () => {
+    const stage = { getPointerPosition: vi.fn().mockReturnValue(null) } as any;
+    expect(getCanvasWorldCoords(stage, 0, 0, 1)).toBeNull();
+  });
+
+  it('converts correctly at scale=1 with no pan', () => {
+    const world = getCanvasWorldCoords(makeStage(100, 200), 0, 0, 1);
+    expect(world).toEqual({ x: 100, y: 200 });
+  });
+
+  it('converts correctly with pan offset', () => {
+    // screen(150,250), pan(50,100), zoom=1 → world(100, 150)
+    const world = getCanvasWorldCoords(makeStage(150, 250), 50, 100, 1);
+    expect(world).toEqual({ x: 100, y: 150 });
+  });
+
+  it('converts correctly with zoom > 1', () => {
+    // screen(200,400), pan(0,0), zoom=2 → world(100, 200)
+    const world = getCanvasWorldCoords(makeStage(200, 400), 0, 0, 2);
+    expect(world).toEqual({ x: 100, y: 200 });
+  });
+
+  it('converts correctly with both pan and zoom', () => {
+    // screen(260,420), pan(60,20), zoom=2 → world((260-60)/2, (420-20)/2) = (100, 200)
+    const world = getCanvasWorldCoords(makeStage(260, 420), 60, 20, 2);
+    expect(world).toEqual({ x: 100, y: 200 });
+  });
+
+  it('handles fractional zoom (zoom < 1)', () => {
+    // screen(50,50), pan(0,0), zoom=0.5 → world(100, 100)
+    const world = getCanvasWorldCoords(makeStage(50, 50), 0, 0, 0.5);
+    expect(world).toEqual({ x: 100, y: 100 });
+  });
+
+  it('negative pan (canvas larger than container) still works', () => {
+    // pan(-100,-80), zoom=1.5, screen(200,160) → world((200-(-100))/1.5, (160-(-80))/1.5) = (200, 160)
+    const world = getCanvasWorldCoords(makeStage(200, 160), -100, -80, 1.5);
+    expect(world!.x).toBeCloseTo(200, 5);
+    expect(world!.y).toBeCloseTo(160, 5);
+  });
+
+  it('world coord round-trips back to screen coord', () => {
+    const panX = 30;
+    const panY = -20;
+    const zoom = 1.25;
+    const screenX = 400;
+    const screenY = 300;
+
+    const world = getCanvasWorldCoords(makeStage(screenX, screenY), panX, panY, zoom)!;
+    // Verify: screenX = worldX * zoom + panX
+    expect(world.x * zoom + panX).toBeCloseTo(screenX, 5);
+    expect(world.y * zoom + panY).toBeCloseTo(screenY, 5);
+  });
+});
 
 describe('screenToWorld', () => {
   it('should convert screen coords to world coords at scale=1 with no offset', () => {

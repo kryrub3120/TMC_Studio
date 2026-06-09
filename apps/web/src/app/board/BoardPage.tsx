@@ -3,6 +3,7 @@
  * Pure composition - orchestrates all board-related sections
  */
 
+import { useRef } from 'react';
 import { 
   RightInspector, 
   BottomStepsBar, 
@@ -37,6 +38,11 @@ export function BoardPage(props: BoardPageProps) {
     onOpenPricingModal,
     onRenameProject,
   } = props;
+
+  // ─── Viewport transform ref (PR-UX-3 ETAP 1) ───────────────────────
+  // BoardCanvasSection writes this every render; useStageEventHandlers reads it
+  // to convert Stage screen coords → world coords without re-render coupling.
+  const viewportTransformRef = useRef({ panX: 0, panY: 0, zoom: 1 });
 
   // State hook
   const state = useBoardPageState(props);
@@ -82,6 +88,8 @@ export function BoardPage(props: BoardPageProps) {
     activeTool: state.activeTool,
     clearSelection: state.clearSelection,
     marqueeStart: state.canvasEventsController.marqueeStart,
+    // ✅ ETAP 1: Stable getter for viewport transform (no re-render on pan/zoom)
+    getViewportTransform: () => viewportTransformRef.current,
   });
 
   // Context menu handler
@@ -186,6 +194,7 @@ export function BoardPage(props: BoardPageProps) {
             getInterpolatedArrowEndpoints={interpolation.getInterpolatedArrowEndpoints}
             useNewCanvas={state.USE_NEW_CANVAS}
             activeCanvasInteraction={state.activeCanvasInteraction}
+            viewportTransformRef={viewportTransformRef}
           />
 
           {/* Shortcuts Hint (one-time) */}

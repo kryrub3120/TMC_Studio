@@ -11,7 +11,7 @@
  * - Fit = reset pan so pitch centered, zoom=1
  */
 
-import { ReactNode, useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { ReactNode, useState, useRef, useEffect, useCallback, useMemo, MutableRefObject } from 'react';
 import type Konva from 'konva';
 import { DEFAULT_PITCH_SETTINGS, isPlayerElement } from '@tmc/core';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
@@ -93,6 +93,12 @@ export interface BoardCanvasSectionProps {
   // Feature flag
   useNewCanvas?: boolean;
   activeCanvasInteraction?: any;
+  /**
+   * PR-UX-3 ETAP 1: Optional ref that BoardCanvasSection keeps up-to-date with the
+   * current viewport transform. Allows sibling hooks (useStageEventHandlers) to
+   * read { panX, panY, zoom } without re-render coupling.
+   */
+  viewportTransformRef?: MutableRefObject<{ panX: number; panY: number; zoom: number }>;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────
@@ -145,6 +151,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     getInterpolatedArrowEndpoints,
     useNewCanvas = false,
     activeCanvasInteraction,
+    viewportTransformRef,
   } = props;
 
   const setZoom = useUIStore((s) => s.setZoom);
@@ -325,6 +332,17 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   // ─── Group transform (panOffset IS groupPan directly) ───────────────
   // In True Virtual Canvas: panOffset = {x: groupPanX, y: groupPanY}
   const groupPan = panOffset;
+
+  // ─── Keep viewportTransformRef up-to-date (PR-UX-3 ETAP 1) ─────────
+  // Runs on every render where effectiveZoom or panOffset changes.
+  // This ref is read by useStageEventHandlers to convert screen→world.
+  if (viewportTransformRef) {
+    viewportTransformRef.current = {
+      panX: groupPan.x,
+      panY: groupPan.y,
+      zoom: effectiveZoom,
+    };
+  }
 
   // ─── Cursor style ────────────────────────────────────────────────────
   const cursorClass = spaceHeld
