@@ -170,30 +170,32 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     if (!container) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
+        const cw = entry.contentRect.width;
+        const ch = entry.contentRect.height;
 
         // 🎯 Auto-scale-down: when container shrinks enough that the
         // pitch would bleed outside, force zoom to fit + center.
         // Bypasses viewportLocked — even locked, the board must never
         // be cut off by browser window changes.
-        const pad = width < 768 ? 16 : 24;
+        const pad = cw < 768 ? 16 : 24;
         const newFitZoom = Math.min(
-          (width - pad) / canvasWidth,
-          (height - pad) / canvasHeight,
+          (cw - pad) / canvasWidth,
+          (ch - pad) / canvasHeight,
           MAX_FIT_UPSCALE,
         );
         if (newFitZoom > 0) {
-          // Read FRESH current zoom via ref (never stale)
+          // Read FRESH current zoom via ref (never stale closure)
           const curZoom = zoomRef.current;
-          // Correct check: effectiveZoom > 1 means pitch overflows
-          if (curZoom * newFitZoom > 1) {
-            // We need zoom such that zoom * newFitZoom = 1 → zoom = 1 / newFitZoom
-            const forcedZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, 1 / newFitZoom));
-            useUIStore.getState().setZoom(forcedZoom);
+          // Raw comparison: if current zoom is too big for new container, clamp it
+          if (curZoom > newFitZoom) {
+            useUIStore.getState().setZoom(newFitZoom);
+            const newPanX = (cw - canvasWidth * newFitZoom) / 2;
+            const newPanY = (ch - canvasHeight * newFitZoom) / 2;
+            setPanOffset({ x: newPanX, y: newPanY });
           }
         }
 
-        setContainerSize({ width, height });
+        setContainerSize({ width: cw, height: ch });
       }
     });
     observer.observe(container);

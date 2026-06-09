@@ -763,6 +763,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           scaleSelectedEquipmentBy(1.15);
           showToast('Equipment +15%');
+        } else if (!isCmd) {
+          // Plain + / = = Zoom In (no selection required)
+          e.preventDefault();
+          zoomIn();
         }
         break;
         
@@ -782,6 +786,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           scaleSelectedEquipmentBy(0.85);
           showToast('Equipment -15%');
+        } else if (!isCmd) {
+          // Plain - = Zoom Out (no selection required)
+          e.preventDefault();
+          zoomOut();
         }
         break;
         

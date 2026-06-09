@@ -78,6 +78,8 @@ const shortcuts: { title: string; items: ShortcutItem[]; isAnimation?: boolean }
       { key: 'O', description: 'Toggle Orientation' },
       { key: 'W', description: 'Print Friendly Mode' },
       { key: 'V', description: 'Cycle Pitch View' },
+      { key: '+', description: 'Zoom In' },
+      { key: '-', description: 'Zoom Out' },
       { key: '?', description: 'Toggle Shortcuts' },
     ],
   },
