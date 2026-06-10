@@ -6,6 +6,7 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { Group, Arrow, Circle, Line, Text } from 'react-konva';
 import type Konva from 'konva';
+import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 import type { ArrowElement, Position, PitchConfig } from '@tmc/core';
 
 export interface ArrowNodeProps {
@@ -142,6 +143,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   const handleDragEnd = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
       if (draggingEndpoint) return;
+      applyGrab(groupRef);
       const node = e.target;
       // Calculate the delta from original center
       const originalCenterX = (arrow.startPoint.x + arrow.endPoint.x) / 2;
@@ -200,6 +202,9 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       draggable={!draggingEndpoint}
       onClick={handleClick}
       onTap={handleClick}
+      onMouseEnter={cursorGrab}
+      onMouseLeave={cursorDefault}
+      onDragStart={() => applyGrabbing(groupRef)}
       onDragEnd={handleDragEnd}
     >
       {/* Shoot arrow - double parallel lines + single arrowhead */}

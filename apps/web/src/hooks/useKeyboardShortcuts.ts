@@ -37,6 +37,9 @@ export interface UseKeyboardShortcutsParams {
   // Player number editing callback (H2)
   onStartEditingPlayerNumber?: (id: string, currentNumber: number) => void;
   
+  // Focus label input in RightInspector (Sprint A — Enter→edit label)
+  onFocusLabelInput?: () => void;
+  
   // Step management (gated by entitlements)
   addStep: () => void;
   
@@ -59,6 +62,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     showToast,
     onStartEditingText,
     onStartEditingPlayerNumber,
+    onFocusLabelInput,
     addStep,
     onOpenPricingModal, // PR3
     contextMenuVisible,
@@ -305,9 +309,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd && e.shiftKey) {
           e.preventDefault();
           redo();
+          showToast('Przywrócono');
         } else if (isCmd) {
           e.preventDefault();
           undo();
+          showToast('Cofnięto');
         } else {
           // Z = rect zone tool, Shift+Z = ellipse zone tool
           e.preventDefault();
@@ -592,14 +598,20 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'enter':
-        // H2: Enter on selected player = start editing number
+        // Sprint A: Enter on selected player → focus label input in RightInspector
+        // Fallback: Enter on selected player = start editing number (H2 string)
         // Enter on selected text = start editing text
         if (selectedIds.length === 1) {
           const el = elements.find((e) => e.id === selectedIds[0]);
           
-          if (el && isPlayerElement(el) && onStartEditingPlayerNumber) {
+          if (el && isPlayerElement(el)) {
             e.preventDefault();
-            onStartEditingPlayerNumber(el.id, (el as any).number ?? 0);
+            // Prefer focus label input (Sprint A)
+            if (onFocusLabelInput) {
+              onFocusLabelInput();
+            } else if (onStartEditingPlayerNumber) {
+              onStartEditingPlayerNumber(el.id, (el as any).number ?? 0);
+            }
           } else if (el && isTextElement(el) && onStartEditingText) {
             e.preventDefault();
             onStartEditingText(el.id, (el as any).content);

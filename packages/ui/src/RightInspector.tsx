@@ -22,6 +22,9 @@ export interface InspectorElement {
   isGoalkeeper?: boolean;
   x: number;
   y: number;
+  // Arrow-specific
+  showNumber?: boolean;
+  arrowNumber?: number;
 }
 
 export interface ElementInList {
@@ -58,7 +61,9 @@ export interface RightInspectorProps {
   elements: ElementInList[];
   layerVisibility: LayerVisibility;
   groups?: GroupData[];
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number }) => void;
+  /** Ref forwarded to the player label input for Enter→focus from keyboard */
+  labelInputRef?: React.RefObject<HTMLInputElement>;
   onSelectElement?: (id: string) => void;
   onToggleLayerVisibility?: (layer: LayerType) => void;
   onSelectGroup?: (groupId: string) => void;
@@ -76,6 +81,10 @@ export interface RightInspectorProps {
   onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
   /** Viewport breakpoint for responsive layout */
   breakpoint?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Arrow-specific callbacks */
+  onToggleAutoNumbering?: () => void;
+  isAutoNumbering?: boolean;
+  onRenumberArrows?: () => void;
 }
 
 type TabType = 'props' | 'layers' | 'objects' | 'teams' | 'pitch';
@@ -198,11 +207,17 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
 const PropsTab: React.FC<{
   selectedCount: number;
   selectedElement?: InspectorElement;
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number }) => void;
   onQuickAction?: (action: string) => void;
   playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
   onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
-}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation }) => {
+  /** Arrow-specific callbacks */
+  onToggleAutoNumbering?: () => void;
+  isAutoNumbering?: boolean;
+  onRenumberArrows?: () => void;
+  /** Ref for label input (Sprint A — Enter→focus) */
+  labelInputRef?: React.RefObject<HTMLInputElement>;
+}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, labelInputRef }) => {
   if (selectedCount === 0) {
     return <QuickActionsPanel onAction={onQuickAction} />;
   }
@@ -278,19 +293,30 @@ const PropsTab: React.FC<{
           
           {/* Label */}
           <div>
-            <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Position Label</label>
+            <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Player Label</label>
             <input
+              ref={labelInputRef}
               type="text"
               value={selectedElement.label ?? ''}
               onChange={(e) => onUpdateElement?.({ label: e.target.value })}
-              placeholder="GK, CB, CM..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              placeholder="Surname or nickname..."
+              aria-label="Player label"
               className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
             />
           </div>
           
           {/* Show Label Toggle */}
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-muted uppercase tracking-wide">Show Label Inside</label>
+            <label className="text-xs font-medium text-muted uppercase tracking-wide">Show Label Below</label>
             <button
               onClick={() => onUpdateElement?.({ showLabel: !selectedElement.showLabel })}
               className={`relative w-10 h-5 rounded-full transition-colors ${
@@ -464,6 +490,92 @@ const PropsTab: React.FC<{
               </div>
             </>
           )}
+        </>
+      )}
+      
+      {/* Arrow-specific fields */}
+      {selectedElement.type === 'arrow' && (
+        <>
+          <div className="pt-3 border-t border-border">
+            <h3 className="text-xs font-medium text-muted uppercase tracking-wide mb-3">Arrow Numbering</h3>
+            
+            {/* Show Number Toggle */}
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-medium text-text">Show number</label>
+              <button
+                onClick={() => onUpdateElement?.({ showNumber: !selectedElement.showNumber })}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  selectedElement.showNumber ? 'bg-accent' : 'bg-surface2 border border-border'
+                }`}
+                aria-label="Toggle arrow number visibility"
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    selectedElement.showNumber ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+            
+            {/* Number Input */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Number</label>
+              <input
+                type="number"
+                min={1}
+                max={999}
+                value={selectedElement.arrowNumber ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  if (value === '') {
+                    onUpdateElement?.({ arrowNumber: undefined });
+                  } else {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 1) {
+                      onUpdateElement?.({ arrowNumber: num });
+                    }
+                  }
+                }}
+                placeholder="No number"
+                aria-label="Arrow number"
+                className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+          
+          {/* Arrow utilities */}
+          <div className="space-y-2">
+            {/* Auto-Numbering Toggle */}
+            {onToggleAutoNumbering !== undefined && (
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted uppercase tracking-wide">Auto-number arrows</label>
+                <button
+                  onClick={onToggleAutoNumbering}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${
+                    isAutoNumbering ? 'bg-accent' : 'bg-surface2 border border-border'
+                  }`}
+                  aria-label="Toggle auto-numbering"
+                >
+                  <span
+                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      isAutoNumbering ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+            
+            {/* Renumber Button */}
+            {onRenumberArrows && (
+              <button
+                onClick={onRenumberArrows}
+                className="w-full px-3 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text hover:bg-accent/10 hover:border-accent transition-colors"
+                aria-label="Renumber arrows"
+              >
+                🔄 Renumber arrows (1..N)
+              </button>
+            )}
+          </div>
         </>
       )}
     </div>
@@ -728,15 +840,21 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onTogglePrintMode,
   playerOrientationSettings,
   onUpdatePlayerOrientation,
+  labelInputRef,
+  breakpoint,
+  onToggleAutoNumbering,
+  isAutoNumbering,
+  onRenumberArrows,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('props');
-  // isSheetOpen syncs with isOpen prop on md/sm (TopBar toggle → open BottomSheet)
+  const isBottomSheetLayout = breakpoint === 'sm';
+  // isSheetOpen syncs with isOpen prop only on phone layout (TopBar toggle → open BottomSheet)
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Sync sheet open state with isOpen prop for md/sm breakpoints
+  // Sync sheet open state with isOpen prop only when the sheet can actually render.
   React.useEffect(() => {
-    setIsSheetOpen(isOpen);
-  }, [isOpen]);
+    setIsSheetOpen(isBottomSheetLayout && isOpen);
+  }, [isBottomSheetLayout, isOpen]);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'props', label: 'Props' },
@@ -767,6 +885,10 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
         onQuickAction={onQuickAction}
         playerOrientationSettings={playerOrientationSettings}
         onUpdatePlayerOrientation={onUpdatePlayerOrientation}
+        labelInputRef={labelInputRef}
+        onToggleAutoNumbering={onToggleAutoNumbering}
+        isAutoNumbering={isAutoNumbering}
+        onRenumberArrows={onRenumberArrows}
       />
     ) : activeTab === 'layers' ? (
       <LayersTab
@@ -811,21 +933,6 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     </div>
   );
 
-  // ─── FAB button for tablet/mobile ────────────────────────────────────
-  const FABButton = () => (
-    <button
-      onClick={() => setIsSheetOpen(true)}
-      className="fixed bottom-20 right-4 z-30 w-10 h-10 rounded-full bg-accent shadow-lg flex items-center justify-center text-white hover:bg-accent-hover active:scale-95 transition-all duration-fast"
-      aria-label="Open inspector"
-      title="Inspector (I)"
-    >
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-        <line x1="15" y1="3" x2="15" y2="21" />
-      </svg>
-    </button>
-  );
-
   // ─── Sheet content ──────────────────────────────────────────────────
   const SheetContent = () => (
     <>
@@ -838,14 +945,15 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
 
   return (
     <>
-      {/* ── DESKTOP xl (≥1280px): full sidebar ── */}
-      <div className="hidden xl:flex flex-col bg-surface border-l border-border z-inspector relative transition-all duration-normal">
-        {/* Collapse Toggle Button */}
+      {/* ── DESKTOP/TABLET md+ (≥768px): full sidebar ── */}
+      <div className="hidden md:flex flex-col bg-surface border-l border-border z-inspector relative transition-all duration-normal">
+        {/* Collapse Toggle Button — zawsze widoczny */}
         {isOpen && (
           <button
             onClick={onToggle}
-            className="hidden xl:block absolute -left-8 top-3 z-canvas w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border text-muted hover:text-text transition-colors"
-            title={isOpen ? 'Close Inspector (I)' : 'Open Inspector (I)'}
+            className="hidden md:block absolute -left-8 top-3 z-canvas w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border text-muted hover:text-text transition-colors"
+            title="Close Inspector (I)"
+            aria-label="Close inspector"
           >
             <CollapseIcon className="w-4 h-4" collapsed={false} />
           </button>
@@ -883,72 +991,44 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
               onClick={onToggle}
               className="h-full w-6 flex items-center justify-center text-muted hover:text-text transition-colors"
               title="Open Inspector (I)"
+              aria-label="Open inspector"
             >
               <CollapseIcon className="w-4 h-4" collapsed={true} />
             </button>
           )}
         </div>
-      </div>
-
-      {/* ── LAPTOP lg (1024-1280px): collapsible icon bar ── */}
-      <div className="hidden lg:block xl:hidden">
-        {!isOpen ? (
-          /* Closed: thin icon strip */
-          <div className="flex flex-col items-center gap-2 py-3 px-1 bg-surface border-l border-border z-inspector transition-all duration-normal w-12 hover:w-[200px] group">
-            {tabs.slice(0, 3).map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => { setActiveTab(tab.id); onToggle(); }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium text-muted hover:text-text hover:bg-surface2 transition-colors whitespace-nowrap"
-                title={tab.label}
-              >
-                <span className="w-4 text-center flex-shrink-0">
-                  {tab.label === 'Props' ? '⚙' : tab.label === 'Layers' ? '👁' : tab.label === 'Objects' ? '📋' : '•'}
-                </span>
-                <span className="hidden group-hover:inline text-xs">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col bg-surface border-l border-border z-inspector shadow-2xl w-[240px]">
-            <div className="fixed inset-0 bg-black/40 z-40" onClick={onToggle} />
-            <div className="relative z-50 flex flex-col h-full">
-              <div className="flex items-center justify-between p-2 border-b border-border">
-                <span className="text-xs font-medium text-muted uppercase tracking-wide">Inspector</span>
-                <button onClick={onToggle} className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors" title="Close">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-3 gap-1 p-2 border-b border-border">
-                  {tabs.map((tab) => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                      className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                        activeTab === tab.id ? 'bg-accent/10 text-accent' : 'text-muted hover:text-text hover:bg-surface2'
-                      }`}>{tab.label}</button>
-                  ))}
-                </div>
-                {renderTabContent()}
-              </div>
-            </div>
-          </div>
+        {/* Floating open button — widoczny gdy sidebar zamknięty */}
+        {!isOpen && (
+          <button
+            onClick={onToggle}
+            className="absolute -left-12 top-3 z-canvas w-10 h-10 rounded-l-md bg-accent shadow-lg flex items-center justify-center text-white hover:bg-accent-hover transition-colors"
+            title="Open Inspector (I)"
+            aria-label="Open inspector panel"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="15" y1="3" x2="15" y2="21" />
+            </svg>
+          </button>
         )}
       </div>
 
-      {/* TABLET md: FAB + BottomSheet */}
-      <div className="hidden md:block lg:hidden">
-        <FABButton />
-        <BottomSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} maxHeight="md">
-          <SheetContent />
-        </BottomSheet>
-      </div>
-
-      {/* ── MOBILE sm (<768px): FAB + BottomSheet 75vh ── */}
-      <div className="block md:hidden">
-        <FABButton />
-        <BottomSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} maxHeight="sm">
+      {/* ── PHONE sm (<768px): FAB + BottomSheet ── */}
+      <div className="md:hidden">
+        {!isOpen && (
+          <button
+            onClick={() => setIsSheetOpen(true)}
+            className="fixed bottom-20 right-4 z-30 w-10 h-10 rounded-full bg-accent shadow-lg flex items-center justify-center text-white hover:bg-accent-hover active:scale-95 transition-all duration-fast"
+            aria-label="Open inspector panel"
+            title="Inspector (I)"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="15" y1="3" x2="15" y2="21" />
+            </svg>
+          </button>
+        )}
+        <BottomSheet isOpen={isBottomSheetLayout && isSheetOpen} onClose={() => setIsSheetOpen(false)} maxHeight="sm">
           <SheetContent />
         </BottomSheet>
       </div>

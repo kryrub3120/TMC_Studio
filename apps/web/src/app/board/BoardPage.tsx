@@ -18,6 +18,7 @@ import {
 import { DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
+import { useBoardStore } from '../../store';
 
 import { BoardTopBarSection } from './BoardTopBarSection';
 import { BoardCanvasSection } from './BoardCanvasSection';
@@ -282,6 +283,7 @@ export function BoardPage(props: BoardPageProps) {
             }
             state.toggleInspector();
           }}
+          labelInputRef={state.labelInputRef}
           breakpoint={state.breakpoint}
           selectedCount={state.selectedIds.length}
           selectedElement={state.inspectorElement}
@@ -304,6 +306,18 @@ export function BoardPage(props: BoardPageProps) {
           onTogglePrintMode={state.togglePrintMode}
           playerOrientationSettings={state.playerOrientationSettings}
           onUpdatePlayerOrientation={state.updatePlayerOrientationSettings}
+          isAutoNumbering={state.isAutoNumbering}
+          onToggleAutoNumbering={handlers.contextMenuActions.onToggleAutoNumbering}
+          onRenumberArrows={() => {
+            const store = useBoardStore.getState();
+            const hasNumbered = store.elements.some(
+              (el: any) => el.type === 'arrow' && el.showNumber
+            );
+            if (hasNumbered) {
+              store.renumberAllArrows();
+              store.pushHistory();
+            }
+          }}
         />
         )}
       </div>

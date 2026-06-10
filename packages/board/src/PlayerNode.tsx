@@ -6,6 +6,7 @@
 import React, { useRef, useState, memo, useEffect } from 'react';
 import { Group, Circle, Rect, RegularPolygon, Line, Text, Wedge } from 'react-konva';
 import type Konva from 'konva';
+import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 import type { PlayerElement, Position, PitchConfig, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
 import {
   snapToGrid,
@@ -203,10 +204,12 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     if (multiDragActive) return;
     setIsDragging(true);
     groupRef.current?.moveToTop();
+    applyGrabbing(groupRef);
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     setIsDragging(false);
+    applyGrab(groupRef);
     const node = e.target;
 
     const snapped = snapToGrid({ x: node.x(), y: node.y() }, pitchConfig.gridSize);
@@ -487,6 +490,8 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       onClick={handleClick}
       onTap={handleClick}
       onDblClick={handleDblClick}
+      onMouseEnter={cursorGrab}
+      onMouseLeave={cursorDefault}
       onDblTap={handleDblClick}
       onMouseDown={handleMouseDown}
       onDragStart={handleDragStart}
@@ -518,14 +523,15 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       {renderArms()}
 
       {/* NUMBER (on top) — rotates with body, flips for readability */}
-      {((player.showLabel && player.label) || player.number != null) && (
+      {/* Numer zawodnika jest osobnym mechanizmem — NIE jest podpisem */}
+      {player.number != null && (
         <Group rotation={textRotation} listening={false}>
           <Text
             x={-r}
             y={-(player.fontSize ?? 14) / 2}
             width={r * 2}
             height={player.fontSize ?? 14}
-            text={player.showLabel && player.label ? player.label : String(player.number)}
+            text={String(player.number)}
             fontSize={player.fontSize ?? 14}
             fontFamily="Inter, system-ui, sans-serif"
             fontStyle="bold"
@@ -538,21 +544,52 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         </Group>
       )}
 
-      {/* Label below (never rotated) */}
-      {player.label && !player.showLabel && (
-        <Text
-          x={-30}
-          y={r + 4}
-          width={60}
-          text={player.label}
-          fontSize={10}
-          fontFamily="Inter, system-ui, sans-serif"
-          fill="#ffffff"
-          align="center"
-          listening={false}
-          perfectDrawEnabled={false}
-        />
-      )}
+      {/* Label below (showLabel === true) — podpis pod zawodnikiem z tłem/pill */}
+      {/* Dynamiczna szerokość: krótkie i długie nazwiska bez ucinania */}
+      {player.label && player.showLabel === true && (() => {
+        const LBL_FONT_SIZE = 11;
+        const LBL_PAD_X = 14;
+        const LBL_PILL_H = 20;
+        const approxCharW = LBL_FONT_SIZE * 0.62; // Inter bold ~0.62× fontSize
+        const textW = Math.ceil(player.label.length * approxCharW);
+        const pillW = Math.max(30, textW + LBL_PAD_X * 2);
+        const textX = -pillW / 2 + LBL_PAD_X;
+        const textInnerW = pillW - LBL_PAD_X * 2;
+
+        return (
+          <Group y={r + 6} listening={false}>
+            <Rect
+              x={-pillW / 2}
+              y={0}
+              width={pillW}
+              height={LBL_PILL_H}
+              cornerRadius={LBL_PILL_H / 2}
+              fill="rgba(0,0,0,0.65)"
+              shadowColor="rgba(0,0,0,0.4)"
+              shadowBlur={4}
+              shadowOffset={{ x: 1, y: 1 }}
+              shadowEnabled={true}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+            <Text
+              x={textX}
+              y={3}
+              width={textInnerW}
+              height={14}
+              text={player.label}
+              fontSize={LBL_FONT_SIZE}
+              fontFamily="Inter, system-ui, sans-serif"
+              fontStyle="bold"
+              fill="#ffffff"
+              align="center"
+              verticalAlign="middle"
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+          </Group>
+        );
+      })()}
 
       {/* ROTATION HIT ZONE (CORRECTION #4) - simple large circle, on top for event priority */}
       {onOrientationPreview && (

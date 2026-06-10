@@ -7,6 +7,7 @@
 import React, { useRef, useState, memo } from 'react';
 import { Group, Circle, RegularPolygon, Ellipse } from 'react-konva';
 import type Konva from 'konva';
+import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 import type { BallElement, Position, PitchConfig } from '@tmc/core';
 import { snapToGrid, clampToBounds } from '@tmc/core';
 
@@ -67,10 +68,12 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
     if (groupRef.current) {
       groupRef.current.moveToTop();
     }
+    applyGrabbing(groupRef);
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     setIsDragging(false);
+    applyGrab(groupRef);
     const node = e.target;
     const rawPosition: Position = { x: node.x(), y: node.y() };
     
@@ -106,6 +109,8 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
       y={ball.position.y}
       draggable={!multiDragActive}
       onClick={handleClick}
+      onMouseEnter={cursorGrab}
+      onMouseLeave={cursorDefault}
       onTap={handleClick}
       onMouseDown={handleMouseDown}
       onDragStart={handleDragStartKonva}

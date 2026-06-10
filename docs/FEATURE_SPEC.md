@@ -6,8 +6,8 @@
 
 ## Meta
 
-- **Version:** 0.4.0
-- **Last Updated:** 2026-06-09
+- **Version:** 0.5.0
+- **Last Updated:** 2026-06-10
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -426,6 +426,13 @@ When enabled via `Shift+N`, every newly created arrow automatically receives the
 - `→` (ArrowRight) on a selected arrow toggles its number ON/OFF.
 - Toggle ON assigns the next available number (`max(existing) + 1`).
 - Toggle OFF preserves the `number` value but hides the label.
+
+**Renumber all arrows (Sprint C):**
+- `renumberAllArrows()` in elementsSlice re-assigns numbers 1..N in insertion order (array order).
+- Called automatically after `deleteSelected` if any numbered arrow was deleted.
+- Also called when Auto-Numbering Mode is toggled ON (`toggleAutoNumbering`).
+- **Does NOT call `pushHistory()`** — only the calling function owns the history snapshot.
+- Button "🔃 Renumber arrows (1..N)" in Inspector → Props tab (arrow selected).
 
 **One-shot auto-number via drag (post-draw action):**
 - `Shift+A` activates the pass arrow tool AND sets a one-shot flag. After drawing a valid arrow (≥20px), the flag triggers auto-numbering.
@@ -1159,6 +1166,7 @@ Located in right sidebar (toggle with `I` key):
 - Element type + position displayed
 - Type-specific property editors:
   - **Player:** Number, Label, ShowLabel, FontSize, Opacity, Goalkeeper toggle, Orientation settings
+  - **Arrow:** Show number toggle, Number input, Auto-number arrows toggle, Renumber arrows button
   - **Text:** (read-only type display)
   - **Zone:** (read-only type display)
   - **Other:** (read-only type display)
@@ -1684,4 +1692,4 @@ zoomThreshold: 40 (%)
 
 ## Document Maintenance
 
-This document must be updated whenever user-facing behavior changes. See `.clinerules` for automatic update requirements.
+This document must be updated whenever user-facing behavior changes. See `.github/copilot-instructions.md` for automatic update requirements.

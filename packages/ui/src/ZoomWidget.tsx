@@ -85,6 +85,7 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
         onClick={onZoomOut}
         disabled={locked || isAtMin}
         title="Zoom Out (Cmd -)"
+        aria-label="Zoom out"
         className={`p-1.5 rounded-md transition-colors duration-fast ${
           locked || isAtMin
             ? 'text-muted/50 cursor-not-allowed'
@@ -116,6 +117,7 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
         onClick={onZoomIn}
         disabled={locked || isAtMax}
         title="Zoom In (Cmd +)"
+        aria-label="Zoom in"
         className={`p-1.5 rounded-md transition-colors duration-fast ${
           locked || isAtMax
             ? 'text-muted/50 cursor-not-allowed'
@@ -150,6 +152,7 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
         onClick={onZoomFit}
         disabled={locked || isAtFit}
         title="Fit to View (Shift+1)"
+        aria-label="Fit to view"
         className={`px-2 py-1 text-xs font-medium rounded-md transition-colors duration-fast ${
           locked || isAtFit
             ? 'text-muted/50 cursor-not-allowed'

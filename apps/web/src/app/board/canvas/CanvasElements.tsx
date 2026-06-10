@@ -3,8 +3,9 @@
  * NO store imports, NO hooks (except memo), receives all data via props
  */
 
-import React from 'react';
-import { Layer, Line } from 'react-konva';
+import React, { useRef, useEffect } from 'react';
+import { Layer, Line, Transformer } from 'react-konva';
+import type Konva from 'konva';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings, EquipmentElement } from '@tmc/core';
 import { isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement } from '@tmc/core';
 import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
@@ -109,6 +110,35 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
   } = props;
 
   const { getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints } = interpolators;
+
+  const transformerRef = useRef<Konva.Transformer>(null);
+
+  // Attach Konva Transformer to the selected TextNode only (Sprint B POC)
+  useEffect(() => {
+    const tr = transformerRef.current;
+    if (!tr) return;
+
+    if (!isPlaying && selectedIds.length === 1) {
+      const selectedId = selectedIds[0];
+      // Verify the selected element is a TextNode
+      const isText = elements.some((el) => el.id === selectedId && isTextElement(el));
+      if (isText) {
+        const stage = tr.getStage();
+        if (stage) {
+          const node = stage.findOne('#' + selectedId);
+          if (node) {
+            tr.nodes([node]);
+            tr.getLayer()?.batchDraw();
+            return;
+          }
+        }
+      }
+    }
+
+    // Detach transformer when no valid single TextNode is selected
+    tr.nodes([]);
+    tr.getLayer()?.batchDraw();
+  }, [selectedIds, elements, isPlaying]);
 
   return (
     <Layer
@@ -248,6 +278,24 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
             />
           );
         })}
+
+      {/* Transformer for selected TextNode — Sprint B POC */}
+      <Transformer
+        ref={transformerRef}
+        borderEnabled={true}
+        borderStroke="#3b82f6"
+        borderStrokeWidth={1}
+        anchorStroke="#3b82f6"
+        anchorFill="#ffffff"
+        anchorSize={8}
+        rotateAnchorOffset={25}
+        enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+        boundBoxFunc={(oldBox, newBox) => {
+          // Prevent shrinking below minimum size
+          if (newBox.width < 20 || newBox.height < 10) return oldBox;
+          return newBox;
+        }}
+      />
 
       {/* Drawing preview */}
       {drawingStart && drawingEnd && (activeTool === 'arrow-pass' || activeTool === 'arrow-run') && (

@@ -1,6 +1,6 @@
 # TMC Studio — Feature Status Report (Inwentaryzacja Funkcji)
 
-> **Data audytu:** 2026-06-09 (stan na dzień dzisiejszy)  
+> **Data audytu:** 2026-06-10 (Sprint A — Quick wins UX + podpisy zawodników zakończony)  
 > **Metodologia:** Krzyżowa analiza dokumentacji (`docs/`, `CHANGELOG.md`, `tasks/`) z faktycznym stanem kodu (`apps/web/src`, `packages/`)  
 > **Źródła dokumentacji:** `FEATURE_SPEC.md`, `ROADMAP.md`, `REFACTOR_ROADMAP.md`, `CHANGELOG.md`, `S2_ANIMATION_MODULE_PLAN.md`, `MONETIZATION_PLAN.md`, `PAYMENT_FOUNDATION.md`, `EQUIPMENT_SYSTEM_PLAN.md`, `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md`, `ARCHITECTURE_DIAGNOSIS_6_ISSUES.md`, `BETA_READY_SPRINT.md`, `GOALS_AND_HOTFIXES_PLAN.md`, `BETA_TESTING_PLAN.md`, `L1_PIN_RENAME_IMPLEMENTATION_STATUS.md`, `SETTINGS_INTEGRATION_PLAN.md`, `UX_IMPLEMENTATION_PLAN.md`, `MASTER_DEVELOPMENT_PLAN.md`, `SYSTEM_ARCHITECTURE.md`, `ZUSTAND_SLICES.md`
 
@@ -14,6 +14,7 @@
 | **Ostatni commit** | `7c5882d` — `chore(config): migracja na natywnego Copilota, usuniecie clinerules i update markerow` |
 | **Autor** | kryrub3120 |
 | **Data ostatniego commita** | 9 czerwca 2026, 02:03 CEST |
+| **Sprint B — Transformer POC** | ✅ Zakończony 2026-06-10 |
 | **Branch `main`** | `a5c58ee` — "Backup przed przeniesieniem z iCloud" (1 commit za developem) |
 | **Różnica `develop` vs `main`** | 20 plików, +293 / −260 linii |
 | **Liczba commitów** | 137 (wszystkie autorstwa kryrub3120) |
@@ -159,7 +160,50 @@ Funkcje w pełni zaimplementowane w kodzie źródłowym i działające.
 | Keyboard shortcuts (~85 skrótów) | `hooks/useKeyboardShortcuts.ts` |
 | CommandRegistry (board domain: intent/effect) | `commands/registry.ts`, `commands/board/intent.ts`, `commands/board/effect.ts` |
 
-### 1.11. Refaktory architektoniczne (zakończone)
+### 1.12. Sprint C — Numeracja strzałek bez dziur + undo
+
+| Funkcja | Dowód w kodzie |
+|---------|---------------|
+| `renumberAllArrows()` w elementsSlice — przelicza 1..N, NIE woła pushHistory | `apps/web/src/store/slices/elementsSlice.ts` |
+| `deleteSelected` — delete + renumber + JEDEN pushHistory | `apps/web/src/store/slices/elementsSlice.ts` |
+| `toggleAutoNumbering` — pushHistory + warunek `if (wasOff) renumberAllArrows()` | `apps/web/src/store/slices/documentSlice.ts` |
+| 25 testów (14 jednostkowych + 11 integracyjnych na realnym store) | `apps/web/src/store/slices/__tests__/arrowRenumber.test.ts`, `arrowRenumber.integration.test.ts` |
+| Konfiguracja vitest + test setup (localStorage/logger/supabase mock) | `apps/web/vite.config.ts`, `apps/web/src/test-setup.ts` |
+
+### 1.13. Inspector UX Fix
+
+| Funkcja | Dowód w kodzie |
+|---------|---------------|
+| Arrow controls w PropsTab (Show number, Number, Auto-number, Renumber) | `packages/ui/src/RightInspector.tsx` |
+| Fix duplikacji — wszystkie breakpointy <xl używają FAB + BottomSheet | `packages/ui/src/RightInspector.tsx` |
+| Floating toggle button dla zamkniętego sidebaru na xl | `packages/ui/src/RightInspector.tsx` |
+| Arrow data (`showNumber`, `arrowNumber`) w InspectorElement | `apps/web/src/app/routes/useBoardPageState.ts`, `packages/ui/src/RightInspector.tsx` |
+| `handleUpdateElement` obsługuje arrow (showNumber/arrowNumber) | `apps/web/src/app/board/useBoardPageHandlers.ts` |
+
+### 1.14. Sprint B — Transformer POC dla TextNode
+
+| Funkcja | Dowód w kodzie |
+|---------|---------------|
+| Konva Transformer dla pojedynczego TextNode | `apps/web/src/app/board/canvas/CanvasElements.tsx` |
+| `stage.findOne('#id')` — lookup przez istniejące `Group id={text.id}` | `packages/board/src/TextNode.tsx` (linia 142) |
+| Automatyczny attach/detach — tylko TextNode, single-select, nie w play mode | `CanvasElements.tsx` — `useEffect([selectedIds, elements, isPlaying])` |
+| 4 anchor narożne + rotate (offset 25px) | `CanvasElements.tsx` — `<Transformer enabledAnchors={[...]} rotateAnchorOffset={25} />` |
+| boundBoxFunc — min rozmiar 20×10px | `CanvasElements.tsx` — `boundBoxFunc` inline |
+| Brak wpływu na PlayerNode (ALT+drag), ZoneNode (resize), ArrowNode (handles) | potwierdzone przez `isTextElement` guard w useEffect |
+
+### 1.15. Sprint A — Quick wins UX + podpisy zawodników + Enter→edit label
+
+| Funkcja | Dowód w kodzie |
+|---------|---------------|
+| **aria-label** na przyciskach Zoom In, Zoom Out, Fit | `packages/ui/src/ZoomWidget.tsx` — `aria-label` na 3 buttonach |
+| **Toasty undo/redo**: "Cofnięto" i "Przywrócono" | `apps/web/src/hooks/useKeyboardShortcuts.ts` — `showToast` w case 'z' |
+| **Kursory wg narzędzia**: crosshair dla draw tools, text dla text tool | `apps/web/src/app/board/BoardCanvasSection.tsx` — `toolCursor` + `cursorClass` |
+| **Podpisy zawodników**: domyślnie brak, `showLabel===true` = podpis pod (pill+tło+cień), numer osobno | `packages/board/src/PlayerNode.tsx` — przebudowa renderowania label/number |
+| **Dynamiczna szerokość pilla**: długie nazwiska bez ucinania | `packages/board/src/PlayerNode.tsx` — `approxCharW = fontSize * 0.62`, `pillW = max(30, textW + 28)` |
+| **Enter→focus label**: Enter na zawodniku focusuje pole "Player Label" w RightInspector | `packages/ui/src/RightInspector.tsx` (+ `labelInputRef`), `useKeyboardShortcuts.ts` (+ `onFocusLabelInput`), `useBoardPageState.ts`, `BoardPage.tsx` |
+| **Enter/Escape w inpucie label**: Enter→blur (zatwierdzenie), Escape→blur (bez rollbacku) | `packages/ui/src/RightInspector.tsx` — `onKeyDown` na input label |
+| **Etykiety UI**: "Player Label" (zamiast "Position Label"), "Show Label Below" (zamiast "Show Label Inside") | `packages/ui/src/RightInspector.tsx` |
+| **aria-label na inpucie label**: `aria-label="Player label"` | `packages/ui/src/RightInspector.tsx` |
 
 | PR | Status | Dowód |
 |----|--------|-------|
@@ -245,7 +289,7 @@ Funkcje rozgrzebane — istnieje kod lub struktura, ale implementacja niekomplet
 | **B2 — RLS disabled na `project_shares`**: Każdy zalogowany user może czytać/zapisywać wszystkie share records | 🔴 BLOCKER | `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md`; migracja `20260209000000_reenable_rls_project_shares.sql` istnieje, status niepotwierdzony |
 | **B3 — RLS na `profiles` i `project_folders`**: Niezweryfikowane | 🔴 BLOCKER | `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md` |
 | **H1 — Player number delete-to-0**: Kasowanie numeru ustawia 0 zamiast undefined | 🟡 HIGH | `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md` |
-| **H2 — ENTER na selekcji playera**: Nie otwiera inline edit | 🟡 HIGH | `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md` |
+| **H2 — ENTER na selekcji playera**: ✅ NAPRAWIONE — Sprint A: focusuje pole label w RightInspector | ✅ FIXED | `useKeyboardShortcuts.ts`, `RightInspector.tsx` |
 | **Toggle "Show orientation" i "Show arms" wpływają na siebie** | Medium | `ARCHITECTURE_DIAGNOSIS_6_ISSUES.md` #1 |
 | **Skróty V / Shift+V niestabilne** (double-trigger, brak guard na orientationEnabled) | High | `ARCHITECTURE_DIAGNOSIS_6_ISSUES.md` #2 |
 | **Wizja zawodnika zbyt słabo widoczna** (opacity 0.14) | Medium | `ARCHITECTURE_DIAGNOSIS_6_ISSUES.md` #3 |
@@ -405,14 +449,14 @@ Funkcje i wymagania opisane w specyfikacji/roadmapie, dla których **nie ma żad
 
 | Kategoria | Liczba |
 |-----------|--------|
-| **✅ Zrealizowane funkcje** | ~85 |
+| **✅ Zrealizowane funkcje** | ~95 |
 | **🔄 W toku / częściowe** | ~35 |
 | **⏳ Zaplanowane (nietknięte)** | ~28 |
 | **🔴 BLOCKERS przed launch** | 3 (B1, B2, B3) |
-| **🟡 HIGH priority bugs** | 2 (H1, H2) |
+| **🟡 HIGH priority bugs** | 1 (H1: player number delete-to-0) — H2 naprawione |
 | **⚠️ Architektura (6 issues)** | 6 |
 | **🔥 Hotfixy Stage 1** | 4 (B1, B2, U1, B4) |
-| **Testy** | 3 unit testy, 0 E2E |
+| **Testy** | 25 (arrowRenumber) + 3 istniejące = 28 testów |
 | **TODO w kodzie** | 14 |
 | **TODO w packages/ui** | 1 (ProjectsDrawer inline rename) |
 

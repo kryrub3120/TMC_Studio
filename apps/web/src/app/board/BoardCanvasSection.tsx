@@ -446,9 +446,12 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   }
 
   // ─── Cursor style ────────────────────────────────────────────────────
+  const toolCursor = activeTool && activeTool !== 'select'
+    ? (activeTool === 'text' ? 'cursor-text' : 'cursor-crosshair')
+    : '';
   const cursorClass = spaceHeld
     ? (isPanningRef.current ? 'cursor-grabbing' : 'cursor-grab')
-    : '';
+    : toolCursor;
 
   return (
     <div

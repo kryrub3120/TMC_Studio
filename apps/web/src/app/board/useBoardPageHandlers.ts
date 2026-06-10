@@ -5,7 +5,7 @@
 
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
-import { isPlayerElement, isTextElement, isZoneElement } from '@tmc/core';
+import { isPlayerElement, isTextElement, isZoneElement, isArrowElement } from '@tmc/core';
 import type { CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
 import { useBoardStore } from '../../store';
@@ -187,8 +187,25 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
 
   // Update element handler
   const handleUpdateElement = useCallback(
-    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean }) => {
-      updateSelectedElement(updates as Partial<PlayerElementType>);
+    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number }) => {
+      const store = useBoardStore.getState();
+      if (store.selectedIds.length !== 1) return;
+      const el = store.elements.find(e => e.id === store.selectedIds[0]);
+      
+      if (el && isArrowElement(el as any)) {
+        // Arrow-specific updates
+        // Kolejność ma znaczenie: arrowNumber ma priorytet przed showNumber.
+        // setArrowNumber wewnętrznie ustawia showNumber, unikamy podwójnego pushHistory.
+        if ('arrowNumber' in updates) {
+          // setArrowNumber ustawia number i showNumber w jednej operacji + pushHistory
+          store.setArrowNumber(el.id, updates.arrowNumber);
+        } else if ('showNumber' in updates) {
+          // toggleArrowNumber toggles smart-sequencing + pushHistory
+          store.toggleArrowNumber(el.id);
+        }
+      } else {
+        updateSelectedElement(updates as Partial<PlayerElementType>);
+      }
     },
     [updateSelectedElement]
   );

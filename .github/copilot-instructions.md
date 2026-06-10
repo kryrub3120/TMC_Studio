@@ -1,131 +1,216 @@
-# Główne Zasady Pracy dla GitHub Copilot (TMC Studio)
+# Glowne Zasady Pracy dla GitHub Copilot - TMC Studio
 
-Zanim wygenerujesz jakikolwiek kod lub zaproponujesz zmiany, MASZ BEZWZGLĘDNY OBOWIĄZEK przeczytać i zastosować wszystkie reguły architektoniczne i behawioralne (Hard Rules) znajdujące się w pliku:
-`docs/SYSTEM_ARCHITECTURE.md` (szczególnie sekcję 11).
+Zanim wygenerujesz jakikolwiek kod lub zaproponujesz zmiany, MUSISZ przeczytac i zastosowac reguly architektoniczne i behawioralne z:
 
-Projekt jest w fazie MVP. Obowiązuje ścisły podział na środowisko Dev (lokalne) i Prod.
+`docs/SYSTEM_ARCHITECTURE.md`
 
----
+Szczegolnie wazna jest sekcja 11 - Hard Rules.
 
-## Workflow — jak pracujemy
-
-```
-@Ask      → pytania, eksploracja, wyjaśnienia
-    ↓
-@Plan     → planowanie, podział na zadania, zatwierdzenie
-    ↓
-@Delivery → implementacja + testy w pętli (autonomicznie)
-    ↓
-TY        → oceniasz wynik: ACCEPT / LOOP AGAIN / STOP
-```
-
-**@Implementer i @Tester** — dostępne do użycia osobno gdy chcesz mieć ręczną kontrolę nad każdym etapem.
+Projekt jest w fazie MVP. Obowiazuje scisly podzial na srodowisko Dev lokalne i Prod produkcyjne.
 
 ---
 
-## Thoughts — Artefakty pracy agentów
+## Workflow
 
-**Każdy agent MUSI zostawić ślad swojej pracy** w folderze `thoughts/`.
+```text
+@Ask
+  -> pytania, eksploracja, wyjasnienia, zero zmian
+
+@Plan
+  -> planowanie, podzial na zadania, ryzyka, kryteria akceptacji
+  -> konczy sie decyzja uzytkownika: APPROVE PLAN / CHANGE PLAN / STOP
+
+@Delivery
+  -> implementacja + testy + self-review + naprawy w petli
+  -> dziala autonomicznie po zatwierdzeniu planu
+
+TY
+  -> oceniasz wynik: ACCEPT / LOOP AGAIN / STOP
+```
+
+`@Implementer` i `@Tester` sa dostepne jako tryb reczny, gdy uzytkownik chce miec osobna kontrole nad implementacja i testowaniem.
+
+---
+
+## Plan Approval Gate
+
+Agent `Plan` jest agentem systemowym Copilota i nie jest modyfikowany.
+
+Kazdy plan przed przekazaniem do `Delivery` musi zawierac:
+
+- Cel zadania
+- Zakres zmian
+- Poza zakresem
+- Kryteria akceptacji
+- Ryzyka
+- Pliki lub obszary prawdopodobnie dotkniete zmiana
+- Wymagane testy
+- Decyzje uzytkownika: `APPROVE PLAN / CHANGE PLAN / STOP`
+
+`Delivery` moze zaczac prace tylko po jasnym `APPROVE PLAN`.
+
+`Delivery` NIE moze rozszerzyc zatwierdzonego zakresu. Jesli odkryje potrzebe wiekszej zmiany, oznacza ja jako `OUT OF SCOPE` albo `BLOCKER` i raportuje uzytkownikowi.
+
+---
+
+## Tryb LOOP
+
+### Jak uruchomic
+
+```text
+@[Agent] LOOP [limit]: [zadanie]
+```
+
+Przyklady limitow:
+
+```text
+3proby
+15min
+4proby 20min
+```
+
+Agent zatrzymuje sie, gdy pierwszy limit zostanie osiagniety.
+
+### Zasady LOOP
+
+- Agent NIE pyta uzytkownika miedzy iteracjami.
+- Kazda iteracja musi miec osobny plik w `thoughts/`.
+- Agent konczy raportem z opcjami: `ACCEPT / LOOP AGAIN / STOP`.
+- Gdy uzytkownik odpowie `LOOP AGAIN: [feedback]`, agent kontynuuje od obecnego stanu i traktuje feedback jako dodatkowe kryteria DoD.
+
+---
+
+## Thoughts - artefakty pracy agentow
+
+Kazdy agent MUSI zostawic slad swojej pracy w folderze `thoughts/`.
 
 ### Format pliku
-```
+
+```text
 thoughts/YYYY-MM-DD/HHMM_[agent]_[slug-zadania].md
 thoughts/YYYY-MM-DD/HHMM_[agent]_[slug-zadania]_iter-N.md
 ```
 
-### Co musi zawierać każdy plik thoughts
+### Format zawartosci
 
-```markdown
-# [Agent] — [Nazwa zadania]
+```md
+# [Agent] - [Nazwa zadania]
 **Data:** YYYY-MM-DD HH:MM
 **Iteracja:** N
 
 ## Zadanie
-[Co miałem zrobić]
+[Co mialem zrobic]
 
-## Proces myślenia
-[Jak podszedłem do problemu, co rozważałem, co odrzuciłem i dlaczego]
+## Decyzje i uzasadnienie
+- Wybrane podejscie
+- Odrzucone alternatywy
+- Przyjete zalozenia
+- Ryzyka
 
-## Co zrobiłem
+## Co zrobilem
 [Konkretne akcje, zmiany, decyzje]
 
 ## Napotkane problemy
-[Co nie działało, jak to rozwiązałem]
+[Co nie dzialalo, jak to rozwiazano]
+
+## Evidence
+- Komendy uruchomione
+- Wyniki testow
+- Manual checks, jesli dotyczy
+- Powod, jesli czegos nie dalo sie sprawdzic
 
 ## Wynik
-[Co osiągnąłem]
+[Co osiagnieto]
 
 ## Status DoD
-- [ ] / [x] każde kryterium
+- [ ] / [x] kazde kryterium
 
-## Dla następnej iteracji / następnego agenta
-[Co powinien wiedzieć]
+## Dla nastepnej iteracji / nastepnego agenta
+[Co powinien wiedziec]
 ```
+
+Nie zapisuj surowego toku rozumowania. Zapisuj decyzje, uzasadnienia, zalozenia, ryzyka i dowody wykonania.
 
 ---
 
-## Tryb LOOP — zasady dla wszystkich agentów
+## Srodowiska - krytyczne
 
-### Jak uruchomić
-```
-@[Agent] LOOP [limit]: [zadanie]
-```
-
-Limity: `3próby`, `15min`, `4próby 20min` — agent zatrzymuje się gdy pierwszy zostanie osiągnięty.
-
-### Zasady pracy w LOOP
-- Agent NIE pyta użytkownika między iteracjami
-- Każda iteracja = osobny plik thoughts z numerem iteracji
-- Agent zawsze kończy raportem końcowym z opcjami: ACCEPT / LOOP AGAIN / STOP
-- Gdy użytkownik odpowie `LOOP AGAIN: [feedback]` — agent kontynuuje z tym feedbackiem
+- Dev = lokalne srodowisko deweloperskie.
+- Prod = produkcja z prawdziwymi danymi.
+- NIGDY nie modyfikuj produkcji bez jawnego polecenia i zatwierdzonego planu.
+- NIGDY nie modyfikuj `.env.production`.
+- NIGDY nie modyfikuj konfiguracji produkcyjnej bez jawnego polecenia.
 
 ---
 
-## Środowiska — KRYTYCZNE
+## Git Safety
 
-- **Dev** = lokalne środowisko deweloperskie
-- **Prod** = produkcja z prawdziwymi danymi
-- **NIGDY nie modyfikuj produkcji** bez jawnego polecenia i zatwierdzonego planu
-- **NIGDY nie modyfikuj** `.env.production`
+- Przed praca sprawdz `git status`.
+- Nie cofaj cudzych zmian.
+- Nie nadpisuj zmian uzytkownika.
+- Modyfikuj minimum niezbednych plikow.
+- Nie commituj bez jawnego polecenia uzytkownika.
+- Nie pushuj bez jawnego polecenia uzytkownika.
+- Na koncu raportuj liste zmienionych plikow.
 
 ---
 
 ## Styl i UX/UI
 
-- Czytaj `docs/DESIGN_SYSTEM.md` przed każdą zmianą UI
-- Czytaj `docs/AGENTS_CHECKLIST.md` — lista kontrolna przed zadaniem
-- Używaj TYLKO komponentów z istniejącej biblioteki projektu
-- Zero inline styles — wyłącznie klasy z design systemu
-- Mobile-first zawsze
-- Dostępność obowiązkowa: aria-labels, kontrast, focus states
+Przed kazda zmiana UI przeczytaj:
+
+- `docs/DESIGN_SYSTEM.md`
+- `docs/AGENTS_CHECKLIST.md`
+
+Zasady:
+
+- Uzywaj tylko komponentow z istniejacej biblioteki projektu.
+- Zero inline styles - wylacznie klasy z design systemu.
+- Mobile-first zawsze.
+- Dostepnosc obowiazkowa: aria-labels, kontrast, focus states.
+- Obsluguj stany loading, error i empty.
+- Zachowuj spojnosc z sasiednimi komponentami.
 
 ---
 
 ## Baza danych i migracje
 
-- Każda zmiana schematu = plik migracji (nigdy bezpośrednia edycja)
-- Format nazwy migracji: `YYYYMMDD_HHMMSS_krotki_opis`
-- Czytaj `docs/DB_CONVENTIONS.md` przed pracą z bazą
-- Czytaj `docs/AGENTS_CHECKLIST.md` — sekcja DB
-- Zgłoś ryzyko migracji w thoughts i wykonuj tylko na Dev
+Przed kazda zmiana DB przeczytaj:
+
+- `docs/DB_CONVENTIONS.md`
+- `docs/AGENTS_CHECKLIST.md`
+
+Zasady:
+
+- Kazda zmiana schematu = plik migracji.
+- Nigdy nie edytuj schematu bez migracji.
+- Format nazwy migracji: `YYYYMMDD_HHMMSS_krotki_opis`.
+- Zglos ryzyko migracji w `thoughts`.
+- Migracje wykonuj i testuj tylko na Dev.
+- Jesli rollback jest mozliwy, opisz go.
 
 ---
 
-## Zasady kodu (wszystkie agenty)
+## Zasady kodu
 
-- Modyfikuj minimum niezbędnych plików
-- Naśladuj istniejące wzorce w projekcie
-- Nie hardcoduj wartości
-- Obsługuj błędy jawnie
+- Modyfikuj minimum niezbednych plikow.
+- Nasladuj istniejace wzorce w projekcie.
+- Nie hardcoduj wartosci.
+- Obsluguj bledy jawnie.
+- Nie zmieniaj architektury bez zatwierdzonego planu.
+- Nie dodawaj nowych zaleznosci bez potrzeby i bez uzasadnienia.
 
 ---
 
 ## Definition of Done
 
-Zadanie jest ukończone gdy:
-- [ ] Kod działa zgodnie z planem
-- [ ] Testy napisane i przechodzą
-- [ ] UI zgodne z design systemem (jeśli dotyczy)
-- [ ] Migracja bezpieczna i przetestowana na Dev (jeśli dotyczy)
-- [ ] Brak regresji w istniejących funkcjach
-- [ ] Plik thoughts zapisany w `thoughts/`
+Zadanie jest ukonczone, gdy:
+
+- [ ] Kod dziala zgodnie z zatwierdzonym planem
+- [ ] Testy napisane lub zaktualizowane, jesli zadanie tego wymaga
+- [ ] Testy przechodza
+- [ ] UI zgodne z design systemem, jesli dotyczy
+- [ ] Migracja bezpieczna i przetestowana na Dev, jesli dotyczy
+- [ ] Brak znanych regresji w istniejacych funkcjach
+- [ ] Evidence zapisane w raporcie
+- [ ] Plik `thoughts/` zapisany

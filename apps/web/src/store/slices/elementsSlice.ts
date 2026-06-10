@@ -81,6 +81,26 @@ function getHighestArrowNumber(elements: BoardElement[]): number {
   return numbers.length > 0 ? Math.max(...numbers) : 0;
 }
 
+/** Get highest arrow number among VISIBLE arrows (showNumber=true). Returns 0 if none */
+function getHighestVisibleArrowNumber(elements: BoardElement[]): number {
+  const numbers = elements
+    .filter(isArrowElement)
+    .filter((a) => a.showNumber === true)
+    .map((a) => a.number)
+    .filter((n): n is number => n != null);
+  return numbers.length > 0 ? Math.max(...numbers) : 0;
+}
+
+/** Get set of numbers used by visible arrows */
+function getVisibleArrowNumbers(elements: BoardElement[]): Set<number> {
+  const numbers = elements
+    .filter(isArrowElement)
+    .filter((a) => a.showNumber === true)
+    .map((a) => a.number)
+    .filter((n): n is number => n != null);
+  return new Set(numbers);
+}
+
 export interface ElementsSlice {
   // State
   elements: BoardElement[];
@@ -109,6 +129,7 @@ export interface ElementsSlice {
   // Arrow numbering (PR-ARROW-NUMBER)
   toggleArrowNumber: (id: ElementId) => void;
   setArrowNumber: (id: ElementId, number: number | undefined) => void;
+  renumberAllArrows: () => void;
   
   // Batch operations on selected
   deleteSelected: () => void;
@@ -338,11 +359,11 @@ export const createElementsSlice: StateCreator<
     const { elements } = get();
     const arrow = elements.find((el) => el.id === id);
     if (!arrow || !isArrowElement(arrow)) return;
-    
+
     const currentlyShown = arrow.showNumber === true && arrow.number !== undefined;
-    
+
     if (currentlyShown) {
-      // Toggle OFF — keep the number but hide it
+      // Toggle OFF — keep the number but hide it (remembered for later restore)
       set((state) => ({
         elements: state.elements.map((el) => {
           if (el.id === id && isArrowElement(el)) {
@@ -352,17 +373,32 @@ export const createElementsSlice: StateCreator<
         }),
       }));
     } else {
-      // Toggle ON — Smart Sequencing: find max number across ALL arrows, assign +1
-      const nextNumber = getHighestArrowNumber(elements) + 1;
-      
-      set((state) => ({
-        elements: state.elements.map((el) => {
-          if (el.id === id && isArrowElement(el)) {
-            return { ...el, showNumber: true, number: nextNumber };
-          }
-          return el;
-        }),
-      }));
+      // Toggle ON — restore or assign next free number
+      const visibleNumbers = getVisibleArrowNumbers(elements);
+      const storedNumber = arrow.number;
+
+      if (storedNumber !== undefined && !visibleNumbers.has(storedNumber)) {
+        // Restore remembered number (not used by any visible arrow)
+        set((state) => ({
+          elements: state.elements.map((el) => {
+            if (el.id === id && isArrowElement(el)) {
+              return { ...el, showNumber: true };
+            }
+            return el;
+          }),
+        }));
+      } else {
+        // Number is empty or already taken — assign next free after max visible
+        const nextNumber = getHighestVisibleArrowNumber(elements) + 1;
+        set((state) => ({
+          elements: state.elements.map((el) => {
+            if (el.id === id && isArrowElement(el)) {
+              return { ...el, showNumber: true, number: nextNumber };
+            }
+            return el;
+          }),
+        }));
+      }
     }
     get().pushHistory();
   },
@@ -383,14 +419,51 @@ export const createElementsSlice: StateCreator<
     get().pushHistory();
   },
   
+  renumberAllArrows: () => {
+    const { elements } = get();
+
+    // Assign sequential numbers 1..N in insertion order (array order)
+    const numberMap = new Map<string, number>();
+    elements.forEach((el) => {
+      if (isArrowElement(el) && el.showNumber) {
+        numberMap.set(el.id, numberMap.size + 1);
+      }
+    });
+    if (numberMap.size === 0) return;
+
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        const newNum = numberMap.get(el.id);
+        if (newNum !== undefined && isArrowElement(el)) {
+          return { ...el, number: newNum };
+        }
+        return el;
+      }),
+    }));
+    // UWAGA: NIE wołamy pushHistory() tutaj — wołamy go w deleteSelected
+  },
+
   deleteSelected: () => {
-    const { selectedIds } = get();
+    const { selectedIds, elements } = get();
     if (selectedIds.length === 0) return;
+    
+    // Sprawdź czy usuwamy jakieś numerowane strzałki
+    const hadNumberedArrows = selectedIds.some((id) => {
+      const el = elements.find((e) => e.id === id);
+      return el && isArrowElement(el) && el.showNumber;
+    });
     
     set((state) => ({
       elements: removeElementsByIds(state.elements, selectedIds),
       selectedIds: [],
     }));
+    
+    // Renumeruj DOPIERO PO usunięciu — to NIE woła pushHistory
+    if (hadNumberedArrows) {
+      get().renumberAllArrows();
+    }
+    
+    // JEDEN pushHistory na całą operację
     get().pushHistory();
   },
   

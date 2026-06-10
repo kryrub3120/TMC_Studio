@@ -566,7 +566,7 @@ ternami
 - **Module Boundaries**: `docs/MODULE_BOUNDARIES.md` - Konkretne granice i API modułów
 - **Refactor Roadmap**: `docs/REFACTOR_ROADMAP.md` - Plan implementacji
 - **Architecture Overview**: `docs/ARCHITECTURE_OVERVIEW.md` - Ogólna architektura
-- **Project Rules**: `.clinerules/project_rules_custom_instruction.md` - Hard rules PR0
+- **Project Rules**: `.github/copilot-instructions.md` - Hard rules PR0
 
 ---
 

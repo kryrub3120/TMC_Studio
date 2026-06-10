@@ -7,6 +7,7 @@ import React from 'react';
 import { Group, Rect } from 'react-konva';
 import type { EquipmentElement } from '@tmc/core';
 import { EQUIPMENT_RENDERERS, getEquipmentHitBounds } from './equipment';
+import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 
 export interface EquipmentNodeProps {
   element: EquipmentElement;
@@ -34,6 +35,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   onDragEnd,
 }) => {
   const { id, position, equipmentType, variant, rotation, color, scale } = element;
+  const groupRef = React.useRef<any>(null);
   
   // Sanitize white to black in print mode (only for white equipment)
   const effectiveColor = color ? sanitizeForPrint(color, isPrintMode ?? false) : color;
@@ -62,27 +64,24 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
     }
   };
   
-  const handleMouseEnter = (e: any) => {
-    const container = e.target.getStage()?.container();
-    if (container) container.style.cursor = 'move';
-  };
-  
-  const handleMouseLeave = (e: any) => {
-    const container = e.target.getStage()?.container();
-    if (container) container.style.cursor = 'default';
+  const handleDragStart = () => {
+    applyGrabbing(groupRef);
   };
   
   const handleDragEnd = (e: any) => {
+    applyGrab(groupRef);
     onDragEnd(id, e.target.x(), e.target.y());
   };
   
   return (
     <Group
+      ref={groupRef}
       id={id}
       x={position.x}
       y={position.y}
       rotation={rotation}
       draggable
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       {/* Hit area (listening=true) - MUST BE FIRST for proper event capture */}
@@ -98,8 +97,8 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
         onContextMenu={handleContextMenu}
         onMouseDown={handleMouseDown}
         onPointerDown={handleMouseDown}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={cursorGrab}
+        onMouseLeave={cursorDefault}
       />
       
       {/* Selection highlight (listening=false) */}

@@ -277,7 +277,7 @@ const CommandRegistry = {
 };
 ```
 
-**See:** `.clinerules/project_rules_custom_instruction.md` for command rules
+**See:** `.github/copilot-instructions.md` for command rules
 
 ---
 
@@ -638,7 +638,7 @@ When adding a new feature, follow this pattern:
 - **Product Philosophy:** `docs/PRODUCT_PHILOSOPHY.md` - Why we build this way
 - **Entitlements:** `docs/ENTITLEMENTS.md` - How permissions work
 - **UX Patterns:** `docs/UX_PATTERNS.md` - Modal and flow patterns
-- **Project Rules:** `.clinerules/project_rules_custom_instruction.md` - Binding development rules
+- **Project Rules:** `.github/copilot-instructions.md` - Binding development rules
 
 ---
 

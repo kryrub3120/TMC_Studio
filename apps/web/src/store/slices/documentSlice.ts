@@ -409,9 +409,20 @@ export const createDocumentSlice: StateCreator<
 
     // PR-ARROW-NUMBER: Auto-numbering toggle
     toggleAutoNumbering: () => {
+      const wasOff = get().isAutoNumbering === false;
+      
       set((state) => ({
         isAutoNumbering: !state.isAutoNumbering,
       }));
+      
+      // Jeśli włączono numerację — przelicz numery istniejących strzałek
+      // renumberAllArrows NIE woła pushHistory — dostępny przez AppState (full store)
+      if (wasOff) {
+        get().renumberAllArrows();
+      }
+      
+      // JEDEN pushHistory dla toggle
+      get().pushHistory();
     },
 
     saveToCloud: async () => {

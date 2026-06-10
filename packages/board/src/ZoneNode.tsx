@@ -6,6 +6,7 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { Group, Rect, Ellipse } from 'react-konva';
 import type Konva from 'konva';
+import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 import type { ZoneElement, Position, PitchConfig } from '@tmc/core';
 
 export interface ZoneNodeProps {
@@ -171,6 +172,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   const handleGroupDragEnd = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
       if (activeHandle) return;
+      applyGrab(groupRef);
       const node = e.target;
       onDragEnd(zone.id, { x: node.x(), y: node.y() });
     },
@@ -232,6 +234,9 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       draggable={!activeHandle}
       onClick={handleClick}
       onTap={handleClick}
+      onMouseEnter={cursorGrab}
+      onMouseLeave={cursorDefault}
+      onDragStart={() => applyGrabbing(groupRef)}
       onDragEnd={handleGroupDragEnd}
     >
       {/* Zone shape */}

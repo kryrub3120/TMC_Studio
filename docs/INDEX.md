@@ -15,7 +15,7 @@ Start tutaj! Ten dokument to Twój przewodnik po całej dokumentacji projektu TM
 ### Pracuję nad nowym feature
 1. 📋 **[Module Boundaries](MODULE_BOUNDARIES.md)** - Znajdź odpowiedni moduł
 2. 🗺️ **[Refactor Roadmap](REFACTOR_ROADMAP.md)** - Sprawdź plan refaktoryzacji
-3. 📐 **[Project Rules](.clinerules/project_rules_custom_instruction.md)** - Hard rules
+3. 📐 **[Project Rules](../.github/copilot-instructions.md)** - Hard rules
 
 ### Pracuję nad refaktoryzacją
 1. 📋 **[Refactor Roadmap](REFACTOR_ROADMAP.md)** - Plan implementacji
@@ -41,7 +41,7 @@ Start tutaj! Ten dokument to Twój przewodnik po całej dokumentacji projektu TM
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | **[Refactor Roadmap](REFACTOR_ROADMAP.md)** | Detailed refactoring plan with PRs | Active contributors |
-| **[Project Rules](.clinerules/project_rules_custom_instruction.md)** | Binding development rules (PR0) | All developers |
+| **[Project Rules](../.github/copilot-instructions.md)** | Binding development rules (PR0) | All developers |
 | **[Drag Drop Pattern](DRAG_DROP_PATTERN.md)** | Canvas interaction patterns | Frontend |
 | **[UX Patterns](UX_PATTERNS.md)** | Modal flows, user journeys | Frontend, UX |
 | **[Commands Map](COMMANDS_MAP.md)** | Command palette structure | Frontend |
@@ -166,7 +166,7 @@ Start tutaj! Ten dokument to Twój przewodnik po całej dokumentacji projektu TM
 - **Refactor Roadmap** (NEW)
 - Entitlements
 - Product Philosophy
-- Project Rules (.clinerules)
+- Project Rules (.github/copilot-instructions.md)
 
 ### ⚠️ Wymaga aktualizacji
 - System Architecture (dodać info o modułach)
@@ -232,7 +232,7 @@ Start tutaj! Ten dokument to Twój przewodnik po całej dokumentacji projektu TM
 - **Architecture questions:** Check ARCHITECTURE_OVERVIEW.md + MODULAR_ARCHITECTURE_STRATEGY.md
 - **"Where do I put this code?":** MODULE_BOUNDARIES.md
 - **"How do I refactor this?":** REFACTOR_ROADMAP.md
-- **"What are the rules?":** .clinerules/project_rules_custom_instruction.md
+- **"What are the rules?":** ../.github/copilot-instructions.md
 
 ---
 

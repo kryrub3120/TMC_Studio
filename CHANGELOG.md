@@ -8,7 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Skróty zoomu `+`/`-` (bez Cmd)** (2026-06-09)
+- **Sprint A: Quick wins UX + podpisy zawodników + Enter→edit** (2026-06-10)
+  - **aria-label** na przyciskach Zoom In, Zoom Out, Fit w `ZoomWidget.tsx`
+  - **Toasty undo/redo**: "Cofnięto" (Ctrl+Z) i "Przywrócono" (Ctrl+Shift+Z)
+  - **Kursory wg narzędzia**: crosshair dla draw tools, text dla text tool
+  - **Podpisy zawodników**: domyślnie brak podpisu, `showLabel===true` = podpis pod zawodnikiem w pill z tłem i cieniem. Numer osobno na ciele. Dynamiczna szerokość pilla (długie nazwiska bez ucinania)
+  - **Enter→focus label**: Enter na zaznaczonym zawodniku focusuje pole "Player Label" w RightInspector
+  - **Enter/Escape w inpucie label**: Enter→blur (zatwierdzenie), Escape→blur
+  - **Etykiety UI**: "Player Label" (zamiast "Position Label"), "Show Label Below" (zamiast "Show Label Inside"), `aria-label="Player label"` na inpucie
+  - Zmodyfikowane pliki: `packages/ui/src/ZoomWidget.tsx`, `apps/web/src/hooks/useKeyboardShortcuts.ts`, `apps/web/src/app/board/BoardCanvasSection.tsx`, `packages/board/src/PlayerNode.tsx`, `packages/ui/src/RightInspector.tsx`, `apps/web/src/app/routes/useBoardPageState.ts`, `apps/web/src/app/board/BoardPage.tsx`
+  - Raporty: `thoughts/2026-06-10/1800_delivery_sprintA-implementation.md`, `thoughts/2026-06-10/1815_delivery_sprintA-player-labels-polish.md`, `thoughts/2026-06-10/1830_delivery_sprintA-enter-edit-label.md`
+- **Inspector UX: arrow controls + duplikacja fix + przycisk toggle** (2026-06-10)
+  - **Arrow Numbering** w PropsTab: Show number toggle, Number input, Auto-number arrows toggle, Renumber arrows button
+  - Kontrolki delegują do `toggleArrowNumber`, `setArrowNumber`, `toggleAutoNumbering`, `renumberAllArrows`
+  - **Fix duplikacji**: breakpoint `lg` (1024-1280px) miał osobny floating overlay — teraz wszystkie breakpointy <xl używają FAB + BottomSheet
+  - **Przycisk toggle**: floating akcentowy przycisk na xl gdy sidebar zamknięty (+ aria-label)
+  - Zmodyfikowane pliki: `packages/ui/src/RightInspector.tsx`, `apps/web/src/app/routes/useBoardPageState.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/app/board/BoardPage.tsx`
+  - Pełna dokumentacja: `thoughts/2026-06-10/1826_delivery_inspector-ux-fix.md`
+- **Sprint C: renumberAllArrows — numeracja strzałek bez dziur + undo** (2026-06-10)
+  - `renumberAllArrows()` w elementsSlice — przypisuje numery 1..N w kolejności insertion, NIE woła pushHistory
+  - `deleteSelected` — usuwa, renumber (jeśli usunięto numerowaną strzałkę), JEDEN pushHistory
+  - `toggleAutoNumbering` — naprawiony: dodano pushHistory + warunek `if (wasOff) renumberAllArrows()`
+  - Fix błędu #1 z planu: warunek `!current && !newVal` → `if (wasOff)`
+  - Fix błędu #3 z planu: podwójny pushHistory — renumberAllArrows nie woła pushHistory
+  - 25 testów (14 jednostkowych + 11 integracyjnych na realnym store) — wszystkie ✅
+  - Zmodyfikowane pliki: `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/store/slices/documentSlice.ts`, `apps/web/src/store/slices/__tests__/arrowRenumber.test.ts`, `apps/web/src/store/slices/__tests__/arrowRenumber.integration.test.ts`
+  - Pełna dokumentacja: `thoughts/2026-06-10/1705_delivery_sprint-C-arrow-renumber-undo.md`, `thoughts/2026-06-10/1725_delivery_sprint-C-verification-fix.md`
+- **Konfiguracja vitest + test setup** (2026-06-10)
+  - `vitest` dodany do devDependencies web app
+  - `vite.config.ts`: test config (environment: node, setupFiles)
+  - `src/test-setup.ts`: mocki localStorage, logger, supabase
+  - Skrypt `pnpm --filter @tmc/web test` działa
+  - Zmodyfikowane pliki: `apps/web/vite.config.ts`, `apps/web/src/test-setup.ts`, `apps/web/package.json`
   - Plain `+`/`=` → zoomIn, plain `-` → zoomOut
   - Działają tylko gdy nie zaznaczono sprzętu (sprzęt ma priorytet scale)
   - Respektują `viewportLocked` — gdy zablokowane, skróty nie działają

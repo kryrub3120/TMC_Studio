@@ -31,6 +31,12 @@ export function useBoardPageState(props: BoardPageProps) {
   
   const stageRef = useRef<Konva.Stage>(null);
   
+  // ─── Label input ref and callback for Enter→focus (Sprint A) ─────
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const onFocusLabelInput = useCallback(() => {
+    labelInputRef.current?.focus();
+  }, []);
+  
   // Auth store
   const authUser = useAuthStore((s) => s.user);
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -259,6 +265,8 @@ export function useBoardPageState(props: BoardPageProps) {
         type: 'arrow' as const,
         x: selectedElement.startPoint.x,
         y: selectedElement.startPoint.y,
+        showNumber: selectedElement.showNumber,
+        arrowNumber: selectedElement.number,
       } satisfies InspectorElement as InspectorElement;
     }
     
@@ -320,6 +328,7 @@ export function useBoardPageState(props: BoardPageProps) {
     handleExportGIF: exportController.exportGIF,
     showToast,
     onStartEditingText: editOverlay.text.start,
+    onFocusLabelInput,
     addStep,
     onOpenPricingModal, // PR3
     contextMenuVisible: contextMenu.menuState.visible,
@@ -334,6 +343,7 @@ export function useBoardPageState(props: BoardPageProps) {
   return {
     // Refs
     stageRef,
+    labelInputRef,
     
     // Feature flags
     USE_NEW_CANVAS,
@@ -397,6 +407,9 @@ export function useBoardPageState(props: BoardPageProps) {
     goToStep,
     nextStep,
     prevStep,
+    
+    // Callbacks (Sprint A)
+    onFocusLabelInput,
     
     // UI state
     theme,
