@@ -233,9 +233,9 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   }, [setEditingTextId, setEditingTextValue]);
 
   // Player quick-edit handlers
-  const handlePlayerQuickEdit = useCallback((id: string, currentNumber: number) => {
+  const handlePlayerQuickEdit = useCallback((id: string, currentNumber: number | null | undefined) => {
     setEditingPlayerId(id);
-    setEditingPlayerNumber(String(currentNumber));
+    setEditingPlayerNumber(currentNumber !== null && currentNumber !== undefined ? String(currentNumber) : '');
     selectElement(id, false);
   }, [selectElement, setEditingPlayerId, setEditingPlayerNumber]);
 

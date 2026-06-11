@@ -74,5 +74,19 @@ export type { BottomSheetProps } from './BottomSheet.js';
 export { OfflineBanner } from './OfflineBanner.js';
 export type { OfflineBannerProps } from './OfflineBanner.js';
 
+// Help sidebar (Sprint E)
+export { FloatingHelpButton } from './FloatingHelpButton.js';
+export type { FloatingHelpButtonProps } from './FloatingHelpButton.js';
+export { HelpSidebar } from './HelpSidebar.js';
+export type { HelpSidebarProps, ProjectSaveStatus } from './HelpSidebar.js';
+export { SHORTCUT_SECTIONS, TOOL_ACTIONS, HELP_TIPS } from './helpSidebarData.js';
+export type { HelpShortcutItem, HelpSection, ToolAction, HelpTip } from './helpSidebarData.js';
+
+// Tutorial (Sprint F)
+export { TutorialOverlay } from './TutorialOverlay.js';
+export type { TutorialOverlayProps } from './TutorialOverlay.js';
+export { TUTORIAL_STEPS } from './tutorialSteps.js';
+export type { TutorialStep } from './tutorialSteps.js';
+
 // Color utilities
 export { SHARED_COLORS, getColorsForMode, sanitizeColorForPrint } from './colors.js';

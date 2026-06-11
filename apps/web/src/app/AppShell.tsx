@@ -50,6 +50,8 @@ export function AppShell() {
   
   // Board store - minimal global state
   const cloudProjects = useBoardStore((s) => s.cloudProjects);
+  const cloudProjectId = useBoardStore((s) => s.cloudProjectId);
+  const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
   
   // Controllers
   const billingController = useBillingController();
@@ -168,6 +170,7 @@ export function AppShell() {
     updatedAt: p.updated_at,
     thumbnailUrl: p.thumbnail_url ?? undefined,
     isCloud: true,
+    saveStatus: cloudProjectId === p.id ? projectSaveStatus : undefined,
     folderId: p.folder_id ?? undefined,
     tags: p.tags ?? undefined,
     isFavorite: p.is_favorite ?? false,

@@ -35,7 +35,7 @@ export interface UseKeyboardShortcutsParams {
   onStartEditingText?: (id: string, content: string) => void;
   
   // Player number editing callback (H2)
-  onStartEditingPlayerNumber?: (id: string, currentNumber: number) => void;
+  onStartEditingPlayerNumber?: (id: string, currentNumber: number | undefined) => void;
   
   // Focus label input in RightInspector (Sprint A — Enter→edit label)
   onFocusLabelInput?: () => void;
@@ -89,6 +89,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
   const saveDocument = useBoardStore((s) => s.saveDocument);
+  const manualSave = useBoardStore((s) => s.manualSave);
   const saveToCloud = useBoardStore((s) => s.saveToCloud);
   const fetchCloudProjects = useBoardStore((s) => s.fetchCloudProjects);
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
@@ -490,19 +491,14 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       case 's':
         if (isCmd) {
           e.preventDefault();
-          saveDocument();
-          if (authIsAuthenticated) {
-            saveToCloud().then(async (success) => {
-              if (success) {
-                await fetchCloudProjects();
-                showToast('Saved to cloud ☁️');
-              } else {
-                showToast('Saved locally');
-              }
-            });
-          } else {
-            showToast('Saved locally');
-          }
+          manualSave().then((cloudSaved) => {
+            if (authIsAuthenticated) {
+              fetchCloudProjects();
+              showToast(cloudSaved ? 'Saved to cloud ☁️' : 'Cloud save failed');
+            } else {
+              showToast('Saved locally');
+            }
+          });
         } else if (e.shiftKey && hasSelectedPlayer()) {
           // Shift+S = cycle player shape (when player selected)
           e.preventDefault();
@@ -610,7 +606,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             if (onFocusLabelInput) {
               onFocusLabelInput();
             } else if (onStartEditingPlayerNumber) {
-              onStartEditingPlayerNumber(el.id, (el as any).number ?? 0);
+              onStartEditingPlayerNumber(el.id, (el as any).number);
             }
           } else if (el && isTextElement(el) && onStartEditingText) {
             e.preventDefault();
@@ -898,7 +894,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     addPlayerAtCursor, addBallAtCursor, addTextAtCursor, addEquipmentAtCursor,
     duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements, createGroup,
     undo, redo, deleteSelected,
-    cycleZoneShape, cyclePlayerShape, saveDocument, saveToCloud, fetchCloudProjects,
+    cycleZoneShape, cyclePlayerShape, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
     cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation,
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,

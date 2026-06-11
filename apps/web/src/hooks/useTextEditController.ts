@@ -41,7 +41,7 @@ export interface TextEditController {
     value: string; // numeric string
     element: PlayerElement | null;
 
-    start: (id: string, currentNumber: number) => void;
+    start: (id: string, currentNumber?: number) => void;
     setValue: (v: string) => void; // caller can sanitize, but hook should also sanitize
     save: () => void;
     cancel: () => void;
@@ -118,9 +118,9 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
 
   // Player number editing handlers
   const startPlayerEdit = useCallback(
-    (id: string, currentNumber: number) => {
+    (id: string, currentNumber?: number | undefined) => {
       setEditingPlayerId(id);
-      setEditingPlayerNumber(String(currentNumber));
+      setEditingPlayerNumber(currentNumber !== undefined ? String(currentNumber) : '');
       onSelectElement(id);
     },
     [onSelectElement]

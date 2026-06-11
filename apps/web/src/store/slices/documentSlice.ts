@@ -33,10 +33,17 @@ import {
   getProjects,
   getFolders,
   createFolder,
+  uploadThumbnail,
   type Project,
   type ProjectFolder,
 } from '../../lib/supabase';
 import type { AppState } from '../types';
+
+/** Module-level callback for thumbnail generation — set by BoardPage on mount */
+let thumbnailGenerator: (() => Promise<Blob | null>) | null = null;
+export function setThumbnailGenerator(fn: (() => Promise<Blob | null>) | null) {
+  thumbnailGenerator = fn;
+}
 
 export interface DocumentSlice {
   // State
@@ -56,6 +63,12 @@ export interface DocumentSlice {
   saveDocument: () => void;
   loadDocument: () => boolean;
   newDocument: () => void;
+  
+  // Sprint G: manual save (Cmd+S) — always generates thumbnail, returns cloud result
+  manualSave: () => Promise<boolean>;
+  /** Generate and upload thumbnail from Konva stage. Throttled for autosave. */
+  generateThumbnail: () => Promise<void>;
+  lastThumbnailTs: number;
   
   // Team settings
   updateTeamSettings: (team: Team, settings: Partial<TeamSetting>) => void;
@@ -109,6 +122,7 @@ export const createDocumentSlice: StateCreator<
     autoSaveTimer: null,
     isDirty: false,
     lastSavedAt: null,
+    lastThumbnailTs: 0,
     isAutoNumbering: false,
     
     saveDocument: () => {
@@ -552,6 +566,10 @@ export const createDocumentSlice: StateCreator<
     
     markDirty: () => {
       set({ isDirty: true });
+      // Update project save status to 'unsaved'
+      import('../useUIStore').then(({ useUIStore }) => {
+        useUIStore.getState().setProjectSaveStatus('unsaved');
+      }).catch(() => {});
       get().scheduleAutoSave();
     },
     
@@ -575,21 +593,117 @@ export const createDocumentSlice: StateCreator<
       
       logger.debug('[Autosave] Saving...');
       
+      // Update status to 'saving'
+      import('../useUIStore').then(({ useUIStore }) => {
+        useUIStore.getState().setProjectSaveStatus('saving');
+      }).catch(() => {});
+      
+      // Always save locally regardless of cloud outcome
       state.saveDocument();
       
+      let cloudSuccess = true;
       if (isSupabaseEnabled()) {
         try {
-          await state.saveToCloud();
-          logger.debug('[Autosave] Saved to cloud');
+          const ok = await state.saveToCloud();
+          if (!ok) {
+            logger.warn('[Autosave] Cloud save returned false');
+            cloudSuccess = false;
+          } else {
+            logger.debug('[Autosave] Saved to cloud');
+          }
         } catch (error) {
           logger.error('[Autosave] Cloud save failed:', error);
+          cloudSuccess = false;
         }
+      }
+      
+      if (cloudSuccess) {
+        // Generate thumbnail if throttled (max once per 30s)
+        const THUMBNAIL_THROTTLE_MS = 30000;
+        const now = Date.now();
+        if (now - state.lastThumbnailTs >= THUMBNAIL_THROTTLE_MS) {
+          set({ lastThumbnailTs: now });
+          // Fire-and-forget
+          get().generateThumbnail().catch(() => {});
+        }
+        
+        set({ 
+          isDirty: false,
+          lastSavedAt: new Date().toISOString(),
+        });
+        
+        import('../useUIStore').then(({ useUIStore }) => {
+          useUIStore.getState().setProjectSaveStatus('saved');
+        }).catch(() => {});
+      } else {
+        // Keep isDirty = true so autosave retries on next timer cycle.
+        // Don't regenerate timer here — the existing markDirty/scheduleAutoSave
+        // from the original user action will re-trigger via the 2s debounce.
+        // Only log and notify.
+        logger.warn('[Autosave] Cloud save failed — will retry');
+        
+        import('../useUIStore').then(({ useUIStore }) => {
+          useUIStore.getState().setProjectSaveStatus('error');
+        }).catch(() => {});
+      }
+    },
+    
+    /** Manual save (Cmd+S) — saves locally, to cloud, and always generates thumbnail.
+   *  Returns true if cloud save succeeded (or was not attempted), false on failure. */
+    manualSave: async (): Promise<boolean> => {
+      const state = get();
+      
+      // Update status
+      import('../useUIStore').then(({ useUIStore }) => {
+        useUIStore.getState().setProjectSaveStatus('saving');
+      }).catch(() => {});
+      
+      state.saveDocument();
+      
+      let cloudSuccess = true;
+      if (isSupabaseEnabled()) {
+        try {
+          const ok = await state.saveToCloud();
+          if (!ok) {
+            logger.warn('[Manual save] Cloud save returned false');
+            cloudSuccess = false;
+          } else {
+            logger.debug('[Manual save] Saved to cloud');
+          }
+        } catch (error) {
+          logger.error('[Manual save] Cloud save failed:', error);
+          cloudSuccess = false;
+        }
+      }
+      
+      // Always generate thumbnail on manual save (only if cloud success)
+      if (cloudSuccess) {
+        set({ lastThumbnailTs: Date.now() });
+        await get().generateThumbnail().catch(() => {});
       }
       
       set({ 
         isDirty: false,
         lastSavedAt: new Date().toISOString(),
       });
+      
+      import('../useUIStore').then(({ useUIStore }) => {
+        useUIStore.getState().setProjectSaveStatus(cloudSuccess ? 'saved' : 'error');
+      }).catch(() => {});
+      
+      return cloudSuccess;
+    },
+    
+    /** Generate and upload thumbnail using registered generator */
+    generateThumbnail: async () => {
+      if (!thumbnailGenerator) return;
+      const blob = await thumbnailGenerator();
+      if (!blob) return;
+      
+      const { cloudProjectId } = get();
+      if (!cloudProjectId) return;
+      
+      await uploadThumbnail(cloudProjectId, blob);
     },
     
     clearAutoSaveTimer: () => {

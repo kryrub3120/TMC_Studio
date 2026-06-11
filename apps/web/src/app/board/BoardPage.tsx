@@ -3,8 +3,8 @@
  * Pure composition - orchestrates all board-related sections
  */
 
-import { useRef } from 'react';
-import { 
+import { useRef, useEffect } from 'react';
+import {
   RightInspector, 
   BottomStepsBar, 
   CommandPaletteModal, 
@@ -14,11 +14,15 @@ import {
   ToastHint, 
   ZoomWidget,
   OfflineBanner,
+  FloatingHelpButton,
+  HelpSidebar,
+  TutorialOverlay,
 } from '@tmc/ui';
 import { DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
 import { useBoardStore } from '../../store';
+import { setThumbnailGenerator } from '../../store/slices/documentSlice';
 
 import { BoardTopBarSection } from './BoardTopBarSection';
 import { BoardCanvasSection } from './BoardCanvasSection';
@@ -104,6 +108,47 @@ export function BoardPage(props: BoardPageProps) {
 
   // Viewport sync (responsive breakpoints)
   useViewportSync();
+
+  // ─── Register thumbnail generator (Sprint G) ──────────────────────
+  useEffect(() => {
+    setThumbnailGenerator(async () => {
+      const stage = state.stageRef.current;
+      if (!stage) return null;
+      try {
+        const dataUrl = stage.toDataURL({ mimeType: 'image/png', pixelRatio: 0.25 });
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        return blob;
+      } catch {
+        return null;
+      }
+    });
+    return () => setThumbnailGenerator(null);
+  }, [state.stageRef]);
+
+  // Tutorial trigger (Sprint F): show on empty board, once per user
+  // Not when print mode, cheat sheet, or help sidebar are active
+  useEffect(() => {
+    const shouldShow = !state.tutorialCompleted
+      && state.elements.length === 0
+      && !state.isPrintMode
+      && !state.cheatSheetVisible
+      && !state.helpSidebarOpen;
+    state.setShowTutorial(shouldShow);
+  }, [
+    state.tutorialCompleted, state.elements.length, state.isPrintMode,
+    state.cheatSheetVisible, state.helpSidebarOpen, state.setShowTutorial,
+  ]);
+
+  const handleTutorialDismiss = () => {
+    state.setTutorialCompleted(true);
+    state.setShowTutorial(false);
+  };
+
+  const handleTutorialComplete = () => {
+    state.setTutorialCompleted(true);
+    state.setShowTutorial(false);
+  };
 
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
@@ -216,6 +261,35 @@ export function BoardPage(props: BoardPageProps) {
               isVisible={state.cheatSheetVisible}
               onClose={state.toggleCheatSheet}
               showAnimationShortcuts={ANIMATION_ENABLED}
+            />
+          )}
+
+          {/* Floating Help Button (Sprint E) */}
+          {!state.focusMode && (
+            <FloatingHelpButton
+              onClick={state.toggleHelpSidebar}
+              isPrintMode={state.isPrintMode}
+            />
+          )}
+
+          {/* Help Sidebar (Sprint E) */}
+          <HelpSidebar
+            isOpen={state.helpSidebarOpen}
+            onClose={() => state.setHelpSidebarOpen(false)}
+            onZoomFit={state.zoomFit}
+            onToggleFocus={state.toggleFocusMode}
+            onTogglePrint={state.togglePrintMode}
+            saveStatus={state.projectSaveStatus}
+            isPrintMode={state.isPrintMode}
+          />
+
+          {/* Tutorial Overlay (Sprint F) — controlled by state.showTutorial */}
+          {state.showTutorial && (
+            <TutorialOverlay
+              isVisible={true}
+              onDismiss={handleTutorialDismiss}
+              onComplete={handleTutorialComplete}
+              elementsCount={state.elements.length}
             />
           )}
 

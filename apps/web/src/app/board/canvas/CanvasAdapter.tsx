@@ -85,7 +85,7 @@ export interface CanvasAdapterProps {
   onElementDragStart: (id: string, mouseX?: number, mouseY?: number) => boolean;
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
   onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
-  onPlayerQuickEdit: (id: string, currentNumber: number) => void;
+  onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
   pushHistory: () => void;
   

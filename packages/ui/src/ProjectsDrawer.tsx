@@ -5,6 +5,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
+import { ConfirmModal } from './ConfirmModal';
 
 export interface ProjectItem {
   id: string;
@@ -16,6 +17,8 @@ export interface ProjectItem {
   isPinned?: boolean;
   tags?: string[];
   folderId?: string | null;
+  /** Save status: 'saved' | 'saving' | 'unsaved' | 'error' | undefined */
+  saveStatus?: 'saved' | 'saving' | 'unsaved' | 'error';
 }
 
 export interface FolderItem {
@@ -209,10 +212,10 @@ export function ProjectsDrawer({
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
   
-  // Inline rename states (TODO: implement inline renaming)
-  const [_renamingProjectId, _setRenamingProjectId] = useState<string | null>(null);
+  // Inline rename states (activated from L1 — double-click to rename)
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const [_renamingFolderId, _setRenamingFolderId] = useState<string | null>(null);
-  const [_renameValue, _setRenameValue] = useState('');
+  const [renameValue, setRenameValue] = useState('');
   
   // Collapse/expand state for folder tree
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(new Set());
@@ -409,7 +412,7 @@ export function ProjectsDrawer({
       {
         label: 'Delete',
         icon: '🗑️',
-        onClick: () => onDeleteProject(project.id),
+        onClick: () => setDeleteConfirmId(project.id),
         variant: 'danger' as const,
         divider: true,
       },
@@ -639,6 +642,28 @@ export function ProjectsDrawer({
     const isCurrent = currentProjectId === project.id;
     const isHovered = hoveredId === project.id;
     const isDragged = draggedProjectId === project.id;
+    const isRenaming = renamingProjectId === project.id;
+
+    const handleDoubleClick = () => {
+      setRenameValue(project.name);
+      setRenamingProjectId(project.id);
+    };
+
+    const handleRenameSubmit = () => {
+      const trimmed = renameValue.trim();
+      if (trimmed && trimmed !== project.name && _onRenameProject) {
+        _onRenameProject(project.id, trimmed);
+      }
+      setRenamingProjectId(null);
+    };
+
+    const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleRenameSubmit();
+      } else if (e.key === 'Escape') {
+        setRenamingProjectId(null);
+      }
+    };
 
     return (
       <div
@@ -650,12 +675,12 @@ export function ProjectsDrawer({
           isCurrent ? 'bg-accent/15 text-accent' : 'hover:bg-surface2 text-text'
         } ${isDragged ? 'opacity-50' : ''}`}
         style={{ paddingLeft: padLeft }}
-        onClick={() => onSelectProject(project.id)}
+        onClick={() => !isRenaming && onSelectProject(project.id)}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => handleProjectContextMenu(e, project)}
         onMouseEnter={() => setHoveredId(project.id)}
         onMouseLeave={() => {
           setHoveredId(null);
-          if (deleteConfirmId === project.id) setDeleteConfirmId(null);
         }}
       >
         {/* Thumbnail */}
@@ -668,11 +693,38 @@ export function ProjectsDrawer({
         </div>
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            {project.isFavorite && <span className="text-[10px]">⭐</span>}
-            {project.isPinned && <span className="text-[10px]">📌</span>}
-            <span className="text-xs font-medium truncate">{project.name}</span>
-          </div>
+          {isRenaming ? (
+            <input
+              autoFocus
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={handleRenameSubmit}
+              onKeyDown={handleRenameKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full text-xs font-medium bg-surface2 border border-accent rounded px-1.5 py-0.5 text-text outline-none"
+              placeholder="Project name"
+            />
+          ) : (
+            <div className="flex items-center gap-1">
+              {project.isFavorite && <span className="text-[10px]">⭐</span>}
+              {project.isPinned && <span className="text-[10px]">📌</span>}
+              <span className="text-xs font-medium truncate">{project.name}</span>
+              {/* Save status indicator */}
+              {project.saveStatus === 'saving' && (
+                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" title="Saving..." />
+              )}
+              {project.saveStatus === 'unsaved' && (
+                <span className="w-2 h-2 rounded-full bg-yellow-600 flex-shrink-0" title="Unsaved changes" />
+              )}
+              {project.saveStatus === 'error' && (
+                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Save error" />
+              )}
+              {project.saveStatus === 'saved' && (
+                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Saved" />
+              )}
+            </div>
+          )}
           <span className="text-[10px] text-muted">{formatDate(project.updatedAt)}</span>
         </div>
         {/* Current badge */}
@@ -680,7 +732,7 @@ export function ProjectsDrawer({
           <span className="text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full flex-shrink-0">Current</span>
         )}
         {/* Hover actions */}
-        {isHovered && !isCurrent && (
+        {isHovered && !isCurrent && !isRenaming && (
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); onDuplicateProject(project.id); }}
@@ -692,7 +744,7 @@ export function ProjectsDrawer({
               </svg>
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onDeleteProject(project.id); }}
+              onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }}
               className="p-1 hover:bg-red-500/20 rounded transition-colors"
               title="Delete"
             >
@@ -1102,6 +1154,26 @@ export function ProjectsDrawer({
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (() => {
+        const projectToDelete = projects.find(p => p.id === deleteConfirmId);
+        return (
+          <ConfirmModal
+            isOpen={true}
+            title="Delete Project"
+            description={projectToDelete ? `Are you sure you want to delete "${projectToDelete.name}"? This action cannot be undone.` : 'Are you sure you want to delete this project?'}
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            danger={true}
+            onConfirm={() => {
+              onDeleteProject(deleteConfirmId);
+              setDeleteConfirmId(null);
+            }}
+            onCancel={() => setDeleteConfirmId(null)}
+          />
+        );
+      })()}
 
       {/* Animation + DnD indicator styles */}
       <style>{`

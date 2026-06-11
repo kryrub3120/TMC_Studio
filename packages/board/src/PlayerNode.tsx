@@ -41,7 +41,7 @@ export interface PlayerNodeProps {
   onDragEnd: (id: string, position: Position) => void;
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
   teamSettings?: TeamSettings;
-  onQuickEditNumber?: (id: string, currentNumber: number) => void;
+  onQuickEditNumber?: (id: string, currentNumber: number | null | undefined) => void;
   isPrintMode?: boolean;
   playerOrientationSettings?: PlayerOrientationSettings;
   /** zoom in PERCENT, e.g. 100 */
@@ -177,7 +177,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
 
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
-    onQuickEditNumber?.(player.id, player.number ?? 0);
+    onQuickEditNumber?.(player.id, player.number);
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {

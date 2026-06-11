@@ -152,6 +152,14 @@ export function useBoardPageState(props: BoardPageProps) {
   const setCheatSheetVisible = useUIStore((s) => s.setCheatSheetVisible);
   const togglePrintMode = useUIStore((s) => s.togglePrintMode);
   const toggleViewportLock = useUIStore((s) => s.toggleViewportLock); // ETAP 4
+  const helpSidebarOpen = useUIStore((s) => s.helpSidebarOpen);
+  const setHelpSidebarOpen = useUIStore((s) => s.setHelpSidebarOpen);
+  const toggleHelpSidebar = useUIStore((s) => s.toggleHelpSidebar);
+  const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
+  const tutorialCompleted = useUIStore((s) => s.tutorialCompleted);
+  const setTutorialCompleted = useUIStore((s) => s.setTutorialCompleted);
+  const setShowTutorial = useUIStore((s) => s.setShowTutorial);
+  const showTutorial = useUIStore((s) => s.showTutorial);
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -177,8 +185,10 @@ export function useBoardPageState(props: BoardPageProps) {
     if (selectedIds.length !== 1) return undefined;
     return elements.find((el) => el.id === selectedIds[0]);
   }, [elements, selectedIds]);
-  // TODO: Podpiąć realny mechanizm autozapisu / dirty flag stanu
-  const isSaved = true;
+  
+  // Save status: not dirty = saved (regardless of isSaving state)
+  const isDirty = useBoardStore((s) => s.isDirty);
+  const isSaved = !isDirty;
   
   // Hidden by group
   const hiddenByGroup = useMemo(() => {
@@ -314,7 +324,8 @@ export function useBoardPageState(props: BoardPageProps) {
     onUpdateText: updateTextContent,
     onUpdatePlayerNumber: (id: string, number: number) => {
       selectElement(id, false);
-      updateSelectedElement({ number });
+      // 0 signals removal → convert to undefined
+      updateSelectedElement({ number: number === 0 ? undefined : number });
     },
     onSelectElement: (id: string) => selectElement(id, false),
     onToast: showToast,
@@ -446,6 +457,14 @@ export function useBoardPageState(props: BoardPageProps) {
     viewportLocked, // ETAP 4
     toggleViewportLock, // ETAP 4
     setInspectorOpen,
+    helpSidebarOpen, // Sprint E
+    setHelpSidebarOpen,
+    toggleHelpSidebar,
+    projectSaveStatus,
+    tutorialCompleted,
+    setTutorialCompleted,
+    showTutorial,
+    setShowTutorial,
     
     // Playback
     isPlaying,
@@ -490,7 +509,7 @@ export function useBoardPageState(props: BoardPageProps) {
     // Player editing (from controller)
     editingPlayerId: editOverlay.player.editingId,
     editingPlayerNumber: editOverlay.player.value,
-    setEditingPlayerId: (id: string | null) => id ? editOverlay.player.start(id, 0) : editOverlay.player.cancel(),
+    setEditingPlayerId: (id: string | null) => id ? editOverlay.player.start(id) : editOverlay.player.cancel(),
     setEditingPlayerNumber: editOverlay.player.setValue,
     editingPlayerElement: editOverlay.player.element,
   };

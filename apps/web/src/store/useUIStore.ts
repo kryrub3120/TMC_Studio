@@ -71,6 +71,9 @@ export function getBreakpoint(width: number): Breakpoint {
   return 'sm';
 }
 
+/** Save status for current project */
+export type ProjectSaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
+
 /** UI Store state */
 interface UIState {
   // Theme
@@ -118,6 +121,16 @@ interface UIState {
   // Online/offline state (PR-L5-MINI)
   isOnline: boolean;
   lastSaveFailureAt: number | null;
+  
+  // Save status (Sprint G)
+  projectSaveStatus: ProjectSaveStatus;
+  
+  // Help sidebar (Sprint E)
+  helpSidebarOpen: boolean;
+  
+  // Tutorial (Sprint F)
+  tutorialCompleted: boolean;
+  showTutorial: boolean;
   
   // Actions - Theme
   toggleTheme: () => void;
@@ -179,6 +192,17 @@ interface UIState {
   // Actions - Online/offline (PR-L5-MINI)
   setOnline: (online: boolean) => void;
   showSaveFailureToast: () => void;
+  
+  // Actions - Save status (Sprint G)
+  setProjectSaveStatus: (status: ProjectSaveStatus) => void;
+  
+  // Actions - Help sidebar (Sprint E)
+  setHelpSidebarOpen: (open: boolean) => void;
+  toggleHelpSidebar: () => void;
+  
+  // Actions - Tutorial (Sprint F)
+  setTutorialCompleted: (completed: boolean) => void;
+  setShowTutorial: (show: boolean) => void;
   
   // Breakpoint
   breakpoint: Breakpoint;
@@ -252,6 +276,10 @@ export const useUIStore = create<UIState>()(
       animationProgress: 0,
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       lastSaveFailureAt: null,
+      projectSaveStatus: 'saved',
+      helpSidebarOpen: false,
+      tutorialCompleted: false,
+      showTutorial: false,
       breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
@@ -443,6 +471,17 @@ export const useUIStore = create<UIState>()(
           set({ lastSaveFailureAt: now });
         }
       },
+      
+      // Save status actions (Sprint G)
+      setProjectSaveStatus: (status) => set({ projectSaveStatus: status }),
+      
+      // Help sidebar actions (Sprint E)
+      setHelpSidebarOpen: (open) => set({ helpSidebarOpen: open }),
+      toggleHelpSidebar: () => set((s) => ({ helpSidebarOpen: !s.helpSidebarOpen })),
+      
+      // Tutorial actions (Sprint F)
+      setTutorialCompleted: (completed) => set({ tutorialCompleted: completed }),
+      setShowTutorial: (show) => set({ showTutorial: show }),
     }),
     {
       name: 'tmc-ui-settings',
@@ -456,6 +495,7 @@ export const useUIStore = create<UIState>()(
         footerVisible: state.footerVisible,
         inspectorOpen: state.inspectorOpen,
         viewportLocked: state.viewportLocked, // PR-UX-3 ETAP 4
+        tutorialCompleted: state.tutorialCompleted, // Sprint F
       }),
       onRehydrateStorage: () => (state) => {
         // Apply theme on rehydration
