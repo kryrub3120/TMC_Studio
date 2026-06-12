@@ -4,7 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import type { Position, ElementId, ArrowType, ZoneShape, DrawingType, BoardElement } from '@tmc/core';
-import { createArrow, createZone, isArrowElement } from '@tmc/core';
+import { createArrow, createZone, createPolygonZone, isArrowElement } from '@tmc/core';
 import type { AppState } from '../types';
 
 export interface DrawingSlice {
@@ -15,6 +15,12 @@ export interface DrawingSlice {
   // Freehand drawing state
   freehandPoints: number[] | null;
   freehandType: DrawingType | null;
+  
+  // Polygon zone drawing state (click-to-place vertices)
+  /** Committed polygon vertices as flat absolute coords [x1,y1,...] */
+  polygonPoints: number[] | null;
+  /** Live cursor position for the rubber-band segment to the next vertex */
+  polygonCursor: Position | null;
   
   // Multi-drag state
   multiDragOffsets: Map<ElementId, Position> | null;
@@ -35,6 +41,11 @@ export interface DrawingSlice {
   // Freehand drawing actions
   startFreehandDrawing: (type: DrawingType, position: Position) => void;
   updateFreehandDrawing: (position: Position) => void;
+  
+  // Polygon zone drawing actions
+  addPolygonPoint: (position: Position) => void;
+  updatePolygonCursor: (position: Position) => void;
+  finishPolygonDrawing: () => void;
 }
 
 export const createDrawingSlice: StateCreator<
@@ -47,6 +58,8 @@ export const createDrawingSlice: StateCreator<
   drawingEnd: null,
   freehandPoints: null,
   freehandType: null,
+  polygonPoints: null,
+  polygonCursor: null,
   multiDragOffsets: null,
   nextArrowShouldBeNumbered: false,
   
@@ -128,7 +141,7 @@ export const createDrawingSlice: StateCreator<
   },
   
   cancelDrawing: () => {
-    set({ drawingStart: null, drawingEnd: null, nextArrowShouldBeNumbered: false });
+    set({ drawingStart: null, drawingEnd: null, nextArrowShouldBeNumbered: false, polygonPoints: null, polygonCursor: null });
   },
   
   // PR-ARROW-NUMBER: Set one-shot auto-number flag
@@ -149,5 +162,57 @@ export const createDrawingSlice: StateCreator<
         ? [...state.freehandPoints, position.x, position.y]
         : null,
     }));
+  },
+  
+  addPolygonPoint: (position) => {
+    set((state) => ({
+      polygonPoints: state.polygonPoints
+        ? [...state.polygonPoints, position.x, position.y]
+        : [position.x, position.y],
+      polygonCursor: position,
+    }));
+  },
+  
+  updatePolygonCursor: (position) => {
+    set({ polygonCursor: position });
+  },
+  
+  finishPolygonDrawing: () => {
+    const { polygonPoints } = get();
+    if (!polygonPoints) return;
+    let pts = polygonPoints.slice();
+    // The finishing double-click fires TWO mousedown cycles, so it appends two
+    // near-identical vertices. If the last two points sit on top of each other
+    // (and we still have >=3 real vertices left), drop BOTH — the double-click
+    // means "finish", not "add a vertex".
+    if (pts.length >= 10) {
+      const n = pts.length;
+      const dx = pts[n - 2] - pts[n - 4];
+      const dy = pts[n - 1] - pts[n - 3];
+      if (Math.hypot(dx, dy) < 8) {
+        pts = pts.slice(0, n - 4);
+      }
+    } else if (pts.length >= 4) {
+      // Fallback: collapse a single trailing duplicate.
+      const n = pts.length;
+      const dx = pts[n - 2] - pts[n - 4];
+      const dy = pts[n - 1] - pts[n - 3];
+      if (Math.hypot(dx, dy) < 8) {
+        pts = pts.slice(0, n - 2);
+      }
+    }
+    // Need at least 3 distinct vertices to form a polygon.
+    if (pts.length < 6) {
+      set({ polygonPoints: null, polygonCursor: null });
+      return;
+    }
+    const zone = createPolygonZone(pts);
+    set((state) => ({
+      elements: [...state.elements, zone],
+      selectedIds: [zone.id],
+      polygonPoints: null,
+      polygonCursor: null,
+    }));
+    get().pushHistory();
   },
 });

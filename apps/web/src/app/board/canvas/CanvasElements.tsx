@@ -8,7 +8,7 @@ import { Layer, Line, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings, EquipmentElement } from '@tmc/core';
 import { isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement } from '@tmc/core';
-import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
+import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPreview, ZonePreview, PolygonPreview, SelectionBox, DrawingNode, EquipmentNode } from '@tmc/board';
 
 export interface CanvasElementsProps {
   // Data
@@ -45,6 +45,8 @@ export interface CanvasElementsProps {
   drawingStart: Position | null;
   drawingEnd: Position | null;
   freehandPoints: number[] | null;
+  polygonPoints: number[] | null;
+  polygonCursor: Position | null;
   
   // Interpolators (stable object)
   interpolators: {
@@ -63,6 +65,8 @@ export interface CanvasElementsProps {
   onElementDragEnd: (id: string, position: Position) => void;
   onElementDragStart: (id: string, mouseX?: number, mouseY?: number) => boolean;
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
+  onUpdateZonePoints?: (id: string, points: number[]) => void;
+  onResizeEquipment?: (id: string, scale: number) => void;
   onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
@@ -91,6 +95,8 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     marqueeStart,
     marqueeEnd,
     drawingStart,
+    polygonPoints,
+    polygonCursor,
     drawingEnd,
     freehandPoints,
     interpolators,
@@ -101,6 +107,8 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     onElementDragEnd,
     onElementDragStart,
     onResizeZone,
+    onUpdateZonePoints,
+    onResizeEquipment,
     onUpdateArrowEndpoint,
     onPlayerQuickEdit,
     onTextDoubleClick,
@@ -164,6 +172,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onResize={onResizeZone}
+              onUpdatePoints={isPlaying ? undefined : onUpdateZonePoints}
             />
           );
         })}
@@ -197,7 +206,9 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
         .filter((player) => !hiddenByGroup.has(player.id))
         .filter((player) => 
           (player.team === 'home' && layerVisibility.homePlayers) ||
-          (player.team === 'away' && layerVisibility.awayPlayers)
+          (player.team === 'away' && layerVisibility.awayPlayers) ||
+          (player.team !== 'home' && player.team !== 'away' &&
+            (layerVisibility.homePlayers || layerVisibility.awayPlayers))
         )
         .map((player) => {
           const animatedPlayer = { ...player, position: getInterpolatedPosition(player.id, player.position) };
@@ -255,6 +266,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onDragEnd={isPlaying ? () => {} : (id, x, y) => {
                 onElementDragEnd(id, { x, y });
               }}
+              onResize={isPlaying ? undefined : onResizeEquipment}
             />
           );
         })}
@@ -298,14 +310,29 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
       />
 
       {/* Drawing preview */}
-      {drawingStart && drawingEnd && (activeTool === 'arrow-pass' || activeTool === 'arrow-run') && (
-        <ArrowPreview start={drawingStart} end={drawingEnd} type={activeTool === 'arrow-pass' ? 'pass' : 'run'} />
+      {drawingStart && drawingEnd && (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'arrow-shoot' || activeTool === 'arrow-dribble') && (
+        <ArrowPreview
+          start={drawingStart}
+          end={drawingEnd}
+          type={
+            activeTool === 'arrow-pass'
+              ? 'pass'
+              : activeTool === 'arrow-run'
+                ? 'run'
+                : activeTool === 'arrow-shoot'
+                  ? 'shoot'
+                  : 'dribble'
+          }
+        />
       )}
       {drawingStart && drawingEnd && activeTool === 'zone' && (
         <ZonePreview start={drawingStart} end={drawingEnd} shape="rect" />
       )}
       {drawingStart && drawingEnd && activeTool === 'zone-ellipse' && (
         <ZonePreview start={drawingStart} end={drawingEnd} shape="ellipse" />
+      )}
+      {activeTool === 'zone-polygon' && polygonPoints && (
+        <PolygonPreview points={polygonPoints} cursor={polygonCursor} />
       )}
 
       {/* Freehand drawings */}

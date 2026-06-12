@@ -1,11 +1,14 @@
 /**
  * Ball node component for the tactical board
- * Professional vector ball with pentagon pattern
+ * Professional vector ball with classic pentagon/seam pattern.
+ * Supports two variants:
+ *  - 'single'  : one ball
+ *  - 'cluster' : a pile of balls that moves as one element
  * Performance optimized with React.memo
  */
 
 import React, { useRef, useState, memo } from 'react';
-import { Group, Circle, RegularPolygon, Ellipse } from 'react-konva';
+import { Group, Circle, Line, Ellipse } from 'react-konva';
 import type Konva from 'konva';
 import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 import type { BallElement, Position, PitchConfig } from '@tmc/core';
@@ -22,6 +25,120 @@ export interface BallNodeProps {
 }
 
 const BALL_RADIUS = 11;
+
+/**
+ * Classic football pattern: a central black pentagon with seams radiating to
+ * five surrounding black pentagons. We approximate the look with a central
+ * pentagon, five small outer pentagons and connecting seam lines — crisper and
+ * more "real ball" than scattered patches.
+ */
+const TAU = Math.PI * 2;
+
+/** Build a regular polygon point list centered at (cx,cy). */
+function polygonPoints(cx: number, cy: number, radius: number, sides: number, rotationDeg: number): number[] {
+  const pts: number[] = [];
+  const rot = (rotationDeg * Math.PI) / 180;
+  for (let i = 0; i < sides; i += 1) {
+    const a = rot + (i / sides) * TAU - Math.PI / 2;
+    pts.push(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
+  }
+  return pts;
+}
+
+/** Single ball graphics (centered at 0,0), reused by cluster. */
+const BallGraphic: React.FC<{
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: number;
+  withShadow: boolean;
+}> = ({ fillColor, strokeColor, strokeWidth, withShadow }) => {
+  // Five outer pentagon centers around the ball
+  const outer = [0, 1, 2, 3, 4].map((i) => {
+    const a = (i / 5) * TAU - Math.PI / 2;
+    const r = 6.6;
+    return { x: r * Math.cos(a), y: r * Math.sin(a), rot: (i * 72) };
+  });
+
+  // Central pentagon vertices (for seam lines)
+  const centralVerts = [0, 1, 2, 3, 4].map((i) => {
+    const a = (i / 5) * TAU - Math.PI / 2;
+    const r = 3.4;
+    return { x: r * Math.cos(a), y: r * Math.sin(a) };
+  });
+
+  return (
+    <>
+      {/* Drop shadow */}
+      {withShadow && (
+        <Ellipse
+          x={1}
+          y={2.5}
+          radiusX={BALL_RADIUS - 0.5}
+          radiusY={BALL_RADIUS - 1.5}
+          fill="rgba(0,0,0,0.18)"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      )}
+
+      {/* Ball base */}
+      <Circle
+        x={0}
+        y={0}
+        radius={BALL_RADIUS}
+        fill={fillColor}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
+        perfectDrawEnabled={false}
+      />
+
+      {/* Seam lines: from central pentagon vertices outwards */}
+      {centralVerts.map((p, i) => (
+        <Line
+          key={`seam-${i}`}
+          points={[p.x, p.y, p.x * 2.6, p.y * 2.6]}
+          stroke={strokeColor}
+          strokeWidth={0.9}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ))}
+
+      {/* Central black pentagon */}
+      <Line
+        points={polygonPoints(0, 0, 3.6, 5, 0)}
+        closed
+        fill={strokeColor}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+
+      {/* Outer pentagon patches */}
+      {outer.map((o, i) => (
+        <Line
+          key={`outer-${i}`}
+          points={polygonPoints(o.x, o.y, 2.4, 5, o.rot + 36)}
+          closed
+          fill={strokeColor}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ))}
+
+      {/* Soft top-left highlight for a subtle 3D feel */}
+      <Ellipse
+        x={-3.4}
+        y={-4}
+        radiusX={2.6}
+        radiusY={1.6}
+        rotation={-30}
+        fill="rgba(255,255,255,0.55)"
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+    </>
+  );
+};
 
 /** Professional vector ball component */
 const BallNodeComponent: React.FC<BallNodeProps> = ({
@@ -76,14 +193,14 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
     applyGrab(groupRef);
     const node = e.target;
     const rawPosition: Position = { x: node.x(), y: node.y() };
-    
+
     // Snap to grid and clamp to bounds
     const snapped = snapToGrid(rawPosition, pitchConfig.gridSize);
     const clamped = clampToBounds(snapped, pitchConfig);
-    
+
     node.x(clamped.x);
     node.y(clamped.y);
-    
+
     onDragEnd(ball.id, clamped);
   };
 
@@ -91,15 +208,18 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   const fillColor = ball.color || '#ffffff';
   const strokeColor = ball.strokeColor || '#1a1a1a';
   const strokeWidth = ball.strokeWidth ?? 2;
+  const isCluster = ball.variant === 'cluster';
 
-  // Pentagon positions for ball pattern (5 around center)
-  const pentagonPositions = [
-    { x: 0, y: -5 },      // top
-    { x: 4.8, y: -1.5 },  // top-right
-    { x: 3, y: 4 },       // bottom-right
-    { x: -3, y: 4 },      // bottom-left
-    { x: -4.8, y: -1.5 }, // top-left
+  // Cluster layout: 5 balls in a tidy pile (offsets in px)
+  const clusterOffsets = [
+    { x: -10, y: 4, s: 0.92 },
+    { x: 10, y: 5, s: 0.92 },
+    { x: -4, y: -8, s: 0.96 },
+    { x: 7, y: -6, s: 0.96 },
+    { x: 0, y: 0, s: 1.04 },
   ];
+
+  const selectionRadius = isCluster ? BALL_RADIUS + 16 : BALL_RADIUS + 5;
 
   return (
     <Group
@@ -121,7 +241,7 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
         <Circle
           x={0}
           y={0}
-          radius={BALL_RADIUS + 5}
+          radius={selectionRadius}
           stroke="#ffd60a"
           strokeWidth={2}
           dash={[4, 2]}
@@ -129,69 +249,31 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
           perfectDrawEnabled={false}
         />
       )}
-      
-      {/* Ball shadow - disabled during drag */}
-      {!isDragging && (
-        <Ellipse
-          x={1}
-          y={2}
-          radiusX={BALL_RADIUS - 1}
-          radiusY={BALL_RADIUS - 2}
-          fill="rgba(0,0,0,0.2)"
-          listening={false}
-          perfectDrawEnabled={false}
+
+      {/* Invisible hit area so the whole cluster is grabbable */}
+      {isCluster && (
+        <Circle x={0} y={0} radius={selectionRadius} fill="rgba(0,0,0,0.001)" />
+      )}
+
+      {isCluster ? (
+        clusterOffsets.map((o, i) => (
+          <Group key={i} x={o.x} y={o.y} scaleX={o.s} scaleY={o.s}>
+            <BallGraphic
+              fillColor={fillColor}
+              strokeColor={strokeColor}
+              strokeWidth={strokeWidth}
+              withShadow={!isDragging}
+            />
+          </Group>
+        ))
+      ) : (
+        <BallGraphic
+          fillColor={fillColor}
+          strokeColor={isSelected ? '#ffd60a' : strokeColor}
+          strokeWidth={isSelected ? 2.5 : strokeWidth}
+          withShadow={!isDragging}
         />
       )}
-      
-      {/* Ball base */}
-      <Circle
-        x={0}
-        y={0}
-        radius={BALL_RADIUS}
-        fill={fillColor}
-        stroke={isSelected ? '#ffd60a' : strokeColor}
-        strokeWidth={isSelected ? 2.5 : strokeWidth}
-        perfectDrawEnabled={false}
-      />
-      
-      {/* Center pentagon */}
-      <RegularPolygon
-        x={0}
-        y={0}
-        sides={5}
-        radius={4}
-        rotation={-18}
-        fill={strokeColor}
-        listening={false}
-        perfectDrawEnabled={false}
-      />
-      
-      {/* Outer pentagon patches */}
-      {pentagonPositions.map((pos, i) => (
-        <RegularPolygon
-          key={i}
-          x={pos.x}
-          y={pos.y}
-          sides={5}
-          radius={2.5}
-          rotation={(i * 72) - 18}
-          fill="#4a4a4a"
-          listening={false}
-          perfectDrawEnabled={false}
-        />
-      ))}
-      
-      {/* Highlight reflection - top left */}
-      <Ellipse
-        x={-3}
-        y={-4}
-        radiusX={2.5}
-        radiusY={1.5}
-        rotation={-30}
-        fill="rgba(255,255,255,0.6)"
-        listening={false}
-        perfectDrawEnabled={false}
-      />
     </Group>
   );
 };
@@ -205,6 +287,7 @@ export const BallNode = memo(BallNodeComponent, (prevProps, nextProps) => {
     prevProps.ball.color === nextProps.ball.color &&
     prevProps.ball.strokeColor === nextProps.ball.strokeColor &&
     prevProps.ball.strokeWidth === nextProps.ball.strokeWidth &&
+    prevProps.ball.variant === nextProps.ball.variant &&
     prevProps.isSelected === nextProps.isSelected
   );
 });

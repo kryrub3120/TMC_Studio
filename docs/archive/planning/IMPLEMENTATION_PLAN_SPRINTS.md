@@ -1,3 +1,10 @@
+# TMC Studio — Plan implementacji (HISTORICAL / SUPERSEDED)
+
+> **SUPERSEDED:** Ten dokument jest historycznym planem sprintow A-D oraz starych notatek do Sprintu E.
+> Nie uzywaj go jako aktywnego source of truth dla kolejnych sprintow.
+> Aktualny plan operacyjny: `docs/CURRENT_SPRINT_PLAN.md`.
+> Szczegolowy plan zakresow: `docs/PLAN_BRAKUJACYCH_FUNKCJI.md`.
+
 # TMC Studio — Plan implementacji (zweryfikowany audytem) — OCENA HONESTA: 6.5/10 → docelowo 8.5/10 ⚠️
 **Data:** 2026-06-10
 **Autor:** Delivery Agent (self-eval 3× + code review + devils advocate)
@@ -23,7 +30,7 @@ Ten plan oznacza jawnie fragmenty, które wyglądają poprawnie w grep search, a
 3. **Sprint B — Spike: Transformer** (2h POC → max 4h full): tylko TextNode, potem expand
 4. ~~**Sprint C — Numeracja + undo** (6h)~~ ✅ DONE
 5. ~~**Sprint D — Inspector UX Fix**~~ ✅ DONE
-6. **Sprint E — Reszta** (8-12h): auto-expand (osobny commit!), thumbnails, FAB (opc.), tutorial (opc.)
+6. **Legacy zakres E — Reszta** (8-12h): auto-expand (osobny commit!), thumbnails, FAB (opc.), tutorial (opc.)
 
 ---
 
@@ -235,7 +242,7 @@ toggleAutoNumbering: () => {
 
 ---
 
-## Sprint E — Reszta (8-12h)
+## Legacy zakres E — Reszta (8-12h)
 
 ### D1: Auto-expand (jeśli nie zrobione w A4)
 
@@ -336,7 +343,7 @@ if (!userZoomed && newFitZoom > curZoom) {
 3. **[⚠️ UNVERIFIED]** Ścieżka `../lib/supabase` vs `../../lib/supabase` — trzeba potwierdzić z rzeczywistym kodem.
 4. **Renumeracja z undo** — najtrudniejsza część. Potencjalne bugi: podwójny pushHistory, nieprawidłowa kolejność snapshotów. Test manualny absolutnie konieczny.
 5. **ZoneNode + Transformer** — konflikt z istniejącym resize. Możliwe że ZoneNode będzie wymagał dedykowanego rozwiązania.
-6. **FAB kalibracji** — to nie jest prawdziwa kalibracja. Jeśli issue #4 wymaga realnej kalibracji, to trzeba osobny Sprint E.
+6. **FAB kalibracji** — to nie jest prawdziwa kalibracja. Jeśli issue #4 wymaga realnej kalibracji, to trzeba osobny przyszly zakres.
 
 ---
 

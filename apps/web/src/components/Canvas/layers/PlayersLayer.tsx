@@ -26,6 +26,7 @@ export interface PlayersLayerProps {
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
   onDragStart?: (id: string) => boolean;
   onPlayerQuickEdit?: (id: string) => void;
+  onResizeEquipment?: (id: string, scale: number) => void;
 }
 
 export const PlayersLayer = memo<PlayersLayerProps>(({
@@ -40,13 +41,17 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
   onDragEnd,
   onDragStart,
   onPlayerQuickEdit,
+  onResizeEquipment,
 }) => {
   const players = elements
     .filter(isPlayerElement)
     .filter((p) => !hiddenByGroup.has(p.id))
     .filter((p) =>
       (p.team === 'home' && layerVisibility.homePlayers) ||
-      (p.team === 'away' && layerVisibility.awayPlayers)
+      (p.team === 'away' && layerVisibility.awayPlayers) ||
+      // team3/team4 have no dedicated toggle yet: visible if any player layer is on
+      (p.team !== 'home' && p.team !== 'away' &&
+        (layerVisibility.homePlayers || layerVisibility.awayPlayers))
     );
   const balls = layerVisibility.ball ? elements.filter(isBallElement).filter((b) => !hiddenByGroup.has(b.id)) : [];
   const equipment = layerVisibility.equipment ? elements.filter(isEquipmentElement) : [];
@@ -93,6 +98,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             isSelected={!isPlaying && selectedIds.includes(eq.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleDragEnd}
+            onResize={isPlaying ? undefined : onResizeEquipment}
           />
         );
       })}

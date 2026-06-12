@@ -1,5 +1,9 @@
 # Sprint "BETA READY" — Plan działania
 
+> **HISTORICAL PLAN:** Ten dokument jest starym planem beta sprintu.
+> Nie jest aktualnym `NEXT_TASK`.
+> Przed uzyciem sprawdz `docs/CURRENT_SPRINT_PLAN.md` i `tasks/NEXT_TASK.md`.
+
 > **Data:** 2026-02-19  
 > **Cel:** Działająca beta z feedback loopem w ciągu 1–2 dni  
 > **Filozofia:** PLG → value first → sygnał od użytkowników → dopiero refaktory architektury  

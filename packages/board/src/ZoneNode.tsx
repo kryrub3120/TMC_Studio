@@ -1,10 +1,14 @@
 /**
- * ZoneNode - Konva Zone component with resize handles
- * Uses manual mouse tracking for resize (not Konva draggable)
+ * ZoneNode - Konva Zone component with resize handles (rect/ellipse) and
+ * polygon vertex editing.
+ *
+ * - rect/ellipse: 8-point resize handles (manual mouse tracking).
+ * - polygon: draggable vertex handles; double-click an edge to add a vertex;
+ *   right-click a vertex to remove it. The whole shape drags as a group.
  */
 
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Group, Rect, Ellipse } from 'react-konva';
+import { Group, Rect, Ellipse, Line, Circle } from 'react-konva';
 import type Konva from 'konva';
 import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
 import type { ZoneElement, Position, PitchConfig } from '@tmc/core';
@@ -16,6 +20,8 @@ export interface ZoneNodeProps {
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   onResize?: (id: string, position: Position, width: number, height: number) => void;
+  /** Replace polygon vertices (flat array relative to zone.position). */
+  onUpdatePoints?: (id: string, points: number[]) => void;
 }
 
 /** Zone color presets */
@@ -39,10 +45,13 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   onSelect,
   onDragEnd,
   onResize,
+  onUpdatePoints,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
-  
-  // Resize state
+
+  const isPolygon = zone.shape === 'polygon';
+
+  // Resize state (rect/ellipse)
   const [activeHandle, setActiveHandle] = useState<HandlePosition | null>(null);
   const resizeDataRef = useRef<{
     startMouseX: number;
@@ -52,7 +61,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
     startWidth: number;
     startHeight: number;
   } | null>(null);
-  
+
   // Preview bounds during resize
   const [previewBounds, setPreviewBounds] = useState<{
     x: number;
@@ -60,6 +69,10 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
     width: number;
     height: number;
   } | null>(null);
+
+  // Polygon vertex-drag preview state
+  const [previewPoints, setPreviewPoints] = useState<number[] | null>(null);
+  const [draggingVertex, setDraggingVertex] = useState(false);
 
   // Display values
   const displayX = previewBounds?.x ?? zone.position.x;
@@ -70,20 +83,23 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   const borderDash = zone.borderStyle === 'dashed' ? [6, 3] : undefined;
   const borderStroke = zone.borderStyle !== 'none' ? (zone.borderColor || zone.fillColor) : undefined;
 
-  // Calculate new bounds from mouse position
+  // Current polygon points (preview while dragging a vertex, else committed)
+  const points = previewPoints ?? zone.points ?? [];
+
+  // ===== Resize (rect/ellipse) =====
   const calculateBounds = useCallback((handle: HandlePosition, mouseX: number, mouseY: number) => {
     const data = resizeDataRef.current;
     if (!data) return null;
-    
+
     const dx = mouseX - data.startMouseX;
     const dy = mouseY - data.startMouseY;
     const minSize = 20;
-    
+
     let x = data.startZoneX;
     let y = data.startZoneY;
     let w = data.startWidth;
     let h = data.startHeight;
-    
+
     switch (handle) {
       case 'nw':
         w = Math.max(minSize, data.startWidth - dx);
@@ -120,29 +136,27 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
         x = data.startZoneX + data.startWidth - w;
         break;
     }
-    
+
     return { x, y, width: w, height: h };
   }, []);
 
-  // Global mouse move/up handlers for resize
   useEffect(() => {
     if (!activeHandle) return;
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       const stage = groupRef.current?.getStage();
       if (!stage) return;
-      
-      // Get mouse position relative to stage
+
       const rect = stage.container().getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       const bounds = calculateBounds(activeHandle, mouseX, mouseY);
       if (bounds) {
         setPreviewBounds(bounds);
       }
     };
-    
+
     const handleMouseUp = () => {
       if (previewBounds && onResize) {
         onResize(zone.id, { x: previewBounds.x, y: previewBounds.y }, previewBounds.width, previewBounds.height);
@@ -151,10 +165,10 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       setPreviewBounds(null);
       resizeDataRef.current = null;
     };
-    
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -171,26 +185,25 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
 
   const handleGroupDragEnd = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (activeHandle) return;
+      if (activeHandle || draggingVertex) return;
       applyGrab(groupRef);
       const node = e.target;
       onDragEnd(zone.id, { x: node.x(), y: node.y() });
     },
-    [zone.id, onDragEnd, activeHandle]
+    [zone.id, onDragEnd, activeHandle, draggingVertex]
   );
 
-  // Start resize on handle mouse down
   const handleResizeStart = useCallback(
     (handle: HandlePosition, e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
-      
+
       const stage = e.target.getStage();
       if (!stage) return;
-      
+
       const rect = stage.container().getBoundingClientRect();
       const mouseX = e.evt.clientX - rect.left;
       const mouseY = e.evt.clientY - rect.top;
-      
+
       resizeDataRef.current = {
         startMouseX: mouseX,
         startMouseY: mouseY,
@@ -199,10 +212,94 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
         startWidth: zone.width,
         startHeight: zone.height,
       };
-      
+
       setActiveHandle(handle);
     },
     [zone.position.x, zone.position.y, zone.width, zone.height]
+  );
+
+  // ===== Polygon vertex editing =====
+  const handleVertexDragStart = useCallback(() => {
+    setDraggingVertex(true);
+    setPreviewPoints((zone.points ?? []).slice());
+  }, [zone.points]);
+
+  const handleVertexDragMove = useCallback(
+    (index: number, e: Konva.KonvaEventObject<DragEvent>) => {
+      const node = e.target;
+      setPreviewPoints((prev) => {
+        const base = (prev ?? zone.points ?? []).slice();
+        base[index * 2] = node.x();
+        base[index * 2 + 1] = node.y();
+        return base;
+      });
+    },
+    [zone.points]
+  );
+
+  const handleVertexDragEnd = useCallback(() => {
+    if (previewPoints && onUpdatePoints) {
+      onUpdatePoints(zone.id, previewPoints);
+    }
+    setDraggingVertex(false);
+    setPreviewPoints(null);
+  }, [previewPoints, onUpdatePoints, zone.id]);
+
+  // Remove a vertex on right-click (keep at least a triangle)
+  const handleVertexContextMenu = useCallback(
+    (index: number, e: Konva.KonvaEventObject<PointerEvent>) => {
+      e.cancelBubble = true;
+      e.evt.preventDefault();
+      const current = zone.points ?? [];
+      if (current.length / 2 <= 3) return; // need >=3 vertices
+      const next = current.slice();
+      next.splice(index * 2, 2);
+      onUpdatePoints?.(zone.id, next);
+    },
+    [zone.points, zone.id, onUpdatePoints]
+  );
+
+  // Add a vertex on double-click of an edge (insert at nearest segment)
+  const handlePolygonDblClick = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      e.cancelBubble = true;
+      const group = groupRef.current;
+      if (!group || !onUpdatePoints) return;
+      const local = group.getRelativePointerPosition();
+      if (!local) return;
+      const pts = zone.points ?? [];
+      const count = pts.length / 2;
+      if (count < 2) return;
+
+      // Find the segment (i -> i+1, wrapping) whose midpoint/projection is
+      // closest to the click, then insert the click point after vertex i.
+      let bestIndex = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < count; i += 1) {
+        const ax = pts[i * 2];
+        const ay = pts[i * 2 + 1];
+        const j = (i + 1) % count;
+        const bx = pts[j * 2];
+        const by = pts[j * 2 + 1];
+        // Distance from local point to segment a-b
+        const dx = bx - ax;
+        const dy = by - ay;
+        const lenSq = dx * dx + dy * dy || 1;
+        let t = ((local.x - ax) * dx + (local.y - ay) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        const px = ax + t * dx;
+        const py = ay + t * dy;
+        const dist = Math.hypot(local.x - px, local.y - py);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIndex = i;
+        }
+      }
+      const next = pts.slice();
+      next.splice((bestIndex + 1) * 2, 0, local.x, local.y);
+      onUpdatePoints(zone.id, next);
+    },
+    [zone.points, zone.id, onUpdatePoints]
   );
 
   // Shape props
@@ -210,11 +307,11 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
     fill: zone.fillColor,
     opacity: zone.opacity,
     stroke: borderStroke,
-    strokeWidth: borderStroke ? 3 : 0, // Thicker border
+    strokeWidth: borderStroke ? 3 : 0,
     dash: borderDash,
   };
 
-  // Handle positions
+  // Resize handle positions (rect/ellipse)
   const handles: Array<{ pos: HandlePosition; x: number; y: number; cursor: string }> = [
     { pos: 'nw', x: 0, y: 0, cursor: 'nwse-resize' },
     { pos: 'n', x: displayWidth / 2, y: 0, cursor: 'ns-resize' },
@@ -231,7 +328,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       ref={groupRef}
       x={displayX}
       y={displayY}
-      draggable={!activeHandle}
+      draggable={!activeHandle && !draggingVertex}
       onClick={handleClick}
       onTap={handleClick}
       onMouseEnter={cursorGrab}
@@ -240,7 +337,15 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       onDragEnd={handleGroupDragEnd}
     >
       {/* Zone shape */}
-      {zone.shape === 'rect' ? (
+      {isPolygon ? (
+        <Line
+          points={points}
+          closed
+          {...shapeProps}
+          onDblClick={isSelected ? handlePolygonDblClick : undefined}
+          onDblTap={isSelected ? handlePolygonDblClick : undefined}
+        />
+      ) : zone.shape === 'rect' ? (
         <Rect
           width={displayWidth}
           height={displayHeight}
@@ -260,7 +365,44 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       {/* Selection border and handles */}
       {isSelected && (
         <>
-          {zone.shape === 'rect' ? (
+          {isPolygon ? (
+            <>
+              {/* Selection outline */}
+              <Line
+                points={points}
+                closed
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dash={[4, 2]}
+                listening={false}
+              />
+              {/* Vertex handles */}
+              {Array.from({ length: points.length / 2 }).map((_, i) => (
+                <Circle
+                  key={i}
+                  x={points[i * 2]}
+                  y={points[i * 2 + 1]}
+                  radius={6}
+                  fill="#fff"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  draggable
+                  onDragStart={handleVertexDragStart}
+                  onDragMove={(e) => handleVertexDragMove(i, e)}
+                  onDragEnd={handleVertexDragEnd}
+                  onContextMenu={(e) => handleVertexContextMenu(i, e)}
+                  onMouseEnter={(e) => {
+                    const c = e.target.getStage()?.container();
+                    if (c) c.style.cursor = 'grab';
+                  }}
+                  onMouseLeave={(e) => {
+                    const c = e.target.getStage()?.container();
+                    if (c) c.style.cursor = 'default';
+                  }}
+                />
+              ))}
+            </>
+          ) : zone.shape === 'rect' ? (
             <Rect
               width={displayWidth}
               height={displayHeight}
@@ -283,8 +425,8 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
             />
           )}
 
-          {/* Resize handles - NOT draggable, use mousedown + window events */}
-          {handles.map(({ pos, x, y, cursor }) => (
+          {/* Resize handles - only for rect/ellipse */}
+          {!isPolygon && handles.map(({ pos, x, y, cursor }) => (
             <Rect
               key={pos}
               x={x - 6}

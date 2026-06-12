@@ -9,7 +9,7 @@ export interface RightPanelProps {
   selectedElement?: {
     id: string;
     type: 'player' | 'ball';
-    team?: 'home' | 'away';
+    team?: 'home' | 'away' | 'team3' | 'team4';
     number?: number;
     label?: string;
     x: number;

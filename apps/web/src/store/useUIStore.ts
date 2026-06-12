@@ -15,8 +15,10 @@ export type ActiveTool =
   | 'arrow-pass'
   | 'arrow-run'
   | 'arrow-shoot'
+  | 'arrow-dribble'
   | 'zone'
   | 'zone-ellipse'
+  | 'zone-polygon'
   | 'text'
   | 'drawing'
   | 'highlighter'
@@ -366,7 +368,10 @@ export const useUIStore = create<UIState>()(
             'arrow-pass': 'Pass Arrow',
             'arrow-run': 'Run Arrow',
             'arrow-shoot': 'Shoot Arrow',
+            'arrow-dribble': 'Dribble Arrow',
             'zone': 'Zone',
+            'zone-ellipse': 'Ellipse Zone',
+            'zone-polygon': 'Polygon Zone — click to add points, double-click to finish',
             'text': 'Text',
           };
           const toolName = toolNames[tool] || tool;

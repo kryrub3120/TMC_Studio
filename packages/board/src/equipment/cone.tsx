@@ -14,7 +14,7 @@ export const ConeShape: React.FC<EquipmentShapeProps> = ({ color, scale, variant
       radius={size * scale}
       fill={color}
       stroke="#ffffff"
-      strokeWidth={1}
+      strokeWidth={Math.max(1, scale)}
       listening={false}
     />
   );

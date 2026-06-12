@@ -18,6 +18,7 @@ import type {
 import {
   DEFAULT_PITCH_CONFIG,
   DEFAULT_PITCH_SETTINGS,
+  DEFAULT_TEAM_SETTINGS,
   DEFAULT_PLAYER_ORIENTATION_SETTINGS,
   DEFAULT_PLAYER_DEFAULTS,
   createDocument,
@@ -179,15 +180,12 @@ export const createDocumentSlice: StateCreator<
     
     updateTeamSettings: (team, settings) => {
       const { document } = get();
-      const currentSettings = document.teamSettings ?? {
-        home: { name: 'Home', primaryColor: '#ef4444', secondaryColor: '#ffffff' },
-        away: { name: 'Away', primaryColor: '#3b82f6', secondaryColor: '#ffffff' },
-      };
+      const currentSettings = document.teamSettings ?? DEFAULT_TEAM_SETTINGS;
       
       const updatedTeamSettings = {
         ...currentSettings,
         [team]: {
-          ...currentSettings[team],
+          ...(currentSettings[team] ?? DEFAULT_TEAM_SETTINGS[team]),
           ...settings,
         },
       };
@@ -315,6 +313,37 @@ export const createDocumentSlice: StateCreator<
             const p = el.position as Position;
             const w = el.width ?? 0;
             const h = el.height ?? 0;
+            
+            // B2) Polygon zone - transform every vertex, then recompute bbox.
+            if ((el as any).shape === 'polygon' && Array.isArray((el as any).points)) {
+              const pts = (el as any).points as number[];
+              const absTransformed: number[] = [];
+              for (let i = 0; i < pts.length; i += 2) {
+                const t = transformStagePoint({ x: p.x + pts[i], y: p.y + pts[i + 1] });
+                absTransformed.push(t.x, t.y);
+              }
+              const xs: number[] = [];
+              const ys: number[] = [];
+              for (let i = 0; i < absTransformed.length; i += 2) {
+                xs.push(absTransformed[i]);
+                ys.push(absTransformed[i + 1]);
+              }
+              const minX = Math.min(...xs);
+              const minY = Math.min(...ys);
+              const maxX = Math.max(...xs);
+              const maxY = Math.max(...ys);
+              const rel: number[] = [];
+              for (let i = 0; i < absTransformed.length; i += 2) {
+                rel.push(absTransformed[i] - minX, absTransformed[i + 1] - minY);
+              }
+              return {
+                ...el,
+                position: { x: minX, y: minY },
+                width: Math.max(1, maxX - minX),
+                height: Math.max(1, maxY - minY),
+                points: rel,
+              } as any;
+            }
             
             const center = { x: p.x + w / 2, y: p.y + h / 2 };
             const newCenter = transformStagePoint(center);

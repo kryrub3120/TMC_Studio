@@ -4,11 +4,12 @@
  */
 
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import type { Position, PlayerElement as PlayerElementType } from '@tmc/core';
+import type { ArrowType, Position, PlayerElement as PlayerElementType, ZoneShape } from '@tmc/core';
 import { isPlayerElement, isTextElement, isZoneElement, isArrowElement } from '@tmc/core';
 import type { CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
 import { useBoardStore } from '../../store';
+import { useUIStore } from '../../store/useUIStore';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
 
 // B5: Resize popover state
@@ -35,8 +36,8 @@ export interface BoardPageHandlersInput {
   // Board store actions
   addPlayerAtCursor: (team: 'home' | 'away') => void;
   addBallAtCursor: () => void;
-  addArrowAtCursor: (type: 'pass' | 'run') => void;
-  addZoneAtCursor: () => void;
+  addArrowAtCursor: (type: ArrowType) => void;
+  addZoneAtCursor: (shape?: ZoneShape) => void;
   addTextAtCursor: () => void;
   selectElement: (id: string, addToSelection: boolean) => void;
   clearSelection: () => void;
@@ -160,7 +161,11 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       case 'add-ball': addBallAtCursor(); break;
       case 'add-pass-arrow': addArrowAtCursor('pass'); break;
       case 'add-run-arrow': addArrowAtCursor('run'); break;
+      case 'add-shoot-arrow': addArrowAtCursor('shoot'); break;
+      case 'add-dribble-arrow': addArrowAtCursor('dribble'); break;
       case 'add-zone': addZoneAtCursor(); break;
+      case 'add-ellipse-zone': addZoneAtCursor('ellipse'); break;
+      case 'add-freehand-draw': useUIStore.getState().setActiveTool('drawing'); break;
       case 'add-text': addTextAtCursor(); break;
       case 'open-palette': openCommandPalette(); break;
     }
@@ -544,7 +549,10 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       addBall: addBallAtCursor,
       addPassArrow: () => addArrowAtCursor('pass'),
       addRunArrow: () => addArrowAtCursor('run'),
+      addShootArrow: () => addArrowAtCursor('shoot'),
+      addDribbleArrow: () => addArrowAtCursor('dribble'),
       addZone: addZoneAtCursor,
+      addEllipseZone: () => addZoneAtCursor('ellipse'),
       addText: addTextAtCursor,
       duplicateSelected,
       deleteSelected,

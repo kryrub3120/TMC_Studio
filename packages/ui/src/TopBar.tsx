@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team } from '@tmc/core';
+import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 
 export type PlanType = 'guest' | 'free' | 'pro';
 
@@ -27,6 +29,16 @@ export interface TopBarProps {
   onToggleTheme: () => void;
   onOpenPalette: () => void;
   onOpenHelp: () => void;
+  /** Select an arrow drawing tool from top bar dropdown */
+  onSelectArrowTool?: (type: ArrowType) => void;
+  /** Select a zone drawing tool from top bar dropdown */
+  onSelectZoneTool?: (shape: ZoneShape) => void;
+  /** Add equipment from top bar dropdown */
+  onAddEquipment?: (type: EquipmentType, variant?: EquipmentVariant) => void;
+  /** Add a ball (single) or ball cluster from top bar dropdown */
+  onAddBall?: (variant: 'single' | 'cluster') => void;
+  /** Add a player of the given team from top bar dropdown */
+  onAddPlayer?: (team: Team) => void;
   /** Open projects drawer */
   onOpenProjects?: () => void;
   /** Rename project callback */
@@ -78,6 +90,480 @@ const HelpIcon: React.FC<{ className?: string }> = ({ className }) => (
     <line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
+
+const EquipmentIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 19h16" />
+    <path d="M7 19l2-12h6l2 12" />
+    <path d="M8.2 12h7.6" />
+    <path d="M9 7l6 12" />
+    <path d="M15 7L9 19" />
+  </svg>
+);
+
+const ArrowsIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 12h13" />
+    <path d="M13 6l6 6-6 6" />
+    <path d="M5 18c4-5 7-5 11-1" />
+  </svg>
+);
+
+const ZonesIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="4" y="5" width="16" height="14" rx="2" />
+    <path d="M8 9h8M8 13h5" />
+  </svg>
+);
+
+const MiniArrowGlyph: React.FC<{ type: ArrowType }> = ({ type }) => {
+  if (type === 'run') {
+    return (
+      <svg viewBox="0 0 44 28" className="h-7 w-11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 14h26" strokeDasharray="5 4" />
+        <path d="M27 7l10 7-10 7" />
+      </svg>
+    );
+  }
+  if (type === 'shoot') {
+    return (
+      <svg viewBox="0 0 44 28" className="h-7 w-11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 11h25" />
+        <path d="M5 17h25" />
+        <path d="M29 6l10 8-10 8" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+  if (type === 'dribble') {
+    return (
+      <svg viewBox="0 0 44 28" className="h-7 w-11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 19c5-13 9 13 14 0s9 13 14-1" />
+        <path d="M29 10l10 7-10 7" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 44 28" className="h-7 w-11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 14h27" />
+      <path d="M28 7l10 7-10 7" />
+    </svg>
+  );
+};
+
+const MiniZoneGlyph: React.FC<{ shape: ZoneShape }> = ({ shape }) => {
+  if (shape === 'ellipse') {
+    return <span className="h-6 w-8 rounded-full border-2 border-current bg-current/10" />;
+  }
+  if (shape === 'polygon') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-8" fill="currentColor" fillOpacity={0.12} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+        <polygon points="12,3 21,9 17,20 7,20 3,9" />
+      </svg>
+    );
+  }
+  return <span className="h-6 w-8 rounded-md border-2 border-current bg-current/10" />;
+};
+
+/** Mini ball glyph (single classic football) */
+const MiniBallGlyph: React.FC = () => (
+  <svg viewBox="0 0 24 24" className="h-6 w-6">
+    <circle cx="12" cy="12" r="9.5" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+    <polygon points="12,7 15.2,9.4 14,13.2 10,13.2 8.8,9.4" fill="#1a1a1a" />
+  </svg>
+);
+
+/** Mini ball-cluster glyph (pile of balls) */
+const MiniBallClusterGlyph: React.FC = () => (
+  <svg viewBox="0 0 28 24" className="h-6 w-7">
+    {[
+      { cx: 8, cy: 14, r: 6 },
+      { cx: 19, cy: 14, r: 6 },
+      { cx: 13.5, cy: 8, r: 6.4 },
+    ].map((b, i) => (
+      <g key={i}>
+        <circle cx={b.cx} cy={b.cy} r={b.r} fill="#fff" stroke="#1a1a1a" strokeWidth="1.3" />
+        <polygon
+          points={`${b.cx},${b.cy - b.r * 0.55} ${b.cx + b.r * 0.5},${b.cy - b.r * 0.1} ${b.cx + b.r * 0.32},${b.cy + b.r * 0.45} ${b.cx - b.r * 0.32},${b.cy + b.r * 0.45} ${b.cx - b.r * 0.5},${b.cy - b.r * 0.1}`}
+          fill="#1a1a1a"
+        />
+      </g>
+    ))}
+  </svg>
+);
+
+const MiniEquipmentGlyph: React.FC<{ type: EquipmentType }> = ({ type }) => {
+  if (type === 'goal') {
+    return <span className="h-5 w-7 rounded-t-md border-2 border-current border-b-0" />;
+  }
+  if (type === 'mannequin') {
+    return (
+      <span className="relative h-7 w-5">
+        <span className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full border-2 border-current" />
+        <span className="absolute bottom-0 left-1/2 h-[18px] w-3.5 -translate-x-1/2 rounded-t-full border-2 border-current" />
+      </span>
+    );
+  }
+  if (type === 'cone') {
+    return <span className="h-0 w-0 border-x-[8px] border-b-[22px] border-x-transparent border-b-current" />;
+  }
+  if (type === 'ladder') {
+    return (
+      <span className="grid h-7 w-7 grid-rows-4 gap-0.5">
+        {[0, 1, 2, 3].map((item) => (
+          <span key={item} className="rounded-sm border border-current" />
+        ))}
+      </span>
+    );
+  }
+  if (type === 'hoop') {
+    return <span className="h-6 w-6 rounded-full border-2 border-current" />;
+  }
+  if (type === 'hurdle') {
+    return (
+      <span className="relative h-6 w-7">
+        <span className="absolute left-1 top-1 h-4 w-px bg-current" />
+        <span className="absolute right-1 top-1 h-4 w-px bg-current" />
+        <span className="absolute left-1 right-1 top-1 h-0.5 bg-current" />
+      </span>
+    );
+  }
+  return <span className="h-7 w-1.5 rounded-full bg-current" />;
+};
+
+const EQUIPMENT_ITEMS: Array<{
+  type: EquipmentType;
+  variant?: EquipmentVariant;
+  label: string;
+  shortcut: string;
+}> = [
+  { type: 'goal', label: 'Goal', shortcut: 'J' },
+  { type: 'goal', variant: 'mini', label: 'Mini goal', shortcut: 'Shift+J' },
+  { type: 'mannequin', label: 'Mannequin', shortcut: 'M' },
+  { type: 'cone', label: 'Cone', shortcut: 'K' },
+  { type: 'pole', label: 'Pole', shortcut: 'Shift+K' },
+  { type: 'ladder', label: 'Ladder', shortcut: 'Y' },
+  { type: 'hoop', label: 'Hoop', shortcut: 'Q' },
+  { type: 'hurdle', label: 'Hurdle', shortcut: 'U' },
+];
+
+const ARROW_ITEMS: Array<{ type: ArrowType; label: string; shortcut: string }> = [
+  { type: 'pass', label: 'Pass arrow', shortcut: 'A' },
+  { type: 'run', label: 'Run arrow', shortcut: 'R' },
+  { type: 'shoot', label: 'Shot arrow', shortcut: 'S' },
+  { type: 'dribble', label: 'Dribble arrow', shortcut: 'D' },
+];
+
+const ZONE_ITEMS: Array<{ shape: ZoneShape; label: string; shortcut: string }> = [
+  { shape: 'rect', label: 'Rectangle zone', shortcut: 'Z' },
+  { shape: 'ellipse', label: 'Ellipse zone', shortcut: 'Shift+Z' },
+  { shape: 'polygon', label: 'Polygon zone', shortcut: 'Alt+Z' },
+];
+
+const ToolMenuButton: React.FC<{
+  dataTour?: string;
+  title: string;
+  icon: React.ReactNode;
+  label: string;
+  isOpen: boolean;
+  onClick: () => void;
+}> = ({ dataTour, title, icon, label, isOpen, onClick }) => (
+  <button
+    data-tour={dataTour}
+    onClick={onClick}
+    className={`
+      flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm transition-all duration-fast active:scale-95
+      ${isOpen ? 'border-accent/80 bg-accent/10 text-text shadow-[0_0_0_1px_rgba(46,230,166,.25)]' : 'border-border bg-surface2 text-muted hover:border-accent/50 hover:text-text'}
+    `}
+    title={title}
+  >
+    {icon}
+    <span className="hidden lg:inline">{label}</span>
+  </button>
+);
+
+const MenuBackdrop: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+  <div className="fixed inset-0 z-40" onClick={onClose} />
+);
+
+const ToolMenuPanel: React.FC<{ widthClass?: string; children: React.ReactNode }> = ({ widthClass = 'w-[320px]', children }) => (
+  <div className={`absolute right-0 top-full z-50 mt-2 rounded-lg border border-border bg-surface p-2 shadow-lg ${widthClass}`}>
+    {children}
+  </div>
+);
+
+const ToolShortcut: React.FC<{ shortcut: string }> = ({ shortcut }) => (
+  <span className="mt-0.5 inline-flex rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+    {shortcut}
+  </span>
+);
+
+const PlayersIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="9" cy="8" r="3" />
+    <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+    <circle cx="17" cy="9" r="2.4" />
+    <path d="M15.5 19a4.5 4.5 0 0 1 5.5-4.4" />
+  </svg>
+);
+
+const TEAM_GLYPH_SHAPE: Record<Team, 'triangle' | 'circle' | 'square' | 'diamond'> = {
+  home: 'triangle',
+  away: 'circle',
+  team3: 'square',
+  team4: 'diamond',
+};
+
+const MiniPlayerGlyph: React.FC<{ team: Team }> = ({ team }) => {
+  const color = (DEFAULT_TEAM_SETTINGS[team] ?? DEFAULT_TEAM_SETTINGS.home).primaryColor;
+  const shape = TEAM_GLYPH_SHAPE[team];
+  if (shape === 'circle') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5"><circle cx="12" cy="12" r="9" fill={color} /></svg>;
+  }
+  if (shape === 'square') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5"><rect x="3" y="3" width="18" height="18" rx="3" fill={color} /></svg>;
+  }
+  if (shape === 'diamond') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5"><path d="M12 2l10 10-10 10L2 12z" fill={color} /></svg>;
+  }
+  return <svg viewBox="0 0 24 24" className="h-5 w-5"><path d="M12 3l9 17H3z" fill={color} /></svg>;
+};
+
+const PLAYER_ITEMS: Array<{ team: Team; label: string; shortcut: string }> = [
+  { team: 'home', label: 'Team 1', shortcut: 'P' },
+  { team: 'away', label: 'Team 2', shortcut: 'Shift+P' },
+  { team: 'team3', label: 'Team 3', shortcut: 'Alt+P' },
+  { team: 'team4', label: 'Team 4', shortcut: 'Alt+Shift+P' },
+];
+
+const PlayersMenu: React.FC<{
+  onAddPlayer?: (team: Team) => void;
+}> = ({ onAddPlayer }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  if (!onAddPlayer) return null;
+
+  return (
+    <div className="relative">
+      <ToolMenuButton
+        dataTour="players"
+        title="Add players"
+        icon={<PlayersIcon className="h-4 w-4" />}
+        label="Players"
+        isOpen={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      />
+      {isOpen && (
+        <>
+          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <ToolMenuPanel widthClass="w-[300px]">
+            <div className="grid grid-cols-2 gap-1.5">
+              {PLAYER_ITEMS.map((item) => (
+                <button
+                  key={item.team}
+                  onClick={() => {
+                    onAddPlayer(item.team);
+                    setIsOpen(false);
+                  }}
+                  className="group flex min-h-[54px] items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface2 group-hover:bg-surface">
+                    <MiniPlayerGlyph team={item.team} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <ToolShortcut shortcut={item.shortcut} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </ToolMenuPanel>
+        </>
+      )}
+    </div>
+  );
+};
+
+const ArrowsMenu: React.FC<{
+  onSelectArrowTool?: (type: ArrowType) => void;
+}> = ({ onSelectArrowTool }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  if (!onSelectArrowTool) return null;
+
+  return (
+    <div className="relative">
+      <ToolMenuButton
+        dataTour="arrows"
+        title="Show arrows"
+        icon={<ArrowsIcon className="h-4 w-4" />}
+        label="Arrows"
+        isOpen={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      />
+      {isOpen && (
+        <>
+          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <ToolMenuPanel widthClass="w-[300px]">
+            <div className="grid grid-cols-1 gap-1.5">
+              {ARROW_ITEMS.map((item) => (
+                <button
+                  key={item.type}
+                  onClick={() => {
+                    onSelectArrowTool(item.type);
+                    setIsOpen(false);
+                  }}
+                  className="group flex min-h-[58px] items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
+                >
+                  <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent group-hover:bg-accent/15">
+                    <MiniArrowGlyph type={item.type} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <ToolShortcut shortcut={item.shortcut} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </ToolMenuPanel>
+        </>
+      )}
+    </div>
+  );
+};
+
+const ZonesMenu: React.FC<{
+  onSelectZoneTool?: (shape: ZoneShape) => void;
+}> = ({ onSelectZoneTool }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  if (!onSelectZoneTool) return null;
+
+  return (
+    <div className="relative">
+      <ToolMenuButton
+        dataTour="zones"
+        title="Show zones"
+        icon={<ZonesIcon className="h-4 w-4" />}
+        label="Zones"
+        isOpen={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      />
+      {isOpen && (
+        <>
+          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <ToolMenuPanel widthClass="w-[280px]">
+            <div className="grid grid-cols-1 gap-1.5">
+              {ZONE_ITEMS.map((item) => (
+                <button
+                  key={item.shape}
+                  onClick={() => {
+                    onSelectZoneTool(item.shape);
+                    setIsOpen(false);
+                  }}
+                  className="group flex min-h-[56px] items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
+                >
+                  <span className="flex h-10 w-12 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent group-hover:bg-accent/15">
+                    <MiniZoneGlyph shape={item.shape} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <ToolShortcut shortcut={item.shortcut} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </ToolMenuPanel>
+        </>
+      )}
+    </div>
+  );
+};
+
+const EquipmentMenu: React.FC<{
+  onAddEquipment?: (type: EquipmentType, variant?: EquipmentVariant) => void;
+  onAddBall?: (variant: 'single' | 'cluster') => void;
+}> = ({ onAddEquipment, onAddBall }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  if (!onAddEquipment) return null;
+
+  return (
+    <div className="relative">
+      <ToolMenuButton
+        data-tour="equipment"
+        title="Show equipment"
+        icon={<EquipmentIcon className="h-4 w-4" />}
+        label="Equipment"
+        isOpen={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      />
+
+      {isOpen && (
+        <>
+          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <ToolMenuPanel widthClass="w-[320px]">
+            <div className="grid grid-cols-2 gap-1.5">
+              {onAddBall && (
+                <>
+                  <button
+                    key="ball-single"
+                    onClick={() => {
+                      onAddBall('single');
+                      setIsOpen(false);
+                    }}
+                    className="group flex min-h-[54px] items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent/10 group-hover:bg-accent/15">
+                      <MiniBallGlyph />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[12px] font-semibold text-text">Ball</span>
+                      <ToolShortcut shortcut="B" />
+                    </span>
+                  </button>
+                  <button
+                    key="ball-cluster"
+                    onClick={() => {
+                      onAddBall('cluster');
+                      setIsOpen(false);
+                    }}
+                    className="group flex min-h-[54px] items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent/10 group-hover:bg-accent/15">
+                      <MiniBallClusterGlyph />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[12px] font-semibold text-text">Ball cluster</span>
+                      <ToolShortcut shortcut="Shift+B" />
+                    </span>
+                  </button>
+                </>
+              )}
+              {EQUIPMENT_ITEMS.map((item) => (
+                <button
+                  key={`${item.type}-${item.variant ?? 'standard'}`}
+                  onClick={() => {
+                    onAddEquipment(item.type, item.variant);
+                    setIsOpen(false);
+                  }}
+                  className="group flex min-h-[54px] items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent group-hover:bg-accent/15">
+                    <MiniEquipmentGlyph type={item.type} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <ToolShortcut shortcut={item.shortcut} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </ToolMenuPanel>
+        </>
+      )}
+    </div>
+  );
+};
 
 /** Command/Keyboard icon */
 const CommandIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -218,6 +704,11 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleTheme,
   onOpenPalette,
   onOpenHelp,
+  onSelectArrowTool,
+  onSelectZoneTool,
+  onAddEquipment,
+  onAddBall,
+  onAddPlayer,
   onOpenProjects,
   onRename,
   onToggleInspector,
@@ -368,6 +859,11 @@ export const TopBar: React.FC<TopBarProps> = ({
         </button>
 
         <div className="w-px h-5 bg-border mx-1" />
+
+        <PlayersMenu onAddPlayer={onAddPlayer} />
+        <ArrowsMenu onSelectArrowTool={onSelectArrowTool} />
+        <ZonesMenu onSelectZoneTool={onSelectZoneTool} />
+        <EquipmentMenu onAddEquipment={onAddEquipment} onAddBall={onAddBall} />
 
         {/* Export */}
         <IconButton onClick={onExport} title="Export PNG" dataTour="export">

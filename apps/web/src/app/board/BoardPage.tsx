@@ -181,6 +181,24 @@ export function BoardPage(props: BoardPageProps) {
             }
             state.toggleCheatSheet();
           }}
+        onSelectArrowTool={(type) => {
+          const tool = type === 'pass'
+            ? 'arrow-pass'
+            : type === 'run'
+              ? 'arrow-run'
+              : type === 'shoot'
+                ? 'arrow-shoot'
+                : 'arrow-dribble';
+          state.setActiveTool(tool);
+        }}
+        onSelectZoneTool={(shape) => {
+          state.setActiveTool(
+            shape === 'ellipse' ? 'zone-ellipse' : shape === 'polygon' ? 'zone-polygon' : 'zone'
+          );
+        }}
+        onAddEquipment={state.addEquipmentAtCursor}
+        onAddBall={(variant) => (variant === 'cluster' ? state.addBallGroupAtCursor() : state.addBallAtCursor())}
+        onAddPlayer={(team) => state.addPlayerAtCursor(team)}
         onOpenProjects={onOpenProjectsDrawer}
         onRenameProject={onRenameProject}
         onToggleInspector={state.toggleInspector}
@@ -215,6 +233,8 @@ export function BoardPage(props: BoardPageProps) {
             drawingStart={state.drawingController.drawingStart}
             drawingEnd={state.drawingController.drawingEnd}
             freehandPoints={state.drawingController.freehandPoints}
+            polygonPoints={state.drawingController.polygonPoints}
+            polygonCursor={state.drawingController.polygonCursor}
             animationProgress={state.animationProgress}
             nextStepElements={interpolation.nextStepElements}
             emptyStateOverlay={
@@ -230,11 +250,14 @@ export function BoardPage(props: BoardPageProps) {
             onStageMouseDown={stageHandlers.handleStageMouseDown}
             onStageMouseMove={stageHandlers.handleStageMouseMove}
             onStageMouseUp={stageHandlers.handleStageMouseUp}
+            onStageDblClick={stageHandlers.handleStageDblClick}
             onContextMenu={contextMenuHandler}
             onElementSelect={handlers.handleElementSelect}
             onElementDragEnd={handlers.handleElementDragEnd}
             onElementDragStart={(id, mouseX, mouseY) => state.canvasEventsController.startMultiDrag(id, mouseX ?? 0, mouseY ?? 0)}
             onResizeZone={state.resizeZone}
+            onUpdateZonePoints={state.updateZonePoints}
+            onResizeEquipment={state.setEquipmentScale}
             onUpdateArrowEndpoint={state.updateArrowEndpoint}
             onPlayerQuickEdit={handlers.handlePlayerQuickEdit}
             onTextDoubleClick={handlers.handleTextDoubleClick}

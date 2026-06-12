@@ -66,6 +66,7 @@ export interface StageEventHandlersInput {
     handleDrawingMouseDown: (pos: Position) => boolean;
     handleDrawingMouseMove: (pos: Position) => void;
     handleDrawingMouseUp: () => boolean;
+    finishPolygon: () => void;
   };
   canvasEventsController: {
     handleStageMouseDown: (pos: Position, clickedOnInteractive: boolean) => void;
@@ -159,11 +160,20 @@ export function useStageEventHandlers(input: StageEventHandlersInput) {
     [clearSelection, activeTool, marqueeStart]
   );
 
+  // Double-click finishes an in-progress polygon zone.
+  const handleStageDblClick = useCallback(
+    () => {
+      drawingController.finishPolygon();
+    },
+    [drawingController]
+  );
+
   return {
     handleStageMouseDown,
     handleStageMouseMove,
     handleStageMouseUp,
     handleStageClick,
+    handleStageDblClick,
   };
 }
 

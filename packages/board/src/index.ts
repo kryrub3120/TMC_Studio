@@ -23,7 +23,7 @@ export type { ZoneNodeProps } from './ZoneNode.js';
 export { TextNode } from './TextNode.js';
 export type { TextNodeProps } from './TextNode.js';
 
-export { ArrowPreview, ZonePreview } from './DrawingPreview.js';
+export { ArrowPreview, ZonePreview, PolygonPreview } from './DrawingPreview.js';
 
 export { DrawingNode } from './DrawingNode.js';
 export type { DrawingNodeProps } from './DrawingNode.js';

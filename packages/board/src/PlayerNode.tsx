@@ -4,10 +4,10 @@
  */
 
 import React, { useRef, useState, memo, useEffect } from 'react';
-import { Group, Circle, Rect, RegularPolygon, Line, Text, Wedge } from 'react-konva';
+import { Group, Circle, Rect, RegularPolygon, Line, Text, Wedge, Arc } from 'react-konva';
 import type Konva from 'konva';
 import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
-import type { PlayerElement, Position, PitchConfig, TeamSettings, PlayerOrientationSettings } from '@tmc/core';
+import type { PlayerElement, Position, PitchConfig, TeamSettings, PlayerOrientationSettings, Team } from '@tmc/core';
 import {
   snapToGrid,
   clampToBounds,
@@ -83,14 +83,15 @@ function resolveIsGoalkeeper(
 
 /** Convert team settings to render colors */
 function getTeamColors(
-  team: 'home' | 'away',
+  team: Team,
   teamSettings?: TeamSettings,
   isGoalkeeper?: boolean,
   playerColorOverride?: string,
   isPrintMode?: boolean
 ): TeamColors {
   const settings = teamSettings ?? DEFAULT_TEAM_SETTINGS;
-  const teamSetting = settings[team];
+  // Fallback chain for documents whose teamSettings predate team3/team4.
+  const teamSetting = settings[team] ?? DEFAULT_TEAM_SETTINGS[team] ?? DEFAULT_TEAM_SETTINGS.home;
 
   // Priority: GK > player.color > team primary
   let primaryHex = isGoalkeeper
@@ -181,6 +182,11 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // ALT+drag anywhere on the player rotates it.
+    if (e.evt.altKey && onOrientationPreview) {
+      startRotationDrag(e);
+      return;
+    }
     if (onDragStart) {
       const stage = e.target.getStage();
       const rect = stage?.container().getBoundingClientRect();
@@ -221,9 +227,9 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   };
 
   // --- ALT+DRAG ROTATION HANDLERS (CORRECTIONS #1-6) ---
-  const handleRotationMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Only handle ALT+click (CORRECTION #6)
-    if (!e.evt.altKey || !onOrientationPreview) return;
+  // Core rotation-drag start (used by ALT+drag on body AND by dragging the vision cone).
+  const startRotationDrag = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!onOrientationPreview) return;
     
     e.cancelBubble = true;
     
@@ -270,6 +276,11 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     window.addEventListener('mouseup', handleRotationMouseUp);
   };
 
+  // Dragging the vision cone (when selected) rotates the player — no modifier needed.
+  const handleVisionRotateStart = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    startRotationDrag(e);
+  };
+
   const handleRotationMouseMove = (e: MouseEvent) => {
     if (!isRotatingRef.current || !onOrientationPreview) return;
     
@@ -296,8 +307,8 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     const delta = deltaDeg(startPointerAngleRef.current, currentAngleDeg);
     const rawOrientation = startOrientationRef.current + delta;
     
-    // Apply snap (ALT+SHIFT = 1°, ALT only = 5°)
-    const snapResolution = e.shiftKey ? 1 : 5;
+    // Smooth by default (1°); hold Shift for coarse 15° tactical snapping.
+    const snapResolution = e.shiftKey ? 15 : 1;
     const snapped = Math.round(rawOrientation / snapResolution) * snapResolution;
     const normalized = norm360(snapped);
     
@@ -338,9 +349,8 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- ARMS GEOMETRY (REAL BODY ORIENTATION) ---
-  // Ramiona mają “wyjść z barków”, ale NIE rozwalać hitboxa (listening=false).
-  // Skrócone o 25%: było 0.40r -> teraz 0.30r
+  // --- BODY ORIENTATION GEOMETRY ---
+  // Premium tactical notation: shoulders + short curved arms, scaled to each player shape.
   const renderArms = () => {
     if (!showArms) return null;
 
@@ -352,62 +362,116 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     const sX = Math.cos(sideRad);
     const sY = Math.sin(sideRad);
 
-    // barki lekko “z przodu” korpusu
-    const shoulderForward = r * 0.22;
-    const shoulderSide = r * 0.52;
+    const shape = player.shape ?? 'circle';
+    const shapeReach = shape === 'triangle'
+      ? 1.12
+      : shape === 'diamond'
+        ? 1.08
+        : shape === 'square'
+          ? 1.03
+          : 1;
+
+    // Long arms forming a V that OPENS TOWARD the facing/vision direction:
+    // shoulders sit at the player's sides, hands reach far forward + outward.
+    const shoulderForward = -r * 0.05;            // shoulders ~at centre, a touch back
+    const shoulderSide = r * 0.55 * shapeReach;   // attach at the player's sides
+    const handForward = r * 1.20;                 // hands well in front (toward vision)
+    const handSide = r * 1.45 * shapeReach;       // hands spread wide → open V
+    const elbowBow = r * 0.12;                     // slight outward bow → clearly bent
 
     const sx = fX * shoulderForward;
     const sy = fY * shoulderForward;
 
+    // Shoulders (left/right)
     const slx = sx - sX * shoulderSide;
     const sly = sy - sY * shoulderSide;
-
     const srx = sx + sX * shoulderSide;
     const sry = sy + sY * shoulderSide;
 
-    const armLen = r * 0.30; // <- 25% krótsze
+    // Hands: forward (toward vision) + outward
+    const elx = fX * handForward - sX * handSide;
+    const ely = fY * handForward - sY * handSide;
+    const erx = fX * handForward + sX * handSide;
+    const ery = fY * handForward + sY * handSide;
 
-    const elx = slx - sX * armLen;
-    const ely = sly - sY * armLen;
+    // Elbows: midpoint of shoulder->hand, bowed slightly outward
+    const mlx = (slx + elx) / 2 - sX * elbowBow;
+    const mly = (sly + ely) / 2 - sY * elbowBow;
+    const mrx = (srx + erx) / 2 + sX * elbowBow;
+    const mry = (sry + ery) / 2 + sY * elbowBow;
 
-    const erx = srx + sX * armLen;
-    const ery = sry + sY * armLen;
+    const chestStartX = -sX * r * 0.22 - fX * r * 0.18;
+    const chestStartY = -sY * r * 0.22 - fY * r * 0.18;
+    const chestEndX = fX * r * 0.42;
+    const chestEndY = fY * r * 0.42;
 
-    // “czytelne” ramiona jak w Twoim mocku: ciemny rdzeń + delikatny highlight
-    const core = 'rgba(0,0,0,0.70)';
-    const highlight = 'rgba(255,255,255,0.18)';
+    const core = 'rgba(8, 15, 35, 0.72)';
+    const highlight = 'rgba(255,255,255,0.34)';
+    const shoulderGlow = 'rgba(255,255,255,0.72)';
 
     return (
       <>
         <Line
-          points={[slx, sly, elx, ely]}
+          points={[chestStartX, chestStartY, chestEndX, chestEndY]}
+          stroke="rgba(255,255,255,0.5)"
+          strokeWidth={Math.max(2, r * 0.13)}
+          lineCap="round"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        <Line
+          points={[slx, sly, mlx, mly, elx, ely]}
           stroke={core}
-          strokeWidth={6}
+          strokeWidth={Math.max(5, r * 0.31)}
           lineCap="round"
+          lineJoin="round"
+          tension={0.45}
           listening={false}
           perfectDrawEnabled={false}
         />
         <Line
-          points={[srx, sry, erx, ery]}
+          points={[srx, sry, mrx, mry, erx, ery]}
           stroke={core}
-          strokeWidth={6}
+          strokeWidth={Math.max(5, r * 0.31)}
           lineCap="round"
+          lineJoin="round"
+          tension={0.45}
           listening={false}
           perfectDrawEnabled={false}
         />
         <Line
-          points={[slx, sly, elx, ely]}
+          points={[slx, sly, mlx, mly, elx, ely]}
           stroke={highlight}
-          strokeWidth={3}
+          strokeWidth={Math.max(2, r * 0.13)}
           lineCap="round"
+          lineJoin="round"
+          tension={0.45}
           listening={false}
           perfectDrawEnabled={false}
         />
         <Line
-          points={[srx, sry, erx, ery]}
+          points={[srx, sry, mrx, mry, erx, ery]}
           stroke={highlight}
-          strokeWidth={3}
+          strokeWidth={Math.max(2, r * 0.13)}
           lineCap="round"
+          lineJoin="round"
+          tension={0.45}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        <Circle
+          x={slx}
+          y={sly}
+          radius={Math.max(2.4, r * 0.15)}
+          fill={shoulderGlow}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+        <Circle
+          x={srx}
+          y={sry}
+          radius={Math.max(2.4, r * 0.15)}
+          fill={shoulderGlow}
           listening={false}
           perfectDrawEnabled={false}
         />
@@ -591,18 +655,31 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         );
       })()}
 
-      {/* ROTATION HIT ZONE (CORRECTION #4) - simple large circle, on top for event priority */}
-      {onOrientationPreview && (
-        <Circle
+      {/* ROTATION HIT ZONE — annular vision wedge, excludes the body centre so the
+          player can still be dragged to move. Active only when selected: grab the
+          cone and drag to rotate (no modifier). ALT+drag on the body works too. */}
+      {onOrientationPreview && showVision && (
+        <Arc
           x={0}
           y={0}
-          radius={showVision ? r * 6 : r + 4}
+          innerRadius={r * 1.25}
+          outerRadius={r * 6}
+          angle={60}
+          rotation={facingKonva - 30}
           fill="black"
           opacity={0}
+          // Always listening: one click on the cone auto-selects AND starts rotating.
           listening={true}
           hitStrokeWidth={0}
-          cursor={isRotatingRef.current ? 'grabbing' : 'crosshair'}
-          onMouseDown={handleRotationMouseDown}
+          onMouseDown={handleVisionRotateStart}
+          onMouseEnter={(e) => {
+            const c = e.target.getStage()?.container();
+            if (c) c.style.cursor = 'grab';
+          }}
+          onMouseLeave={(e) => {
+            const c = e.target.getStage()?.container();
+            if (c) c.style.cursor = 'default';
+          }}
           perfectDrawEnabled={false}
         />
       )}

@@ -50,7 +50,7 @@ export function createCanvasEffectCommands(): Pick<
       // ✅ addBallAtCursor already calls pushHistory
     },
 
-    addArrow: (type: 'pass' | 'run', start?: Position, _end?: Position) => {
+    addArrow: (type: 'pass' | 'run' | 'shoot' | 'dribble', start?: Position, _end?: Position) => {
       const store = useBoardStore.getState();
       if (start) {
         store.setCursorPosition(start);

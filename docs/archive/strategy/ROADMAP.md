@@ -1,5 +1,9 @@
 # TMC Studio Roadmap
 
+> **STRATEGIC / NOT CURRENT TASK:** Roadmap pokazuje kierunek produktu i historie milestone'ow.
+> Nie traktuj sekcji "Current Status" jako aktualnej decyzji launchowej.
+> Aktualny plan operacyjny: `docs/CURRENT_SPRINT_PLAN.md`.
+
 ## 🎯 Vision
 Ultra-fast football tactics board with step-based animation for analysts, coaches, and content creators.
 
@@ -303,7 +307,7 @@ The following features are **COMPLETE** and form the stable baseline for TMC Stu
 - [ ] Final production test with real card
 - [ ] Verify webhook delivery in LIVE mode
 - [ ] Update Terms/Privacy with refund policy
-- [ ] GO LIVE! 🚀
+- [ ] Launch gate after current security and release-readiness checks
 
 **Status:** Testing with TEST mode on production
 **Next:** Beta launch to testers
@@ -386,7 +390,7 @@ If these are needed in the future, they require explicit strategy decisions.
 
 ---
 
-**Current Status:** V1 Complete - Stabilized and ready for production.
+**Historical Status:** V1 foundation was previously described as complete. Current execution status is governed by `docs/CURRENT_SPRINT_PLAN.md`.
 
 **Next Steps:**
 1. Lock main branch as stable baseline

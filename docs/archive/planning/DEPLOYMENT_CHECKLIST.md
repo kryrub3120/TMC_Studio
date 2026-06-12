@@ -1,5 +1,9 @@
 # Deployment Checklist - TMC Studio BETA
 
+> **HISTORICAL SNAPSHOT:** Ten dokument opisuje poprzedni stan beta setupu.
+> Nie traktuj go jako aktualnej zgody na launch.
+> Aktualny status i kolejka prac: `docs/CURRENT_SPRINT_PLAN.md` oraz `tasks/NEXT_TASK.md`.
+
 **Date:** 2026-01-22  
 **Environment:** BETA TESTING (TEST Stripe keys)
 **Status:** 🧪 Beta Mode - Testing with TEST cards before going LIVE

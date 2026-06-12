@@ -8,8 +8,8 @@ export interface Position {
   y: number;
 }
 
-/** Team identifier */
-export type Team = 'home' | 'away';
+/** Team identifier (home/away kept for back-compat = Team 1/Team 2) */
+export type Team = 'home' | 'away' | 'team3' | 'team4';
 
 /** Player shape types */
 export type PlayerShape = 'circle' | 'square' | 'triangle' | 'diamond';
@@ -58,10 +58,16 @@ export interface BallElement extends BoardElementBase {
   strokeColor?: string;
   /** Stroke width in pixels (default: 2) */
   strokeWidth?: number;
+  /**
+   * Ball variant:
+   * - 'single' (default): a single ball
+   * - 'cluster': a pile/group of balls that drags as one element
+   */
+  variant?: 'single' | 'cluster';
 }
 
 /** Arrow types for tactical movements */
-export type ArrowType = 'pass' | 'run' | 'shoot';
+export type ArrowType = 'pass' | 'run' | 'shoot' | 'dribble';
 
 /** Arrow element (pass/run lines) */
 export interface ArrowElement {
@@ -81,13 +87,13 @@ export interface ArrowElement {
 }
 
 /** Zone shape types */
-export type ZoneShape = 'rect' | 'ellipse';
+export type ZoneShape = 'rect' | 'ellipse' | 'polygon';
 
 /** Zone element (highlighted areas) */
 export interface ZoneElement {
   id: ElementId;
   type: 'zone';
-  position: Position; // Top-left corner
+  position: Position; // Top-left corner (bounding-box top-left)
   width: number;
   height: number;
   shape: ZoneShape;
@@ -96,6 +102,11 @@ export interface ZoneElement {
   borderStyle?: 'solid' | 'dashed' | 'none';
   borderColor?: string;
   zIndex?: number; // PR-UX-2
+  /**
+   * Polygon vertices as a flat array [x1, y1, x2, y2, ...] in coordinates
+   * RELATIVE to `position`. Only used when `shape === 'polygon'`.
+   */
+  points?: number[];
 }
 
 /** Text element for labels/annotations */
@@ -181,16 +192,20 @@ export interface TeamSetting {
   goalkeeperColor?: string; // Optional GK jersey color (default: #fbbf24 yellow)
 }
 
-/** Team settings for both teams */
+/** Team settings (home/away required; team3/team4 optional for back-compat) */
 export interface TeamSettings {
   home: TeamSetting;
   away: TeamSetting;
+  team3?: TeamSetting;
+  team4?: TeamSetting;
 }
 
 /** Default team settings */
 export const DEFAULT_TEAM_SETTINGS: TeamSettings = {
-  home: { name: 'Home', primaryColor: '#ef4444', secondaryColor: '#ffffff' },
-  away: { name: 'Away', primaryColor: '#3b82f6', secondaryColor: '#ffffff' },
+  home: { name: 'Team 1', primaryColor: '#ef4444', secondaryColor: '#ffffff' },
+  away: { name: 'Team 2', primaryColor: '#3b82f6', secondaryColor: '#ffffff' },
+  team3: { name: 'Team 3', primaryColor: '#22c55e', secondaryColor: '#ffffff' },
+  team4: { name: 'Team 4', primaryColor: '#f97316', secondaryColor: '#ffffff' },
 };
 
 /** Pitch theme presets */

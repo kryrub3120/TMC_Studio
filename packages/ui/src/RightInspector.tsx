@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import type { TeamSettings, TeamSetting, PitchSettings } from '@tmc/core';
+import type { TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
 import { TeamsPanel } from './TeamsPanel.js';
 import { PitchPanel } from './PitchPanel.js';
 import { BottomSheet } from './BottomSheet.js';
@@ -12,7 +12,7 @@ import { BottomSheet } from './BottomSheet.js';
 export interface InspectorElement {
   id: string;
   type: 'player' | 'ball' | 'arrow' | 'zone' | 'text';
-  team?: 'home' | 'away';
+  team?: Team;
   number?: number | null; // Can be null for players without numbers
   label?: string;
   showLabel?: boolean;
@@ -30,7 +30,7 @@ export interface InspectorElement {
 export interface ElementInList {
   id: string;
   type: string;
-  team?: 'home' | 'away';
+  team?: Team;
   label: string;
 }
 
@@ -72,7 +72,7 @@ export interface RightInspectorProps {
   onRenameGroup?: (groupId: string, name: string) => void;
   onQuickAction?: (action: string) => void;
   teamSettings?: TeamSettings;
-  onUpdateTeam?: (team: 'home' | 'away', settings: Partial<TeamSetting>) => void;
+  onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
   pitchSettings?: PitchSettings;
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
   isPrintMode?: boolean;
@@ -154,11 +154,15 @@ const UnlockIcon: React.FC<{ className?: string }> = ({ className }) => (
 const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ onAction }) => {
   const actions = [
     { key: 'P', label: 'Add Home Player', action: 'add-home-player', color: '#e63946' },
-    { key: '⇧P', label: 'Add Away Player', action: 'add-away-player', color: '#457b9d' },
+    { key: 'Shift+P', label: 'Add Away Player', action: 'add-away-player', color: '#457b9d' },
     { key: 'B', label: 'Add Ball', action: 'add-ball', color: '#ffffff' },
     { key: 'A', label: 'Pass Arrow', action: 'add-pass-arrow', color: 'currentColor' },
     { key: 'R', label: 'Run Arrow', action: 'add-run-arrow', color: 'currentColor' },
+    { key: 'S', label: 'Shot Arrow', action: 'add-shoot-arrow', color: '#ef4444' },
+    { key: 'D', label: 'Dribble Arrow', action: 'add-dribble-arrow', color: '#1d4ed8' },
     { key: 'Z', label: 'Zone', action: 'add-zone', color: 'currentColor' },
+    { key: 'Shift+Z', label: 'Ellipse Zone', action: 'add-ellipse-zone', color: 'currentColor' },
+    { key: 'Shift+D', label: 'Freehand Draw', action: 'add-freehand-draw', color: 'currentColor' },
     { key: 'T', label: 'Text Label', action: 'add-text', color: 'currentColor' },
   ];
 
@@ -440,7 +444,7 @@ const PropsTab: React.FC<{
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Vision cone</label>
-                        <p className={`text-[10px] mt-0.5 ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'}`}>V / ⇧V shortcut</p>
+                        <p className={`text-[10px] mt-0.5 ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'}`}>V / Shift+V shortcut</p>
                       </div>
                       <button
                         onClick={() => onUpdatePlayerOrientation({ showVision: !visionActive })}

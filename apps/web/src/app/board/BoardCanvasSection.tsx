@@ -58,6 +58,8 @@ export interface BoardCanvasSectionProps {
   drawingStart: Position | null;
   drawingEnd: Position | null;
   freehandPoints: number[] | null;
+  polygonPoints: number[] | null;
+  polygonCursor: Position | null;
   
   // Animation state
   animationProgress: number;
@@ -71,11 +73,14 @@ export interface BoardCanvasSectionProps {
   onStageMouseDown: (e: any) => void;
   onStageMouseMove: (e: any) => void;
   onStageMouseUp: () => void;
+  onStageDblClick?: () => void;
   onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => void;
   onElementSelect: (id: string, addToSelection: boolean) => void;
   onElementDragEnd: (id: string, position: Position) => void;
   onElementDragStart: (id: string, mouseX?: number, mouseY?: number) => boolean;
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
+  onUpdateZonePoints?: (id: string, points: number[]) => void;
+  onResizeEquipment?: (id: string, scale: number) => void;
   onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
@@ -128,6 +133,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     marqueeStart,
     marqueeEnd,
     drawingStart,
+    polygonPoints,
+    polygonCursor,
     drawingEnd,
     freehandPoints,
     emptyStateOverlay,
@@ -135,11 +142,14 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     onStageMouseDown,
     onStageMouseMove,
     onStageMouseUp,
+    onStageDblClick,
     onContextMenu,
     onElementSelect,
     onElementDragEnd,
     onElementDragStart,
     onResizeZone,
+    onUpdateZonePoints,
+    onResizeEquipment,
     onUpdateArrowEndpoint,
     onPlayerQuickEdit,
     onTextDoubleClick,
@@ -502,6 +512,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             onElementDragEnd={activeCanvasInteraction?.handleElementDragEnd}
             onElementDragStart={activeCanvasInteraction?.handleDragStart}
             onResizeZone={onResizeZone}
+            onResizeEquipment={onResizeEquipment}
             onUpdateArrowEndpoint={onUpdateArrowEndpoint}
             onPlayerQuickEdit={(id) => {
               const player = elements.find(el => el.id === id && isPlayerElement(el));
@@ -537,15 +548,20 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             drawingStart={drawingStart}
             drawingEnd={drawingEnd}
             freehandPoints={freehandPoints}
+            polygonPoints={polygonPoints}
+            polygonCursor={polygonCursor}
             onStageClick={onStageClick}
             onStageMouseDown={onStageMouseDown}
             onStageMouseMove={onStageMouseMove}
             onStageMouseUp={onStageMouseUp}
+            onStageDblClick={onStageDblClick}
             onContextMenu={onContextMenu}
             onElementSelect={onElementSelect}
             onElementDragEnd={onElementDragEnd}
             onElementDragStart={onElementDragStart}
             onResizeZone={onResizeZone}
+            onUpdateZonePoints={onUpdateZonePoints}
+            onResizeEquipment={onResizeEquipment}
             onUpdateArrowEndpoint={onUpdateArrowEndpoint}
             onPlayerQuickEdit={onPlayerQuickEdit}
             onTextDoubleClick={onTextDoubleClick}

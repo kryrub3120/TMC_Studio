@@ -62,6 +62,7 @@ export interface BoardCanvasProps {
   onElementDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
   onElementDragStart?: (id: string) => boolean;
   onResizeZone?: (id: string, pos: { x: number; y: number }, width: number, height: number) => void;
+  onResizeEquipment?: (id: string, scale: number) => void;
   onUpdateArrowEndpoint?: (id: string, endpoint: 'start' | 'end', pos: { x: number; y: number }) => void;
   onPlayerQuickEdit?: (id: string) => void;
 }
@@ -91,6 +92,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
     onElementDragEnd,
     onElementDragStart,
     onResizeZone,
+    onResizeEquipment,
     onUpdateArrowEndpoint,
     onPlayerQuickEdit,
   } = props;
@@ -153,6 +155,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         onDragEnd={onElementDragEnd}
         onDragStart={onElementDragStart}
         onPlayerQuickEdit={onPlayerQuickEdit}
+        onResizeEquipment={onResizeEquipment}
       />
       
       {/* Layer 5: Freehand drawings */}

@@ -64,7 +64,12 @@ export function getContextMenuHeader(element: BoardElement | null): string | und
   }
 
   if (isArrowElement(element)) {
-    const type = element.arrowType === 'pass' ? 'Pass' : 'Run';
+    const type = {
+      pass: 'Pass',
+      run: 'Run',
+      shoot: 'Shot',
+      dribble: 'Dribble',
+    }[element.arrowType];
     return `➡️ ${type} Arrow`;
   }
 

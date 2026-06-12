@@ -1,5 +1,9 @@
 # TMC Studio — Feature Status Report (Inwentaryzacja Funkcji)
 
+> **STALE SNAPSHOT:** Ten dokument jest inwentaryzacja funkcji, nie aktywnym planem sprintow.
+> Zawiera stary commit bazowy (`7c5882d`) i musi byc odswiezony przed uzyciem jako zrodlo decyzji.
+> Aktualny plan operacyjny: `docs/CURRENT_SPRINT_PLAN.md`.
+
 > **Data audytu:** 2026-06-10 (Sprint A — Quick wins UX + podpisy zawodników zakończony)  
 > **Metodologia:** Krzyżowa analiza dokumentacji (`docs/`, `CHANGELOG.md`, `tasks/`) z faktycznym stanem kodu (`apps/web/src`, `packages/`)  
 > **Źródła dokumentacji:** `FEATURE_SPEC.md`, `ROADMAP.md`, `REFACTOR_ROADMAP.md`, `CHANGELOG.md`, `S2_ANIMATION_MODULE_PLAN.md`, `MONETIZATION_PLAN.md`, `PAYMENT_FOUNDATION.md`, `EQUIPMENT_SYSTEM_PLAN.md`, `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md`, `ARCHITECTURE_DIAGNOSIS_6_ISSUES.md`, `BETA_READY_SPRINT.md`, `GOALS_AND_HOTFIXES_PLAN.md`, `BETA_TESTING_PLAN.md`, `L1_PIN_RENAME_IMPLEMENTATION_STATUS.md`, `SETTINGS_INTEGRATION_PLAN.md`, `UX_IMPLEMENTATION_PLAN.md`, `MASTER_DEVELOPMENT_PLAN.md`, `SYSTEM_ARCHITECTURE.md`, `ZUSTAND_SLICES.md`

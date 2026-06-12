@@ -75,7 +75,11 @@ export function createPlayer(options: CreatePlayerOptions): PlayerElement {
     position: snapToGrid(position, gridSize),
     team,
     number: number ?? undefined,
-    shape: shape ?? (team === 'home' ? 'triangle' : 'circle'),
+    shape: shape ?? (
+      team === 'home' ? 'triangle' :
+      team === 'away' ? 'circle' :
+      team === 'team3' ? 'square' : 'diamond'
+    ),
     isGoalkeeper: isGoalkeeper ?? false,
     orientation: orientation ?? 0, // Explicit default (north/up) — required for deterministic orientation transforms on pitch flip
   };
@@ -93,7 +97,8 @@ export function createPlayer(options: CreatePlayerOptions): PlayerElement {
 /** Create a new ball element */
 export function createBall(
   position: Position,
-  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
+  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize,
+  variant: 'single' | 'cluster' = 'single'
 ): BallElement {
   return {
     id: generateId(),
@@ -102,6 +107,7 @@ export function createBall(
     color: '#ffffff',
     strokeColor: '#1a1a1a',
     strokeWidth: 2,
+    variant,
   };
 }
 
@@ -112,7 +118,7 @@ export function createArrow(
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): ArrowElement {
   const snappedStart = snapToGrid(startPoint, gridSize);
-  // Default colors: pass = dark gray, run = orange, shoot = red
+  // Default colors: pass = dark gray, run = orange, shoot = red, dribble = blue
   let defaultColor: string;
   let defaultStroke: number;
   
@@ -128,6 +134,10 @@ export function createArrow(
     case 'shoot':
       defaultColor = '#ef4444'; // Red
       defaultStroke = 5; // Thicker for shoot
+      break;
+    case 'dribble':
+      defaultColor = '#1d4ed8'; // Tactical blue
+      defaultStroke = 4;
       break;
     default:
       defaultColor = '#1a1a1a';
@@ -155,7 +165,7 @@ export function createZone(
   shape: ZoneShape = 'rect',
   gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
 ): ZoneElement {
-  return {
+  const base: ZoneElement = {
     id: generateId(),
     type: 'zone',
     position: snapToGrid(position, gridSize),
@@ -165,6 +175,49 @@ export function createZone(
     fillColor: '#ef4444', // Red default
     opacity: 0.25,
     borderStyle: 'none',
+  };
+  if (shape === 'polygon') {
+    // Default to a triangle relative to position (used only as a fallback;
+    // interactive drawing supplies real vertices via createPolygonZone).
+    base.points = [0, 0, 120, 0, 60, 80];
+  }
+  return base;
+}
+
+/**
+ * Create a polygon zone from absolute world-space vertices.
+ * Computes the bounding-box top-left as `position` and stores `points`
+ * relative to that origin.
+ */
+export function createPolygonZone(
+  absolutePoints: number[]
+): ZoneElement {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let i = 0; i < absolutePoints.length; i += 2) {
+    xs.push(absolutePoints[i]);
+    ys.push(absolutePoints[i + 1]);
+  }
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  const relative: number[] = [];
+  for (let i = 0; i < absolutePoints.length; i += 2) {
+    relative.push(absolutePoints[i] - minX, absolutePoints[i + 1] - minY);
+  }
+  return {
+    id: generateId(),
+    type: 'zone',
+    position: { x: minX, y: minY },
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+    shape: 'polygon',
+    fillColor: '#ef4444',
+    opacity: 0.25,
+    borderStyle: 'solid',
+    borderColor: '#ef4444',
+    points: relative,
   };
 }
 

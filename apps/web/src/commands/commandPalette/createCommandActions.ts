@@ -15,7 +15,10 @@ export interface CreateCommandActionsDeps {
   addBall: () => void;
   addPassArrow: () => void;
   addRunArrow: () => void;
+  addShootArrow: () => void;
+  addDribbleArrow: () => void;
   addZone: () => void;
+  addEllipseZone: () => void;
   addText: () => void;
 
   // Edit
@@ -71,18 +74,21 @@ export function createCommandActions(deps: CreateCommandActionsDeps): CommandAct
   return [
     // Elements
     { id: 'add-home-player', label: 'Add Home Player', shortcut: 'P', category: 'elements', onExecute: deps.addHomePlayer },
-    { id: 'add-away-player', label: 'Add Away Player', shortcut: '⇧P', category: 'elements', onExecute: deps.addAwayPlayer },
+    { id: 'add-away-player', label: 'Add Away Player', shortcut: 'Shift+P', category: 'elements', onExecute: deps.addAwayPlayer },
     { id: 'add-ball', label: 'Add Ball', shortcut: 'B', category: 'elements', onExecute: deps.addBall },
     { id: 'add-pass-arrow', label: 'Add Pass Arrow', shortcut: 'A', category: 'elements', onExecute: deps.addPassArrow },
     { id: 'add-run-arrow', label: 'Add Run Arrow', shortcut: 'R', category: 'elements', onExecute: deps.addRunArrow },
+    { id: 'add-shoot-arrow', label: 'Add Shot Arrow', shortcut: 'S', category: 'elements', onExecute: deps.addShootArrow },
+    { id: 'add-dribble-arrow', label: 'Add Dribble Arrow', shortcut: 'D', category: 'elements', onExecute: deps.addDribbleArrow },
     { id: 'add-zone', label: 'Add Zone', shortcut: 'Z', category: 'elements', onExecute: deps.addZone },
+    { id: 'add-ellipse-zone', label: 'Add Ellipse Zone', shortcut: 'Shift+Z', category: 'elements', onExecute: deps.addEllipseZone },
     { id: 'add-text', label: 'Add Text', shortcut: 'T', category: 'elements', onExecute: deps.addText },
 
     // Edit
     { id: 'duplicate', label: 'Duplicate Selection', shortcut: `${cmd}D`, category: 'edit', onExecute: deps.duplicateSelected, disabled: deps.selectedCount === 0 },
     { id: 'delete', label: 'Delete Selection', shortcut: 'Del', category: 'edit', onExecute: deps.deleteSelected, disabled: deps.selectedCount === 0 },
     { id: 'undo', label: 'Undo', shortcut: `${cmd}Z`, category: 'edit', onExecute: deps.undo, disabled: !deps.canUndo },
-    { id: 'redo', label: 'Redo', shortcut: `⇧${cmd}Z`, category: 'edit', onExecute: deps.redo, disabled: !deps.canRedo },
+    { id: 'redo', label: 'Redo', shortcut: `Shift+${cmd}Z`, category: 'edit', onExecute: deps.redo, disabled: !deps.canRedo },
     { id: 'select-all', label: 'Select All', shortcut: `${cmd}A`, category: 'edit', onExecute: deps.selectAll },
     { id: 'clear-selection', label: 'Clear Selection', shortcut: 'Esc', category: 'edit', onExecute: () => {} },
 
@@ -104,9 +110,9 @@ export function createCommandActions(deps: CreateCommandActionsDeps): CommandAct
 
     // Export
     { id: 'export-png', label: 'Export PNG', shortcut: `${cmd}E`, category: 'export', onExecute: deps.exportPNG },
-    { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `⇧${cmd}E`, category: 'export', onExecute: deps.exportAllStepsPNG },
-    { id: 'export-gif', label: 'Export Animated GIF', shortcut: `⇧${cmd}G`, category: 'export', onExecute: deps.exportGIF, disabled: !animationEnabled || deps.stepsCount < 2 },
-    { id: 'export-pdf', label: 'Export PDF (all steps)', shortcut: `⇧${cmd}P`, category: 'export', onExecute: deps.exportPDF },
+    { id: 'export-steps', label: 'Export All Steps PNG', shortcut: `Shift+${cmd}E`, category: 'export', onExecute: deps.exportAllStepsPNG },
+    { id: 'export-gif', label: 'Export Animated GIF', shortcut: `Shift+${cmd}G`, category: 'export', onExecute: deps.exportGIF, disabled: !animationEnabled || deps.stepsCount < 2 },
+    { id: 'export-pdf', label: 'Export PDF (all steps)', shortcut: `Shift+${cmd}P`, category: 'export', onExecute: deps.exportPDF },
     { id: 'export-svg', label: 'Export SVG', category: 'export', onExecute: deps.exportSVG },
   ];
 }

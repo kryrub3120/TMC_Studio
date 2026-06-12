@@ -69,7 +69,7 @@ export interface CanvasCommands {
   /**
    * Add arrow to canvas (commits history)
    */
-  addArrow: (type: 'pass' | 'run', start?: Position, end?: Position) => void;
+  addArrow: (type: 'pass' | 'run' | 'shoot' | 'dribble', start?: Position, end?: Position) => void;
   
   /**
    * Add zone to canvas (commits history)

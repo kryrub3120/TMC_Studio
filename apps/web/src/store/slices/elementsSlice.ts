@@ -66,8 +66,8 @@ function resolvePlayerDefaults(
     result.number = null;
   }
   
-  result.shape = team === 'home' ? defaults.homeShape : defaults.awayShape;
-  result.color = team === 'home' ? defaults.homeColor : defaults.awayColor;
+  result.shape = team === 'home' ? defaults.homeShape : team === 'away' ? defaults.awayShape : undefined;
+  result.color = team === 'home' ? defaults.homeColor : team === 'away' ? defaults.awayColor : undefined;
   
   return result;
 }
@@ -112,6 +112,7 @@ export interface ElementsSlice {
   // Convenience creators
   addPlayerAtCursor: (team: Team) => void;
   addBallAtCursor: () => void;
+  addBallGroupAtCursor: () => void;
   addArrowAtCursor: (arrowType: ArrowType) => void;
   addZoneAtCursor: (shape?: ZoneShape) => void;
   addTextAtCursor: () => void;
@@ -124,6 +125,10 @@ export interface ElementsSlice {
   updateTextColor: (ids: ElementId[], color: string) => void;
   moveElementById: (id: ElementId, position: Position) => void;
   resizeZone: (id: ElementId, position: Position, width: number, height: number) => void;
+  /** Replace polygon-zone vertices (flat array relative to zone.position) and push history. */
+  updateZonePoints: (id: ElementId, points: number[]) => void;
+  /** Set equipment scale absolutely (drag-resize handles). Clamped 0.25..3. */
+  setEquipmentScale: (id: ElementId, scale: number) => void;
   updateArrowEndpoint: (id: ElementId, endpoint: 'start' | 'end', position: Position) => void;
   
   // Arrow numbering (PR-ARROW-NUMBER)
@@ -222,6 +227,16 @@ export const createElementsSlice: StateCreator<
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
     const ball = createBall(position);
+    get().addElement(ball);
+  },
+  
+  addBallGroupAtCursor: () => {
+    const { cursorPosition } = get();
+    const position = cursorPosition ?? { 
+      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
+      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
+    };
+    const ball = createBall(position, DEFAULT_PITCH_CONFIG.gridSize, 'cluster');
     get().addElement(ball);
   },
   
@@ -335,6 +350,35 @@ export const createElementsSlice: StateCreator<
         }
         return el;
       }),
+    }));
+    get().pushHistory();
+  },
+
+  updateZonePoints: (id, points) => {
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (el.id === id && el.type === 'zone') {
+          // Recompute bounding box (width/height) from new points; keep position.
+          let maxX = 0;
+          let maxY = 0;
+          for (let i = 0; i < points.length; i += 2) {
+            if (points[i] > maxX) maxX = points[i];
+            if (points[i + 1] > maxY) maxY = points[i + 1];
+          }
+          return { ...el, points, width: Math.max(1, maxX), height: Math.max(1, maxY) };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+
+  setEquipmentScale: (id, scale) => {
+    const clamped = Math.max(0.25, Math.min(3, scale));
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        el.id === id && el.type === 'equipment' ? { ...el, scale: clamped } : el
+      ),
     }));
     get().pushHistory();
   },
@@ -706,9 +750,10 @@ export const createElementsSlice: StateCreator<
             const currentRadius = element.radius ?? defaultRadius;
             return { ...el, radius: currentRadius * clampedScale };
           }
-          // Equipment - add scale property
+          // Equipment - scale multiplicatively (consistent with players/zones/text)
           if (el.type === 'equipment') {
-            return { ...el, scale: clampedScale };
+            const equipment = el as { scale?: number };
+            return { ...el, scale: (equipment.scale ?? 1) * clampedScale };
           }
           // Zones - scale dimensions
           if (el.type === 'zone') {

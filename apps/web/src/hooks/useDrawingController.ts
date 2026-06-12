@@ -20,6 +20,8 @@ interface DrawingController {
   drawingStart: Position | null;
   drawingEnd: Position | null;
   freehandPoints: number[] | null;
+  polygonPoints: number[] | null;
+  polygonCursor: Position | null;
   activeTool: ActiveTool;
   
   // Handlers for Stage events
@@ -29,6 +31,9 @@ interface DrawingController {
   
   // Check if tool is drawing-related
   isDrawingTool: (tool: ActiveTool) => boolean;
+  
+  // Polygon zone: finish current polygon (called on stage double-click)
+  finishPolygon: () => void;
 }
 
 /**
@@ -53,6 +58,11 @@ export function useDrawingController(): DrawingController {
   const startFreehandDrawing = useBoardStore((s) => s.startFreehandDrawing);
   const updateFreehandDrawing = useBoardStore((s) => s.updateFreehandDrawing);
   const finishFreehandDrawing = useBoardStore((s) => s.finishFreehandDrawing);
+  const addPolygonPoint = useBoardStore((s) => s.addPolygonPoint);
+  const updatePolygonCursor = useBoardStore((s) => s.updatePolygonCursor);
+  const finishPolygonDrawing = useBoardStore((s) => s.finishPolygonDrawing);
+  const polygonPoints = useBoardStore((s) => s.polygonPoints);
+  const polygonCursor = useBoardStore((s) => s.polygonCursor);
   
   // Get active tool from UI store
   const activeTool = useUIStore((s) => s.activeTool);
@@ -67,8 +77,10 @@ export function useDrawingController(): DrawingController {
            tool === 'arrow-pass' || 
            tool === 'arrow-run' || 
            tool === 'arrow-shoot' ||
+           tool === 'arrow-dribble' ||
            tool === 'zone' || 
-           tool === 'zone-ellipse';
+           tool === 'zone-ellipse' ||
+           tool === 'zone-polygon';
   }, []);
 
   /**
@@ -84,14 +96,20 @@ export function useDrawingController(): DrawingController {
       return true;
     }
     
+    // Polygon zone — each click places a vertex (handled here on mousedown).
+    if (activeTool === 'zone-polygon') {
+      addPolygonPoint(pos);
+      return true;
+    }
+
     // Arrow/zone tools
-    if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'arrow-shoot' || activeTool === 'zone' || activeTool === 'zone-ellipse') {
+    if (activeTool === 'arrow-pass' || activeTool === 'arrow-run' || activeTool === 'arrow-shoot' || activeTool === 'arrow-dribble' || activeTool === 'zone' || activeTool === 'zone-ellipse') {
       startDrawing(pos);
       return true;
     }
 
     return false;
-  }, [activeTool, startDrawing, startFreehandDrawing]);
+  }, [activeTool, startDrawing, startFreehandDrawing, addPolygonPoint]);
 
   /**
    * Handle mouse move for drawing
@@ -104,11 +122,17 @@ export function useDrawingController(): DrawingController {
       return;
     }
     
+    // Polygon zone — track cursor for the rubber-band preview segment
+    if (activeTool === 'zone-polygon' && polygonPoints) {
+      updatePolygonCursor(pos);
+      return;
+    }
+    
     // If drawing arrow/zone, update the end position
     if (drawingStart) {
       updateDrawing(pos);
     }
-  }, [drawingStart, updateDrawing, freehandPoints, activeTool, updateFreehandDrawing]);
+  }, [drawingStart, updateDrawing, freehandPoints, activeTool, updateFreehandDrawing, polygonPoints, updatePolygonCursor]);
 
   /**
    * Handle mouse up for drawing
@@ -120,6 +144,12 @@ export function useDrawingController(): DrawingController {
     if (freehandPoints && (activeTool === 'drawing' || activeTool === 'highlighter')) {
       finishFreehandDrawing();
       clearActiveTool();
+      return true;
+    }
+    
+    // Polygon zone — consume the mouseup so it doesn't start marquee/selection.
+    // The vertex was already placed on mousedown; finishing happens on double-click.
+    if (activeTool === 'zone-polygon') {
       return true;
     }
     
@@ -137,6 +167,10 @@ export function useDrawingController(): DrawingController {
         finishArrowDrawing('shoot');
         clearActiveTool();
         return true;
+      } else if (activeTool === 'arrow-dribble') {
+        finishArrowDrawing('dribble');
+        clearActiveTool();
+        return true;
       } else if (activeTool === 'zone') {
         finishZoneDrawing('rect');
         clearActiveTool();
@@ -151,14 +185,23 @@ export function useDrawingController(): DrawingController {
     return false;
   }, [activeTool, drawingStart, finishArrowDrawing, finishZoneDrawing, freehandPoints, finishFreehandDrawing, clearActiveTool]);
 
+  const finishPolygon = useCallback(() => {
+    if (activeTool !== 'zone-polygon') return;
+    finishPolygonDrawing();
+    clearActiveTool();
+  }, [activeTool, finishPolygonDrawing, clearActiveTool]);
+
   return {
     drawingStart,
     drawingEnd,
     freehandPoints,
+    polygonPoints,
+    polygonCursor,
     activeTool,
     handleDrawingMouseDown,
     handleDrawingMouseMove,
     handleDrawingMouseUp,
     isDrawingTool,
+    finishPolygon,
   };
 }

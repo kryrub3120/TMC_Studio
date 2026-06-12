@@ -1,5 +1,8 @@
 # TMC Studio — Pre-Launch Audit & Fix Plan
 
+> **REQUIRES RE-VERIFICATION:** Ten dokument zawiera wazne blockery B1-B3, ale jego dawny werdykt launch readiness nie jest aktualna zgoda na bete.
+> Aktualna decyzja: security najpierw, zgodnie z `docs/CURRENT_SPRINT_PLAN.md` i `tasks/NEXT_TASK.md`.
+
 > **Date:** 2026-02-09  
 > **Status:** PLAN — awaiting implementation approval  
 > **Scope:** Security, UX bugs, data integrity, launch readiness  

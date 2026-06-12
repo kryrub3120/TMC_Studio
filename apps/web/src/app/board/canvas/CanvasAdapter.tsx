@@ -71,12 +71,15 @@ export interface CanvasAdapterProps {
   drawingStart: Position | null;
   drawingEnd: Position | null;
   freehandPoints: number[] | null;
+  polygonPoints: number[] | null;
+  polygonCursor: Position | null;
   
   // Stage event handlers
   onStageClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onStageMouseDown: (e: any) => void;
   onStageMouseMove: (e: any) => void;
   onStageMouseUp: () => void;
+  onStageDblClick?: () => void;
   onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => void;
   
   // Element event handlers
@@ -84,6 +87,8 @@ export interface CanvasAdapterProps {
   onElementDragEnd: (id: string, position: Position) => void;
   onElementDragStart: (id: string, mouseX?: number, mouseY?: number) => boolean;
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
+  onUpdateZonePoints?: (id: string, points: number[]) => void;
+  onResizeEquipment?: (id: string, scale: number) => void;
   onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
@@ -124,15 +129,20 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     drawingStart,
     drawingEnd,
     freehandPoints,
+    polygonPoints,
+    polygonCursor,
     onStageClick,
     onStageMouseDown,
     onStageMouseMove,
     onStageMouseUp,
+    onStageDblClick,
     onContextMenu,
     onElementSelect,
     onElementDragEnd,
     onElementDragStart,
     onResizeZone,
+    onUpdateZonePoints,
+    onResizeEquipment,
     onUpdateArrowEndpoint,
     onPlayerQuickEdit,
     onTextDoubleClick,
@@ -172,6 +182,8 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
       onTouchMove={onStageMouseMove}
       onMouseUp={onStageMouseUp}
       onTouchEnd={onStageMouseUp}
+      onDblClick={onStageDblClick}
+      onDblTap={onStageDblClick}
       onContextMenu={onContextMenu}
     >
       <CanvasElements
@@ -196,11 +208,15 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
         drawingStart={drawingStart}
         drawingEnd={drawingEnd}
         freehandPoints={freehandPoints}
+        polygonPoints={polygonPoints}
+        polygonCursor={polygonCursor}
         interpolators={interpolators}
         onElementSelect={onElementSelect}
         onElementDragEnd={onElementDragEnd}
         onElementDragStart={onElementDragStart}
         onResizeZone={onResizeZone}
+        onUpdateZonePoints={onUpdateZonePoints}
+        onResizeEquipment={onResizeEquipment}
         onUpdateArrowEndpoint={onUpdateArrowEndpoint}
         onPlayerQuickEdit={onPlayerQuickEdit}
         onTextDoubleClick={onTextDoubleClick}

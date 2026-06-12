@@ -76,11 +76,15 @@ export function useBoardPageState(props: BoardPageProps) {
   // Board store actions
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
+  const addBallGroupAtCursor = useBoardStore((s) => s.addBallGroupAtCursor);
   const addArrowAtCursor = useBoardStore((s) => s.addArrowAtCursor);
+  const addEquipmentAtCursor = useBoardStore((s) => s.addEquipmentAtCursor);
   const addZoneAtCursor = useBoardStore((s) => s.addZoneAtCursor);
   const addTextAtCursor = useBoardStore((s) => s.addTextAtCursor);
   const moveElementById = useBoardStore((s) => s.moveElementById);
   const resizeZone = useBoardStore((s) => s.resizeZone);
+  const updateZonePoints = useBoardStore((s) => s.updateZonePoints);
+  const setEquipmentScale = useBoardStore((s) => s.setEquipmentScale);
   const selectElement = useBoardStore((s) => s.selectElement);
   const clearSelection = useBoardStore((s) => s.clearSelection);
   const deleteSelected = useBoardStore((s) => s.deleteSelected);
@@ -131,6 +135,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const viewportLocked = useUIStore((s) => s.viewportLocked); // ETAP 4
   const hasSeenShortcutsHint = useUIStore((s) => s.hasSeenShortcutsHint);
   const activeTool = useUIStore((s) => s.activeTool);
+  const setActiveTool = useUIStore((s) => s.setActiveTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
   const isPrintMode = useUIStore((s) => s.isPrintMode);
   const isOnline = useUIStore((s) => s.isOnline);
@@ -345,6 +350,7 @@ export function useBoardPageState(props: BoardPageProps) {
     addStep,
     onOpenPricingModal, // PR3
     contextMenuVisible: contextMenu.menuState.visible,
+    stageRef,
   });
 
   // NOTE: Handler functions (handleQuickAction, handleElementSelect,
@@ -382,7 +388,9 @@ export function useBoardPageState(props: BoardPageProps) {
     // Board actions
     addPlayerAtCursor,
     addBallAtCursor,
+    addBallGroupAtCursor,
     addArrowAtCursor,
+    addEquipmentAtCursor,
     addZoneAtCursor,
     addTextAtCursor,
     selectElement,
@@ -400,6 +408,8 @@ export function useBoardPageState(props: BoardPageProps) {
     cycleZoneShape,
     updateArrowEndpoint,
     resizeZone,
+    updateZonePoints,
+    setEquipmentScale,
     moveElementById,
     pushHistory,
     updatePitchSettings,
@@ -436,6 +446,7 @@ export function useBoardPageState(props: BoardPageProps) {
     effectiveZoom: zoom,
     hasSeenShortcutsHint,
     activeTool,
+    setActiveTool,
     gridVisible,
     isPrintMode,
     isOnline,

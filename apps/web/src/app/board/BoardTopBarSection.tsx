@@ -3,6 +3,7 @@
  */
 
 import { TopBar } from '@tmc/ui';
+import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team } from '@tmc/core';
 
 export interface BoardTopBarSectionProps {
   // Document
@@ -27,6 +28,11 @@ export interface BoardTopBarSectionProps {
   onToggleTheme: () => void;
   onOpenPalette: () => void;
   onOpenHelp: () => void;
+  onSelectArrowTool?: (type: ArrowType) => void;
+  onSelectZoneTool?: (shape: ZoneShape) => void;
+  onAddEquipment?: (type: EquipmentType, variant?: EquipmentVariant) => void;
+  onAddBall?: (variant: 'single' | 'cluster') => void;
+  onAddPlayer?: (team: Team) => void;
   onOpenProjects: () => void;
   onRenameProject: (newName: string) => void;
   onToggleInspector: () => void;
@@ -52,6 +58,11 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
     onToggleTheme,
     onOpenPalette,
     onOpenHelp,
+    onSelectArrowTool,
+    onSelectZoneTool,
+    onAddEquipment,
+    onAddBall,
+    onAddPlayer,
     onOpenProjects,
     onRenameProject,
     onToggleInspector,
@@ -78,6 +89,11 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
       onToggleTheme={onToggleTheme}
       onOpenPalette={onOpenPalette}
       onOpenHelp={onOpenHelp}
+      onSelectArrowTool={onSelectArrowTool}
+      onSelectZoneTool={onSelectZoneTool}
+      onAddEquipment={onAddEquipment}
+      onAddBall={onAddBall}
+      onAddPlayer={onAddPlayer}
       onOpenProjects={onOpenProjects}
       onRename={onRenameProject}
       onToggleInspector={onToggleInspector}

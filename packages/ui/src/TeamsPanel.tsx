@@ -2,12 +2,13 @@
  * TeamsPanel - Team color customization panel
  */
 
-import type { TeamSettings, TeamSetting } from '@tmc/core';
+import type { TeamSettings, TeamSetting, Team } from '@tmc/core';
+import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { SHARED_COLORS } from './colors';
 
 export interface TeamsPanelProps {
   teamSettings: TeamSettings;
-  onUpdateTeam: (team: 'home' | 'away', settings: Partial<TeamSetting>) => void;
+  onUpdateTeam: (team: Team, settings: Partial<TeamSetting>) => void;
 }
 
 /** Team color section component */
@@ -132,6 +133,14 @@ function TeamSection({
   );
 }
 
+/** Teams shown in the panel (home/away kept for back-compat = Team 1/Team 2) */
+const TEAM_ORDER: Array<{ key: Team; label: string }> = [
+  { key: 'home', label: 'Team 1' },
+  { key: 'away', label: 'Team 2' },
+  { key: 'team3', label: 'Team 3' },
+  { key: 'team4', label: 'Team 4' },
+];
+
 /** Main TeamsPanel component */
 export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
   return (
@@ -140,22 +149,19 @@ export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
         Team Colors
       </div>
 
-      {/* Home team section */}
-      <TeamSection
-        team="Home"
-        settings={teamSettings.home}
-        onUpdate={(settings) => onUpdateTeam('home', settings)}
-      />
-
-      {/* Divider */}
-      <div className="border-t border-border" />
-
-      {/* Away team section */}
-      <TeamSection
-        team="Away"
-        settings={teamSettings.away}
-        onUpdate={(settings) => onUpdateTeam('away', settings)}
-      />
+      {TEAM_ORDER.map(({ key, label }, idx) => {
+        const settings = teamSettings[key] ?? DEFAULT_TEAM_SETTINGS[key] ?? DEFAULT_TEAM_SETTINGS.home;
+        return (
+          <div key={key} className="space-y-6">
+            {idx > 0 && <div className="border-t border-border" />}
+            <TeamSection
+              team={label}
+              settings={settings}
+              onUpdate={(patch) => onUpdateTeam(key, patch)}
+            />
+          </div>
+        );
+      })}
 
       {/* Help text */}
       <div className="pt-2 border-t border-border">

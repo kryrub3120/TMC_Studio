@@ -25,9 +25,115 @@ const ARROW_COLORS = {
   pass: '#1a1a1a', // Dark gray
   run: '#f97316',  // Orange
   shoot: '#ef4444', // Red
+  dribble: '#1d4ed8', // Tactical blue
 };
 
 type DraggingEndpoint = 'start' | 'end' | null;
+
+function getDribblePoints(startX: number, startY: number, endX: number, endY: number): number[] {
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
+  if (length < 24) return [startX, startY, endX, endY];
+
+  const ux = dx / length;
+  const uy = dy / length;
+  const px = -uy;
+  const py = ux;
+  const headReserve = Math.min(20, length * 0.22);
+  const bodyLength = Math.max(8, length - headReserve);
+  const waveCount = Math.max(3, Math.min(9, Math.round(bodyLength / 28)));
+  const amplitude = Math.max(8, Math.min(13, length * 0.05));
+  const points: number[] = [startX, startY];
+
+  for (let i = 1; i <= waveCount; i += 1) {
+    const t = i / (waveCount + 1);
+    const offset = (i % 2 === 0 ? -1 : 1) * amplitude;
+    points.push(
+      startX + ux * bodyLength * t + px * offset,
+      startY + uy * bodyLength * t + py * offset
+    );
+  }
+
+  points.push(startX + ux * bodyLength, startY + uy * bodyLength, endX, endY);
+  return points;
+}
+
+function renderShootArrow(
+  startRelX: number,
+  startRelY: number,
+  endRelX: number,
+  endRelY: number,
+  color: string,
+  strokeWidth: number
+) {
+  const dx = endRelX - startRelX;
+  const dy = endRelY - startRelY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
+  if (length < 10) {
+    return (
+      <Arrow
+        points={[startRelX, startRelY, endRelX, endRelY]}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill={color}
+        pointerLength={10}
+        pointerWidth={8}
+        lineCap="round"
+        lineJoin="round"
+        hitStrokeWidth={15}
+      />
+    );
+  }
+
+  const ux = dx / length;
+  const uy = dy / length;
+  const px = -uy;
+  const py = ux;
+  const headLength = Math.min(22, Math.max(15, length * 0.18));
+  const headWidth = Math.min(15, Math.max(10, strokeWidth * 2.6));
+  const gap = Math.max(4, strokeWidth * 1.05);
+  const tipX = endRelX;
+  const tipY = endRelY;
+  const baseX = tipX - ux * headLength;
+  const baseY = tipY - uy * headLength;
+  const leftX = baseX + px * headWidth;
+  const leftY = baseY + py * headWidth;
+  const rightX = baseX - px * headWidth;
+  const rightY = baseY - py * headWidth;
+  const perpX = px * gap;
+  const perpY = py * gap;
+
+  return (
+    <>
+      <Line
+        points={[startRelX + perpX, startRelY + perpY, baseX + perpX, baseY + perpY]}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        lineCap="round"
+        lineJoin="round"
+        hitStrokeWidth={15}
+      />
+      <Line
+        points={[startRelX - perpX, startRelY - perpY, baseX - perpX, baseY - perpY]}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        lineCap="round"
+        lineJoin="round"
+        hitStrokeWidth={15}
+      />
+      <Line
+        points={[tipX, tipY, leftX, leftY, rightX, rightY]}
+        fill={color}
+        strokeEnabled={false}
+        closed
+        listening={false}
+      />
+    </>
+  );
+}
 
 /** ArrowNode component */
 export const ArrowNode: React.FC<ArrowNodeProps> = ({
@@ -208,95 +314,27 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       onDragEnd={handleDragEnd}
     >
       {/* Shoot arrow - double parallel lines + single arrowhead */}
-      {arrow.arrowType === 'shoot' ? (() => {
-        const dx = endRelX - startRelX;
-        const dy = endRelY - startRelY;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        
-        // Fallback for very short arrows - render single center line
-        if (length < 10) {
-          return (
-            <Arrow
-              points={[startRelX, startRelY, endRelX, endRelY]}
-              stroke={effectiveColor}
-              strokeWidth={effectiveStrokeWidth}
-              fill={effectiveColor}
-              pointerLength={10}
-              pointerWidth={8}
-              lineCap="round"
-              lineJoin="round"
-              hitStrokeWidth={15}
-            />
-          );
-        }
-        
-        // Unit vectors for proper arrowhead geometry
-        const ux = dx / length;  // unit direction
-        const uy = dy / length;
-        const px = -uy;          // unit perpendicular
-        const py = ux;
-        
-        // Arrowhead dimensions - larger for prominent "shot" look
-        const headLength = 18;
-        const headWidth = 12;
-        
-        // Arrowhead tip
-        const tipX = endRelX;
-        const tipY = endRelY;
-        
-        // Arrowhead base center
-        const baseX = tipX - ux * headLength;
-        const baseY = tipY - uy * headLength;
-        
-        // Arrowhead base corners
-        const leftX = baseX + px * headWidth;
-        const leftY = baseY + py * headWidth;
-        const rightX = baseX - px * headWidth;
-        const rightY = baseY - py * headWidth;
-        
-        // Parallel lines offset (3px each side)
-        const perpX = px * 3;
-        const perpY = py * 3;
-        
-        return (
-          <>
-            {/* First parallel line (shaft) - stops at arrowhead base */}
-            <Line
-              points={[
-                startRelX + perpX, startRelY + perpY,
-                baseX + perpX, baseY + perpY
-              ]}
-              stroke={effectiveColor}
-              strokeWidth={effectiveStrokeWidth}
-              lineCap="round"
-              lineJoin="round"
-              hitStrokeWidth={15}
-            />
-            
-            {/* Second parallel line (shaft) - stops at arrowhead base */}
-            <Line
-              points={[
-                startRelX - perpX, startRelY - perpY,
-                baseX - perpX, baseY - perpY
-              ]}
-              stroke={effectiveColor}
-              strokeWidth={effectiveStrokeWidth}
-              lineCap="round"
-              lineJoin="round"
-              hitStrokeWidth={15}
-            />
-            
-            {/* Arrowhead triangle - fill only, no stroke */}
-            <Line
-              points={[tipX, tipY, leftX, leftY, rightX, rightY]}
-              fill={effectiveColor}
-              strokeEnabled={false}
-              closed={true}
-              listening={false}
-            />
-          </>
-        );
-      })() : (
+      {arrow.arrowType === 'shoot' ? renderShootArrow(
+        startRelX,
+        startRelY,
+        endRelX,
+        endRelY,
+        effectiveColor,
+        effectiveStrokeWidth
+      ) : arrow.arrowType === 'dribble' ? (
+        <Arrow
+          points={getDribblePoints(startRelX, startRelY, endRelX, endRelY)}
+          stroke={effectiveColor}
+          strokeWidth={effectiveStrokeWidth}
+          fill={effectiveColor}
+          pointerLength={12}
+          pointerWidth={10}
+          tension={0.35}
+          lineCap="round"
+          lineJoin="round"
+          hitStrokeWidth={16}
+        />
+      ) : (
         /* Standard arrow (pass/run) */
         <Arrow
           points={[startRelX, startRelY, endRelX, endRelY]}

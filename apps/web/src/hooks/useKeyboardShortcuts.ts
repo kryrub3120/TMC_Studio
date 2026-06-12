@@ -9,7 +9,7 @@
  * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-1
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, type RefObject } from 'react';
 import { useBoardStore } from '../store';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -48,6 +48,9 @@ export interface UseKeyboardShortcutsParams {
   
   // Context menu state (for guards)
   contextMenuVisible: boolean;
+
+  // Konva stage ref for pointer hit-testing (scroll-to-resize)
+  stageRef: RefObject<any>;
 }
 
 /**
@@ -66,6 +69,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     addStep,
     onOpenPricingModal, // PR3
     contextMenuVisible,
+    stageRef,
   } = params;
   
   // ===== Command Registry (PR1) =====
@@ -74,6 +78,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   // ===== Board Store Actions =====
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
+  const addBallGroupAtCursor = useBoardStore((s) => s.addBallGroupAtCursor);
   const addTextAtCursor = useBoardStore((s) => s.addTextAtCursor);
   const addEquipmentAtCursor = useBoardStore((s) => s.addEquipmentAtCursor);
   const duplicateSelected = useBoardStore((s) => s.duplicateSelected);
@@ -214,22 +219,35 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd && e.shiftKey) {
           e.preventDefault();
           handleExportPDF();
+        } else if (!isCmd && e.altKey && e.shiftKey) {
+          e.preventDefault();
+          addPlayerAtCursor('team4');
+          showToast('Team 4 Player');
+        } else if (!isCmd && e.altKey) {
+          e.preventDefault();
+          addPlayerAtCursor('team3');
+          showToast('Team 3 Player');
         } else if (!isCmd && e.shiftKey) {
           e.preventDefault();
           addPlayerAtCursor('away');
-          showToast('Away Player');
+          showToast('Team 2 Player');
         } else if (!isCmd) {
           e.preventDefault();
           addPlayerAtCursor('home');
-          showToast('Home Player');
+          showToast('Team 1 Player');
         }
         break;
         
       case 'b':
         if (!isCmd) {
           e.preventDefault();
-          addBallAtCursor();
-          showToast('Ball');
+          if (e.shiftKey) {
+            addBallGroupAtCursor();
+            showToast('Ball cluster');
+          } else {
+            addBallAtCursor();
+            showToast('Ball');
+          }
         }
         break;
         
@@ -316,9 +334,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           undo();
           showToast('Cofnięto');
         } else {
-          // Z = rect zone tool, Shift+Z = ellipse zone tool
+          // Z = rect zone tool, Shift+Z = ellipse zone tool, Alt+Z = polygon zone tool
           e.preventDefault();
-          setActiveTool(e.shiftKey ? 'zone-ellipse' : 'zone');
+          setActiveTool(e.altKey ? 'zone-polygon' : e.shiftKey ? 'zone-ellipse' : 'zone');
         }
         break;
         
@@ -327,9 +345,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           duplicateSelected();
           showToast('Duplicated');
-        } else {
+        } else if (e.shiftKey) {
           e.preventDefault();
           setActiveTool('drawing');
+        } else {
+          e.preventDefault();
+          setActiveTool('arrow-dribble');
+          showToast('Dribble arrow');
         }
         break;
         
@@ -463,7 +485,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           }
         }
         break;
-        
+
       case 'h':
         if (!isCmd) {
           e.preventDefault();
@@ -891,7 +913,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     // Dependencies
     cmdRegistry,
     commandPaletteOpen, closeCommandPalette, openCommandPalette, contextMenuVisible,
-    addPlayerAtCursor, addBallAtCursor, addTextAtCursor, addEquipmentAtCursor,
+    addPlayerAtCursor, addBallAtCursor, addBallGroupAtCursor, addTextAtCursor, addEquipmentAtCursor,
     duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements, createGroup,
     undo, redo, deleteSelected,
     cycleZoneShape, cyclePlayerShape, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
@@ -962,4 +984,56 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       }
     };
   }, [setPlayerOrientation, showToast]);
+
+  // Scroll-to-resize: wheel over a SELECTED element scales it (no modifier keys).
+  // Equipment -> scaleSelectedEquipmentBy (multiplicative); others -> resizeSelected.
+  // Ctrl/Cmd = zoom and Alt = orientation are handled elsewhere and excluded here.
+  useEffect(() => {
+    let lastApplied = 0;
+    const STEP_MS = 60;
+
+    const handleResizeWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      if (useUIStore.getState().viewportLocked) return;
+
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      const state = useBoardStore.getState();
+      const { selectedIds, elements } = state;
+      if (selectedIds.length === 0) return;
+
+      // Resolve pointer -> top-most node under cursor, walk up to an element id.
+      stage.setPointersPositions(e);
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+
+      let node: any = stage.getIntersection(pos);
+      let hitId: string | null = null;
+      while (node) {
+        const nid = typeof node.id === 'function' ? node.id() : undefined;
+        if (nid && selectedIds.includes(nid)) { hitId = nid; break; }
+        node = typeof node.getParent === 'function' ? node.getParent() : null;
+      }
+      if (!hitId) return;
+
+      e.preventDefault();
+
+      // Throttle smooth/trackpad wheels into discrete steps.
+      const now = Date.now();
+      if (now - lastApplied < STEP_MS) return;
+      lastApplied = now;
+
+      const el = elements.find((x) => x.id === hitId);
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      if (el && el.type === 'equipment') {
+        state.scaleSelectedEquipmentBy(factor);
+      } else {
+        state.resizeSelected(factor);
+      }
+    };
+
+    window.addEventListener('wheel', handleResizeWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleResizeWheel);
+  }, [stageRef]);
 }

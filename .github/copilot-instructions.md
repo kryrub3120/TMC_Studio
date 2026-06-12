@@ -12,6 +12,8 @@ Projekt jest w fazie MVP. Obowiazuje scisly podzial na srodowisko Dev lokalne i 
 
 ## Workflow
 
+### Dla pojedynczego zadania (bez Mastera)
+
 ```text
 @Ask
   -> pytania, eksploracja, wyjasnienia, zero zmian
@@ -28,7 +30,47 @@ TY
   -> oceniasz wynik: ACCEPT / LOOP AGAIN / STOP
 ```
 
+### Dla planu z wieloma sprintami (Master Autopilot)
+
+```text
+@Ask
+  -> pytania, eksploracja, wyjasnienia, zero zmian
+
+@Plan
+  -> planowanie, podzial na sprinty, ryzyka, kryteria akceptacji
+  -> konczy sie decyzja: APPROVE PLAN / CHANGE PLAN / STOP
+
+@MasterAutopilot (PREFEROWANY dla wielu sprintow)
+  -> analizuje glowny plan, dzieli na sprinty, wykrywa zaleznosci
+  -> wybiera i czyta SKILL.md z .github/skills/ per sprint
+  -> dziala w JEDNEJ sesji - nie deleguje do @Delivery
+  -> wewnetrzne passy: DeliveryPass -> TesterPass -> FixPass -> MasterVerifier -> SprintGate
+  -> wewnetrzny loop az do DoD albo limitu
+  -> pyta uzytkownika TYLKO przy blockerach, scope/product decisions, prod/data/payment risk
+  -> po ostatnim sprincie: Final Master Summary
+
+TY
+  -> oceniasz wynik: ACCEPT / STOP / CHANGE PLAN
+  -> odpowiadasz tylko na ASK USER lub BLOCKED
+```
+
 `@Implementer` i `@Tester` sa dostepne jako tryb reczny, gdy uzytkownik chce miec osobna kontrole nad implementacja i testowaniem.
+
+### Ktorego workflow uzyc?
+
+| Scenariusz | Uzyj |
+|------------|------|
+| Pojedyncze male zadanie | **Delivery** (bez Mastera) |
+| Plan z wieloma sprintami (S1-S6) | **Master Autopilot** (preferowany) |
+| Tylko eksploracja/pytania | **Ask** (zero agentow) |
+| Tylko implementacja (manualny nadzor) | **Implementer** recznie |
+| Tylko testy (manualny nadzor) | **Tester** recznie |
+
+- **Master Autopilot jest preferowany dla wielu sprintow.** Dziala w jednej sesji, nie wymaga przeklejania promptow.
+- **Master Autopilot nie deleguje do zewnetrznego @Delivery.** Role Delivery/Tester sa wewnetrznymi passami.
+- **Master Autopilot jest finalnym gatekeeperem sprintu.** DeliveryPass moze uwazac sprint za gotowy, ale tylko MasterVerifier + SprintGate zatwierdza.
+- **Skille sa dobierane per sprint** z `.github/skills/` przez SkillSelectionPass i czytane przed passami, ktore ich uzywaja.
+- Zobacz `docs/AGENT_ORCHESTRATION.md`.
 
 ---
 
@@ -36,7 +78,7 @@ TY
 
 Agent `Plan` jest agentem systemowym Copilota i nie jest modyfikowany.
 
-Kazdy plan przed przekazaniem do `Delivery` musi zawierac:
+Kazdy plan przed przekazaniem do `Delivery` albo `MasterAutopilot` musi zawierac:
 
 - Cel zadania
 - Zakres zmian
@@ -47,9 +89,9 @@ Kazdy plan przed przekazaniem do `Delivery` musi zawierac:
 - Wymagane testy
 - Decyzje uzytkownika: `APPROVE PLAN / CHANGE PLAN / STOP`
 
-`Delivery` moze zaczac prace tylko po jasnym `APPROVE PLAN`.
+`Delivery` albo `MasterAutopilot` moze zaczac prace tylko po jasnym `APPROVE PLAN`.
 
-`Delivery` NIE moze rozszerzyc zatwierdzonego zakresu. Jesli odkryje potrzebe wiekszej zmiany, oznacza ja jako `OUT OF SCOPE` albo `BLOCKER` i raportuje uzytkownikowi.
+`Delivery` i `MasterAutopilot` NIE moga rozszerzyc zatwierdzonego zakresu. Jesli odkryja potrzebe wiekszej zmiany, oznaczaja ja jako `OUT OF SCOPE` albo `BLOCKER` i raportuja uzytkownikowi.
 
 ---
 
@@ -67,6 +109,7 @@ Przyklady limitow:
 3proby
 15min
 4proby 20min
+6 sprintow 3proby na sprint
 ```
 
 Agent zatrzymuje sie, gdy pierwszy limit zostanie osiagniety.
@@ -77,6 +120,27 @@ Agent zatrzymuje sie, gdy pierwszy limit zostanie osiagniety.
 - Kazda iteracja musi miec osobny plik w `thoughts/`.
 - Agent konczy raportem z opcjami: `ACCEPT / LOOP AGAIN / STOP`.
 - Gdy uzytkownik odpowie `LOOP AGAIN: [feedback]`, agent kontynuuje od obecnego stanu i traktuje feedback jako dodatkowe kryteria DoD.
+
+### Master Autopilot LOOP
+
+Dla duzych planow z wieloma sprintami:
+
+```text
+@MasterAutopilot LOOP [liczba sprintow] [limit na sprint]: [glowny plan]
+```
+
+Przyklad:
+
+```text
+@MasterAutopilot LOOP 6 sprintow 3proby na sprint:
+[tu wklejam glowny plan z S1-S6]
+```
+
+Master Autopilot sam:
+- analizuje plan i dzieli na sprinty,
+- wybiera skille per sprint i czyta wybrane `SKILL.md`,
+- wykonuje wewnetrzny loop (DeliveryPass -> TesterPass -> FixPass -> MasterVerifier -> SprintGate),
+- pyta uzytkownika TYLKO przy blockerach i decyzjach produktowych.
 
 ---
 
