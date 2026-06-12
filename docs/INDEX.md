@@ -27,7 +27,7 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 | `CURRENT_SPRINT_PLAN.md` | Aktywny plan operacyjny |
 | `PLAN_BRAKUJACYCH_FUNKCJI.md` | Szczegoly sprintow G/E/F i dalszych epikow |
 | `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md` | Security/pre-launch blockery do ponownej weryfikacji |
-| `DOCUMENTATION_CLEANUP_PLAN.md` | Mapa porzadkow i archiwum |
+| `DOCUMENTATION_CLEANUP_PLAN.md` | Mapa porzadkow i archiwum (✅ WYKONANY 2026-06-12) |
 
 ---
 
