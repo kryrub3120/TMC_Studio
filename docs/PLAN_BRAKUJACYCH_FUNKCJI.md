@@ -1,8 +1,8 @@
 # TMC Studio — Plan brakujących funkcji po aktualnych sprintach (v2)
 
 **Data:** 2026-06-10
-**Status:** Plan po korekcie — czeka na zatwierdzenie (APPROVE PLAN / CHANGE PLAN / STOP)
-**Bazowany na:** `docs/IMPLEMENTATION_PLAN_SPRINTS.md`, `docs/AUDIT_COMPREHENSIVE_2026_06_10.md`, `docs/FEATURE_STATUS.md`, `docs/SYSTEM_ARCHITECTURE.md`
+**Status:** Szczegolowy plan pomocniczy. Aktywna kolejnosc i rozstrzygniecia sa w `docs/CURRENT_SPRINT_PLAN.md`.
+**Bazowany na:** `docs/archive/planning/IMPLEMENTATION_PLAN_SPRINTS.md`, `docs/archive/audits/AUDIT_COMPREHENSIVE_2026_06_10.md`, `docs/archive/inventory/FEATURE_STATUS_2026-06-10.md`, `docs/SYSTEM_ARCHITECTURE.md`
 
 ---
 
@@ -13,7 +13,7 @@ Po wdrożeniu aktualnych sprintów (A–D3) i poniższych zmian użytkownik zysk
 1. **Security foundation** — blokery B1–B3 załatane (post-logout data leak, RLS na `project_shares`, RLS na `profiles`).
 2. **Usprawniony panel zapisu** — lista projektów z sortowaniem, stanami saving/saved/error/offline, tworzeniem/zmianą nazwy/usuwaniem z potwierdzeniem, autozapis z throttled thumbnailem.
 3. **Prawy sidebar z pomocą** — duży, pływający przycisk otwiera nieblokujący panel ze skrótami, wskazówkami i statusem zapisu.
-4. **Tutorial strzałkowy 5 kroków w 20s** — szybkie wprowadzenie dla nowych użytkowników.
+4. **Coach Tour onboarding 6 kroków** — szybkie, wizualne first experience dla nowych użytkowników.
 5. **Premium Club** (oddzielny epik) — Club Premium z zarządzaniem dostępami przez admina.
 
 Łączny szacowany czas core: **14–21h** (Sprint 0 + A verification + G + E + F).
@@ -35,7 +35,7 @@ Premium Club to osobny epik z własnym harmonogramem, poprzedzony Stripe QA.
 ### Poza zakresem tego planu
 - Blokery B1–B3 (Post-logout data leak, RLS na project_shares, RLS na profiles/folders) — **osobny Sprint 0**, zrobiony PRZED tymi sprintami. Plan: `PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md`.
 - Pełna kalibracja touch (Issue #4 w audycji) — tylko placeholder w Sprint D4 planu bazowego.
-- Animacje S2 (onion skin, step thumbnails, drag reorder steps) — osobny plan w `ROADMAP.md`.
+- Animacje S2 (onion skin, step thumbnails, drag reorder steps) — osobny plan historyczny w `docs/archive/strategy/ROADMAP.md`.
 - Migracja do CommandRegistry (cmd.*) dla wszystkich akcji — osobny refaktor.
 - E2E tests — osobny temat po betcie.
 - **Premium Team Setup** — osobny Epik H, realizowany po betcie i po Stripe QA.
@@ -107,7 +107,7 @@ Poniższa tabela pokazuje które pliki są współdzielone między sprintami E, 
 | **A** | Sprint A verification/domknięcie | 🔴 BLOCKER | S0 | 🟢 NISKIE | 1h (verification) |
 | **G** | Save Files Sidebar UX/UI + Logic | 🔴 BLOCKER przed launch | S0 + A | 🟠 ŚREDNIE | 6–8h |
 | **E** | Right Sidebar + Floating Help Button | 🟡 HIGH | S0 + A | 🟠 ŚREDNIE | 4–6h |
-| **F** | 5-step Tutorial | 🟠 MEDIUM | D3 (auto-expand), E (opcjonalnie) | 🟠 ŚREDNIE | 3–5h |
+| **F** | Coach Tour onboarding | ✅ DONE | E / targety UI | 🟠 ŚREDNIE | wdrożone 2026-06-12 |
 | **EPIK H** | Premium Team Setup | 🔵 NISKI (po betcie) | Entitlements (gotowe) + Stripe QA | 🔴 WYSOKIE | **Osobny epik** — patrz sekcja Epik H |
 
 **Rekomendowana kolejność:** S0 → A (verification) → G → E → F → (po betcie) EPIK H
@@ -219,112 +219,88 @@ Dodanie wyskakującego prawego sidebara z pomocą/skrótami/wskazówkami/statuse
 
 ---
 
-## Sprint F — 5-step Tutorial
+## Sprint F — Coach Tour onboarding
 
 ### Cel
-Szybki onboarding strzałkowy (5 kroków, max 20 sekund) prowadzący użytkownika po kluczowych funkcjach. Pokazuje się raz dla nowych użytkowników. Można pominąć.
+Szybki, atrakcyjny first experience dla nowego gościa. Tutorial ma jasno wskazać realne miejsca w interfejsie, pokazać skróty i zachęcić do natychmiastowej pracy na tablicy.
+
+**Status:** DONE / implemented 2026-06-12.
 
 ### Zakres
 
-#### F1 — Struktura tutoriala (5 kroków)
+#### F1 — Struktura tutoriala (6 kroków)
 
-| Krok | Treść tooltipa | Cel (strzałka wskazuje na) | Czas (s) |
-|------|---------------|---------------------------|----------|
-| 1 | "**Dodaj zawodnika** — naciśnij `P` lub kliknij tutaj" | Pusta tablica / środek canvasa (lub przycisk dodawania jeśli istnieje) | 4 |
-| 2 | "**Dodaj strzałkę** — naciśnij `A` i przeciągnij od zawodnika" | Toolbar lub canvas (wizualizacja narzędzia strzałki) | 4 |
-| 3 | "**Przeciągnij zawodnika** — przesuń go w dowolne miejsce" | Canvas z przykładowym zawodnikiem | 4 |
-| 4 | "**Animuj** — naciśnij `Space` aby zobaczyć taktykę w ruchu" | BottomStepsBar (przycisk Play) | 4 |
-| 5 | "**Gotowe!** — naciśnij `?` aby zobaczyć wszystkie skróty" | Floating button (Sprint E) lub ikona `?` w TopBar | 4 |
+| Krok | Fokus | Cel UI | Skróty / cue |
+|------|-------|--------|---------------|
+| 1 | Skróty i szybkie dodawanie | `data-tour="shortcuts"` w TopBar | `P`, `B`, `A`, `?`, `Cmd+K` |
+| 2 | Inspector i PPM | `data-tour="inspector"` w RightInspector | `I`, `PPM`, `Enter` |
+| 3 | Orientacja boiska/zawodników i vision | `data-tour="inspector"` | `O`, `[`, `]`, `V` |
+| 4 | Sprzęt treningowy | `data-tour="shortcuts"` | `J`, `Y`, `C`, `U` |
+| 5 | Export | `data-tour="export"` w TopBar | PNG, PDF, GIF |
+| 6 | Więcej opcji / Pro | `data-tour="premium"` | Projects, Cloud, Pro |
 
-**Razem:** 20 sekund (5 × 4s).
+Uwaga: w aktualnym produkcie `W` jest Print Mode. Orientacja boiska jest pod `O`, a orientacja/vision zawodników przez `[`, `]`, `V`.
 
 #### F2 — Zachowanie
-- **Auto-advance:** Każdy krok trwa 4s, potem automatycznie przechodzi do następnego.
-- **Skip:** Użytkownik może kliknąć "Skip" (mały przycisk w tooltipie) → kończy tutorial, ustawia `tutorialCompleted: true`.
-- **Kliknięcie w tooltip:** Nie robi nic (tylko pausuje auto-advance? **Decyzja:** Nie pausuje — tutorial jest tak krótki że pauza nie ma sensu).
-- **Interakcja z canvasem:** Dozwolona podczas tutoriala (użytkownik może kliknąć w canvas, tooltip nie blokuje).
-- **Animacja:** Tooltip wjeżdża z góry/dołu/boku z `opacity 0→1` (200ms, `duration-normal`). Strzałka wskazująca cel — prosty trójkąt lub linia SVG.
-- **Po ostatnim kroku:** Tooltip znika, `tutorialCompleted: true`, żaden toast ani gratulacje (ciche zakończenie).
+- **Auto-advance:** Każdy krok ma timer/progress; użytkownik może przejść dalej ręcznie.
+- **Sterowanie:** Back, Next/Finish i Skip.
+- **Spotlight:** aktywny target jest podświetlony, reszta interfejsu przyciemniona bez zmiany layoutu.
+- **Strzałka:** zakrzywiona SVG arrow wskazuje aktywny target.
+- **Mini-demo:** każdy krok ma małą animowaną demonstrację (shortcuts, inspector, orientation, equipment, export, premium).
+- **Po ostatnim kroku:** tutorial kończy się i ustawia `tutorialCompleted: true`.
 
 #### F3 — Stan tutoriala
-- **Gdzie zapisać:** `useUIStore.ts` lub `useAuthStore.ts`.
-  - **Decyzja:** `useUIStore.ts` — `tutorialCompleted: boolean`, `showTutorial: boolean`. Persystowane w `localStorage` (przez istniejący mechanizm persist `useUIStore`).
-  - Dla zalogowanych: opcjonalnie zapisz w `user_preferences` w Supabase (sync na future, nie teraz).
+- **Gdzie zapisać:** `useUIStore.ts`.
+- **Pola:** `tutorialCompleted`, `showTutorial`, `tutorialForceVisible`.
+- **Manual restart:** `replayTutorial()` ustawia `tutorialCompleted: false`, `showTutorial: true`, `tutorialForceVisible: true`.
 - **Warunek pokazania:**
-  - `tutorialCompleted === false`
-  - `elements.length === 0` (pusta tablica) — tutorial pokazuje się tylko przy pierwszym wejściu na pustą tablicę.
-  - Jeśli użytkownik wczytał istniejący projekt → tutorial nie pokazuje się (nawet jeśli `tutorialCompleted === false`).
+  - `showTutorial === true`
+  - `tutorialCompleted === false` albo `tutorialForceVisible === true`
 - **Kiedy NIE pokazywać:**
-  - Guest mode powracający — jeśli tablica nie jest pusta.
-  - Po załadowaniu projektu z chmury.
   - W print mode.
   - Gdy CheatSheet jest otwarty.
+  - Gdy Help Sidebar jest otwarty.
 
 #### F4 — Pozycjonowanie tooltipów
-- Każdy krok ma target element (np. `.toolbar-add-player`, `.bottom-steps-bar`).
-- Jeśli target nie istnieje (przycisk nie wyrenderowany) → tooltip pokazuje się na środku canvasa.
+- Każdy krok ma target CSS selector oparty o stabilne `data-tour`.
+- Jeśli target nie istnieje → card spada do bezpiecznej pozycji na środku viewportu.
 - Tooltip nie może wyjść poza viewport. Jeśli target jest blisko krawędzi → tooltip po przeciwnej stronie.
-- **Auto-expand (Sprint D3):** Tooltip musi reagować na zmianę zoom/scroll. Jeśli canvas zmieni pozycję podczas tutoriala, tooltip śledzi target lub resetuje pozycję.
+- Pozycja przelicza się przy zmianie kroku, scroll, resize i orientationchange.
 
 #### F5 — Mobile
-- Tooltipy są większe (łatwiejsze do tapnięcia "Skip").
-- Strzałki są opcjonalne — na mobile wystarczy tooltip z tekstem.
-- Ta sama sekwencja, ale targety mogą być inne (np. toolbar na mobile jest w innym miejscu).
+- Card ma responsywną szerokość i mieści się w viewport.
+- Spotlight i label są clampowane do ekranu.
+- Strzałka może skracać się względem pozycji targetu, ale nie powinna zasłaniać przycisków na cardzie.
 
 #### F6 — Implementacja
-- **Nowy komponent:** `packages/ui/src/TutorialOverlay.tsx` — główny komponent tutoriala.
-- **Nowy plik danych:** `packages/ui/src/tutorialSteps.ts` — tablica 5 kroków z targetami i treścią.
-- **Stan:** `useUIStore.ts` — `tutorialCompleted`, `showTutorial`.
-- **Timer:** `useEffect` z `setTimeout` 4s na krok. Reset przy unmount.
-- **Render:** W `CanvasShell.tsx` (albo nad canvasem).
-- **Strzałki:** Inline SVG, obliczana pozycja względem targetu (getBoundingClientRect).
+- **Komponent:** `packages/ui/src/TutorialOverlay.tsx`.
+- **Dane:** `packages/ui/src/tutorialSteps.ts`.
+- **Stan:** `apps/web/src/store/useUIStore.ts`.
+- **Integracja:** `apps/web/src/app/board/BoardPage.tsx` i `apps/web/src/app/routes/useBoardPageState.ts`.
+- **Targety:** `packages/ui/src/TopBar.tsx`, `packages/ui/src/RightInspector.tsx`.
 
 ### Poza zakresem
 - Interaktywny tutorial (gdzie użytkownik musi wykonać akcję przed przejściem dalej) — to skomplikowane, nie MVP.
-- Tutorial dla zalogowanych funkcji premium (cloud sync, export).
 - Analytics (który krok user skipnął) — można dodać później.
 
-### Pliki do sprawdzenia przed implementacją
-- `apps/web/src/store/useUIStore.ts` — obecnie persistowane stany.
-- `packages/ui/src/ShortcutsHint.tsx` — istniejący hint, wzór do naśladowania.
-- `packages/ui/src/EmptyStateOverlay.tsx` — istniejący empty state, w którym może być tutorial trigger.
-- `apps/web/src/components/CanvasShell.tsx` — miejsce renderu.
-- `docs/DESIGN_SYSTEM.md` §7 (z-index) — warstwa tooltipa.
-
-### Kroki implementacji
-
-1. **Stwórz `tutorialSteps.ts`:** Zdefiniuj 5 kroków (target CSS selector, title, description, position hint).
-2. **Stwórz `TutorialOverlay.tsx`:**
-   - Renderuje tooltip + strzałkę na aktualnym kroku.
-   - Timer 4s na krok.
-   - Auto-advance i opcja Skip.
-   - Pozycjonowanie względem targetu z korektą viewport.
-3. **useUIStore:** Dodaj `tutorialCompleted`, `showTutorial`, `setTutorialCompleted`, `dismissTutorial`.
-4. **Integracja:** W `CanvasShell.tsx` — sprawdź przy montowaniu czy pokazać tutorial (pusta tablica i `!tutorialCompleted`).
-5. **EmptyState integracja:** Jeśli EmptyStateOverlay jest wyświetlone, tutorial może być nad nim.
-6. **CSS:** Tooltip z `z-tutorial` (wyższy niż canvas, niższy niż modal).
-7. **Export w `packages/ui/src/index.ts`.**
-
 ### Kryteria akceptacji
-- [ ] Tutorial pokazuje się tylko na pustej tablicy, pierwszy raz.
-- [ ] 5 kroków, każdy ~4s → łącznie ~20s.
-- [ ] Auto-advance działa (tooltip zmienia się co 4s).
-- [ ] Skip kończy tutorial natychmiast.
-- [ ] Po ostatnim kroku tutorial znika.
-- [ ] `tutorialCompleted` persistuje w localStorage.
-- [ ] Po dodaniu elementu i odświeżeniu → tutorial NIE pokazuje się (bo elements.length > 0).
-- [ ] Po załadowaniu zapisanego projektu → tutorial NIE pokazuje się.
-- [ ] Tooltip nie wychodzi poza viewport.
-- [ ] Mobile: tooltip czytelny, Skip tapialny.
-- [ ] `aria-label` na tooltipie i przycisku Skip.
-- [ ] Auto-expand (D3) nie powoduje "uciekania" tooltipa.
+- [x] 6 kroków Coach Tour.
+- [x] Auto-advance i ręczne Next/Back.
+- [x] Skip kończy tutorial natychmiast.
+- [x] Po ostatnim kroku tutorial znika.
+- [x] `tutorialCompleted` persistuje w localStorage.
+- [x] Restart z Help Sidebar pokazuje tutorial ponownie.
+- [x] Tooltip/card nie wychodzi poza viewport na desktop i mobile.
+- [x] Spotlight + arrow wskazują realne elementy UI.
+- [x] `aria-label` na overlay/card i przyciskach sterujących.
+- [x] Brak zależności od `elements.length === 0`.
 
 ### Testy
-1. Manual: Fresh state → tutorial pokazuje się.
-2. Manual: Skip → znika, nie wraca po odświeżeniu.
-3. Manual: Poczekaj 20s → tutorial kończy się sam.
-4. Manual: Dodaj playera przed tutorialem → nie pokazuje się.
-5. Manual: Mobile viewport → tooltip nie ucięty.
+1. `packages/ui`: `tsc --noEmit` — pass.
+2. `apps/web`: `tsc --noEmit` — pass.
+3. `apps/web`: `vitest run` — 99/99 pass.
+4. Manual desktop 1280x720 — Coach Tour widoczny po restart z Help Sidebar, spotlight/arrow/card poprawne.
+5. Manual mobile 390x844 — card w viewport, brak błędów konsoli.
 
 ### Ryzyka
 - 🟠 ŚREDNIE: Pozycjonowanie tooltipa gdy target zmienia pozycję (auto-expand, animacja). Mitigacja: tooltip z `position: fixed` i korekcją na resize.
@@ -663,7 +639,7 @@ Zebrane z audytu kodu (`AUDIT_COMPREHENSIVE_2026_06_10.md`) i listy bugów. Niez
 
 | # | Usprawnienie | Wartość | Ryzyko | Czas |
 |---|-------------|---------|--------|------|
-| Q10 | **Logger replacement** — zastąp 101 console.log globalnym loggerem z flagą DEV | Produkcja-ready, bezpieczeństwo | 🟢 NISKIE | 2h (PR-2 z BETA_READY_SPRINT) |
+| Q10 | **Logger replacement** — zastąp 101 console.log globalnym loggerem z flagą DEV | Produkcja-ready, bezpieczeństwo | 🟢 NISKIE | 2h (historyczny PR-2 z `tasks/archive/BETA_READY_SPRINT.md`) |
 | Q11 | **Guest Login Sync (PR-UX-1)** — autozapis guest work po zalogowaniu | Nie tracisz danych przy rejestracji | 🟠 ŚREDNIE | 2–3h |
 | Q12 | **Settings Modal full integration** — podpięcie handlery (updateProfile, changePassword, deleteAccount) | Użytkownik może zarządzać kontem | 🟠 ŚREDNIE | 1–2h |
 | Q13 | **Folder limits enforcement** — `can('createFolder')` w UI (Free: 3) | Spójność monetyzacji | 🟢 NISKIE | 30min |
@@ -686,10 +662,10 @@ Pytania, które wymagają decyzji użytkownika przed rozpoczęciem implementacji
 2. **Czy HelpSidebar ma sekcję "Status zapisu", czy to już istnieje w TopBar?** Jeśli TopBar już pokazuje status (OfflineBanner), to sekcja może być redundantna. Ale w sidebarze jest bardziej dostępna.
 3. **Czy sidebar na mobile ma być full-width czy drawer?** Sugeruję: `< md` → full-width, `≥ md` → drawer 320px.
 
-### Sprint F — Tutorial
-4. **Czy tutorial ma się pokazywać również w guest mode?** Jeśli guest mode ma localStorage, to stan `tutorialCompleted` będzie persistowany. Sugeruję: tak, dla wszystkich.
-5. **Czy po skipnięciu tutoriala można go ręcznie uruchomić ponownie?** Sugeruję: tak, przez HelpSidebar → przycisk "Pokaż tutorial ponownie".
-6. **Jaki język tutoriala?** Sugeruję: angielski (spójny z resztą UI), ale to zależy od grupy docelowej.
+### Sprint F — Coach Tour
+4. **Czy tutorial ma się pokazywać również w guest mode?** Rozstrzygnięte: tak, onboarding jest first experience dla gościa i użytkownika.
+5. **Czy po skipnięciu tutoriala można go ręcznie uruchomić ponownie?** Rozstrzygnięte: tak, przez HelpSidebar → restart tutoriala.
+6. **Jaki język tutoriala?** Rozstrzygnięte na teraz: angielski, spójnie z aktualnym UI.
 
 ### Sprint G — Save Panel
 7. **Czy thumbnail ma być generowany dla wszystkich zapisów, czy tylko manual save?** Decyzja w planie: manual save zawsze, autosave max raz na 30-60s. Do potwierdzenia: 30s czy 60s?
@@ -719,12 +695,12 @@ Pytania, które wymagają decyzji użytkownika przed rozpoczęciem implementacji
 
 - **Sprint 0 + Sprint A verification** — Sprint 0 to backend/DB, A verification to frontend. Mogą być równoległe (osobne branche).
 - **Quick wins Q5–Q9** — można wrzucić między sprintami jako małe commity. Nie wymagają osobnego sprintu.
-- **Sprint F (Tutorial)** można zacząć research (struktura kroków, targety) przed D3, ale finalne pozycjonowanie po D3.
+- **Sprint F (Coach Tour)** jest wdrożony; dalsze prace to tylko polish/analytics/treści.
 
 ### Czego nie robić teraz
 
 - **Epik H (Premium Club)** — odłóż po bettę, po Stripe QA przez `@StripeTester`. To nie jest sprint — to osobny epik 16–24h z własnym harmonogramem.
-- **Sprint F (Tutorial)** — zacznij dopiero po D3 (auto-expand) lub przynajmniej uwzględnij w implementacji.
+- **Sprint F od zera** — nie używaj starego promptu 5-step; aktualny wariant to Coach Tour.
 - **Q10–Q13** — przydatne, ale nie krytyczne przed betą. Rób po głównych sprintach.
 
 ### Kolejność wykonania (rekomendowana)
@@ -736,9 +712,7 @@ Sprint A verification (domknięcie) [1h]
     ↓
 Sprint G — Save Panel [7h] ← priorytet przed publicznym launch
     ↓
-Sprint E — Help Sidebar [5h] ← po G (współdzielone pliki)
-    ↓
-Sprint F — Tutorial [4h] ← po D3
+Sprint E/F — DONE (Help Sidebar + Coach Tour)
     ↓
 [po betcie] EPIK H — Premium Club [16-24h] ← po Stripe QA przez @StripeTester
 ```
@@ -751,7 +725,7 @@ Po zatwierdzeniu planu, użyj tych promptów:
 
 **Prompt 1 — Sprint 0 (Blokery):**
 ```
-@Delivery LOOP 3proby: Zaimplementuj Sprint 0 z IMPLEMENTATION_PLAN_SPRINTS.md — fix blokerów B1-B3 z PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md:
+@Delivery LOOP 3proby: Zaimplementuj Security Sprint B1-B3 z CURRENT_SPRINT_PLAN.md i PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md:
 1. B1: Post-logout data leak — w useAuthStore.ts signOut() dodaj newDocument(), clear localStorage, clear autosave timer
 2. B2: RLS na project_shares — nowa migracja z ENABLE ROW LEVEL SECURITY i politykami
 3. B3: Sprawdź RLS na profiles i project_folders — jeśli brak, dodaj migrację
@@ -783,16 +757,13 @@ Przeczytaj najpierw istniejący kod ProjectsDrawer.tsx i AutosaveService.ts. Zap
 Sprawdź że nie koliduje z RightInspector i podpisami zawodników. Zapisz thoughts.
 ```
 
-**Prompt 4 — Sprint F (Tutorial):**
+**Prompt 4 — Sprint F (Coach Tour polish only):**
 ```
-@Delivery LOOP 3proby 20min: Zaimplementuj Sprint F z PLAN_BRAKUJACYCH_FUNKCJI.md:
-1. Stwórz tutorialSteps.ts w packages/ui/src/ — 5 kroków z targetami i treścią
-2. Stwórz TutorialOverlay.tsx — tooltip + strzałka, timer 4s/krok, auto-advance, Skip
-3. Dodaj tutorialCompleted do useUIStore.ts (persisted localStorage)
-4. Zintegruj w CanvasShell.tsx — pokaż tylko gdy elements.length===0 && !tutorialCompleted
-5. Tooltip pozycjonowany względem targetu (getBoundingClientRect), fixed pozycja, korekcja viewport
-6. Uwzględnij auto-expand (D3) — tooltip nie ucieka gdy canvas zmienia rozmiar
-Sprawdź na mobile. Zapisz thoughts.
+@Delivery LOOP 2proby 20min:
+Wykonaj tylko polish istniejącego Coach Tour, jeśli user poprosi o zmianę treści/designu.
+Nie wracaj do starego 5-step tooltipa i nie dodawaj warunku elements.length===0.
+Przed zmianą przeczytaj: TutorialOverlay.tsx, tutorialSteps.ts, useUIStore.ts, BoardPage.tsx.
+Po zmianie sprawdź desktop + mobile i zapisz thoughts.
 ```
 
 **Prompt 5 — Stripe + Premium Planning (NIE implementacja):**

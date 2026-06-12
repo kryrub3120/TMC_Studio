@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Sprint F: Coach Tour onboarding + tutorial restart polish** (2026-06-12)
+  - Prosty 5-step tooltip zastąpiony 6-krokowym **Coach Tour** dla first experience: shortcuts, Inspector/PPM, orientacja/vision, sprzęt treningowy, export, Pro/more options.
+  - Tutorial ma spotlight na realnych elementach UI, animowaną strzałkę, target label, progress, keycaps, mini-demo dla każdego kroku oraz Back/Next/Skip.
+  - `replayTutorial()` z Help Sidebar wymusza ponowne pokazanie tutoriala nawet na domyślnej tablicy z gotową formacją.
+  - Usunięto warunek `elements.length === 0`; pierwszy onboarding działa dla nowego gościa na realnym startowym stanie boardu.
+  - Dodano stabilne kotwice `data-tour` w TopBar i RightInspector (`shortcuts`, `inspector`, `export`, `premium`).
+  - Zweryfikowano: `packages/ui` typecheck, `apps/web` typecheck, `apps/web` vitest (99/99), manual desktop + mobile viewport w przeglądarce.
 - **Sprint A: Quick wins UX + podpisy zawodników + Enter→edit** (2026-06-10)
   - **aria-label** na przyciskach Zoom In, Zoom Out, Fit w `ZoomWidget.tsx`
   - **Toasty undo/redo**: "Cofnięto" (Ctrl+Z) i "Przywrócono" (Ctrl+Shift+Z)

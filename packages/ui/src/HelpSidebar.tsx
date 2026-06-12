@@ -24,6 +24,8 @@ export interface HelpSidebarProps {
   onManualSave?: () => void;
   /** Whether print mode is active (hides saving section) */
   isPrintMode?: boolean;
+  /** Restart the 5-step tutorial */
+  onRestartTutorial?: () => void;
 }
 
 /** Close icon */
@@ -72,6 +74,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
   hasUnsavedChanges,
   onManualSave,
   isPrintMode = false,
+  onRestartTutorial,
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -207,7 +210,17 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
           </div>
         </div>
 
-        {/* Section 4: Save Status */}
+        {/* Section 5: Restart Tutorial */}
+        <div>
+          <SectionHeader title="Tutorial" />
+          <button
+            onClick={onRestartTutorial}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-surface2 hover:bg-surface border border-border text-xs text-text transition-colors"
+          >
+            <span className="text-accent">▶</span>
+            <span>Restart 5-step tutorial</span>
+          </button>
+        </div>
         {!isPrintMode && (
           <div>
             <SectionHeader title="Save Status" />

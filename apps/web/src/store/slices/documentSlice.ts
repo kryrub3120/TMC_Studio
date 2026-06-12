@@ -169,6 +169,12 @@ export const createDocumentSlice: StateCreator<
         cloudProjectId: null,
         currentStepIndex: 0,
       });
+      // Reset tutorial for new empty board
+      import('../useUIStore').then(({ useUIStore }) => {
+        if (elements.length === 0) {
+          useUIStore.getState().setShowTutorial(true);
+        }
+      }).catch(() => {});
     },
     
     updateTeamSettings: (team, settings) => {

@@ -1,6 +1,6 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-06-10
+**Data:** 2026-06-12
 **Status:** ACTIVE SOURCE OF TRUTH dla kolejnych sprintow
 **Bazowany na:** `docs/PLAN_BRAKUJACYCH_FUNKCJI.md`, `thoughts/2026-06-10/2350_master-verifier_sprint-plan-verification.md`, `docs/PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md`
 
@@ -16,11 +16,12 @@ Jesli inne dokumenty planistyczne mowia cos sprzecznego o kolejnych sprintach, t
 
 ## Aktualna decyzja planu
 
-1. **Security Sprint B1-B3** idzie pierwszy.
-2. **Sprint G** idzie po security.
-3. **Sprint E** oznacza teraz **Help Sidebar + Floating Help Button**.
-4. Stary zakres "Sprint E - Reszta" z `docs/archive/planning/IMPLEMENTATION_PLAN_SPRINTS.md` jest historyczny i nie jest aktywnym sprintem.
-5. **Sprint F** idzie po Sprint E, bo oba dotykaja overlayow w `CanvasShell.tsx` / `BoardPage.tsx`.
+1. **Sprint E** jest wdrozony jako Help Sidebar + restart tutoriala. ✅ DONE
+2. **Sprint F** jest wdrozony jako 6-krokowy Coach Tour onboarding. ✅ DONE
+3. **Sprint Docs Cleanup** (obecny) — aktualizacja dokumentacji po sprintach E/F/G.
+4. **Security Sprint B1-B3** pozostaje najwazniejszym blockerem przed publicznym ruchem/beta launch.
+5. **Sprint G** idzie po security, bo dotyka zapisu, projektow i statusu sync.
+6. Stary zakres "Sprint E - Reszta" z `docs/archive/planning/IMPLEMENTATION_PLAN_SPRINTS.md` jest historyczny i nie jest aktywnym sprintem.
 
 ---
 
@@ -31,8 +32,8 @@ Jesli inne dokumenty planistyczne mowia cos sprzecznego o kolejnych sprintach, t
 | 1 | Security B1-B3 | NEXT | Post-logout data leak, RLS `project_shares`, RLS `profiles` / `project_folders` | `docs/PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md` |
 | 2 | Sprint A verification | OPTIONAL CHECK | Potwierdzenie quick wins i podpisow zawodnikow | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
 | 3 | Sprint G | PLANNED | Save Panel, ProjectsDrawer polish, status zapisu, thumbnail throttling | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
-| 4 | Sprint E | PLANNED | Help Sidebar + Floating Help Button | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
-| 5 | Sprint F | PLANNED | Tutorial overlay | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
+| 4 | Sprint E | DONE | Help Sidebar + restart tutoriala | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
+| 5 | Sprint F | DONE | Coach Tour onboarding, 6 krokow, spotlight/arrow/keycaps/demo | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
 | 6 | Sprint I/J | LATER | Dalsze post-beta / quality / release items | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
 | 7 | Epik K/L | LATER | Premium / team / wieksze epiki | `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` |
 
@@ -48,7 +49,17 @@ Aktualnie:
 
 - **Sprint E** = Help Sidebar + Floating Help Button.
 - **Thumbnail / auto-expand notes** = historyczne notatki albo osobny przyszly zakres, jesli wroci potrzeba.
-- **Tutorial** = Sprint F.
+- **Tutorial** = Sprint F, wdrozony jako Coach Tour w `TutorialOverlay.tsx`.
+
+### Sprint F
+
+Pierwotny plan mowil o prostym 5-step tooltipie tylko dla pustej tablicy. Po decyzji produktowej zakres zostal rozszerzony i wdrozony jako 6-krokowy first-experience Coach Tour:
+
+- wskazywanie realnych elementow UI przez `data-tour`,
+- spotlight + strzalka + target label,
+- keycaps i mini-demo w kazdym kroku,
+- restart z Help Sidebar,
+- brak blokady `elements.length === 0`, bo nowy board startuje z gotowa formacja.
 
 ### Beta readiness
 

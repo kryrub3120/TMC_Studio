@@ -171,6 +171,7 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
         {actions.map((item) => (
           <button
             key={item.action}
+            data-tool={item.action}
             onClick={() => onAction?.(item.action)}
             className="w-full px-3 py-2 flex items-center justify-between rounded-lg text-left hover:bg-surface2 transition-colors group"
           >
@@ -390,7 +391,7 @@ const PropsTab: React.FC<{
           {/* Player Orientation Settings */}
           {playerOrientationSettings && onUpdatePlayerOrientation && (
             <>
-              <div className="pt-3 border-t border-border">
+              <div data-tour="orientation-panel" className="pt-3 border-t border-border">
                 <h3 className="text-xs font-medium text-muted uppercase tracking-wide mb-3">Player Orientation</h3>
                 
                 {/* Show Orientation Toggle */}
@@ -946,7 +947,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   return (
     <>
       {/* ── DESKTOP/TABLET md+ (≥768px): full sidebar ── */}
-      <div className="hidden md:flex flex-col bg-surface border-l border-border z-inspector relative transition-all duration-normal">
+      <div data-tour="inspector" className="hidden md:flex flex-col bg-surface border-l border-border z-inspector relative transition-all duration-normal">
         {/* Collapse Toggle Button — zawsze widoczny */}
         {isOpen && (
           <button

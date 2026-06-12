@@ -264,6 +264,111 @@ pnpm dev
 
 ---
 
-**Last updated:** 2026-01-04
-**Pattern version:** 1.0
-**Components using pattern:** ZoneNode, ArrowNode
+**Last updated:** 2026-06-12
+**Pattern version:** 2.0
+**Components using pattern:** ZoneNode, ArrowNode, PlayerNode (ALT+drag rotation), EquipmentNode
+
+---
+
+## Virtual Canvas Architecture
+
+### DOM Layout (Flex Containment Chain)
+
+Od Sprintu D3 (PR-UX-3) canvas używa następującej struktury DOM, która pozwala na skalowanie i auto-dopasowanie:
+
+```
+BoardPage (flex flex-col min-h-0 h-screen)
+  └── TopBar
+  └── div (flex-1 flex min-w-0 min-h-0 overflow-hidden p-4 relative)
+       └── BoardCanvasSection (absolute inset-0 overflow-hidden flex items-center justify-center)
+            └── CanvasShell (w-full h-full)
+                 └── Konva Stage + overlays
+```
+
+**Kluczowe własności:**
+- `min-w-0` / `min-h-0` nadpisuje domyślny `min-size:auto` flexa, pozwalając dzieciom na shrink
+- `absolute inset-0` zapobiega rozciąganiu przez intrinsic dimensions Konvy
+- Overlaye (CheatSheet, ZoomWidget, ShortcutsHint) renderują się POZA kontenerem absolutnym
+
+### Render Model
+
+| Komponent | Rola |
+|-----------|------|
+| **Stage** | Wypełnia 100% viewport (width/height = kontenera) |
+| **Layer** | Odbiera transform zoom/pan (scaleX, scaleY, x, y) |
+| **Group (nie Layer)** | Zawiera elementy — NIE odbiera transform (tylko Layer) |
+
+```
+Stage (100% viewport, bez skalowania)
+  └── Layer (scale, x, y — zoom i pan)
+       └── Group 1..N (elementy boiska)
+            └── PlayerNode, BallNode, ArrowNode, itd.
+```
+
+### Zoom & Pan System
+
+**Zoom range:** 25%–200% (`ZOOM_MIN: 0.25`, `ZOOM_MAX: 2.0`)
+
+**Efektywny zoom:**
+```
+effectiveZoom = userZoom × fitZoom
+```
+
+Gdzie `fitZoom` automatycznie wylicza się, aby dopasować boisko do kontenera.
+
+**Auto-scale na resize okna:**
+- `ResizeObserver` na pomiarowym kontenerze wykrywa zmianę rozmiaru
+- Jeśli obecny zoom użytkownika przekracza zoom dopasowania dla nowego kontenera → zoom jest clampowany do fit i pan re-centrowany
+- Bypassuje viewport lock (board nigdy nie może być ucięty przez resize okna)
+
+### Zoom Shortcuts
+
+| Shortcut | Behavior |
+|----------|----------|
+| `Cmd+=` / `+` (plain, bez zaznaczonego sprzętu) | Zoom in +25% |
+| `Cmd+-` / `-` (plain, bez zaznaczonego sprzętu) | Zoom out -25% |
+| `Ctrl+Scroll` | Zoom to cursor position |
+| `0` (zero key) | Fit view (reset zoom + pan) |
+| Zoom Widget buttons | +/- 25% or Fit |
+
+**Uwaga:** Plain `+`/`-` są wyłączone gdy zaznaczono equipment (priorytet ma skalowanie sprzętu) i gdy viewport jest zablokowany.
+
+### Pan Controls
+
+| Trigger | Behavior |
+|---------|----------|
+| `Space+Drag` | Pan canvas |
+| Two-finger drag (mobile) | Pan canvas |
+| Pinch (mobile) | Zoom in/out |
+
+**Pan clamping:** 80px margines poza krawędzie boiska
+**Pan reset:** gdy zoom ≤ 1.0 (boisko mieści się w viewporcie)
+
+### Viewport Lock
+
+- Włączany/wyłączany przez `cmd.view` (toggle kłódki)
+- Gdy locked: użytkownik nie może ręcznie zmienić zoom/pan
+- Auto-scale na resize okna działa POMIMO locka (board nie może być ucięty)
+- Przydatne do zachowania spójnego widoku podczas prezentacji
+
+### Auto-Fit & Auto-Center
+
+- **Auto-fit na load:** Po załadowaniu dokumentu zoom jest ustawiany tak, by całe boisko było widoczne
+- **Auto-center na zoom-out:** Gdy użytkownik zoomuje out i boisko mieści się w viewporcie → pan jest auto-centrowany
+- **Auto-center na resize:** Przy zmianie rozmiaru okna pan jest re-centrowany jeśli boisko mieści się w viewporcie
+
+### Mobile Touch
+
+- `touch-action: none` na kontenerze canvasa (zapobiega natywnym gestom przeglądarki)
+- Pinch zoom: adjusts user zoom level
+- Two-finger pan: moves viewport
+- Single-finger drag: element interaction (if not on Space)
+- Double-tap: activates text/number editing (if on player/text)
+
+### Własności zoom-zależne
+
+| Feature | Gated | Threshold |
+|---------|-------|-----------|
+| Arms rendering | ✅ Yes | `zoomThreshold` (default 40%) |
+| Number rotation | ✅ Yes | `zoomThreshold` (default 40%) |
+| Vision cone | ❌ No | Always visible |

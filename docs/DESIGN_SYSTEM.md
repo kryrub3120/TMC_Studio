@@ -177,7 +177,10 @@ Hierarchia nakładania — **nigdy nie używaj `z-` z hardcoded wartością**. U
 | `z-inspector` | 10 | Panel inspektora (prawy) |
 | `z-topbar` | 20 | Górny pasek nawigacji |
 | `z-bottombar` | 20 | Dolny pasek kroków |
+| `z-sidebar` | 25 | Help Sidebar (prawy panel pomocy) |
 | `z-cheatsheet` | 30 | Cheatsheet overlay |
+| `z-floating` | 35 | Floating Help Button |
+| `z-tutorial` | 38 | Tutorial Overlay (Coach Tour) |
 | `z-toast` | 40 | Toast notifications |
 | `z-modal` | 50 | Modale (Auth, Pricing, Confirm, etc.) |
 | `z-palette` | 60 | Command palette |

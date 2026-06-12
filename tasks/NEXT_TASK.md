@@ -1,103 +1,82 @@
-# Current Task: BETA-TESTING
+# Current Task: COACH TOUR + DOCS CLEANUP — READY FOR COMMIT
 
-## Status: 🚀 READY TO LAUNCH
-
----
-
-## What We're Doing
-
-**BETA Testing Phase**: Launch product to beta testers with TEST Stripe mode to gather UX/UI feedback on complete flow (signup → upgrade → pro features) before going LIVE.
+## Status: READY FOR COMMIT
 
 ---
 
-## Context
+## Co zostało zrobione
 
-- **V1 Foundation:** ✅ Complete
-- **Payment Integration:** ✅ Complete (PR-PAY-1 through PR-PAY-5)
-- **Stripe Mode:** TEST keys configured in Netlify
-- **Goal:** Validate UX/UI and payment flow before switching to LIVE mode
+### Sprint F — Coach Tour onboarding ✅
+6-krokowy first-experience Coach Tour z spotlight, strzałką, keycaps i mini-demo:
+- `packages/ui/src/TutorialOverlay.tsx` — główny komponent overlay
+- `packages/ui/src/tutorialSteps.ts` — definicje 6 kroków
+- Integracja w `useUIStore.ts`, `BoardPage.tsx`, `BoardCanvasSection.tsx`
+- Restart z HelpSidebar
 
----
+### Sprint E — Help Sidebar + Floating Help Button ✅
+- `packages/ui/src/FloatingHelpButton.tsx` — pływający przycisk (z-floating)
+- `packages/ui/src/HelpSidebar.tsx` — panel pomocy/skrótów/statusu (z-sidebar, non-modal)
+- `packages/ui/src/helpSidebarData.ts` — dane shortcutów i wskazówek
 
-## Beta Testing Checklist
+### Sprint G — Save Panel / ProjectsDrawer / Autosave rozszerzenia ✅
+- `packages/ui/src/ProjectsDrawer.tsx` — ulepszony panel projektów
+- `apps/web/src/services/AutosaveService.ts` — thumbnail throttling, projectSaveStatus
+- `apps/web/src/store/useUIStore.ts` — stany: projektSaveStatus, helpSidebarOpen, tutorial
 
-### Pre-Launch
-- [x] V1 code complete and deployed
-- [x] Stripe TEST keys configured in Netlify
-- [x] TEST Price IDs in code
-- [x] All migrations applied to Supabase
-- [ ] Beta testing plan documented
-- [ ] Test scenarios defined
-- [ ] Feedback form prepared
+### Sprint Docs Cleanup ✅
+Aktualizacja dokumentacji po wprowadzonych zmianach:
+- `docs/DESIGN_SYSTEM.md` §7 — dodane tokeny z-sidebar, z-floating, z-tutorial
+- `docs/COMMANDS_MAP.md` — dodane ~40 brakujących skrótów (equipment, arrow numbering, orientation, text, zoom)
+- `docs/DATA_MODEL.md` §5 — kompletna sekcja DB Schema (project_folders, project_tags, user_preferences, stripe_webhook_events, RLS project_shares, is_pinned)
+- `docs/DRAG_DROP_PATTERN.md` — nowa sekcja Virtual Canvas Architecture (zoom, pan, viewport lock, auto-fit)
+- `docs/ARCHITECTURE_OVERVIEW.md` — rozszerzony Service Layer (AutosaveService thumbnail), dodane komponenty E/F/G
+- `docs/SYSTEM_ARCHITECTURE.md` §11 — dodane Hard Rules dla HelpSidebar, TutorialOverlay, AutosaveService, ProjectsDrawer
 
-### During Beta
-- [ ] Send invites to beta testers
-- [ ] Monitor signup flow
-- [ ] Track upgrade conversions
-- [ ] Collect UX/UI feedback
-- [ ] Monitor Stripe webhook success rate
-- [ ] Document bugs and issues
-
-### Post-Beta
-- [ ] Review all feedback
-- [ ] Implement critical bug fixes
-- [ ] Make UI/UX improvements
-- [ ] Create LIVE products in Stripe
-- [ ] Update code with LIVE Price IDs
-- [ ] Switch Netlify to LIVE Stripe keys
-- [ ] Final production test
-- [ ] GO LIVE! 🚀
+### Zweryfikowane jako aktualne (bez zmian)
+- `ENTITLEMENTS.md` ✅, `IMPLEMENTATION_CONTRACTS.md` ✅, `DB_CONVENTIONS.md` ✅
+- `PRODUCT_PHILOSOPHY.md` ✅, `INDEX.md` ✅, `FEATURE_SPEC.md` ✅
+- `UX_PATTERNS.md` ✅, `DOCUMENTATION_CLEANUP_PLAN.md` ✅
 
 ---
 
-## Test Scenarios for Beta Testers
+## Source of Truth
 
-### Scenario 1: Guest User Flow
-1. Visit site without login
-2. Create a simple tactical board
-3. Try to create 2nd project → should trigger signup
-4. Complete signup flow
-5. Verify gets Free account (3 projects)
-
-### Scenario 2: Free → Pro Upgrade
-1. Login with Free account
-2. Create 3 projects (hit limit)
-3. Try to create 4th → limit reached modal
-4. Click "Upgrade to Pro"
-5. Complete Stripe checkout (TEST card: 4242 4242 4242 4242)
-6. Verify redirect back with success message
-7. Verify Pro badge appears
-8. Verify unlimited projects unlocked
-
-### Scenario 3: Pro Features
-1. As Pro user, create 10+ projects (no limit)
-2. Create board with 15+ steps (no limit for Pro)
-3. Export GIF (should work)
-4. Export PDF (should work)
-5. Test Customer Portal (manage billing)
-
-### Scenario 4: Cancellation Flow
-1. Open Customer Portal
-2. Cancel subscription
-3. Verify tier drops to Free
-4. Verify limits re-apply (3 projects, 10 steps)
+- `docs/CURRENT_SPRINT_PLAN.md` — aktualny plan operacyjny (zaktualizowany)
+- `docs/PLAN_BRAKUJACYCH_FUNKCJI.md` — szczegolowy opis sprintow G/E/F i dalszych epikow
+- `docs/FEATURE_SPEC.md` — kanoniczne zachowanie produktu
+- `CHANGELOG.md` — wpis do commita/release notes
+- `docs/PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md` — security / pre-launch blockers
+- `docs/AGENT_ORCHESTRATION.md` — jak uruchamiac Delivery i MasterAutopilot
 
 ---
 
-## Feedback Collection
+## Next Order
 
-Key questions for testers:
-- Was signup flow intuitive?
-- Was upgrade process clear and trustworthy?
-- Were pricing/features easy to understand?
-- Any confusing UI elements?
-- Any bugs encountered?
-- Would you pay real money for this?
+1. **Security Sprint B1-B3** 🔴 NEXT
+   - B1: post-logout data leak
+   - B2: RLS na `project_shares`
+   - B3: RLS na `profiles` / `project_folders`
+2. **Sprint A verification** (opcjonalny, szybki sanity check)
+3. **Sprint G dokończenie** — pozostałe zadania (pinned section UI, inline rename, folder color chip)
+4. **Release-readiness / beta verification**
 
 ---
 
-## Related Docs
+## Immediate Prompt
 
-- `docs/BETA_TESTING_PLAN.md` - Detailed beta plan
-- `docs/ROADMAP.md` - Sprint 7: Beta Phase
-- `docs/DEPLOYMENT_CHECKLIST.md` - Beta mode status
+```text
+Przygotuj commit:
+
+feat(onboarding): add coach tour tutorial
+
+Po commicie wracamy do Security Sprint B1-B3 z docs/CURRENT_SPRINT_PLAN.md i docs/PRE_LAUNCH_AUDIT_AND_FIX_PLAN.md.
+```
+
+---
+
+## Beta Checklist Resume
+
+Po security i release-readiness mozna wrocic do beta checklisty z:
+
+- `docs/archive/planning/BETA_TESTING_PLAN.md`
+- `docs/archive/planning/DEPLOYMENT_CHECKLIST.md`

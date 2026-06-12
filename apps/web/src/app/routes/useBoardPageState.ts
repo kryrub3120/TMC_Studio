@@ -157,9 +157,11 @@ export function useBoardPageState(props: BoardPageProps) {
   const toggleHelpSidebar = useUIStore((s) => s.toggleHelpSidebar);
   const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
   const tutorialCompleted = useUIStore((s) => s.tutorialCompleted);
+  const tutorialForceVisible = useUIStore((s) => s.tutorialForceVisible);
   const setTutorialCompleted = useUIStore((s) => s.setTutorialCompleted);
   const setShowTutorial = useUIStore((s) => s.setShowTutorial);
   const showTutorial = useUIStore((s) => s.showTutorial);
+  const replayTutorial = useUIStore((s) => s.replayTutorial);
   
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
@@ -462,9 +464,11 @@ export function useBoardPageState(props: BoardPageProps) {
     toggleHelpSidebar,
     projectSaveStatus,
     tutorialCompleted,
+    tutorialForceVisible,
     setTutorialCompleted,
     showTutorial,
     setShowTutorial,
+    replayTutorial,
     
     // Playback
     isPlaying,

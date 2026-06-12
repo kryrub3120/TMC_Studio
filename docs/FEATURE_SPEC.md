@@ -47,7 +47,8 @@
 11. [Z-Order & Rendering](#11-z-order--rendering)
 12. [Export](#12-export)
 13. [Save & Persistence](#13-save--persistence)
-14. [Appendices](#appendices)
+14. [Onboarding & Help](#14-onboarding--help)
+15. [Appendices](#appendices)
 
 ---
 
@@ -1519,6 +1520,43 @@ Context menu items exist for:
 - Changes sync automatically when back online
 
 **Offline detection:** Browser `navigator.onLine` API + connection testing
+
+---
+
+## 14. Onboarding & Help
+
+### 14.1 First-Run Coach Tour
+
+**Purpose:** Give a new guest a fast, visual first experience that points at the real product surface and teaches the highest-value actions before they start editing.
+
+**Trigger rules:**
+- Show when `showTutorial === true` and `tutorialCompleted === false`.
+- A manual restart from Help Sidebar calls `replayTutorial()` and force-shows the tour even if the board already contains the default starter formation.
+- Do not show while print mode, CheatSheet, or Help Sidebar are open.
+- Dismiss/complete persists through `useUIStore`.
+
+**Flow:**
+
+| Step | Focus | Target | Primary cues |
+|------|-------|--------|--------------|
+| 1 | Shortcuts | TopBar shortcuts command (`data-tour="shortcuts"`) | Keycaps `P`, `B`, `A`, `?`, `Cmd+K`; shortcut tray demo |
+| 2 | Inspector / right-click editing | RightInspector (`data-tour="inspector"`) | Inspector cards, right-click/context editing cue |
+| 3 | Pitch and player orientation | RightInspector (`data-tour="inspector"`) | `O`, `[`, `]`, `V`; orientation/vision demo |
+| 4 | Training equipment | TopBar shortcuts command (`data-tour="shortcuts"`) | `J`, `Y`, `C`, `U`; mini equipment kit |
+| 5 | Export | TopBar export button (`data-tour="export"`) | PNG/PDF/GIF export cards |
+| 6 | More options / Pro | Account/Pro area (`data-tour="premium"`) | Projects, Cloud, Pro options |
+
+**Visual behavior:**
+- Full-screen overlay with non-destructive spotlight on the target element.
+- Curved SVG arrow points to the active target.
+- Target label sits close to the spotlight and stays clamped inside the viewport.
+- Coach card includes eyebrow, title, description, mini-demo, keycaps, progress bars, Back, Next/Finish, and Skip.
+- Positioning recalculates on step change, scroll, resize, and orientation change.
+- If a target is unavailable, the card falls back to a safe centered position.
+
+### 14.2 Help Sidebar Tutorial Restart
+
+The Help Sidebar exposes a tutorial restart action. Restarting clears the completed flag, sets `showTutorial`, and enables a force-visible state so the Coach Tour appears immediately on the current board.
 
 ---
 

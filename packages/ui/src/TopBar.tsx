@@ -100,8 +100,10 @@ const IconButton: React.FC<{
   title: string;
   children: React.ReactNode;
   active?: boolean;
-}> = ({ onClick, title, children, active }) => (
+  dataTour?: string;
+}> = ({ onClick, title, children, active, dataTour }) => (
   <button
+    data-tour={dataTour}
     onClick={onClick}
     title={title}
     className={`
@@ -128,6 +130,7 @@ const AccountMenu: React.FC<{
     <div className="relative">
       {/* Avatar Button */}
       <button
+        data-tour="premium"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 p-1 rounded-md hover:bg-surface2 transition-colors"
         title="Account"
@@ -350,6 +353,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="flex items-center gap-1">
         {/* Command Palette Trigger */}
         <button
+          data-tour="shortcuts"
           onClick={onOpenPalette}
           className="
             flex items-center gap-2 px-3 py-1.5 rounded-md
@@ -366,7 +370,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="w-px h-5 bg-border mx-1" />
 
         {/* Export */}
-        <IconButton onClick={onExport} title="Export PNG">
+        <IconButton onClick={onExport} title="Export PNG" dataTour="export">
           <ExportIcon className="w-4 h-4" />
         </IconButton>
 
@@ -388,7 +392,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </IconButton>
 
         {/* Help */}
-        <IconButton onClick={onOpenHelp} title="Help & Shortcuts (?)">
+        <IconButton onClick={onOpenHelp} title="Help & Shortcuts (?)" dataTour="help">
           <HelpIcon className="w-4 h-4" />
         </IconButton>
 

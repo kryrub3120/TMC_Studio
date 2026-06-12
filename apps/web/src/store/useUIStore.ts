@@ -131,6 +131,7 @@ interface UIState {
   // Tutorial (Sprint F)
   tutorialCompleted: boolean;
   showTutorial: boolean;
+  tutorialForceVisible: boolean;
   
   // Actions - Theme
   toggleTheme: () => void;
@@ -203,6 +204,8 @@ interface UIState {
   // Actions - Tutorial (Sprint F)
   setTutorialCompleted: (completed: boolean) => void;
   setShowTutorial: (show: boolean) => void;
+  /** Replay the 5-step tutorial — resets completed flag and forces show */
+  replayTutorial: () => void;
   
   // Breakpoint
   breakpoint: Breakpoint;
@@ -280,6 +283,7 @@ export const useUIStore = create<UIState>()(
       helpSidebarOpen: false,
       tutorialCompleted: false,
       showTutorial: false,
+      tutorialForceVisible: false,
       breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
@@ -481,7 +485,8 @@ export const useUIStore = create<UIState>()(
       
       // Tutorial actions (Sprint F)
       setTutorialCompleted: (completed) => set({ tutorialCompleted: completed }),
-      setShowTutorial: (show) => set({ showTutorial: show }),
+      setShowTutorial: (show) => set({ showTutorial: show, tutorialForceVisible: show ? get().tutorialForceVisible : false }),
+      replayTutorial: () => set({ tutorialCompleted: false, showTutorial: true, tutorialForceVisible: true }),
     }),
     {
       name: 'tmc-ui-settings',

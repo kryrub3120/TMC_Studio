@@ -126,17 +126,18 @@ export function BoardPage(props: BoardPageProps) {
     return () => setThumbnailGenerator(null);
   }, [state.stageRef]);
 
-  // Tutorial trigger (Sprint F): show on empty board, once per user
+  // Tutorial trigger (Sprint F): show once per user.
+  // New boards include an initial lineup, so this cannot depend on elements.length.
   // Not when print mode, cheat sheet, or help sidebar are active
   useEffect(() => {
-    const shouldShow = !state.tutorialCompleted
-      && state.elements.length === 0
-      && !state.isPrintMode
+    const canShow = !state.isPrintMode
       && !state.cheatSheetVisible
       && !state.helpSidebarOpen;
+    const shouldShow = canShow
+      && (state.tutorialForceVisible || !state.tutorialCompleted);
     state.setShowTutorial(shouldShow);
   }, [
-    state.tutorialCompleted, state.elements.length, state.isPrintMode,
+    state.tutorialCompleted, state.tutorialForceVisible, state.isPrintMode,
     state.cheatSheetVisible, state.helpSidebarOpen, state.setShowTutorial,
   ]);
 
@@ -148,6 +149,11 @@ export function BoardPage(props: BoardPageProps) {
   const handleTutorialComplete = () => {
     state.setTutorialCompleted(true);
     state.setShowTutorial(false);
+  };
+
+  const handleRestartTutorial = () => {
+    state.replayTutorial();
+    state.setHelpSidebarOpen(false);
   };
 
   return (
@@ -281,6 +287,7 @@ export function BoardPage(props: BoardPageProps) {
             onTogglePrint={state.togglePrintMode}
             saveStatus={state.projectSaveStatus}
             isPrintMode={state.isPrintMode}
+            onRestartTutorial={handleRestartTutorial}
           />
 
           {/* Tutorial Overlay (Sprint F) — controlled by state.showTutorial */}
@@ -289,7 +296,6 @@ export function BoardPage(props: BoardPageProps) {
               isVisible={true}
               onDismiss={handleTutorialDismiss}
               onComplete={handleTutorialComplete}
-              elementsCount={state.elements.length}
             />
           )}
 

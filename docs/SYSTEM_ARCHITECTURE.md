@@ -592,7 +592,7 @@ Enforced by `commitlint.config.js` (`@commitlint/config-conventional`).
 
 ### 🏛️ Tier 1 — Architectural Rules (code contracts)
 
-Source of truth: `docs/MODULAR_ARCHITECTURE_STRATEGY.md` and this document.
+Source of truth: this document, `docs/ARCHITECTURE_OVERVIEW.md`, and `docs/IMPLEMENTATION_CONTRACTS.md`.
 
 - **UI → Commands only:** UI MUST NOT call Zustand store actions or `store.getState()` directly. UI mutations go ONLY through `CommandRegistry (cmd.*)`.
 - **UI reads via selectors/facades (vm)** — never raw store internals.
@@ -604,6 +604,41 @@ Source of truth: `docs/MODULAR_ARCHITECTURE_STRATEGY.md` and this document.
 - **Zustand slices MUST NOT call each other** — orchestration only via CommandRegistry/dispatch.
 - **One vertical slice per PR.** Follow PR0–PR6 migration plan. Never big-bang.
 - **PR0 = scaffolding only** (types, folders, contracts). ❌ No wiring, ❌ no runtime behavior changes.
+
+### 🧩 Tier 1b — New Components Rules (Sprint E/F/G)
+
+#### HelpSidebar & FloatingHelpButton (Sprint E)
+- **HelpSidebar is NON-MODAL:** `aria-modal="false"`, brak backdropu, canvas w pełni interaktywny.
+- **HelpSidebar z-index:** `z-sidebar` (25) — poniżej cheatsheet (30), powyżej topbar (20).
+- **FloatingHelpButton z-index:** `z-floating` (35) — pomiędzy cheatsheet (30) a tutorial (38).
+- **FloatingHelpButton ukryty:** gdy `isPrintMode === true`.
+- **Zamykanie:** ESC (globalny nasłuch tylko gdy otwarty), X button.
+- **Shortcut data:** Współdzielona struktura z CheatSheetOverlay przez `helpSidebarData.ts`.
+
+#### TutorialOverlay / Coach Tour (Sprint F)
+- **TutorialOverlay z-index:** `z-tutorial` (38) — pomiędzy floating (35) a toast (40).
+- **Trigger:** `showTutorial === true` i `tutorialCompleted === false`, lub `replayTutorial()` z HelpSidebar.
+- **Nie pokazuje się** gdy: print mode, CheatSheet, lub HelpSidebar są otwarte.
+- **Targety:** przez `data-tour="..."` atrybuty na elementach UI.
+- **Fallback:** jeśli target niedostępny → karta w bezpiecznej, wycentrowanej pozycji.
+- **Persystencja:** `tutorialCompleted` i `showTutorial` w `useUIStore`.
+
+#### AutosaveService & Thumbnail (Sprint G)
+- **Debounce:** 2000ms — ustawiony w `AutosaveConfig.debounceMs`.
+- **Thumbnail throttling:** max raz na 30s przy autosave (`thumbnailThrottleMs`), zawsze przy manual save.
+- **`forceThumbnail()`:** przy pierwszym zapisie projektu (po utworzeniu).
+- **`projectSaveStatus`:** śledzony w `useUIStore` — 'unsaved' | 'saving' | 'saved' | 'error'.
+- **Offline:** cloud save skipped, localStorage działa, OfflineBanner widoczny.
+- **Po błędzie:** `projectSaveStatus: 'error'`, retry przy kolejnej `markDirty()`.
+- **Konflikt offline/online:** MVP last-write-wins (lokalna wersja wygrywa). Pełny conflict resolution = osobny temat po betcie.
+
+#### ProjectsDrawer (Sprint G)
+- **Pozycja:** lewa strona (nie koliduje z RightInspector po prawej).
+- **Trigger:** przycisk w TopBar.
+- **Sortowanie:** `updatedAt DESC`, pinned projects na górze.
+- **Usuwanie:** przez ConfirmModal, nie `window.confirm`.
+- **Puste stany:** guest → "Zaloguj się", authenticated → "Brak projektów".
+- **Folder color chip:** kolorowy wskaźnik obok folderów (L1).
 
 ### 📝 Tier 2 — Documentation Rules
 

@@ -406,19 +406,38 @@ const DEFAULT_TEAM_SETTINGS: TeamSettings = {
 
 #### `profiles` Table
 
-User profile data:
+Extended user profile data (extends `auth.users`):
 
 ```sql
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT,
+  email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
-  stripe_customer_id TEXT,
-  is_pro BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  stripe_customer_id TEXT UNIQUE,         -- Added by 20260108000001
+  subscription_tier TEXT DEFAULT 'free'   -- 'free' | 'pro' | 'team'
+    CHECK (subscription_tier IN ('free', 'pro', 'team')),
+  subscription_expires_at TIMESTAMPTZ,
+  projects_count INTEGER DEFAULT 0,
+  preferences JSONB DEFAULT '{}',         -- Added by 20260110000000: theme, gridVisible, snapEnabled
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Indexes
+CREATE INDEX idx_profiles_email ON profiles(email);
+CREATE INDEX idx_profiles_stripe_customer_id ON profiles(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+CREATE INDEX idx_profiles_preferences ON profiles USING gin(preferences);
+```
+
+**`preferences` JSONB structure:**
+```json
+{
+  "theme": "dark",
+  "gridVisible": false,
+  "snapEnabled": false,
+  "cheatSheetVisible": false
+}
 ```
 
 #### `projects` Table
@@ -429,40 +448,135 @@ Stored tactical boards:
 CREATE TABLE projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  folder_id UUID REFERENCES project_folders(id) ON DELETE SET NULL,
-  name TEXT NOT NULL,
-  document JSONB NOT NULL,          -- BoardDocument
+  folder_id UUID REFERENCES project_folders(id) ON DELETE SET NULL,  -- Added by 20260109000002
+  name TEXT NOT NULL DEFAULT 'Untitled Board',
+  description TEXT,
+  document JSONB NOT NULL DEFAULT '{}',          -- BoardDocument
   thumbnail_url TEXT,
   is_public BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  is_template BOOLEAN DEFAULT FALSE,
+  version INTEGER DEFAULT 1,
+  tags TEXT[] DEFAULT '{}',                      -- Added by 20260109000002
+  is_favorite BOOLEAN DEFAULT FALSE,             -- Added by 20260109000002
+  is_pinned BOOLEAN DEFAULT FALSE,               -- Added by 20260209000001
+  position INTEGER DEFAULT 0,                    -- Added by 20260109000002 (sort within folder)
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- Indexes for performance
+-- Indexes
 CREATE INDEX idx_projects_user_id ON projects(user_id);
 CREATE INDEX idx_projects_folder_id ON projects(folder_id);
 CREATE INDEX idx_projects_updated_at ON projects(updated_at DESC);
+CREATE INDEX idx_projects_is_public ON projects(is_public) WHERE is_public = true;
+CREATE INDEX idx_projects_tags ON projects USING GIN(tags);
+CREATE INDEX idx_projects_is_favorite ON projects(is_favorite) WHERE is_favorite = true;
+CREATE INDEX idx_projects_is_pinned ON projects(is_pinned) WHERE is_pinned = true;
+CREATE INDEX idx_projects_position ON projects(folder_id, position);
 ```
 
 #### `project_folders` Table
 
-Project organization:
+Hierarchical folder organization for projects (added by 20260109000002):
 
 ```sql
 CREATE TABLE project_folders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  color TEXT DEFAULT '#3b82f6',
-  sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  name TEXT NOT NULL CHECK (length(name) > 0 AND length(name) <= 100),
+  color TEXT DEFAULT '#3b82f6' CHECK (color ~ '^#[0-9A-Fa-f]{6}$'),
+  icon TEXT DEFAULT 'folder',
+  description TEXT,
+  parent_id UUID REFERENCES project_folders(id) ON DELETE CASCADE,   -- Recursive nesting
+  is_pinned BOOLEAN DEFAULT FALSE,             -- Added by 20260209000001
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  
+  CONSTRAINT no_self_reference CHECK (id != parent_id)  -- Prevent circular refs
 );
+
+-- Indexes
+CREATE INDEX idx_project_folders_user_id ON project_folders(user_id);
+CREATE INDEX idx_project_folders_parent_id ON project_folders(parent_id);
+CREATE INDEX idx_project_folders_position ON project_folders(user_id, position);
+CREATE INDEX idx_project_folders_is_pinned ON project_folders(is_pinned) WHERE is_pinned = true;
 ```
 
-### Row Level Security (RLS)
+#### `project_tags` Table
+
+User-defined tags for project categorization (added by 20260109000002):
 
 ```sql
--- Projects: Users can only access their own projects
+CREATE TABLE project_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK (length(name) > 0 AND length(name) <= 50),
+  color TEXT DEFAULT '#6b7280',
+  usage_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  
+  UNIQUE(user_id, name)  -- Unique tag name per user
+);
+
+-- Indexes
+CREATE INDEX idx_project_tags_user_id ON project_tags(user_id);
+CREATE INDEX idx_project_tags_usage_count ON project_tags(user_id, usage_count DESC);
+```
+
+#### `project_shares` Table
+
+Project sharing/collaboration (see Security Sprint B1-B3):
+
+```sql
+CREATE TABLE project_shares (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+  shared_with_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  shared_with_email TEXT NOT NULL,
+  permission TEXT DEFAULT 'view' CHECK (permission IN ('view', 'edit')),
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Indexes
+CREATE INDEX idx_project_shares_project_id ON project_shares(project_id);
+CREATE INDEX idx_project_shares_user_id ON project_shares(shared_with_user_id);
+CREATE UNIQUE INDEX idx_project_shares_unique ON project_shares(project_id, shared_with_email);
+
+-- RLS: Re-enabled by 20260209000000 with deny-by-default (no policies = no access)
+ALTER TABLE project_shares ENABLE ROW LEVEL SECURITY;
+```
+
+#### `stripe_webhook_events` Table
+
+Idempotency tracking for Stripe webhook processing (added by 20260111000000):
+
+```sql
+CREATE TABLE stripe_webhook_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id TEXT NOT NULL UNIQUE,              -- Stripe event ID (evt_xxx)
+  event_type TEXT NOT NULL,                   -- checkout.session.completed, etc.
+  status TEXT NOT NULL DEFAULT 'processing',  -- processing | success | error | duplicate
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at TIMESTAMPTZ
+);
+
+-- RLS enabled (no policies = only service_role can access)
+ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
+```
+
+<small>Migracje: 20260109000002, 20260110000000, 20260111000000, 20260209000000, 20260209000001</small>
+
+### Row Level Security (RLS) Summary
+
+```sql
+-- Profiles: users can only access own profile
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+-- (policies defined in 20260109000001_fix_rls_complete.sql)
+
+-- Projects: users can only access own projects (plus public projects)
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own projects"
@@ -481,10 +595,32 @@ CREATE POLICY "Users can delete own projects"
   ON projects FOR DELETE
   USING (auth.uid() = user_id);
 
--- Public projects are visible to all authenticated users
+-- Public projects visible to all authenticated users
 CREATE POLICY "Public projects visible to all"
   ON projects FOR SELECT
   USING (is_public = TRUE);
+
+-- Folders: users can only access own folders
+ALTER TABLE project_folders ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own folders"
+  ON project_folders FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own folders"
+  ON project_folders FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+-- (additional policies in 20260109000002)
+
+-- Tags: users can only access own tags
+ALTER TABLE project_tags ENABLE ROW LEVEL SECURITY;
+-- (policies in 20260109000002)
+
+-- Stripe events: no user policies (service_role only)
+ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
+
+-- Project shares: deny-by-default (no policies = no access per 20260209000000)
+ALTER TABLE project_shares ENABLE ROW LEVEL SECURITY;
 ```
 
 ### JSONB Document Schema

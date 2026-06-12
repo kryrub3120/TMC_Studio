@@ -375,7 +375,7 @@ Services encapsulate cross-cutting concerns:
 
 | Service | Responsibility |
 |---------|---------------|
-| **AutosaveService** | Debounced cloud save after edits |
+| **AutosaveService** | Debounced cloud save after edits + thumbnail throttling (Sprint G) |
 | **ExportService** | PNG/GIF/PDF export logic |
 | **KeyboardService** | Keyboard shortcut handling |
 
@@ -393,6 +393,15 @@ useEffect(() => {
   AutosaveService.init(saveToCloud);
 }, []);
 ```
+
+**AutosaveService szczegóły (Sprint G):**
+- Debounce: 2000ms
+- `markDirty()` → ustawia `projectSaveStatus: 'unsaved'` w `useUIStore`
+- Obsługuje throttling thumbnaila: max raz na 30s przy autosave, zawsze przy manual save
+- `flush()` — force immediate save (manual save / Cmd+S)
+- `forceThumbnail()` — generuje thumbnail niezależnie od throttlingu (przy pierwszym zapisie projektu)
+- Po błędzie: `projectSaveStatus: 'error'`, retry przy kolejnej `markDirty()`
+- Offline: cloud save skipped, localStorage nadal działa, OfflineBanner widoczny
 
 **Services vs. Hooks:**
 - **Services:** Stateless utilities, singletons
@@ -543,6 +552,15 @@ Autosave is debounced (1.5s) and disabled during:
 | **UI Components** | `packages/ui/src/` |
 | **Canvas Nodes** | `packages/board/src/` |
 | **Business Logic** | `apps/web/src/lib/` or `services/` |
+
+**Nowe komponenty UI (Sprint E, F, G):**
+- `FloatingHelpButton.tsx` — duży pływający przycisk pomocy (prawy dolny róg, z-floating)
+- `HelpSidebar.tsx` — nieblokujący panel pomocy/skrótów/statusu (prawa strona, z-sidebar, non-modal)
+- `HelpSidebarData.ts` — dane shortcutów, akcji i tipów
+- `TutorialOverlay.tsx` — 6-krokowy Coach Tour onboarding (fullscreen spotlight, z-tutorial)
+- `TutorialSteps.ts` — definicje kroków tutoriala (targety data-tour, keycaps, dema)
+- `ProjectsDrawer.tsx` — panel projektów z sortowaniem, pinningiem, rename, delete
+- `AutosaveService.ts` — rozszerzony o throttling thumbnaila (Sprint G)
 
 ### ❌ Do NOT Add Logic Here:
 

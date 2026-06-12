@@ -159,6 +159,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
 
         {/* Play/Pause */}
         <button
+          data-testid="play-button"
           onClick={isPlaying ? onPause : onPlay}
           className="p-2 rounded-md bg-accent text-white hover:bg-accent-hover transition-colors"
           title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}

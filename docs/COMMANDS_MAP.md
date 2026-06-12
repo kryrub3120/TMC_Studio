@@ -17,12 +17,28 @@ TMC Studio uses two types of commands:
 |---------|----------|------|-------------|----------|
 | **Canvas Actions** |
 | `addPlayer` | P | Effect | Add player at cursor | CommandRegistry |
+| `addPlayerAway` | Shift+P | Effect | Add away player at cursor | CommandRegistry |
 | `addBall` | B | Effect | Add ball at cursor | CommandRegistry |
-| `addArrow` | A (pass), R (run) | Effect | Add arrow (click-drag) | CommandRegistry |
+| `addArrow` | A (pass), R (run), S (shoot) | Effect | Add arrow (click-drag) | CommandRegistry |
 | `addZone` | Z (rect), Shift+Z (ellipse) | Effect | Add tactical zone | CommandRegistry |
 | `addText` | T | Effect | Add text label | CommandRegistry |
 | `startDrawing` | D / H | Intent | Start freehand drawing/highlight | CommandRegistry |
 | `clearDrawings` | C | Effect | Clear all drawings | CommandRegistry |
+| `clearAll` | Shift+C | Effect | Clear ALL elements (with confirmation) | CommandRegistry |
+| **Equipment** |
+| `addGoal` | J | Effect | Add goal (standard) | CommandRegistry |
+| `addGoalMini` | Shift+J | Effect | Add goal (mini) | CommandRegistry |
+| `addMannequin` | M | Effect | Add mannequin (standard) | CommandRegistry |
+| `addMannequinFlat` | Shift+M | Effect | Add mannequin (flat) | CommandRegistry |
+| `addCone` | K | Effect | Add cone | CommandRegistry |
+| `addPole` | Shift+K | Effect | Add pole | CommandRegistry |
+| `addLadder` | Y | Effect | Add ladder | CommandRegistry |
+| `addHoop` | Q | Effect | Add hoop | CommandRegistry |
+| `addHurdle` | U | Effect | Add hurdle | CommandRegistry |
+| `equipRotate` | `[` / `]` | Intent | Rotate equipment ±15° | App |
+| `equipRotate90` | `{` / `}` (Shift+[ / ]) | Intent | Rotate equipment ±90° | App |
+| `equipScaleUp` | `+` (equip selected) | Intent | Scale equipment +15% | App |
+| `equipScaleDown` | `-` (equip selected) | Intent | Scale equipment -15% | App |
 | **Selection** |
 | `select` | Click | Intent | Select element | OverlayLayer |
 | `multiSelect` | Shift+Click | Intent | Add to selection | OverlayLayer |
@@ -38,7 +54,9 @@ TMC Studio uses two types of commands:
 | `paste` | Cmd+V | Effect | Paste from clipboard | App |
 | `cycleColor` | Alt+Up/Down | Intent | Cycle element color | App |
 | `adjustStroke` | Alt+Left/Right | Intent | Adjust stroke width | App |
-| `cycleShape` | S (player), E (zone) | Intent | Cycle element shape | App |
+| `cycleShape` | Shift+S (player), E (zone) | Intent | Cycle element shape | App |
+| `resizeRadiusUp` | Cmd+Alt+= | Effect | Increase player radius +10% | App |
+| `resizeRadiusDown` | Cmd+Alt+- | Effect | Decrease player radius -10% | App |
 | **Groups** |
 | `group` | Cmd+G | Effect | Group selected elements | CommandRegistry |
 | `ungroup` | Cmd+Shift+G | Effect | Ungroup selection | CommandRegistry |
@@ -65,14 +83,40 @@ TMC Studio uses two types of commands:
 | `save` | Cmd+S | Effect | Save project | App |
 | `newProject` | Cmd+N | Effect | New project | App |
 | `openCommandPalette` | Cmd+K | Intent | Open command palette | App |
+| **Editing (text)** |
+| `textSizeUp` | ↑ (text selected) | Intent | Increase font size +2 | App |
+| `textSizeDown` | ↓ (text selected) | Intent | Decrease font size -2 | App |
+| `textToggleBold` | ← (text selected) | Intent | Toggle bold | App |
+| `textToggleItalic` | → (text selected) | Intent | Toggle italic | App |
+| `textCycleBg` | Shift+↑ (text selected) | Intent | Cycle background color | App |
+| `textRemoveBg` | Shift+↓ (text selected) | Intent | Remove background | App |
+| **Arrow Numbering** |
+| `toggleArrowNumber` | → (arrow selected) | Intent | Toggle arrow number (Smart Sequencing) | App |
+| `toggleAutoNumbering` | Shift+N | Intent | Toggle Auto-Numbering Mode ON/OFF | App |
+| `addPassArrowAutoNum` | Shift+A | Intent | Pass arrow tool + one-shot auto-number | App |
+| `addRunArrowAutoNum` | Shift+R | Intent | Run arrow tool + one-shot auto-number | App |
+| **Player Orientation & Vision** |
+| `rotateCCW` | `[` | Effect | Rotate player -15° | App |
+| `rotateCW` | `]` | Effect | Rotate player +15° | App |
+| `rotateFineCCW` | Shift+`[` | Effect | Rotate player -5° (fine) | App |
+| `rotateFineCW` | Shift+`]` | Effect | Rotate player +5° (fine) | App |
+| `resetOrientation` | Alt+0 | Effect | Reset orientation to 0° (north) | App |
+| `toggleVision` | V (player selected) | Intent | Toggle vision cone (cycles undefined→true→false) | App |
+| `toggleVisionAll` | Shift+V | Intent | Toggle vision for ALL players (deterministic) | App |
+| `dragRotate` | ALT+drag on player | Intent | Interactive rotation (5° snap) | App |
+| `dragRotateFine` | Shift+ALT+drag | Intent | Interactive rotation (1° snap) | App |
+| `scrollRotate` | ALT+scroll wheel | Intent | Rotate with mouse wheel (debounced 300ms) | App |
 | **View** |
 | `toggleFocus` | F | Intent | Toggle focus mode | App |
 | `toggleOrientation` | O | Intent | Toggle pitch orientation | App |
 | `togglePrintMode` | W | Intent | Toggle print-friendly mode | App |
-| `zoomIn` | Cmd++ | Intent | Zoom in | App |
-| `zoomOut` | Cmd+- | Intent | Zoom out | App |
-| `zoomFit` | Cmd+0 | Intent | Fit to screen | App |
-| `showCheatSheet` | ? | Intent | Show keyboard shortcuts | App |
+| `toggleGrid` | G | Intent | Toggle grid visibility | App |
+| `toggleInspector` | I | Intent | Toggle inspector panel | App |
+| `toggleCheatSheet` | ? | Intent | Toggle cheat sheet (help overlay) | App |
+| `zoomIn` | Cmd++ / `+` (no selection) | Intent | Zoom in +25% | App |
+| `zoomOut` | Cmd+- / `-` (no selection) | Intent | Zoom out -25% | App |
+| `zoomToCursor` | Ctrl+Scroll | Intent | Zoom to cursor position | App |
+| `zoomFit` | 0 (zero) / Cmd+0 | Intent | Fit view (reset zoom + pan) | App |
 
 ---
 
@@ -108,13 +152,14 @@ cmd.addPlayer(300, 400, 'home');
 ---
 
 #### Add Arrow
-**Command:** `addArrow(type: 'pass' | 'run', startX, startY, endX, endY)`  
-**Shortcut:** `A` (pass), `R` (run)  
+**Command:** `addArrow(type: 'pass' | 'run' | 'shoot', startX, startY, endX, endY)`  
+**Shortcut:** `A` (pass), `R` (run), `S` (shoot)  
 **Type:** Effect  
 **Interaction:** Click-drag to create  
 **Colors:**
-- Pass: Red (#ff0000), 4px, dashed
-- Run: Blue (#3b82f6), 3px, solid
+- Pass: Dark gray (#1a1a1a), 4px, solid
+- Run: Orange (#f97316), 3px, dashed [8,4]
+- Shoot: Red (#ef4444), 5px, solid, double parallel lines
 
 ---
 
@@ -133,10 +178,13 @@ cmd.addPlayer(300, 400, 'home');
 **Shortcut:** `T`  
 **Type:** Effect  
 **Editing:**
-- Enter to edit
-- ↑/↓ to change font size
+- Double-click or Enter to edit content
+- ↑/↓ to change font size ±2 (range 8-72)
 - ←/→ to toggle bold/italic
-- Shift+↑ to change background color
+- Shift+↑ to cycle background color (black, white, red, green, blue, dark)
+- Shift+↓ to remove background
+- Alt+↑/↓ to cycle text color
+- Enter to save, Escape to cancel
 
 ---
 
@@ -154,6 +202,101 @@ cmd.addPlayer(300, 400, 'home');
 **Customization:**
 - Alt+Up/Down - Cycle color
 - Alt+Left/Right - Adjust stroke width (1-30px)
+
+---
+
+### Equipment Commands
+
+#### Add Equipment
+**Command:** `addEquipment(type: EquipmentType, variant: string, x, y)`  
+**Types & Shortcuts:**
+
+| Type | Standard | Mini Variant |
+|------|----------|--------------|
+| Goal | `J` | `Shift+J` (mini) |
+| Mannequin | `M` | `Shift+M` (flat) |
+| Cone | `K` | — |
+| Pole | `Shift+K` | — |
+| Ladder | `Y` | — |
+| Hoop | `Q` | — |
+| Hurdle | `U` | — |
+
+**Type:** Effect
+
+#### Equipment Interactions
+| Shortcut | Behavior | Range |
+|----------|----------|-------|
+| `[` / `]` | Rotate ±15° | 0-360° |
+| `{` / `}` (Shift+[ / ]) | Rotate ±90° | Quick 90° turns |
+| `+` (no Cmd, equip selected) | Scale +15% | 0.25-3.0 |
+| `-` (no Cmd, equip selected) | Scale -15% | 0.25-3.0 |
+| `Alt+↑/↓` | Cycle color | Shared palette |
+
+---
+
+### Arrow Numbering Commands
+
+#### Toggle Arrow Number
+**Command:** `toggleArrowNumber(id: string)`  
+**Shortcut:** `→` (ArrowRight key, arrow selected)  
+**Type:** Intent  
+**Behavior:**
+- Toggles `showNumber` ON/OFF
+- When ON: assigns next available number (max existing + 1)
+
+#### Toggle Auto-Numbering Mode
+**Command:** `toggleAutoNumbering()`  
+**Shortcut:** `Shift+N`  
+**Type:** Intent  
+**Behavior:**
+- When ON: every new arrow auto-receives sequential number + `showNumber: true`
+- When OFF: new arrows created unnumbered
+- Shows "Auto-numeracja: ON" indicator
+
+#### One-Shot Auto-Number
+**Command:** `addArrowPassAutoNum()` / `addArrowRunAutoNum()`  
+**Shortcut:** `Shift+A` (pass), `Shift+R` (run)  
+**Type:** Intent  
+**Behavior:**
+- Activates arrow tool + one-shot auto-number flag
+- After drawing valid arrow (≥20px), arrow gets next number
+- Flag resets after successful arrow creation
+
+#### Renumber All Arrows
+**Command:** `renumberAllArrows()`  
+**Trigger:** Inspector → Props → "🔃 Renumber arrows (1..N)" button  
+**Type:** Effect  
+**Behavior:**
+- Re-assigns numbers 1..N in insertion order
+- Auto-called after `deleteSelected` if any numbered arrow was deleted
+- Does NOT push history (caller owns history snapshot)
+
+---
+
+### Player Orientation & Vision Commands
+
+#### Rotate Commands
+| Shortcut | Angle | Description |
+|----------|-------|-------------|
+| `[` | -15° | Rotate counter-clockwise |
+| `]` | +15° | Rotate clockwise |
+| Shift+`[` | -5° | Fine CCW rotation |
+| Shift+`]` | +5° | Fine CW rotation |
+| Alt+0 | 0° | Reset to north |
+| ALT+drag | 5° snap | Interactive rotation |
+| Shift+ALT+drag | 1° snap | Interactive fine rotation |
+| ALT+scroll | ±15° | Mouse wheel rotation (debounced 300ms) |
+
+#### Vision Toggle
+**Shortcuts:**
+- `V` (player selected) — Toggle vision for selected player(s), cycles: undefined → true → false
+- `Shift+V` — Deterministic toggle for ALL players: if any OFF → all ON, if all ON → all OFF
+
+**Type:** Intent  
+**Behavior:**
+- Vision cone: 60° wedge, radius × 6, player color at 28% opacity
+- Per-player override (`undefined` = inherit global)
+- Gated by master orientation toggle in Inspector
 
 ---
 
