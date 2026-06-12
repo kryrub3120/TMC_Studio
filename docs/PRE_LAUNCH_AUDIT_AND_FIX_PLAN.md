@@ -1,10 +1,18 @@
 # TMC Studio — Pre-Launch Audit & Fix Plan
 
-> **REQUIRES RE-VERIFICATION:** Ten dokument zawiera wazne blockery B1-B3, ale jego dawny werdykt launch readiness nie jest aktualna zgoda na bete.
-> Aktualna decyzja: security najpierw, zgodnie z `docs/CURRENT_SPRINT_PLAN.md` i `tasks/NEXT_TASK.md`.
+> **⚠️ STATUS: B1-B3 ZWERYFIKOWANE JAKO FIXED (2026-06-12)**
+>
+> Wszystkie 3 blokery (B1 — post-logout data leak, B2 — RLS project_shares, B3 — RLS profiles/folders) zostały **zweryfikowane w kodzie jako wdrożone** podczas audytu 2026-06-12.
+>
+> - B1: `useAuthStore.ts` — signOut() czyści board, localStorage, autosave
+> - B2: migracja `20260209000000_reenable_rls_project_shares.sql` — RLS enabled
+> - B3: profiles RLS w initial schema, folders RLS + 4 policies w `20260109000002`
+>
+> Dokument pozostawiony jako evidence historyczna. Nie jest aktywnym planem pracy.
+> Aktualny plan: `docs/CURRENT_SPRINT_PLAN.md`. Najbliższe zadanie: `tasks/NEXT_TASK.md`.
 
 > **Date:** 2026-02-09  
-> **Status:** PLAN — awaiting implementation approval  
+> **Status:** ✅ ALL BLOCKERS FIXED  
 > **Scope:** Security, UX bugs, data integrity, launch readiness  
 > **Approach:** Smallest safe changes, no big-bang refactors
 
