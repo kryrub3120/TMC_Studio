@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TUTORIAL_STEPS, type TutorialStep } from './tutorialSteps';
+import { useTranslation } from './i18n.js';
 
 export interface TutorialOverlayProps {
   isVisible: boolean;
@@ -66,43 +67,49 @@ const DemoHeader: React.FC<{ label: string }> = ({ label }) => (
   </div>
 );
 
-const ShortcutDemo = () => (
-  <div className="rounded-lg border border-border bg-bg/60 p-3">
-    <DemoHeader label="Fast input" />
-    <div className="space-y-1.5">
-      {[
-        ['P', 'Home player'],
-        ['A', 'Pass arrow'],
-        ['?', 'Shortcut sheet'],
-      ].map(([key, label]) => (
-        <div key={key} className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5">
-          <span className="w-7 rounded border border-border bg-surface2 py-0.5 text-center text-[11px] font-bold text-accent">
-            {key}
-          </span>
-          <span className="text-[11px] text-text">{label}</span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const InspectorDemo = () => (
-  <div className="grid grid-cols-[1fr_auto] gap-2 rounded-lg border border-border bg-bg/60 p-3">
-    <div>
-      <DemoHeader label="Inspector" />
+const ShortcutDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.fastInput')} />
       <div className="space-y-1.5">
-        <div className="h-2 rounded bg-accent/70" />
-        <div className="h-2 w-3/4 rounded bg-surface2" />
-        <div className="h-2 w-1/2 rounded bg-surface2" />
+        {[
+          ['P', t('tutorial.demos.homePlayer')],
+          ['A', t('tutorial.demos.passArrow')],
+          ['?', t('tutorial.demos.shortcutSheet')],
+        ].map(([key, label]) => (
+          <div key={key} className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5">
+            <span className="w-7 rounded border border-border bg-surface2 py-0.5 text-center text-[11px] font-bold text-accent">
+              {key}
+            </span>
+            <span className="text-[11px] text-text">{label}</span>
+          </div>
+        ))}
       </div>
     </div>
-    <div className="tour-float rounded-md border border-border bg-surface px-2 py-1.5 shadow-lg">
-      <div className="mb-1 h-1.5 w-12 rounded bg-accent/70" />
-      <div className="mb-1 h-1.5 w-10 rounded bg-surface2" />
-      <div className="h-1.5 w-8 rounded bg-red-400/60" />
+  );
+};
+
+const InspectorDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="grid grid-cols-[1fr_auto] gap-2 rounded-lg border border-border bg-bg/60 p-3">
+      <div>
+        <DemoHeader label={t('tutorial.demos.inspector')} />
+        <div className="space-y-1.5">
+          <div className="h-2 rounded bg-accent/70" />
+          <div className="h-2 w-3/4 rounded bg-surface2" />
+          <div className="h-2 w-1/2 rounded bg-surface2" />
+        </div>
+      </div>
+      <div className="tour-float rounded-md border border-border bg-surface px-2 py-1.5 shadow-lg">
+        <div className="mb-1 h-1.5 w-12 rounded bg-accent/70" />
+        <div className="mb-1 h-1.5 w-10 rounded bg-surface2" />
+        <div className="h-1.5 w-8 rounded bg-red-400/60" />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const OrientationDemo = () => (
   <div className="relative h-28 overflow-hidden rounded-lg border border-border bg-[linear-gradient(90deg,rgba(46,230,166,.12)_1px,transparent_1px),linear-gradient(0deg,rgba(46,230,166,.12)_1px,transparent_1px)] bg-[size:18px_18px]">
@@ -138,39 +145,49 @@ const EquipmentDemo = () => (
   </div>
 );
 
-const ExportDemo = () => (
-  <div className="rounded-lg border border-border bg-bg/60 p-3">
-    <DemoHeader label="Output" />
-    <div className="flex items-center gap-2">
-      {['PNG', 'PDF', 'GIF'].map((format, index) => (
-        <span
-          key={format}
-          className="tour-pop rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-[11px] font-semibold text-accent"
+const ExportDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.output')} />
+      <div className="flex items-center gap-2">
+        {['PNG', 'PDF', 'GIF'].map((format, index) => (
+          <span
+            key={format}
+            className="tour-pop rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-[11px] font-semibold text-accent"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
+            {format}
+          </span>
+        ))}
+        <span className="h-px flex-1 bg-border" />
+        <span className="rounded-md bg-surface2 px-2 py-1 text-[11px] text-text">{t('tutorial.demos.share')}</span>
+      </div>
+    </div>
+  );
+};
+
+const PremiumDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {[
+        t('tutorial.demos.projects'),
+        t('tutorial.demos.cloud'),
+        t('tutorial.demos.pro'),
+      ].map((item, index) => (
+        <div
+          key={item}
+          className="tour-pop rounded-lg border border-border bg-bg/60 p-2 text-center"
           style={{ animationDelay: `${index * 100}ms` }}
         >
-          {format}
-        </span>
+          <div className="mx-auto mb-2 h-6 w-6 rounded-full bg-accent/15 ring-1 ring-accent/30" />
+          <div className="text-[10px] font-semibold text-text">{item}</div>
+        </div>
       ))}
-      <span className="h-px flex-1 bg-border" />
-      <span className="rounded-md bg-surface2 px-2 py-1 text-[11px] text-text">Share</span>
     </div>
-  </div>
-);
-
-const PremiumDemo = () => (
-  <div className="grid grid-cols-3 gap-2">
-    {['Projects', 'Cloud', 'Pro'].map((item, index) => (
-      <div
-        key={item}
-        className="tour-pop rounded-lg border border-border bg-bg/60 p-2 text-center"
-        style={{ animationDelay: `${index * 100}ms` }}
-      >
-        <div className="mx-auto mb-2 h-6 w-6 rounded-full bg-accent/15 ring-1 ring-accent/30" />
-        <div className="text-[10px] font-semibold text-text">{item}</div>
-      </div>
-    ))}
-  </div>
-);
+  );
+};
 
 const StepDemo: React.FC<{ step: TutorialStep }> = ({ step }) => {
   switch (step.demo) {
@@ -196,6 +213,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   onDismiss,
   onComplete,
 }) => {
+  const { t } = useTranslation();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [tooltipSize, setTooltipSize] = useState({ width: 360, height: 300 });
@@ -365,6 +383,8 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   };
   const targetCenter = targetRect ? getCenter(targetRect) : null;
   const arrowPath = targetCenter ? getPath(cardCenter, targetCenter) : null;
+  const stepKey = `tutorial.steps.${currentStep.id}`;
+  const stepTitle = t(`${stepKey}.title`);
 
   return (
     <div className="fixed inset-0 z-tutorial pointer-events-none">
@@ -392,7 +412,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
             left: clamp(targetRect.left, 8, window.innerWidth - 160),
           }}
         >
-          {currentStep.targetLabel}
+          {t(`${stepKey}.target`)}
         </div>
       )}
 
@@ -425,25 +445,25 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
           width: tooltipSize.width,
         }}
         role="dialog"
-        aria-label={`Tutorial step ${currentStep.id}: ${currentStep.title}`}
+        aria-label={t('tutorial.ariaStep', { id: currentStep.id, title: stepTitle })}
       >
         <div className="tour-card overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
           <div className="border-b border-border bg-bg/45 px-4 py-3">
             <div className="mb-2 flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-                  {currentStep.eyebrow}
+                  {t(`${stepKey}.eyebrow`)}
                 </div>
                 <div className="mt-1 text-[11px] font-medium text-muted">
-                  Step {currentStep.id} of {TUTORIAL_STEPS.length}
+                  {t('tutorial.step', { current: currentStep.id, total: TUTORIAL_STEPS.length })}
                 </div>
               </div>
               <button
                 onClick={handleSkip}
                 className="rounded-md px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:bg-surface2 hover:text-text"
-                aria-label="Skip tutorial"
+                aria-label={t('tutorial.skip')}
               >
-                Skip
+                {t('tutorial.skip')}
               </button>
             </div>
             <div className="flex gap-1">
@@ -460,8 +480,8 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
           <div className="space-y-4 p-4">
             <div>
-              <h3 className="text-lg font-semibold leading-tight text-text">{currentStep.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{currentStep.description}</p>
+              <h3 className="text-lg font-semibold leading-tight text-text">{stepTitle}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{t(`${stepKey}.description`)}</p>
             </div>
 
             <KeycapRail keycaps={currentStep.keycaps} />
@@ -473,13 +493,13 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                 disabled={currentStepIndex === 0}
                 className="rounded-md px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface2 hover:text-text disabled:pointer-events-none disabled:opacity-35"
               >
-                Back
+                {t('tutorial.back')}
               </button>
               <button
                 onClick={handleNext}
                 className="rounded-md bg-accent px-4 py-2 text-xs font-semibold text-[#062016] shadow-lg shadow-accent/20 transition-transform hover:scale-[1.02] hover:bg-accent-hover"
               >
-                {isLastStep ? currentStep.cta ?? 'Start building' : currentStep.cta ?? 'Next'}
+                {isLastStep ? t(`${stepKey}.cta`) || t('tutorial.startBuilding') : t(`${stepKey}.cta`) || t('tutorial.next')}
               </button>
             </div>
           </div>

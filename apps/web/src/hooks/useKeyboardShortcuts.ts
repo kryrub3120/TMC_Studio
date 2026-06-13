@@ -15,6 +15,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { isTextElement, isPlayerElement, isZoneElement, isArrowElement, PITCH_THEMES } from '@tmc/core';
 import { formations } from '@tmc/presets';
+import { useTranslation } from '@tmc/ui';
 import { useCommandRegistry } from './useCommandRegistry';
 import { ANIMATION_ENABLED } from '../config/featureFlags';
 
@@ -71,6 +72,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     contextMenuVisible,
     stageRef,
   } = params;
+  const { t } = useTranslation();
+  const showTranslatedToast = useCallback(
+    (key: string, vars?: Record<string, string | number>) => showToast(t(`commands.toast.${key}`, vars)),
+    [showToast, t]
+  );
   
   // ===== Command Registry (PR1) =====
   const cmdRegistry = useCommandRegistry();
@@ -107,6 +113,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const scaleSelectedEquipmentBy = useBoardStore((s) => s.scaleSelectedEquipmentBy);
   const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const applyFormation = useBoardStore((s) => s.applyFormation);
+  const cycleGoalkeeperColor = useBoardStore((s) => s.cycleGoalkeeperColor);
   const removeStep = useBoardStore((s) => s.removeStep);
   const prevStep = useBoardStore((s) => s.prevStep);
   const nextStep = useBoardStore((s) => s.nextStep);
@@ -222,19 +229,19 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         } else if (!isCmd && e.altKey && e.shiftKey) {
           e.preventDefault();
           addPlayerAtCursor('team4');
-          showToast('Team 4 Player');
+          showTranslatedToast('team4Player');
         } else if (!isCmd && e.altKey) {
           e.preventDefault();
           addPlayerAtCursor('team3');
-          showToast('Team 3 Player');
+          showTranslatedToast('team3Player');
         } else if (!isCmd && e.shiftKey) {
           e.preventDefault();
           addPlayerAtCursor('away');
-          showToast('Team 2 Player');
+          showTranslatedToast('team2Player');
         } else if (!isCmd) {
           e.preventDefault();
           addPlayerAtCursor('home');
-          showToast('Team 1 Player');
+          showTranslatedToast('team1Player');
         }
         break;
         
@@ -243,10 +250,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           if (e.shiftKey) {
             addBallGroupAtCursor();
-            showToast('Ball cluster');
+            showTranslatedToast('ballCluster');
           } else {
             addBallAtCursor();
-            showToast('Ball');
+            showTranslatedToast('ball');
           }
         }
         break;
@@ -255,7 +262,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (!isCmd) {
           e.preventDefault();
           addTextAtCursor();
-          showToast('Text');
+          showTranslatedToast('text');
         }
         break;
         
@@ -265,10 +272,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           if (e.shiftKey) {
             addEquipmentAtCursor('mannequin', 'flat');
-            showToast('Lying Mannequin');
+            showTranslatedToast('lyingMannequin');
           } else {
             addEquipmentAtCursor('mannequin');
-            showToast('Mannequin');
+            showTranslatedToast('mannequin');
           }
         }
         break;
@@ -276,12 +283,18 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       case 'k':
         if (!isCmd) {
           e.preventDefault();
-          if (e.shiftKey) {
+          // Cone family: K = standard cone, Alt+K = flat disc marker,
+          // Shift+K = pole (legacy binding kept). Mirrors the Z/Shift+Z/Alt+Z
+          // zone pattern so modifiers stay consistent across tools.
+          if (e.altKey) {
+            addEquipmentAtCursor('cone', 'flat');
+            showTranslatedToast('discMarker');
+          } else if (e.shiftKey) {
             addEquipmentAtCursor('pole');
-            showToast('Pole');
+            showTranslatedToast('pole');
           } else {
             addEquipmentAtCursor('cone');
-            showToast('Cone');
+            showTranslatedToast('cone');
           }
         }
         break;
@@ -290,7 +303,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (!isCmd) {
           e.preventDefault();
           addEquipmentAtCursor('hoop');
-          showToast('Hoop');
+          showTranslatedToast('hoop');
         }
         break;
         
@@ -298,7 +311,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (!isCmd) {
           e.preventDefault();
           addEquipmentAtCursor('hurdle');
-          showToast('Hurdle');
+          showTranslatedToast('hurdle');
         }
         break;
         
@@ -306,7 +319,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (!isCmd) {
           e.preventDefault();
           addEquipmentAtCursor('ladder');
-          showToast('Ladder');
+          showTranslatedToast('ladder');
         }
         break;
         
@@ -315,10 +328,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           if (e.shiftKey) {
             addEquipmentAtCursor('goal', 'mini');
-            showToast('Mini Goal');
+            showTranslatedToast('miniGoal');
           } else {
             addEquipmentAtCursor('goal');
-            showToast('Goal');
+            showTranslatedToast('goal');
           }
         }
         break;
@@ -328,11 +341,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd && e.shiftKey) {
           e.preventDefault();
           redo();
-          showToast('Przywrócono');
+          showTranslatedToast('redo');
         } else if (isCmd) {
           e.preventDefault();
           undo();
-          showToast('Cofnięto');
+          showTranslatedToast('undo');
         } else {
           // Z = rect zone tool, Shift+Z = ellipse zone tool, Alt+Z = polygon zone tool
           e.preventDefault();
@@ -344,14 +357,14 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd) {
           e.preventDefault();
           duplicateSelected();
-          showToast('Duplicated');
+          showTranslatedToast('duplicated');
         } else if (e.shiftKey) {
           e.preventDefault();
           setActiveTool('drawing');
         } else {
           e.preventDefault();
           setActiveTool('arrow-dribble');
-          showToast('Dribble arrow');
+          showTranslatedToast('dribbleArrow');
         }
         break;
         
@@ -359,7 +372,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd) {
           e.preventDefault();
           copySelection();
-          showToast('Copied');
+          showTranslatedToast('copied');
         } else if (e.shiftKey) {
           // Shift+C = Clear all elements on this step
           e.preventDefault();
@@ -370,7 +383,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             danger: true,
             onConfirm: () => {
               setElements([]);
-              showToast('All elements cleared');
+              showTranslatedToast('allElementsCleared');
               useUIStore.getState().closeConfirmModal();
             },
           });
@@ -379,10 +392,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           const drawingsCount = elements.filter(el => el.type === 'drawing').length;
           if (drawingsCount === 0) {
-            showToast('No drawings to clear');
+            showTranslatedToast('noDrawingsToClear');
           } else {
             clearAllDrawings();
-            showToast(`${drawingsCount} drawing${drawingsCount > 1 ? 's' : ''} cleared • Undo: Cmd+Z`);
+            showTranslatedToast('drawingsCleared', { count: drawingsCount });
           }
         }
         break;
@@ -392,7 +405,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           // Cmd+V = Paste — handled here, no orientation guard needed.
           e.preventDefault();
           pasteClipboard();
-          showToast('Pasted');
+          showTranslatedToast('pasted');
           break;
         }
         // V / Shift+V = Vision / orientation toggle (requires orientation feature enabled).
@@ -401,7 +414,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         {
           const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
           if (!orientationSettings.enabled) {
-            showToast('Enable player orientation first (Inspector → Orientation)');
+            showTranslatedToast('enableOrientation');
             break;
           }
           if (e.shiftKey) {
@@ -416,13 +429,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
               );
               const willTurnOn = anyExplicitlyOff;
               togglePlayerVision(allPlayerIds);
-              showToast(
-                willTurnOn
-                  ? `Vision: ON — ${allPlayerIds.length} player(s)`
-                  : `Vision: OFF — ${allPlayerIds.length} player(s)`
-              );
+              showTranslatedToast(willTurnOn ? 'visionAllOn' : 'visionAllOff', { count: allPlayerIds.length });
             } else {
-              showToast('No players on board');
+              showTranslatedToast('noPlayersOnBoard');
             }
           } else {
             // V = Toggle vision for SELECTED players only
@@ -431,9 +440,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
               .map((el) => el.id);
             if (selectedPlayerIds.length > 0) {
               togglePlayerVision(selectedPlayerIds);
-              showToast(`Vision toggled for ${selectedPlayerIds.length} player(s)`);
+              showTranslatedToast('visionSelected', { count: selectedPlayerIds.length });
             } else {
-              showToast('Select player(s) to toggle vision');
+              showTranslatedToast('selectPlayersForVision');
             }
           }
         }
@@ -446,12 +455,25 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         } else if (isCmd) {
           e.preventDefault();
           createGroup();
-          showToast('Group created');
+          showTranslatedToast('groupCreated');
+        } else if (e.shiftKey) {
+          // Shift+G = goalkeeper: promote a single selected player to GK,
+          // otherwise cycle the relevant team's goalkeeper jersey color.
+          e.preventDefault();
+          const res = cycleGoalkeeperColor();
+          const teamLabel =
+            res.team === 'home' ? 'Home' :
+            res.team === 'away' ? 'Away' :
+            res.team === 'team3' ? 'Team 3' : 'Team 4';
+          showTranslatedToast(
+            res.promoted ? 'goalkeeperSet' : 'goalkeeperColor',
+            { team: teamLabel, color: res.color.toUpperCase() }
+          );
         } else {
           // G = Toggle grid
           e.preventDefault();
           toggleGrid();
-          showToast(uiState.gridVisible ? 'Grid hidden' : 'Grid visible');
+          showTranslatedToast(uiState.gridVisible ? 'gridHidden' : 'gridVisible');
         }
         break;
         
@@ -464,7 +486,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           setNextArrowShouldBeNumbered(true);
           setActiveTool('arrow-pass');
-          showToast('Pass arrow (auto-number)');
+          showTranslatedToast('passArrowAutoNumber');
         } else {
           e.preventDefault();
           setActiveTool('arrow-pass');
@@ -478,7 +500,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             e.preventDefault();
             setNextArrowShouldBeNumbered(true);
             setActiveTool('arrow-run');
-            showToast('Run arrow (auto-number)');
+            showTranslatedToast('runArrowAutoNumber');
           } else {
             e.preventDefault();
             setActiveTool('arrow-run');
@@ -498,7 +520,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (!isCmd && hasSelectedZone()) {
           e.preventDefault();
           cycleZoneShape();
-          showToast('Zone shape changed');
+          showTranslatedToast('zoneShapeChanged');
         } else if (isCmd) {
           // Cmd+E = Export PNG
           e.preventDefault();
@@ -516,16 +538,16 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           manualSave().then((cloudSaved) => {
             if (authIsAuthenticated) {
               fetchCloudProjects();
-              showToast(cloudSaved ? 'Saved to cloud ☁️' : 'Cloud save failed');
+              showTranslatedToast(cloudSaved ? 'savedCloud' : 'cloudSaveFailed');
             } else {
-              showToast('Saved locally');
+              showTranslatedToast('savedLocal');
             }
           });
         } else if (e.shiftKey && hasSelectedPlayer()) {
           // Shift+S = cycle player shape (when player selected)
           e.preventDefault();
           cyclePlayerShape();
-          showToast('Shape changed');
+          showTranslatedToast('shapeChanged');
         } else if (!e.shiftKey) {
           // S = shoot arrow (primary shortcut)
           e.preventDefault();
@@ -565,7 +587,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           } else {
             useUIStore.getState().setZoom(1.0);
           }
-          showToast(newOrientation === 'portrait' ? 'Portrait mode (75%)' : 'Landscape mode');
+          showTranslatedToast(newOrientation === 'portrait' ? 'portraitMode' : 'landscapeMode');
         }
         break;
         
@@ -586,7 +608,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             if (isPrintMode) {
               togglePrintMode();
             }
-            showToast('Print Mode OFF');
+            showTranslatedToast('printModeOff');
           } else {
             // Set to print-friendly mode AND enable print mode
             updatePitchSettings({
@@ -599,7 +621,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             if (!isPrintMode) {
               togglePrintMode();
             }
-            showToast('Print Mode ON');
+            showTranslatedToast('printModeOn');
           }
         }
         break;
@@ -650,7 +672,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (ANIMATION_ENABLED && !isCmd) {
           e.preventDefault();
           toggleLoop();
-          showToast(uiState.isLooping ? 'Loop disabled' : 'Loop enabled');
+          showTranslatedToast(uiState.isLooping ? 'loopOff' : 'loopOn');
         }
         break;
         
@@ -661,11 +683,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           toggleAutoNumbering();
           const isOn = useBoardStore.getState().isAutoNumbering;
-          showToast(isOn ? 'Auto-numbering ON' : 'Auto-numbering OFF');
+          showTranslatedToast(isOn ? 'autoNumberingOn' : 'autoNumberingOff');
         } else if (ANIMATION_ENABLED && !isCmd) {
           e.preventDefault();
           addStep();
-          showToast('New step added');
+          showTranslatedToast('stepAdded');
         }
         break;
         
@@ -675,7 +697,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (ANIMATION_ENABLED && !isCmd && boardDoc.steps.length > 1) {
           e.preventDefault();
           removeStep(currentStepIndex);
-          showToast('Step deleted');
+          showTranslatedToast('stepDeleted');
         }
         break;
         
@@ -692,16 +714,16 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
               const currentIndex = currentBg ? BG_COLORS.indexOf(currentBg) : -1;
               const newBg = BG_COLORS[(currentIndex + 1) % BG_COLORS.length];
               updateTextProperties(textEl.id, { backgroundColor: newBg });
-              showToast(`Background: ${newBg}`);
+              showTranslatedToast('background', { color: newBg });
             } else {
               // Up = increase font size
               const newSize = Math.min(72, (textEl.fontSize || 18) + 2);
               updateTextProperties(textEl.id, { fontSize: newSize });
-              showToast(`Font size: ${newSize}px`);
+              showTranslatedToast('fontSize', { size: newSize });
             }
           } else if (e.altKey) {
             cycleSelectedColor(-1);
-            showToast('Previous color');
+            showTranslatedToast('previousColor');
           } else {
             nudgeSelected(0, e.shiftKey ? -1 : -5);
           }
@@ -715,15 +737,15 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           if (textEl) {
             if (e.shiftKey) {
               updateTextProperties(textEl.id, { backgroundColor: undefined });
-              showToast('Background removed');
+              showTranslatedToast('backgroundRemoved');
             } else {
               const newSize = Math.max(8, (textEl.fontSize || 18) - 2);
               updateTextProperties(textEl.id, { fontSize: newSize });
-              showToast(`Font size: ${newSize}px`);
+              showTranslatedToast('fontSize', { size: newSize });
             }
           } else if (e.altKey) {
             cycleSelectedColor(1);
-            showToast('Next color');
+            showTranslatedToast('nextColor');
           } else {
             nudgeSelected(0, e.shiftKey ? 1 : 5);
           }
@@ -736,10 +758,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           const textEl = getSelectedText();
           if (textEl) {
             updateTextProperties(textEl.id, { bold: !textEl.bold });
-            showToast(textEl.bold ? 'Normal' : 'Bold');
+            showTranslatedToast(textEl.bold ? 'normal' : 'bold');
           } else if (e.altKey) {
             adjustSelectedStrokeWidth(-1);
-            showToast('Thinner stroke');
+            showTranslatedToast('thinnerStroke');
           } else if (ANIMATION_ENABLED && !isCmd && selectedIds.length === 0) {
             // Animation: previous step (gated behind feature flag for MVP)
             prevStep();
@@ -756,16 +778,16 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           if (hasSelectedArrow()) {
             const arrowId = selectedIds[0];
             toggleArrowNumber(arrowId);
-            showToast('Arrow number toggled');
+            showTranslatedToast('arrowNumberToggled');
             break;
           }
           const textEl = getSelectedText();
           if (textEl) {
             updateTextProperties(textEl.id, { italic: !textEl.italic });
-            showToast(textEl.italic ? 'Normal' : 'Italic');
+            showTranslatedToast(textEl.italic ? 'normal' : 'italic');
           } else if (e.altKey) {
             adjustSelectedStrokeWidth(1);
-            showToast('Thicker stroke');
+            showTranslatedToast('thickerStroke');
           } else if (ANIMATION_ENABLED && !isCmd && selectedIds.length === 0) {
             // Animation: next step (gated behind feature flag for MVP)
             nextStep();
@@ -784,7 +806,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           // Option+Cmd+= = Resize up +10%
           e.preventDefault();
           resizeSelected(1.1);
-          showToast('Resized +10%');
+          showTranslatedToast('resizedUp');
         } else if (isCmd) {
           e.preventDefault();
           zoomIn();
@@ -792,7 +814,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           // + = Equipment resize +15%
           e.preventDefault();
           scaleSelectedEquipmentBy(1.15);
-          showToast('Equipment +15%');
+          showTranslatedToast('equipmentUp');
         } else if (!isCmd) {
           // Plain + / = = Zoom In (no selection required)
           e.preventDefault();
@@ -807,7 +829,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           // Option+Cmd+- = Resize down -10%
           e.preventDefault();
           resizeSelected(0.9);
-          showToast('Resized -10%');
+          showTranslatedToast('resizedDown');
         } else if (isCmd) {
           e.preventDefault();
           zoomOut();
@@ -815,7 +837,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           // - = Equipment resize -15%
           e.preventDefault();
           scaleSelectedEquipmentBy(0.85);
-          showToast('Equipment -15%');
+          showTranslatedToast('equipmentDown');
         } else if (!isCmd) {
           // Plain - = Zoom Out (no selection required)
           e.preventDefault();
@@ -833,7 +855,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           const playerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
           resetPlayerOrientation(playerIds);
           state.pushHistory();
-          showToast('Player orientation reset');
+          showTranslatedToast('orientationReset');
         } else if (!isCmd && !e.altKey && !e.shiftKey) {
           // ✅ IMPERATIVE guard — lock disables zoom shortcuts
           if (useUIStore.getState().viewportLocked) break;
@@ -855,11 +877,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         const delta = e.shiftKey ? -5 : -15;
         setPlayerOrientation(playerIds, delta);
         state.pushHistory();
-        showToast(`Player orientation ${delta}°`);
+        showTranslatedToast('playerOrientation', { delta });
       } else if (hasSelectedEquipment()) {
         // [ = Equipment rotation (fallback)
         rotateSelected(-15);
-        showToast('Rotated -15°');
+        showTranslatedToast('rotatedLeft15');
       }
     }
     
@@ -872,11 +894,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         const delta = e.shiftKey ? 5 : 15;
         setPlayerOrientation(playerIds, delta);
         state.pushHistory();
-        showToast(`Player orientation +${delta}°`);
+        showTranslatedToast('playerOrientation', { delta: `+${delta}` });
       } else if (hasSelectedEquipment()) {
         // ] = Equipment rotation (fallback)
         rotateSelected(15);
-        showToast('Rotated +15°');
+        showTranslatedToast('rotatedRight15');
       }
     }
     
@@ -884,13 +906,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     if (key === '{' && !isCmd && hasSelectedEquipment()) {
       e.preventDefault();
       rotateSelected(-90);
-      showToast('Rotated -90°');
+      showTranslatedToast('rotatedLeft90');
     }
     
     if (key === '}' && !isCmd && hasSelectedEquipment()) {
       e.preventDefault();
       rotateSelected(90);
-      showToast('Rotated +90°');
+      showTranslatedToast('rotatedRight90');
     }
     
     // ===== FORMATIONS (1-6, Shift+1-6) =====
@@ -906,7 +928,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         e.preventDefault();
         const team = e.shiftKey ? 'away' : 'home';
         applyFormation(formations[idx].id, team);
-        showToast(`${formations[idx].shortName} applied (${team})`);
+        showTranslatedToast('formationApplied', { formation: formations[idx].shortName, team });
       }
     }
   }, [
@@ -919,6 +941,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     cycleZoneShape, cyclePlayerShape, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
     cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation,
+    cycleGoalkeeperColor,
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
     zoomIn, zoomOut, isPlaying, play, pause, toggleLoop, togglePrintMode, isPrintMode,
     removeStep, prevStep, nextStep, addStep,

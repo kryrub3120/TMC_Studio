@@ -1,6 +1,9 @@
 /**
- * ArrowNode - Konva Arrow component for pass/run lines
- * Uses window events for endpoint dragging (not Konva draggable)
+ * ArrowNode - Konva Arrow component for pass/run/shoot/dribble lines.
+ * Supports an optional bend: when `arrow.curveControl` is set the arrow is
+ * rendered along a quadratic-bezier centerline. When selected, a mid "bend"
+ * handle lets the user drag the arrow into an arc (double-click straightens).
+ * Uses window events for endpoint/control dragging (not Konva draggable).
  */
 
 import React, { useRef, useCallback, useEffect, useState } from 'react';
@@ -15,7 +18,7 @@ export interface ArrowNodeProps {
   isSelected: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
-  onEndpointDrag?: (id: string, endpoint: 'start' | 'end', position: Position) => void;
+  onEndpointDrag?: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   /** Print mode: all arrows render as black, shoot gets 1.5x stroke */
   isPrintMode?: boolean;
 }
@@ -28,54 +31,108 @@ const ARROW_COLORS = {
   dribble: '#1d4ed8', // Tactical blue
 };
 
-type DraggingEndpoint = 'start' | 'end' | null;
+/** Accent color for the bend handle */
+const BEND_ACCENT = '#2563eb';
 
-function getDribblePoints(startX: number, startY: number, endX: number, endY: number): number[] {
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const length = Math.sqrt(dx * dx + dy * dy);
+type DraggingEndpoint = 'start' | 'end' | 'control' | null;
 
-  if (length < 24) return [startX, startY, endX, endY];
+// ---------------------------------------------------------------------------
+// Geometry helpers (all in coordinates relative to the group center)
+// ---------------------------------------------------------------------------
 
-  const ux = dx / length;
-  const uy = dy / length;
-  const px = -uy;
-  const py = ux;
-  const headReserve = Math.min(20, length * 0.22);
-  const bodyLength = Math.max(8, length - headReserve);
-  const waveCount = Math.max(3, Math.min(9, Math.round(bodyLength / 28)));
-  const amplitude = Math.max(8, Math.min(13, length * 0.05));
-  const points: number[] = [startX, startY];
-
-  for (let i = 1; i <= waveCount; i += 1) {
-    const t = i / (waveCount + 1);
-    const offset = (i % 2 === 0 ? -1 : 1) * amplitude;
-    points.push(
-      startX + ux * bodyLength * t + px * offset,
-      startY + uy * bodyLength * t + py * offset
+/** Sample a quadratic bezier into a flat [x,y,...] polyline. */
+function sampleCurve(
+  sx: number, sy: number,
+  ex: number, ey: number,
+  cx: number, cy: number,
+  segments = 28
+): number[] {
+  const pts: number[] = [];
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / segments;
+    const mt = 1 - t;
+    pts.push(
+      mt * mt * sx + 2 * mt * t * cx + t * t * ex,
+      mt * mt * sy + 2 * mt * t * cy + t * t * ey
     );
   }
+  return pts;
+}
 
-  points.push(startX + ux * bodyLength, startY + uy * bodyLength, endX, endY);
+/** Cumulative arc-length metrics for a flat polyline. */
+function polylineMetrics(pts: number[]) {
+  const n = pts.length / 2;
+  const cum: number[] = [0];
+  let total = 0;
+  for (let i = 1; i < n; i += 1) {
+    total += Math.hypot(pts[2 * i] - pts[2 * (i - 1)], pts[2 * i + 1] - pts[2 * (i - 1) + 1]);
+    cum.push(total);
+  }
+  return { cum, total, n };
+}
+
+/** Point + unit tangent at arc-length `s` along a flat polyline. */
+function pointAt(pts: number[], cum: number[], total: number, s: number) {
+  const clamped = Math.max(0, Math.min(total, s));
+  let i = 1;
+  while (i < cum.length && cum[i] < clamped) i += 1;
+  const i0 = i - 1;
+  const i1 = Math.min(i, cum.length - 1);
+  const segLen = (cum[i1] - cum[i0]) || 1;
+  const t = (clamped - cum[i0]) / segLen;
+  const x0 = pts[2 * i0];
+  const y0 = pts[2 * i0 + 1];
+  const x1 = pts[2 * i1];
+  const y1 = pts[2 * i1 + 1];
+  let tx = x1 - x0;
+  let ty = y1 - y0;
+  const tl = Math.hypot(tx, ty) || 1;
+  tx /= tl;
+  ty /= tl;
+  return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, tx, ty };
+}
+
+/** Build the dribble wave along a (possibly curved) centerline. */
+function getDribblePoints(centerline: number[]): number[] {
+  const { cum, total } = polylineMetrics(centerline);
+  const sx = centerline[0];
+  const sy = centerline[1];
+  const ex = centerline[centerline.length - 2];
+  const ey = centerline[centerline.length - 1];
+
+  if (total < 24) return [sx, sy, ex, ey];
+
+  const headReserve = Math.min(20, total * 0.22);
+  const bodyLength = Math.max(8, total - headReserve);
+  const waveCount = Math.max(3, Math.min(9, Math.round(bodyLength / 28)));
+  const amplitude = Math.max(8, Math.min(13, total * 0.05));
+
+  const points: number[] = [sx, sy];
+  for (let i = 1; i <= waveCount; i += 1) {
+    const s = bodyLength * (i / (waveCount + 1));
+    const p = pointAt(centerline, cum, total, s);
+    const px = -p.ty;
+    const py = p.tx;
+    const offset = (i % 2 === 0 ? -1 : 1) * amplitude;
+    points.push(p.x + px * offset, p.y + py * offset);
+  }
+  const bodyEnd = pointAt(centerline, cum, total, bodyLength);
+  points.push(bodyEnd.x, bodyEnd.y, ex, ey);
   return points;
 }
 
-function renderShootArrow(
-  startRelX: number,
-  startRelY: number,
-  endRelX: number,
-  endRelY: number,
-  color: string,
-  strokeWidth: number
-) {
-  const dx = endRelX - startRelX;
-  const dy = endRelY - startRelY;
-  const length = Math.sqrt(dx * dx + dy * dy);
+/** Render the shoot arrow (two parallel lines + single head) along a centerline. */
+function renderShootArrow(centerline: number[], color: string, strokeWidth: number) {
+  const { cum, total } = polylineMetrics(centerline);
+  const sx = centerline[0];
+  const sy = centerline[1];
+  const ex = centerline[centerline.length - 2];
+  const ey = centerline[centerline.length - 1];
 
-  if (length < 10) {
+  if (total < 10) {
     return (
       <Arrow
-        points={[startRelX, startRelY, endRelX, endRelY]}
+        points={[sx, sy, ex, ey]}
         stroke={color}
         strokeWidth={strokeWidth}
         fill={color}
@@ -88,28 +145,35 @@ function renderShootArrow(
     );
   }
 
-  const ux = dx / length;
-  const uy = dy / length;
-  const px = -uy;
-  const py = ux;
-  const headLength = Math.min(22, Math.max(15, length * 0.18));
+  const headLength = Math.min(22, Math.max(15, total * 0.18));
   const headWidth = Math.min(15, Math.max(10, strokeWidth * 2.6));
   const gap = Math.max(4, strokeWidth * 1.05);
-  const tipX = endRelX;
-  const tipY = endRelY;
-  const baseX = tipX - ux * headLength;
-  const baseY = tipY - uy * headLength;
-  const leftX = baseX + px * headWidth;
-  const leftY = baseY + py * headWidth;
-  const rightX = baseX - px * headWidth;
-  const rightY = baseY - py * headWidth;
-  const perpX = px * gap;
-  const perpY = py * gap;
+  const bodyLen = Math.max(1, total - headLength);
+
+  const seg = Math.max(8, Math.round(bodyLen / 6));
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let i = 0; i <= seg; i += 1) {
+    const p = pointAt(centerline, cum, total, (bodyLen * i) / seg);
+    const px = -p.ty;
+    const py = p.tx;
+    left.push(p.x + px * gap, p.y + py * gap);
+    right.push(p.x - px * gap, p.y - py * gap);
+  }
+
+  const tip = pointAt(centerline, cum, total, total);
+  const base = pointAt(centerline, cum, total, bodyLen);
+  const bpx = -base.ty;
+  const bpy = base.tx;
+  const leftHX = base.x + bpx * headWidth;
+  const leftHY = base.y + bpy * headWidth;
+  const rightHX = base.x - bpx * headWidth;
+  const rightHY = base.y - bpy * headWidth;
 
   return (
     <>
       <Line
-        points={[startRelX + perpX, startRelY + perpY, baseX + perpX, baseY + perpY]}
+        points={left}
         stroke={color}
         strokeWidth={strokeWidth}
         lineCap="round"
@@ -117,7 +181,7 @@ function renderShootArrow(
         hitStrokeWidth={15}
       />
       <Line
-        points={[startRelX - perpX, startRelY - perpY, baseX - perpX, baseY - perpY]}
+        points={right}
         stroke={color}
         strokeWidth={strokeWidth}
         lineCap="round"
@@ -125,7 +189,7 @@ function renderShootArrow(
         hitStrokeWidth={15}
       />
       <Line
-        points={[tipX, tipY, leftX, leftY, rightX, rightY]}
+        points={[tip.x, tip.y, leftHX, leftHY, rightHX, rightHY]}
         fill={color}
         strokeEnabled={false}
         closed
@@ -146,8 +210,8 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   isPrintMode,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
-  
-  // Endpoint drag state
+
+  // Endpoint/control drag state
   const [draggingEndpoint, setDraggingEndpoint] = useState<DraggingEndpoint>(null);
   const dragDataRef = useRef<{
     startMouseX: number;
@@ -155,10 +219,11 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
     startPointX: number;
     startPointY: number;
   } | null>(null);
-  
-  // Preview position during drag
+
+  // Preview positions during drag
   const [previewStart, setPreviewStart] = useState<Position | null>(null);
   const [previewEnd, setPreviewEnd] = useState<Position | null>(null);
+  const [previewControl, setPreviewControl] = useState<Position | null>(null);
 
   const color = arrow.color || ARROW_COLORS[arrow.arrowType];
   const strokeWidth = arrow.strokeWidth || (arrow.arrowType === 'pass' ? 3 : 2);
@@ -173,8 +238,10 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   // Use preview positions if dragging, otherwise use arrow positions
   const displayStart = previewStart || arrow.startPoint;
   const displayEnd = previewEnd || arrow.endPoint;
+  const displayControl = previewControl || arrow.curveControl || null;
+  const hasCurve = !!displayControl;
 
-  // Calculate center for group position
+  // Calculate center for group position (midpoint of start/end)
   const centerX = (displayStart.x + displayEnd.x) / 2;
   const centerY = (displayStart.y + displayEnd.y) / 2;
 
@@ -183,60 +250,75 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   const startRelY = displayStart.y - centerY;
   const endRelX = displayEnd.x - centerX;
   const endRelY = displayEnd.y - centerY;
+  const ctrlRelX = displayControl ? displayControl.x - centerX : 0;
+  const ctrlRelY = displayControl ? displayControl.y - centerY : 0;
 
-  // Global mouse event handlers for endpoint dragging
+  // The bend handle / number badge sit at the curve apex (t = 0.5). Because the
+  // center is the midpoint of start & end, startRel + endRel = 0, so the apex
+  // simplifies to half the relative control point.
+  const apexRelX = ctrlRelX / 2;
+  const apexRelY = ctrlRelY / 2;
+
+  // Centerline used by every arrow type.
+  const centerline = hasCurve
+    ? sampleCurve(startRelX, startRelY, endRelX, endRelY, ctrlRelX, ctrlRelY)
+    : [startRelX, startRelY, endRelX, endRelY];
+
+  // Global mouse event handlers for endpoint/control dragging
   useEffect(() => {
     if (!draggingEndpoint) return;
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       const stage = groupRef.current?.getStage();
       if (!stage || !dragDataRef.current) return;
-      
-      // Get mouse position relative to stage
+
       const rect = stage.container().getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
-      // Calculate delta from start
+
       const dx = mouseX - dragDataRef.current.startMouseX;
       const dy = mouseY - dragDataRef.current.startMouseY;
-      
-      // Calculate new position
+
       const newX = dragDataRef.current.startPointX + dx;
       const newY = dragDataRef.current.startPointY + dy;
-      
+
       if (draggingEndpoint === 'start') {
         setPreviewStart({ x: newX, y: newY });
-      } else {
+      } else if (draggingEndpoint === 'end') {
         setPreviewEnd({ x: newX, y: newY });
+      } else {
+        // 'control': newX/newY is where the apex (point on the curve) should be.
+        // Convert apex -> quadratic control point: C = 2*apex - center.
+        setPreviewControl({ x: 2 * newX - centerX, y: 2 * newY - centerY });
       }
     };
-    
+
     const handleMouseUp = () => {
-      // Apply final position
       if (onEndpointDrag) {
         if (draggingEndpoint === 'start' && previewStart) {
           onEndpointDrag(arrow.id, 'start', previewStart);
         } else if (draggingEndpoint === 'end' && previewEnd) {
           onEndpointDrag(arrow.id, 'end', previewEnd);
+        } else if (draggingEndpoint === 'control' && previewControl) {
+          onEndpointDrag(arrow.id, 'control', previewControl);
         }
       }
-      
-      // Clear state
+
       setDraggingEndpoint(null);
       setPreviewStart(null);
       setPreviewEnd(null);
+      setPreviewControl(null);
       dragDataRef.current = null;
     };
-    
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingEndpoint, previewStart, previewEnd, arrow.id, onEndpointDrag]);
+  }, [draggingEndpoint, previewStart, previewEnd, previewControl, centerX, centerY, arrow.id, onEndpointDrag]);
 
   const handleClick = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -251,13 +333,13 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       if (draggingEndpoint) return;
       applyGrab(groupRef);
       const node = e.target;
-      // Calculate the delta from original center
       const originalCenterX = (arrow.startPoint.x + arrow.endPoint.x) / 2;
       const originalCenterY = (arrow.startPoint.y + arrow.endPoint.y) / 2;
       const dx = node.x() - originalCenterX;
       const dy = node.y() - originalCenterY;
-      
-      // Move both endpoints by the delta
+
+      // Move both endpoints (and the bend control, if any) by the delta so the
+      // whole curved arrow translates rigidly.
       if (onEndpointDrag) {
         onEndpointDrag(arrow.id, 'start', {
           x: arrow.startPoint.x + dx,
@@ -267,37 +349,86 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
           x: arrow.endPoint.x + dx,
           y: arrow.endPoint.y + dy,
         });
+        if (arrow.curveControl) {
+          onEndpointDrag(arrow.id, 'control', {
+            x: arrow.curveControl.x + dx,
+            y: arrow.curveControl.y + dy,
+          });
+        }
       }
-      
+
       onDragEnd(arrow.id, { x: node.x(), y: node.y() });
     },
-    [arrow.id, arrow.startPoint, arrow.endPoint, onDragEnd, onEndpointDrag, draggingEndpoint]
+    [arrow.id, arrow.startPoint, arrow.endPoint, arrow.curveControl, onDragEnd, onEndpointDrag, draggingEndpoint]
   );
 
   // Start endpoint drag
   const handleEndpointMouseDown = useCallback(
     (endpoint: 'start' | 'end', e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
-      
+
       const stage = e.target.getStage();
       if (!stage) return;
-      
+
       const rect = stage.container().getBoundingClientRect();
       const mouseX = e.evt.clientX - rect.left;
       const mouseY = e.evt.clientY - rect.top;
-      
+
       const point = endpoint === 'start' ? arrow.startPoint : arrow.endPoint;
-      
+
       dragDataRef.current = {
         startMouseX: mouseX,
         startMouseY: mouseY,
         startPointX: point.x,
         startPointY: point.y,
       };
-      
+
       setDraggingEndpoint(endpoint);
     },
     [arrow.startPoint, arrow.endPoint]
+  );
+
+  // Start bend (control) drag. The handle represents the apex of the curve.
+  const handleControlMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      e.cancelBubble = true;
+
+      const stage = e.target.getStage();
+      if (!stage) return;
+
+      const rect = stage.container().getBoundingClientRect();
+      const mouseX = e.evt.clientX - rect.left;
+      const mouseY = e.evt.clientY - rect.top;
+
+      const cX = (arrow.startPoint.x + arrow.endPoint.x) / 2;
+      const cY = (arrow.startPoint.y + arrow.endPoint.y) / 2;
+      // Current apex (point on the curve) in absolute coords.
+      const apexX = arrow.curveControl ? (cX + arrow.curveControl.x) / 2 : cX;
+      const apexY = arrow.curveControl ? (cY + arrow.curveControl.y) / 2 : cY;
+
+      dragDataRef.current = {
+        startMouseX: mouseX,
+        startMouseY: mouseY,
+        startPointX: apexX,
+        startPointY: apexY,
+      };
+
+      setDraggingEndpoint('control');
+    },
+    [arrow.startPoint, arrow.endPoint, arrow.curveControl]
+  );
+
+  // Double-click the bend handle to straighten the arrow.
+  const handleControlDblClick = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      e.cancelBubble = true;
+      if (onEndpointDrag) {
+        const cX = (arrow.startPoint.x + arrow.endPoint.x) / 2;
+        const cY = (arrow.startPoint.y + arrow.endPoint.y) / 2;
+        onEndpointDrag(arrow.id, 'control', { x: cX, y: cY });
+      }
+    },
+    [arrow.id, arrow.startPoint, arrow.endPoint, onEndpointDrag]
   );
 
   return (
@@ -315,29 +446,26 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
     >
       {/* Shoot arrow - double parallel lines + single arrowhead */}
       {arrow.arrowType === 'shoot' ? renderShootArrow(
-        startRelX,
-        startRelY,
-        endRelX,
-        endRelY,
+        centerline,
         effectiveColor,
         effectiveStrokeWidth
       ) : arrow.arrowType === 'dribble' ? (
         <Arrow
-          points={getDribblePoints(startRelX, startRelY, endRelX, endRelY)}
+          points={getDribblePoints(centerline)}
           stroke={effectiveColor}
           strokeWidth={effectiveStrokeWidth}
           fill={effectiveColor}
           pointerLength={12}
           pointerWidth={10}
-          tension={0.35}
+          tension={hasCurve ? 0 : 0.35}
           lineCap="round"
           lineJoin="round"
           hitStrokeWidth={16}
         />
       ) : (
-        /* Standard arrow (pass/run) */
+        /* Standard arrow (pass/run) - straight or curved */
         <Arrow
-          points={[startRelX, startRelY, endRelX, endRelY]}
+          points={centerline}
           stroke={effectiveColor}
           strokeWidth={effectiveStrokeWidth}
           fill={effectiveColor}
@@ -350,10 +478,10 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
         />
       )}
 
-      {/* Arrow number label (PR-ARROW-NUMBER) */}
+      {/* Arrow number label (PR-ARROW-NUMBER) - sits at the curve apex */}
       {arrow.showNumber && arrow.number !== undefined && (() => {
-        const midX = (startRelX + endRelX) / 2;
-        const midY = (startRelY + endRelY) / 2;
+        const midX = apexRelX;
+        const midY = apexRelY;
         const radius = 12;
         return (
           <Group listening={false}>
@@ -382,7 +510,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
         );
       })()}
 
-      {/* Selection highlight and endpoint handles */}
+      {/* Selection highlight, endpoint handles, and bend handle */}
       {isSelected && (
         <>
           {/* Start endpoint handle */}
@@ -403,7 +531,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           {/* End endpoint handle */}
           <Circle
             x={endRelX}
@@ -421,6 +549,37 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
               const container = e.target.getStage()?.container();
               if (container) container.style.cursor = 'default';
             }}
+          />
+
+          {/* Bend handle (apex) - drag to curve, double-click to straighten */}
+          <Circle
+            x={apexRelX}
+            y={apexRelY}
+            radius={7}
+            fill={hasCurve ? BEND_ACCENT : '#fff'}
+            stroke={BEND_ACCENT}
+            strokeWidth={2}
+            shadowColor="#000000"
+            shadowBlur={hasCurve ? 4 : 0}
+            shadowOpacity={0.25}
+            onMouseDown={handleControlMouseDown}
+            onDblClick={handleControlDblClick}
+            onMouseEnter={(e) => {
+              const container = e.target.getStage()?.container();
+              if (container) container.style.cursor = 'grab';
+            }}
+            onMouseLeave={(e) => {
+              const container = e.target.getStage()?.container();
+              if (container) container.style.cursor = 'default';
+            }}
+          />
+          {/* Inner dot so the bend handle reads as distinct from endpoints */}
+          <Circle
+            x={apexRelX}
+            y={apexRelY}
+            radius={2}
+            fill={hasCurve ? '#fff' : BEND_ACCENT}
+            listening={false}
           />
         </>
       )}

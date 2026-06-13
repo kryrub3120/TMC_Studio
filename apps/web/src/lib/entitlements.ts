@@ -4,11 +4,11 @@
  * 
  * Defines plan types, entitlement mapping, and permission checking.
  * 
- * IMPORTANT: This is infrastructure only (PR-MON-CORE).
- * Enforcement in UI happens in future PRs:
- * - PR-MON-EXPORT: Gate GIF/PDF export
- * - PR-MON-PROJECT-LIMITS: Gate project creation
- * - PR-MON-STEP-LIMITS: Gate step addition
+ * Gating status:
+ * - ✅ PR-MON-EXPORT: GIF/PDF export gated (useExportController)
+ * - ✅ PR-MON-PROJECT-LIMITS: Project creation gated (useProjectsController)
+ * - ✅ PR-MON-STEP-LIMITS: Step addition gated (useBoardPageState)
+ * - ✅ PR-MON-FOLDER-LIMITS: Folder creation gated (useProjectsController)
  */
 
 // ===== TYPES =====

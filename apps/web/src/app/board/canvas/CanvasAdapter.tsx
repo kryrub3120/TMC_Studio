@@ -89,7 +89,7 @@ export interface CanvasAdapterProps {
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
   onUpdateZonePoints?: (id: string, points: number[]) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
-  onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
+  onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
   pushHistory: () => void;

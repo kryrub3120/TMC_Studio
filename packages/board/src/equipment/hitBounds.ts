@@ -55,9 +55,28 @@ export function getEquipmentHitBounds(element: EquipmentElement): {
     }
 
     case 'cone': {
-      const size = variant === 'tall' ? 28 : 20;
-      const radius = size * scale;
-      return { x: -radius, y: -radius, width: radius * 2, height: radius * 2 };
+      // Pivot at base centre (y = 0); body extends upward (negative y).
+      // Bounds must match ConeShape geometry in cone.tsx.
+      const margin = 2;
+      if (variant === 'flat') {
+        // dome: peak y=-14, base rim rx=22 ry=6.5
+        const minX = -(22 + margin) * scale;
+        const minY = -(14 + margin) * scale;
+        const maxY = (6.5 + margin) * scale;
+        return { x: minX, y: minY, width: -minX * 2, height: maxY - minY };
+      }
+      if (variant === 'tall') {
+        // apex y=-62, baseRx=18.5, baseRy=6
+        const minX = -(18.5 + margin) * scale;
+        const minY = -(62 + margin) * scale;
+        const maxY = (6 + margin) * scale;
+        return { x: minX, y: minY, width: -minX * 2, height: maxY - minY };
+      }
+      // standard: apex y=-44, baseRx=20, baseRy=6.5
+      const minX = -(20 + margin) * scale;
+      const minY = -(44 + margin) * scale;
+      const maxY = (6.5 + margin) * scale;
+      return { x: minX, y: minY, width: -minX * 2, height: maxY - minY };
     }
 
     case 'mannequin': {

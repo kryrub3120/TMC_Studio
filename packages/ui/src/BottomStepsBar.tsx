@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from './i18n.js';
 
 export type Duration = 0.6 | 0.8 | 1.2;
 
@@ -113,6 +114,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
   onToggleLoop,
   onDurationChange,
 }) => {
+  const { t } = useTranslation();
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -121,7 +123,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
   const handleDoubleClick = (index: number, currentLabel: string) => {
     if (!onRenameStep) return;
     setEditingIndex(index);
-    setEditValue(currentLabel || `Step ${index + 1}`);
+    setEditValue(currentLabel || t('bottomSteps.defaultName', { number: index + 1 }));
   };
   
   // Handle blur or Enter to finish editing
@@ -152,7 +154,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
           onClick={onPrevStep}
           disabled={currentStepIndex === 0}
           className="p-2 rounded-md text-muted hover:text-text hover:bg-surface2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          title="Previous Step (←)"
+          title={t('bottomSteps.previous')}
         >
           <SkipBackIcon className="w-4 h-4" />
         </button>
@@ -162,7 +164,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
           data-testid="play-button"
           onClick={isPlaying ? onPause : onPlay}
           className="p-2 rounded-md bg-accent text-white hover:bg-accent-hover transition-colors"
-          title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+          title={isPlaying ? t('bottomSteps.pause') : t('bottomSteps.play')}
         >
           {isPlaying ? (
             <PauseIcon className="w-4 h-4" />
@@ -176,7 +178,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
           onClick={onNextStep}
           disabled={currentStepIndex === steps.length - 1}
           className="p-2 rounded-md text-muted hover:text-text hover:bg-surface2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          title="Next Step (→)"
+          title={t('bottomSteps.next')}
         >
           <SkipForwardIcon className="w-4 h-4" />
         </button>
@@ -189,7 +191,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
               ? 'text-accent bg-accent/10' 
               : 'text-muted hover:text-text hover:bg-surface2'
           }`}
-          title="Loop (L)"
+          title={t('bottomSteps.loop')}
         >
           <LoopIcon className="w-4 h-4" />
         </button>
@@ -266,9 +268,9 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
                     ? 'bg-accent text-white shadow-sm'
                     : 'bg-surface2 text-muted hover:text-text hover:bg-border'}
                 `}
-                title={onRenameStep ? 'Double-click to rename' : undefined}
+                title={onRenameStep ? t('bottomSteps.rename') : undefined}
               >
-                {step.label || `Step ${index + 1}`}
+                {step.label || t('bottomSteps.defaultName', { number: index + 1 })}
               </button>
             )}
             
@@ -289,7 +291,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
                     ? 'text-white/70 hover:text-white hover:bg-white/20'
                     : 'text-muted hover:text-red-400 hover:bg-red-500/10'}
                 `}
-                title="Delete step (X)"
+                title={t('bottomSteps.delete')}
               >
                 <XIcon className="w-2.5 h-2.5" />
               </button>
@@ -301,7 +303,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
         <button
           onClick={onAddStep}
           className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-dashed border-border text-muted hover:border-accent hover:text-accent transition-colors flex items-center justify-center"
-          title="Add Step (N)"
+          title={t('bottomSteps.add')}
         >
           <PlusIcon className="w-3.5 h-3.5" />
         </button>
@@ -309,7 +311,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
 
       {/* Right: Step Counter */}
       <div className="text-xs text-muted tabular-nums">
-        Step {currentStepIndex + 1} / {steps.length}
+        {t('bottomSteps.counter', { current: currentStepIndex + 1, total: steps.length })}
       </div>
     </footer>
   );

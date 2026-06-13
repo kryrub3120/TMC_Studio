@@ -17,7 +17,7 @@ export interface ArrowsLayerProps {
   isPrintMode?: boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
-  onEndpointDrag?: (id: string, endpoint: 'start' | 'end', pos: { x: number; y: number }) => void;
+  onEndpointDrag?: (id: string, endpoint: 'start' | 'end' | 'control', pos: { x: number; y: number }) => void;
 }
 
 export const ArrowsLayer = memo<ArrowsLayerProps>(({

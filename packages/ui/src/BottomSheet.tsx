@@ -7,6 +7,7 @@
 
 import React, { useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from './i18n.js';
 
 export interface BottomSheetProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   maxHeight = 'md',
 }) => {
+  const { t } = useTranslation();
   const dragStartYRef = useRef(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +65,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         className={`fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-surface rounded-t-2xl shadow-2xl animate-slide-up ${maxHClass}`}
         role="dialog"
         aria-modal="true"
-        aria-label="Inspector panel"
+        aria-label={t('bottomSheet.inspectorPanel')}
       >
         {/* Drag handle */}
         <div
@@ -79,8 +81,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors duration-fast"
-            aria-label="Close inspector"
-            title="Close"
+            aria-label={t('bottomSheet.closeInspector')}
+            title={t('bottomSheet.close')}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />

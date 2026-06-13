@@ -3,10 +3,10 @@
  * Pure composition - orchestrates all board-related sections
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   RightInspector, 
-  BottomStepsBar, 
+  SmartBottomBar,
   CommandPaletteModal, 
   CheatSheetOverlay, 
   ShortcutsHint, 
@@ -17,8 +17,8 @@ import {
   FloatingHelpButton,
   HelpSidebar,
   TutorialOverlay,
+  SquadBench,
 } from '@tmc/ui';
-import { DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
 import { useBoardStore } from '../../store';
@@ -51,6 +51,18 @@ export function BoardPage(props: BoardPageProps) {
 
   // State hook
   const state = useBoardPageState(props);
+  
+  // ─── First element celebration ─────────────────────────────────────
+  const [showCelebration, setShowCelebration] = useState(false);
+  const prevElementCount = useRef(0);
+  useEffect(() => {
+    if (prevElementCount.current === 0 && state.elements.length > 0) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 2200);
+      return () => clearTimeout(timer);
+    }
+    prevElementCount.current = state.elements.length;
+  }, [state.elements.length]);
   
   // Handlers hook
   const handlers = useBoardPageHandlers({
@@ -170,7 +182,15 @@ export function BoardPage(props: BoardPageProps) {
         focusMode={state.focusMode}
         theme={state.theme}
         isOnline={state.isOnline}
-        onExport={state.exportController.exportPNG}
+        onExport={(format) => {
+          switch (format) {
+            case 'png': state.exportController.exportPNG(); break;
+            case 'png-all': state.exportController.exportAllSteps(); break;
+            case 'jpg': state.exportController.exportJPG(); break;
+            case 'pdf': state.exportController.exportPDF(); break;
+            case 'gif': state.exportController.exportGIF(); break;
+          }
+        }}
         onToggleFocus={state.toggleFocusMode}
         onToggleTheme={state.toggleTheme}
         onOpenPalette={state.openCommandPalette}
@@ -199,16 +219,34 @@ export function BoardPage(props: BoardPageProps) {
         onAddEquipment={state.addEquipmentAtCursor}
         onAddBall={(variant) => (variant === 'cluster' ? state.addBallGroupAtCursor() : state.addBallAtCursor())}
         onAddPlayer={(team) => state.addPlayerAtCursor(team)}
+        onOpenSquadSettings={onOpenSettingsModal}
         onOpenProjects={onOpenProjectsDrawer}
         onRenameProject={onRenameProject}
         onToggleInspector={state.toggleInspector}
         onOpenAccount={state.authIsAuthenticated ? onOpenSettingsModal : onOpenAuthModal}
         onUpgrade={onOpenPricingModal}
         onLogout={state.authIsAuthenticated ? state.signOut : undefined}
+        // DEV-ONLY: "Test login" plan switcher in the account menu.
+        // Remove this prop (and useAuthStore.devLogin) once done testing.
+        onDevLogin={import.meta.env.DEV ? state.devLogin : undefined}
+        // DEV-ONLY: "Clear dev data" button in the account menu.
+        // Remove this prop (and useAuthStore.devClearData) once done testing.
+        onClearDevData={import.meta.env.DEV ? state.devClearData : undefined}
       />
 
       {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden"
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+        onDrop={(e) => {
+          e.preventDefault();
+          try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            if (data && data.name !== undefined && data.number !== undefined) {
+              state.addPlayerFromSquad(data.team, data.name, data.number);
+            }
+          } catch { /* not a squad player drop */ }
+        }}
+      >
         {/* Canvas area */}
       <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden p-4 relative">
           <BoardCanvasSection
@@ -240,6 +278,7 @@ export function BoardPage(props: BoardPageProps) {
             emptyStateOverlay={
               <EmptyStateOverlay
                 isVisible={state.elements.length === 0}
+                showCelebration={showCelebration}
                 onAddPlayer={() => state.addPlayerAtCursor('home')}
                 onAddBall={state.addBallAtCursor}
                 onAddArrow={() => state.addArrowAtCursor('pass')}
@@ -401,12 +440,6 @@ export function BoardPage(props: BoardPageProps) {
           onToggleGroupVisibility={state.toggleGroupVisibility}
           onRenameGroup={state.renameGroup}
           onQuickAction={handlers.handleQuickAction}
-          teamSettings={state.teamSettings}
-          onUpdateTeam={state.updateTeamSettings}
-          pitchSettings={state.pitchSettings ?? DEFAULT_PITCH_SETTINGS}
-          onUpdatePitch={state.updatePitchSettings}
-          isPrintMode={state.isPrintMode}
-          onTogglePrintMode={state.togglePrintMode}
           playerOrientationSettings={state.playerOrientationSettings}
           onUpdatePlayerOrientation={state.updatePlayerOrientationSettings}
           isAutoNumbering={state.isAutoNumbering}
@@ -421,30 +454,53 @@ export function BoardPage(props: BoardPageProps) {
               store.pushHistory();
             }
           }}
+          onUpdateSelectedElements={(u) => useBoardStore.getState().updateSelectedElements(u)}
         />
         )}
       </div>
 
-      {/* Bottom Steps Bar (animation module - hidden behind feature flag for MVP) */}
-      {ANIMATION_ENABLED && (
-        <BottomStepsBar
-          steps={state.stepsData}
-          currentStepIndex={state.currentStepIndex}
-          isPlaying={state.isPlaying}
-          isLooping={state.isLooping}
-          duration={state.stepDuration}
-          onStepSelect={state.goToStep}
-          onAddStep={state.addStep}
-          onDeleteStep={state.removeStep}
-          onRenameStep={state.renameStep}
-          onPlay={state.play}
-          onPause={state.pause}
-          onPrevStep={state.prevStep}
-          onNextStep={state.nextStep}
-          onToggleLoop={state.toggleLoop}
-          onDurationChange={state.setStepDuration}
-        />
-      )}
+      {/* Squad Bench — zawsze renderowany, SquadBench zarządza widocznością */}
+      <SquadBench
+        squad={state.squad}
+        visible={state.squadVisible}
+        canAccess={state.authIsPro}
+        freeLimit={5}
+        premiumPerTeamLimit={25}
+        onToggle={state.toggleSquadVisible}
+        onOpenSettings={onOpenSettingsModal}
+        onDragStart={() => {}}
+        onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
+        onRemovePlayer={(id) => state.removeSquadPlayer(id)}
+      />
+      <SmartBottomBar
+        elementCount={state.elements.length}
+        canUndo={state.canUndo}
+        canRedo={state.canRedo}
+        onUndo={state.undo}
+        onRedo={state.redo}
+        onAddPlayer={() => state.addPlayerAtCursor('home')}
+        onAddBall={state.addBallAtCursor}
+        onAddArrow={() => state.addArrowAtCursor('pass')}
+        onOpenPalette={state.openCommandPalette}
+        animationEnabled={ANIMATION_ENABLED}
+        steps={state.stepsData}
+        currentStepIndex={state.currentStepIndex}
+        isPlaying={state.isPlaying}
+        isLooping={state.isLooping}
+        duration={state.stepDuration}
+        onStepSelect={state.goToStep}
+        onAddStep={state.addStep}
+        onDeleteStep={state.removeStep}
+        onRenameStep={state.renameStep}
+        onPlay={state.play}
+        onPause={state.pause}
+        onPrevStep={state.prevStep}
+        onNextStep={state.nextStep}
+        onToggleLoop={state.toggleLoop}
+        onDurationChange={state.setStepDuration}
+        animationProgress={state.animationProgress}
+        stepInfo={state.boardDoc.steps.length > 1 ? `Step ${state.currentStepIndex + 1}/${state.boardDoc.steps.length}` : undefined}
+      />
 
       {/* Command Palette */}
       <CommandPaletteModal

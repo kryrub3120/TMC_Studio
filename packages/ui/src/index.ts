@@ -2,9 +2,36 @@
  * @tmc/ui - UI Components for TMC Studio
  */
 
+// i18n (zero-dep, react-i18next-compatible API)
+export { LanguageProvider, useTranslation, translate, LANGUAGES } from './i18n.js';
+export type { Language, TFunction } from './i18n.js';
+export { LanguageSwitcher } from './LanguageSwitcher.js';
+
 // Core components
 export { Button } from './Button.js';
 export type { ButtonProps } from './Button.js';
+
+// Shared form primitives (Toggle, Section, SettingRow, Slider, Field, ColorSwatchRow, SegmentedControl)
+export {
+  Toggle,
+  SettingRow,
+  Section,
+  Field,
+  inputClass,
+  Slider,
+  ColorSwatchRow,
+  SegmentedControl,
+} from './primitives.js';
+export type {
+  ToggleProps,
+  SettingRowProps,
+  SectionProps,
+  FieldProps,
+  SliderProps,
+  ColorSwatchRowProps,
+  SegmentedOption,
+  SegmentedControlProps,
+} from './primitives.js';
 
 // Legacy components (kept for backwards compatibility)
 export { Toolbar } from './Toolbar.js';
@@ -15,13 +42,16 @@ export type { RightPanelProps } from './RightPanel.js';
 
 // New UI components (v2)
 export { TopBar } from './TopBar.js';
-export type { TopBarProps } from './TopBar.js';
+export type { TopBarProps, ExportFormat } from './TopBar.js';
 
 export { RightInspector } from './RightInspector.js';
 export type { RightInspectorProps, InspectorElement, ElementInList, LayerVisibility, LayerType } from './RightInspector.js';
 
 export { BottomStepsBar } from './BottomStepsBar.js';
 export type { BottomStepsBarProps, StepInfo, Duration } from './BottomStepsBar.js';
+
+export { SmartBottomBar } from './SmartBottomBar.js';
+export type { SmartBottomBarProps } from './SmartBottomBar.js';
 
 export { CommandPaletteModal } from './CommandPaletteModal.js';
 export type { CommandPaletteModalProps, CommandAction, CommandCategory } from './CommandPaletteModal.js';
@@ -55,6 +85,11 @@ export type { QuickEditOverlayProps } from './QuickEditOverlay.js';
 export { AuthModal } from './AuthModal.js';
 export { UserMenu } from './UserMenu.js';
 export { PricingModal } from './PricingModal.js';
+
+// Squad Bench
+export { SquadBench } from './SquadBench.js';
+export type { SquadBenchProps } from './SquadBench.js';
+export type { SquadPlayer } from '@tmc/core';
 export { ProjectsDrawer } from './ProjectsDrawer.js';
 export type { ProjectItem, FolderItem } from './ProjectsDrawer.js';
 export { ContextMenu } from './ContextMenu.js';

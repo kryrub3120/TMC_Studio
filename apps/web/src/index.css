@@ -145,6 +145,22 @@
     }
   }
 
+  /* Confetti drop for first element celebration */
+  @keyframes confettiDrop {
+    0% {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg) scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: translateY(40px) rotate(180deg) scale(0.5);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(80px) rotate(360deg) scale(0);
+    }
+  }
+
   /* Tabular numbers for stats/coordinates */
   .tabular-nums {
     font-variant-numeric: tabular-nums;

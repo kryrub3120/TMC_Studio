@@ -122,6 +122,22 @@ Dostepne skille:
 
 Nie wybieraj skilla tylko dlatego, ze istnieje. Dobor musi wynikac z zakresu sprintu.
 
+### Wersjonowanie
+
+Przed ACCEPT SPRINT sprawdz, czy sprint wymaga bumpa wersji:
+
+- Nowa funkcja → **MINOR** (`0.5.0` → `0.6.0`).
+- Tylko bug fixy → **PATCH** (`0.5.0` → `0.5.1`).
+- Bump robiony na WSZYSTKICH `package.json` w monorepo.
+- Po bumpie: `CHANGELOG.md` → przenies `[Unreleased]` do nowej sekcji.
+- Wersja w Footer jest dynamiczna (import z `package.json`), nie hardcoduj.
+- Zobacz `docs/VERSIONING.md` po pelna polityke.
+
+Evidence wersjonowania w MasterVerifier:
+- [ ] Wersja w `package.json` (root, apps/web, packages/*) zgodna ze zmiana
+- [ ] `CHANGELOG.md` zaktualizowany
+- [ ] Footer wyswietla poprawna wersje (dynamiczny import)
+
 Domyslne zasady:
 
 - Po kazdym sprincie z kodem wybierz `regression-testing`.

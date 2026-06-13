@@ -107,7 +107,7 @@ export function useCanvasInteraction() {
    */
   const handleArrowEndpointDrag = useCallback((
     arrowId: string,
-    endpoint: 'start' | 'end',
+    endpoint: 'start' | 'end' | 'control',
     position: { x: number; y: number }
   ) => {
     cmd.intent.arrowEndpointDelta(arrowId, endpoint, position);

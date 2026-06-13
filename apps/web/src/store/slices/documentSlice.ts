@@ -13,6 +13,7 @@ import type {
   PitchSettings,
   PlayerOrientationSettings,
   PlayerDefaults,
+  SquadPlayer,
   Position,
 } from '@tmc/core';
 import {
@@ -21,9 +22,13 @@ import {
   DEFAULT_TEAM_SETTINGS,
   DEFAULT_PLAYER_ORIENTATION_SETTINGS,
   DEFAULT_PLAYER_DEFAULTS,
+  DEFAULT_SQUAD,
   createDocument,
+  createSquadPlayer,
   saveToLocalStorage,
   loadFromLocalStorage,
+  exportDocument,
+  importDocument,
   isArrowElement,
 } from '@tmc/core';
 import {
@@ -63,6 +68,10 @@ export interface DocumentSlice {
   // Document actions
   saveDocument: () => void;
   loadDocument: () => boolean;
+  /** Download the current board as a .json file. */
+  exportBoardToFile: () => void;
+  /** Load a board from an uploaded .json file. Returns false on invalid file. */
+  importBoardFromFile: (file: File) => Promise<boolean>;
   newDocument: () => void;
   
   // Sprint G: manual save (Cmd+S) — always generates thumbnail, returns cloud result
@@ -89,6 +98,15 @@ export interface DocumentSlice {
   
   // PR-ARROW-NUMBER: Auto-numbering toggle
   toggleAutoNumbering: () => void;
+  
+  // Squad bench actions
+  getSquad: () => SquadPlayer[];
+  addSquadPlayer: (name: string, number: number, team: Team) => void;
+  removeSquadPlayer: (id: string) => void;
+  updateSquadPlayer: (id: string, updates: Partial<{ name: string; number: number; team: Team }>) => void;
+  setSquad: (squad: SquadPlayer[]) => void;
+  setSquadVisible: (visible: boolean) => void;
+  toggleSquadVisible: () => void;
   
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
@@ -154,6 +172,34 @@ export const createDocumentSlice: StateCreator<
         selectedIds: [],
         history: [{ elements, selectedIds: [] }],
         historyIndex: 0,
+      });
+      return true;
+    },
+
+    exportBoardToFile: () => {
+      const { document, elements } = get();
+      const doc = {
+        ...document,
+        steps: [
+          { ...document.steps[0], elements: structuredClone(elements) },
+          ...document.steps.slice(1),
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+      exportDocument(doc, document.name);
+    },
+
+    importBoardFromFile: async (file: File) => {
+      const doc = await importDocument(file);
+      if (!doc) return false;
+      const elements = doc.steps[0]?.elements ?? [];
+      set({
+        document: doc,
+        elements,
+        selectedIds: [],
+        history: [{ elements, selectedIds: [] }],
+        historyIndex: 0,
+        currentStepIndex: 0,
       });
       return true;
     },
@@ -738,7 +784,16 @@ export const createDocumentSlice: StateCreator<
       const { cloudProjectId } = get();
       if (!cloudProjectId) return;
       
-      await uploadThumbnail(cloudProjectId, blob);
+      // Upload then persist the resulting URL onto the project so cards
+      // in the drawer actually show a preview (works on Supabase + devCloud).
+      const thumbnailUrl = await uploadThumbnail(cloudProjectId, blob);
+      if (thumbnailUrl) {
+        try {
+          await updateProject(cloudProjectId, { thumbnail_url: thumbnailUrl });
+        } catch (err) {
+          logger.error('Failed to persist thumbnail_url:', err);
+        }
+      }
     },
     
     clearAutoSaveTimer: () => {
@@ -747,6 +802,87 @@ export const createDocumentSlice: StateCreator<
         clearTimeout(timer);
         set({ autoSaveTimer: null });
       }
+    },
+
+    // ─── Squad bench actions ──────────────────────────────────────
+    getSquad: () => {
+      return get().document.squad ?? DEFAULT_SQUAD;
+    },
+
+    addSquadPlayer: (name, number, team) => {
+      const { document } = get();
+      const currentSquad = document.squad ?? DEFAULT_SQUAD;
+      const newPlayer = createSquadPlayer(name, number, team);
+      set({
+        document: {
+          ...document,
+          squad: [...currentSquad, newPlayer],
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
+    },
+
+    removeSquadPlayer: (id) => {
+      const { document } = get();
+      const currentSquad = document.squad ?? DEFAULT_SQUAD;
+      set({
+        document: {
+          ...document,
+          squad: currentSquad.filter((p) => p.id !== id),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
+    },
+
+    updateSquadPlayer: (id, updates) => {
+      const { document } = get();
+      const currentSquad = document.squad ?? DEFAULT_SQUAD;
+      set({
+        document: {
+          ...document,
+          squad: currentSquad.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
+    },
+
+    setSquad: (squad) => {
+      const { document } = get();
+      set({
+        document: {
+          ...document,
+          squad,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
+    },
+
+    setSquadVisible: (visible) => {
+      const { document } = get();
+      set({
+        document: {
+          ...document,
+          squadVisible: visible,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
+    },
+
+    toggleSquadVisible: () => {
+      const { document } = get();
+      set({
+        document: {
+          ...document,
+          squadVisible: !document.squadVisible,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
     },
   };
 };

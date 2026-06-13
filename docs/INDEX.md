@@ -51,6 +51,7 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 | `ARCHITECTURE_OVERVIEW.md` | Ogolny obraz architektury |
 | `SYSTEM_ARCHITECTURE.md` | Infrastruktura, backend, deployment |
 | `DATA_MODEL.md` | Model danych |
+| `VERSIONING.md` | Polityka wersjonowania (SemVer + CalVer), multi-platform strategy |
 | `ENTITLEMENTS.md` | Uprawnienia, plany, gating |
 
 ---

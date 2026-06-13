@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from './i18n.js';
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
@@ -15,6 +16,10 @@ interface AuthModalProps {
   onSignInWithGoogle?: () => Promise<void>;
   error?: string | null;
   isLoading?: boolean;
+  /** DEV-ONLY: instantly sign in as a fake free/pro/team user for testing.
+   *  Only pass this in when import.meta.env.DEV is true - safe to remove
+   *  later along with the matching block in useAuthStore. */
+  onDevLogin?: (tier: 'free' | 'pro' | 'team') => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -23,9 +28,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSignIn,
   onSignUp,
   onSignInWithGoogle,
+  onDevLogin,
   error,
   isLoading = false,
 }) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,17 +62,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     // Validation
     if (!email || !password) {
-      setLocalError('Please fill in all required fields');
+      setLocalError(t('auth.requiredFields'));
       return;
     }
 
     if (mode === 'register') {
       if (password !== confirmPassword) {
-        setLocalError('Passwords do not match');
+        setLocalError(t('auth.passwordsMismatch'));
         return;
       }
       if (password.length < 8) {
-        setLocalError('Password must be at least 8 characters');
+        setLocalError(t('auth.passwordTooShort'));
         return;
       }
     }
@@ -76,7 +83,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onClose();
       } else if (mode === 'register') {
         await onSignUp(email, password, fullName || undefined);
-        setSuccessMessage('Check your email to verify your account!');
+        setSuccessMessage(t('auth.verifyEmail'));
         resetForm();
         setMode('login');
       }
@@ -113,9 +120,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="px-6 pt-6 pb-4 border-b border-white/10">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-white">
-              {mode === 'login' && 'Continue for free'}
-              {mode === 'register' && 'Continue for free'}
-              {mode === 'forgot' && 'Reset Password'}
+              {mode === 'login' && t('auth.continueFree')}
+              {mode === 'register' && t('auth.continueFree')}
+              {mode === 'forgot' && t('auth.resetPassword')}
             </h2>
             <button
               onClick={onClose}
@@ -127,9 +134,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
           </div>
           <p className="text-sm text-gray-400 mt-1">
-            {mode === 'login' && 'Sign in to save your work and unlock the Free plan.'}
-            {mode === 'register' && 'Sign in to save your work and unlock the Free plan.'}
-            {mode === 'forgot' && 'Enter your email to reset password'}
+            {mode === 'login' && t('auth.signInSubtitle')}
+            {mode === 'register' && t('auth.signInSubtitle')}
+            {mode === 'forgot' && t('auth.resetSubtitle')}
           </p>
         </div>
 
@@ -149,6 +156,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
+          {/* DEV-ONLY: Test login buttons - bypass Google/Supabase entirely.
+              onDevLogin is only passed in from the app when
+              import.meta.env.DEV is true. Safe to delete this block +
+              onDevLogin prop + useAuthStore.devLogin once real-auth
+              testing is done. */}
+          {onDevLogin && mode !== 'forgot' && (
+            <div className="mb-5 p-3 border border-dashed border-yellow-500/50 rounded-lg bg-yellow-500/5">
+              <p className="text-[11px] uppercase tracking-wide text-yellow-400 font-semibold mb-2">
+                {t('auth.devLogin')}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => onDevLogin('free')}
+                  className="flex-1 px-2 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 rounded-md transition-colors"
+                >
+                  {t('auth.freeTier')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDevLogin('pro')}
+                  className="flex-1 px-2 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 rounded-md transition-colors"
+                >
+                  {t('auth.proTier')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDevLogin('team')}
+                  className="flex-1 px-2 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 rounded-md transition-colors"
+                >
+                  {t('auth.teamTier')}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Google Sign In */}
           {mode !== 'forgot' && onSignInWithGoogle && (
             <>
@@ -164,12 +207,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Continue with Google
+                {t('auth.continueGoogle')}
               </button>
 
               <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px bg-white/10" />
-                <span className="text-sm text-gray-500">or</span>
+                <span className="text-sm text-gray-500">{t('auth.or')}</span>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
             </>
@@ -180,7 +223,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                  Full Name
+                  {t('auth.fullName')}
                 </label>
                 <input
                   type="text"
@@ -194,7 +237,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 type="email"
@@ -209,7 +252,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {mode !== 'forgot' && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                  Password
+                  {t('auth.password')}
                 </label>
                 <input
                   type="password"
@@ -227,7 +270,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                  Confirm Password
+                  {t('auth.confirmPassword')}
                 </label>
                 <input
                   type="password"
@@ -249,7 +292,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClick={() => handleModeChange('forgot')}
                   className="text-sm text-blue-400 hover:text-blue-300"
                 >
-                  Forgot password?
+                  {t('auth.forgotPassword')}
                 </button>
               </div>
             )}
@@ -265,13 +308,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Loading...
+                  {t('auth.loading')}
                 </span>
               ) : (
                 <>
-                  {mode === 'login' && 'Sign In'}
-                  {mode === 'register' && 'Create Account'}
-                  {mode === 'forgot' && 'Send Reset Link'}
+                  {mode === 'login' && t('auth.signIn')}
+                  {mode === 'register' && t('auth.createAccount')}
+                  {mode === 'forgot' && t('auth.sendResetLink')}
                 </>
               )}
             </button>
@@ -283,23 +326,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div>
             {mode === 'login' && (
               <>
-                Don't have an account?{' '}
+                {t('auth.noAccount')}{' '}
                 <button
                   onClick={() => handleModeChange('register')}
                   className="text-blue-400 hover:text-blue-300 font-medium"
                 >
-                  Sign up
+                  {t('auth.signUp')}
                 </button>
               </>
             )}
             {mode === 'register' && (
               <>
-                Already have an account?{' '}
+                {t('auth.alreadyAccount')}{' '}
                 <button
                   onClick={() => handleModeChange('login')}
                   className="text-blue-400 hover:text-blue-300 font-medium"
                 >
-                  Sign in
+                  {t('auth.signIn')}
                 </button>
               </>
             )}
@@ -308,13 +351,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => handleModeChange('login')}
                 className="text-blue-400 hover:text-blue-300 font-medium"
               >
-                ← Back to sign in
+                ← {t('auth.backToSignIn')}
               </button>
             )}
           </div>
           {mode !== 'forgot' && (
             <p className="text-xs text-gray-500">
-              Free forever. No credit card required.
+              {t('auth.freeForever')}
             </p>
           )}
         </div>

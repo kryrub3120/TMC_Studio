@@ -6,7 +6,7 @@
  */
 
 import type Konva from 'konva';
-import { exportPNG, exportGIF, exportPDF, exportSVG } from '../utils/exportUtils';
+import { exportPNG, exportJPG, exportGIF, exportPDF, exportSVG } from '../utils/exportUtils';
 
 export interface ExportProgressCallback {
   (percent: number): void;
@@ -22,6 +22,17 @@ class ExportService {
     pixelRatio = 2
   ): Promise<void> {
     exportPNG(stage, { filename, pixelRatio });
+  }
+  
+  /**
+   * Export single frame as JPG
+   */
+  async exportSingleJPG(
+    stage: Konva.Stage,
+    filename: string,
+    pixelRatio = 2
+  ): Promise<void> {
+    exportJPG(stage, { filename, pixelRatio });
   }
   
   /**

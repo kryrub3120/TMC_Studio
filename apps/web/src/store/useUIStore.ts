@@ -2,9 +2,11 @@
  * UI State Store - manages theme, focus mode, command palette, and UI visibility
  */
 
+import { useEffect } from 'react';
 import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { translate as t } from '@tmc/ui';
 
 /** Active tool types */
 export type ActiveTool =
@@ -24,8 +26,11 @@ export type ActiveTool =
   | 'highlighter'
   | null;
 
-/** Theme type */
+/** Theme type (resolved, applied to <html>) */
 export type Theme = 'light' | 'dark';
+
+/** Theme preference — 'system' follows the OS color scheme. */
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 /** Toast message with optional duration */
 export interface ToastMessage {
@@ -45,7 +50,7 @@ export interface ConfirmModalConfig {
 }
 
 /** Layer visibility types */
-export type LayerType = 'homePlayers' | 'awayPlayers' | 'ball' | 'arrows' | 'zones' | 'labels';
+export type LayerType = 'homePlayers' | 'awayPlayers' | 'ball' | 'arrows' | 'zones' | 'labels' | 'equipment' | 'drawings';
 
 /** Layer visibility state */
 export interface LayerVisibility {
@@ -55,6 +60,8 @@ export interface LayerVisibility {
   arrows: boolean;
   zones: boolean;
   labels: boolean;
+  equipment: boolean;
+  drawings: boolean;
 }
 
 /** Zoom constants */
@@ -80,6 +87,7 @@ export type ProjectSaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 interface UIState {
   // Theme
   theme: Theme;
+  themeMode: ThemeMode;
   
   // Modes
   focusMode: boolean;
@@ -138,6 +146,7 @@ interface UIState {
   // Actions - Theme
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   
   // Actions - Focus Mode
   toggleFocusMode: () => void;
@@ -235,6 +244,34 @@ const applyThemeToDocument = (theme: Theme) => {
   }
 };
 
+/** Resolve a theme preference to an actual theme (handles 'system'). */
+const resolveThemeMode = (mode: ThemeMode): Theme => {
+  if (mode === 'system') {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  }
+  return mode;
+};
+
+let systemThemeMql: MediaQueryList | null = null;
+let systemThemeHandler: ((e: MediaQueryListEvent) => void) | null = null;
+/** Attach the OS color-scheme listener only while mode === 'system'; detach otherwise. */
+const updateSystemThemeListener = (mode: ThemeMode, onChange: (t: Theme) => void) => {
+  if (typeof window === 'undefined' || !window.matchMedia) return;
+  if (systemThemeMql && systemThemeHandler) {
+    systemThemeMql.removeEventListener('change', systemThemeHandler);
+    systemThemeMql = null;
+    systemThemeHandler = null;
+  }
+  if (mode === 'system') {
+    systemThemeMql = window.matchMedia('(prefers-color-scheme: dark)');
+    systemThemeHandler = (e) => onChange(e.matches ? 'dark' : 'light');
+    systemThemeMql.addEventListener('change', systemThemeHandler);
+  }
+};
+
 /** Sync preferences to cloud */
 const syncPreferencesToCloud = async (prefs: { theme?: Theme; gridVisible?: boolean; snapEnabled?: boolean; cheatSheetVisible?: boolean }) => {
   try {
@@ -253,6 +290,7 @@ export const useUIStore = create<UIState>()(
     (set, get) => ({
       // Initial state
       theme: 'dark',
+      themeMode: 'dark',
       focusMode: false,
       isPrintMode: false, // Print mode is UI-only, not persisted
       inspectorOpen: getInitialInspectorState(),
@@ -269,6 +307,8 @@ export const useUIStore = create<UIState>()(
         arrows: true,
         zones: true,
         labels: true,
+        equipment: true,
+        drawings: true,
       },
       activeTool: null,
       activeToast: null,
@@ -292,16 +332,30 @@ export const useUIStore = create<UIState>()(
       toggleTheme: () => {
         const newTheme = get().theme === 'light' ? 'dark' : 'light';
         applyThemeToDocument(newTheme);
-        set({ theme: newTheme });
+        updateSystemThemeListener(newTheme, () => {});
+        set({ theme: newTheme, themeMode: newTheme });
         // Sync to cloud
         syncPreferencesToCloud({ theme: newTheme });
       },
       
       setTheme: (theme) => {
         applyThemeToDocument(theme);
-        set({ theme });
+        updateSystemThemeListener(theme, () => {});
+        set({ theme, themeMode: theme });
         // Sync to cloud
         syncPreferencesToCloud({ theme });
+      },
+
+      setThemeMode: (mode) => {
+        const resolved = resolveThemeMode(mode);
+        applyThemeToDocument(resolved);
+        updateSystemThemeListener(mode, (t) => {
+          applyThemeToDocument(t);
+          set({ theme: t });
+        });
+        set({ themeMode: mode, theme: resolved });
+        // Sync to cloud
+        syncPreferencesToCloud({ theme: resolved });
       },
 
       // Focus mode actions
@@ -362,20 +416,20 @@ export const useUIStore = create<UIState>()(
         // Show toast hint when tool is activated
         if (tool && tool !== 'select') {
           const toolNames: Record<string, string> = {
-            'player-home': 'Home Player',
-            'player-away': 'Away Player',
-            'ball': 'Ball',
-            'arrow-pass': 'Pass Arrow',
-            'arrow-run': 'Run Arrow',
-            'arrow-shoot': 'Shoot Arrow',
-            'arrow-dribble': 'Dribble Arrow',
-            'zone': 'Zone',
-            'zone-ellipse': 'Ellipse Zone',
-            'zone-polygon': 'Polygon Zone — click to add points, double-click to finish',
-            'text': 'Text',
+            'player-home': t('storeToast.tools.player-home'),
+            'player-away': t('storeToast.tools.player-away'),
+            'ball': t('storeToast.tools.ball'),
+            'arrow-pass': t('storeToast.tools.arrow-pass'),
+            'arrow-run': t('storeToast.tools.arrow-run'),
+            'arrow-shoot': t('storeToast.tools.arrow-shoot'),
+            'arrow-dribble': t('storeToast.tools.arrow-dribble'),
+            'zone': t('storeToast.tools.zone'),
+            'zone-ellipse': t('storeToast.tools.zone-ellipse'),
+            'zone-polygon': t('storeToast.tools.zone-polygon'),
+            'text': t('storeToast.tools.text'),
           };
           const toolName = toolNames[tool] || tool;
-          get().showToast(`${toolName} tool active — click to place • Esc to exit`);
+          get().showToast(t('storeToast.toolActive', { tool: toolName }));
         }
       },
       
@@ -428,18 +482,18 @@ export const useUIStore = create<UIState>()(
       zoomIn: () => {
         const newZoom = Math.min(ZOOM_MAX, get().zoom + ZOOM_STEP);
         set({ zoom: newZoom });
-        get().showToast(`Zoom: ${Math.round(newZoom * 100)}%`, 800);
+        get().showToast(t('storeToast.zoom', { percent: Math.round(newZoom * 100) }), 800);
       },
       
       zoomOut: () => {
         const newZoom = Math.max(ZOOM_MIN, get().zoom - ZOOM_STEP);
         set({ zoom: newZoom });
-        get().showToast(`Zoom: ${Math.round(newZoom * 100)}%`, 800);
+        get().showToast(t('storeToast.zoom', { percent: Math.round(newZoom * 100) }), 800);
       },
       
       zoomFit: () => {
         set({ zoom: 1 });
-        get().showToast('Zoom: Fit', 800);
+        get().showToast(t('storeToast.zoomFit'), 800);
       },
       
       setZoom: (zoom) => {
@@ -462,9 +516,9 @@ export const useUIStore = create<UIState>()(
       setOnline: (online) => {
         set({ isOnline: online });
         if (online) {
-          get().showToast('Back online', 1500);
+          get().showToast(t('storeToast.backOnline'), 1500);
         } else {
-          get().showToast('You are offline', 1500);
+          get().showToast(t('storeToast.offline'), 1500);
         }
       },
       
@@ -476,7 +530,7 @@ export const useUIStore = create<UIState>()(
         
         // Rate limit: only show toast if last failure was >5 seconds ago
         if (!lastFailure || now - lastFailure > 5000) {
-          get().showToast('Save failed — will retry when online', 3000);
+          get().showToast(t('storeToast.saveFailedRetry'), 3000);
           set({ lastSaveFailureAt: now });
         }
       },
@@ -498,6 +552,7 @@ export const useUIStore = create<UIState>()(
       partialize: (state) => ({
         // Only persist these settings
         theme: state.theme,
+        themeMode: state.themeMode,
         // cheatSheetVisible: NOT persisted (Hard Rule A)
         hasSeenShortcutsHint: state.hasSeenShortcutsHint,
         gridVisible: state.gridVisible,
@@ -520,7 +575,23 @@ export const useUIStore = create<UIState>()(
 /** Hook to initialize theme on app start */
 export const useInitializeTheme = () => {
   const theme = useUIStore((s) => s.theme);
-  
+
+  // On mount: if the persisted preference is 'system', resolve against the OS
+  // and attach a listener so the app follows live OS theme changes.
+  useEffect(() => {
+    const mode = useUIStore.getState().themeMode;
+    if (mode === 'system') {
+      const resolved = resolveThemeMode('system');
+      applyThemeToDocument(resolved);
+      updateSystemThemeListener('system', (t) => {
+        applyThemeToDocument(t);
+        useUIStore.setState({ theme: t });
+      });
+      useUIStore.setState({ theme: resolved });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Apply theme on mount
   if (typeof document !== 'undefined') {
     applyThemeToDocument(theme);

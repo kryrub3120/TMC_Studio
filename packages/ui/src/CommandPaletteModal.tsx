@@ -9,6 +9,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 export type CommandCategory = 'elements' | 'edit' | 'view' | 'steps' | 'export' | 'presets';
 
 /** Command action definition */
+import { useTranslation } from './i18n.js';
+
 export interface CommandAction {
   id: string;
   label: string;
@@ -28,15 +30,6 @@ export interface CommandPaletteModalProps {
 }
 
 /** Category display names */
-const categoryNames: Record<CommandCategory, string> = {
-  elements: 'Elements',
-  edit: 'Edit',
-  view: 'View',
-  steps: 'Steps',
-  export: 'Export',
-  presets: 'Presets',
-};
-
 /** Category icons */
 const CategoryIcon: React.FC<{ category: CommandCategory; className?: string }> = ({ 
   category, 
@@ -118,6 +111,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
   onClose,
   actions,
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -240,7 +234,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a command or search..."
+              placeholder={t('palette.placeholder')}
               className="
                 w-full px-3 py-2 rounded-lg
                 bg-surface2 border border-border
@@ -256,7 +250,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
           <div ref={listRef} className="max-h-[400px] overflow-y-auto py-2">
             {flatList.length === 0 ? (
               <div className="px-4 py-8 text-center text-muted text-sm">
-                No commands found
+                {t('palette.noResults')}
               </div>
             ) : (
               Object.entries(groupedActions).map(([category, categoryActions]) => {
@@ -267,7 +261,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                     {/* Category Header */}
                     <div className="px-4 py-1.5 flex items-center gap-2 text-xs text-muted uppercase tracking-wide">
                       <CategoryIcon category={category as CommandCategory} className="w-3 h-3" />
-                      {categoryNames[category as CommandCategory]}
+                      {t(`palette.categories.${category}`)}
                     </div>
                     
                     {/* Category Actions */}
@@ -297,7 +291,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                             </span>
                             {action.locked && (
                               <span className="ml-1 text-[10px] text-muted/70 flex items-center gap-0.5">
-                                🔒 <span className="text-accent">Pro</span>
+                                🔒 <span className="text-accent">{t('palette.pro')}</span>
                               </span>
                             )}
                           </div>
@@ -324,15 +318,15 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
           <div className="px-4 py-2 border-t border-border bg-surface2/50 text-xs text-muted flex items-center gap-4">
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 rounded bg-surface border border-border text-xs">↑↓</kbd>
-              navigate
+              {t('palette.navigate')}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 rounded bg-surface border border-border text-xs">↵</kbd>
-              select
+              {t('palette.select')}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 rounded bg-surface border border-border text-xs">esc</kbd>
-              close
+              {t('palette.close')}
             </span>
           </div>
         </div>

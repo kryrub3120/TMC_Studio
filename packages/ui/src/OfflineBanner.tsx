@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface OfflineBannerProps {
   isVisible: boolean;
@@ -27,13 +28,14 @@ const WifiOffIcon: React.FC<{ className?: string }> = ({ className }) => (
  * Displays a non-blocking banner when user is offline
  */
 export const OfflineBanner: React.FC<OfflineBannerProps> = ({ isVisible }) => {
+  const { t } = useTranslation();
   if (!isVisible) return null;
 
   return (
     <div className="fixed top-12 left-0 right-0 z-[45] flex justify-center pointer-events-none">
       <div className="bg-red-500/90 text-white px-4 py-2 rounded-b-lg shadow-lg flex items-center gap-2 text-sm font-medium pointer-events-auto">
         <WifiOffIcon className="w-4 h-4" />
-        <span>You are offline — changes will sync when back online</span>
+        <span>{t('offline.message')}</span>
       </div>
     </div>
   );

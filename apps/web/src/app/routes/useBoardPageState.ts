@@ -6,7 +6,7 @@
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
 import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, hasPosition } from '@tmc/core';
-import type { InspectorElement, ElementInList } from '@tmc/ui';
+import { useTranslation, type InspectorElement, type ElementInList } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore, useInitializeTheme } from '../../store/useUIStore';
@@ -28,30 +28,35 @@ export interface BoardPageProps {
 
 export function useBoardPageState(props: BoardPageProps) {
   const { onOpenLimitModal, onOpenPricingModal } = props;
-  
+  const { t } = useTranslation();
+
   const stageRef = useRef<Konva.Stage>(null);
-  
+
   // ─── Label input ref and callback for Enter→focus (Sprint A) ─────
   const labelInputRef = useRef<HTMLInputElement>(null);
   const onFocusLabelInput = useCallback(() => {
     labelInputRef.current?.focus();
   }, []);
-  
+
   // Auth store
   const authUser = useAuthStore((s) => s.user);
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authIsPro = useAuthStore((s) => s.isPro);
   const signOut = useAuthStore((s) => s.signOut);
-  
+  // DEV-ONLY: see useAuthStore.devLogin
+  const devLogin = useAuthStore((s) => s.devLogin);
+  // DEV-ONLY: see useAuthStore.devClearData
+  const devClearData = useAuthStore((s) => s.devClearData);
+
   // Entitlements
   const { can } = useEntitlements();
-  
+
   // Initialize theme
   useInitializeTheme();
-  
+
   // Pozyskane wcześnie, by efekt post-mount mógł spełnić exhaustive-deps
   const setInspectorOpen = useUIStore((s) => s.setInspectorOpen);
-  
+
   // Post-mount inspector correction (Hard Rule B)
   useEffect(() => {
     const stored = localStorage.getItem('tmc-ui-settings');
@@ -61,7 +66,7 @@ export function useBoardPageState(props: BoardPageProps) {
       setInspectorOpen(shouldBeOpen);
     }
   }, [setInspectorOpen]);
-  
+
   // Board store state
   const elements = useBoardStore((s) => s.elements);
   const selectedIds = useBoardStore((s) => s.selectedIds);
@@ -72,9 +77,10 @@ export function useBoardPageState(props: BoardPageProps) {
   const playerOrientationSettingsRaw = useBoardStore((s) => s.document.playerOrientationSettings); // PR3
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
   const updatePlayerOrientationSettings = useBoardStore((s) => s.updatePlayerOrientationSettings); // PR4
-  
+
   // Board store actions
   const addPlayerAtCursor = useBoardStore((s) => s.addPlayerAtCursor);
+  const addPlayerFromSquad = useBoardStore((s) => s.addPlayerFromSquad);
   const addBallAtCursor = useBoardStore((s) => s.addBallAtCursor);
   const addBallGroupAtCursor = useBoardStore((s) => s.addBallGroupAtCursor);
   const addArrowAtCursor = useBoardStore((s) => s.addArrowAtCursor);
@@ -111,7 +117,11 @@ export function useBoardPageState(props: BoardPageProps) {
   const renameGroup = useBoardStore((s) => s.renameGroup);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   const updateTextContent = useBoardStore((s) => s.updateTextContent);
-  
+  const addSquadPlayer = useBoardStore((s) => s.addSquadPlayer);
+  const removeSquadPlayer = useBoardStore((s) => s.removeSquadPlayer);
+  const setSquadVisible = useBoardStore((s) => s.setSquadVisible);
+  const toggleSquadVisible = useBoardStore((s) => s.toggleSquadVisible);
+
   // Cloud/step actions
   const cloudProjectId = useBoardStore((s) => s.cloudProjectId);
   const isSaving = useBoardStore((s) => s.isSaving);
@@ -122,7 +132,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const goToStep = useBoardStore((s) => s.goToStep);
   const nextStep = useBoardStore((s) => s.nextStep);
   const prevStep = useBoardStore((s) => s.prevStep);
-  
+
   // UI store state
   const theme = useUIStore((s) => s.theme);
   const focusMode = useUIStore((s) => s.focusMode);
@@ -140,7 +150,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const isPrintMode = useUIStore((s) => s.isPrintMode);
   const isOnline = useUIStore((s) => s.isOnline);
   const breakpoint = useUIStore((s) => s.breakpoint);
-  
+
   // UI store actions
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const toggleFocusMode = useUIStore((s) => s.toggleFocusMode);
@@ -167,7 +177,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const setShowTutorial = useUIStore((s) => s.setShowTutorial);
   const showTutorial = useUIStore((s) => s.showTutorial);
   const replayTutorial = useUIStore((s) => s.replayTutorial);
-  
+
   // Playback state
   const isPlaying = useUIStore((s) => s.isPlaying);
   const isLooping = useUIStore((s) => s.isLooping);
@@ -178,7 +188,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const toggleLoop = useUIStore((s) => s.toggleLoop);
   const setStepDuration = useUIStore((s) => s.setStepDuration);
   const setAnimationProgress = useUIStore((s) => s.setAnimationProgress);
-  
+
   // Normalizacja orientacji (kontrakt: showVision musi być jawnym boolean; undefined => false)
   const playerOrientationSettings = useMemo(() => {
     const settings = playerOrientationSettingsRaw ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
@@ -192,11 +202,11 @@ export function useBoardPageState(props: BoardPageProps) {
     if (selectedIds.length !== 1) return undefined;
     return elements.find((el) => el.id === selectedIds[0]);
   }, [elements, selectedIds]);
-  
+
   // Save status: not dirty = saved (regardless of isSaving state)
   const isDirty = useBoardStore((s) => s.isDirty);
   const isSaved = !isDirty;
-  
+
   // Hidden by group
   const hiddenByGroup = useMemo(() => {
     const hidden = new Set<string>();
@@ -207,16 +217,16 @@ export function useBoardPageState(props: BoardPageProps) {
     }
     return hidden;
   }, [groups]);
-  
+
   // Pitch config
-  const pitchConfig = useMemo(() => 
+  const pitchConfig = useMemo(() =>
     getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
     [pitchSettings?.orientation]
   );
-  
+
   const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
   const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
-  
+
   // Export controller
   const exportController = useExportController({
     stageRef,
@@ -224,7 +234,7 @@ export function useBoardPageState(props: BoardPageProps) {
     canvasHeight,
     onOpenPricingModal,
   });
-  
+
   // Steps data (liczone bezpośrednio z boardDoc.steps — jedno źródło prawdy)
   const stepsData = useMemo(() => {
     return boardDoc.steps.map((step, index) => ({
@@ -233,33 +243,33 @@ export function useBoardPageState(props: BoardPageProps) {
       index,
     }));
   }, [boardDoc.steps]);
-  
+
   // Gated step addition
   const addStep = useCallback(() => {
     const stepCount = boardDoc.steps.length;
     const canAddStep = can('addStep', { stepCount });
-    
+
     if (!authIsAuthenticated && canAddStep === 'hard-block') {
       onOpenLimitModal('guest-step', stepCount, 5);
       return;
     }
-    
+
     if (authIsAuthenticated && !authIsPro && canAddStep === 'hard-block') {
       onOpenLimitModal('free-step', stepCount, 10);
       return;
     }
-    
+
     if (authIsAuthenticated && !authIsPro && canAddStep === 'soft-prompt') {
-      showToast(`You have ${stepCount}/10 steps. Upgrade to Pro for unlimited!`);
+      showToast(t('commands.toast.stepLimitFree', { count: stepCount }));
     }
-    
+
     addStepRaw();
-  }, [can, authIsAuthenticated, authIsPro, boardDoc.steps.length, addStepRaw, showToast, onOpenLimitModal]);
-  
+  }, [can, authIsAuthenticated, authIsPro, boardDoc.steps.length, addStepRaw, showToast, onOpenLimitModal, t]);
+
   // Inspector element
   const inspectorElement: InspectorElement | undefined = useMemo(() => {
     if (!selectedElement) return undefined;
-    
+
     if (hasPosition(selectedElement)) {
       return {
         id: selectedElement.id,
@@ -275,7 +285,7 @@ export function useBoardPageState(props: BoardPageProps) {
         y: selectedElement.position.y,
       };
     }
-    
+
     if (isArrowElement(selectedElement)) {
       return {
         id: selectedElement.id,
@@ -286,10 +296,10 @@ export function useBoardPageState(props: BoardPageProps) {
         arrowNumber: selectedElement.number,
       } satisfies InspectorElement as InspectorElement;
     }
-    
+
     return undefined;
   }, [selectedElement]);
-  
+
   // Elements list
   const elementsList: ElementInList[] = useMemo(() => {
     return elements.map((el) => ({
@@ -301,7 +311,7 @@ export function useBoardPageState(props: BoardPageProps) {
         : 'Ball',
     }));
   }, [elements]);
-  
+
   // Canvas events controller
   const canvasEventsController = useCanvasEventsController({
     elements,
@@ -312,17 +322,17 @@ export function useBoardPageState(props: BoardPageProps) {
     updateArrowEndpoint,
     stageRef,
   });
-  
+
   // Drawing controller
   const drawingController = useDrawingController();
-  
+
   // Canvas interaction (new architecture)
   const canvasInteraction = useCanvasInteraction();
   const activeCanvasInteraction = USE_NEW_CANVAS ? canvasInteraction : null;
-  
+
   // Context menu
   const contextMenu = useCanvasContextMenu();
-  
+
   // Text edit controller (new hook with overlay positioning)
   const editOverlay = useTextEditController({
     elements,
@@ -337,7 +347,7 @@ export function useBoardPageState(props: BoardPageProps) {
     onSelectElement: (id: string) => selectElement(id, false),
     onToast: showToast,
   });
-  
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     handleExportPNG: exportController.exportPNG,
@@ -358,21 +368,23 @@ export function useBoardPageState(props: BoardPageProps) {
   // handleTextEditSave, handlePlayerQuickEdit, handlePlayerNumberSave)
   // were removed from this file in I5. BoardPage now uses
   // useBoardPageHandlers as the single source of truth for all handlers.
-  
+
   return {
     // Refs
     stageRef,
     labelInputRef,
-    
+
     // Feature flags
     USE_NEW_CANVAS,
-    
+
     // Auth
     authUser,
     authIsAuthenticated,
     authIsPro,
     signOut,
-    
+    devLogin,
+    devClearData,
+
     // Board state
     elements,
     selectedIds,
@@ -384,9 +396,10 @@ export function useBoardPageState(props: BoardPageProps) {
     hiddenByGroup,
     cloudProjectId,
     isSaving,
-    
+
     // Board actions
     addPlayerAtCursor,
+    addPlayerFromSquad,
     addBallAtCursor,
     addBallGroupAtCursor,
     addArrowAtCursor,
@@ -420,7 +433,7 @@ export function useBoardPageState(props: BoardPageProps) {
     toggleGroupVisibility,
     renameGroup,
     updateTextContent,
-    
+
     // Steps
     currentStepIndex,
     stepsData,
@@ -430,10 +443,10 @@ export function useBoardPageState(props: BoardPageProps) {
     goToStep,
     nextStep,
     prevStep,
-    
+
     // Callbacks (Sprint A)
     onFocusLabelInput,
-    
+
     // UI state
     theme,
     focusMode,
@@ -451,7 +464,7 @@ export function useBoardPageState(props: BoardPageProps) {
     isPrintMode,
     isOnline,
     breakpoint,
-    
+
     // UI actions
     toggleTheme,
     toggleFocusMode,
@@ -480,7 +493,7 @@ export function useBoardPageState(props: BoardPageProps) {
     showTutorial,
     setShowTutorial,
     replayTutorial,
-    
+
     // Playback
     isPlaying,
     isLooping,
@@ -491,7 +504,7 @@ export function useBoardPageState(props: BoardPageProps) {
     toggleLoop,
     setStepDuration,
     setAnimationProgress,
-    
+
     // Derived
     selectedElement,
     canUndo,
@@ -500,12 +513,12 @@ export function useBoardPageState(props: BoardPageProps) {
     inspectorElement,
     elementsList,
     isAutoNumbering, // PR-ARROW-NUMBER
-    
+
     // Canvas
     pitchConfig,
     canvasWidth,
     canvasHeight,
-    
+
     // Controllers
     exportController,
     canvasEventsController,
@@ -513,19 +526,27 @@ export function useBoardPageState(props: BoardPageProps) {
     activeCanvasInteraction,
     contextMenu,
     editOverlay,
-    
+
     // Text editing (from controller)
     editingTextId: editOverlay.text.editingId,
     editingTextValue: editOverlay.text.value,
     setEditingTextId: (id: string | null) => id ? editOverlay.text.start(id) : editOverlay.text.cancel(),
     setEditingTextValue: editOverlay.text.setValue,
     editingTextElement: editOverlay.text.element,
-    
+
     // Player editing (from controller)
     editingPlayerId: editOverlay.player.editingId,
     editingPlayerNumber: editOverlay.player.value,
     setEditingPlayerId: (id: string | null) => id ? editOverlay.player.start(id) : editOverlay.player.cancel(),
     setEditingPlayerNumber: editOverlay.player.setValue,
     editingPlayerElement: editOverlay.player.element,
+
+    // Squad bench
+    squad: boardDoc.squad ?? [],
+    squadVisible: boardDoc.squadVisible ?? true,
+    addSquadPlayer,
+    removeSquadPlayer,
+    setSquadVisible,
+    toggleSquadVisible,
   };
 }

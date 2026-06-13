@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface ShortcutsHintProps {
   isVisible: boolean;
@@ -20,6 +21,7 @@ export const ShortcutsHint: React.FC<ShortcutsHintProps> = ({
   onDismiss,
   onClick,
 }) => {
+  const { t } = useTranslation();
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
   useEffect(() => {
@@ -66,15 +68,15 @@ export const ShortcutsHint: React.FC<ShortcutsHintProps> = ({
 
           {/* Text */}
           <div className="flex items-center gap-1.5 text-sm">
-            <span className="text-text">Press</span>
+            <span className="text-text">{t('shortcutsHint.press')}</span>
             <kbd className="px-1.5 py-0.5 rounded bg-surface2 border border-border text-accent font-mono text-xs">
               ?
             </kbd>
-            <span className="text-text">for shortcuts •</span>
+            <span className="text-text">{t('shortcutsHint.forShortcuts')} •</span>
             <kbd className="px-1.5 py-0.5 rounded bg-surface2 border border-border text-accent font-mono text-xs">
               ⌘K
             </kbd>
-            <span className="text-text">for commands</span>
+            <span className="text-text">{t('shortcutsHint.forCommands')}</span>
           </div>
 
           {/* Close hint (subtle) */}

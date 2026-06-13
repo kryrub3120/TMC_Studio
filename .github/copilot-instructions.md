@@ -237,6 +237,20 @@ Zasady:
 
 ---
 
+## Wersjonowanie aplikacji
+
+Kazdy sprint moze zmieniac wersje produktu. Obowiazuja nastepujace zasady:
+
+- Przeczytaj `docs/VERSIONING.md` przed kazdym sprintem, ktory moze byc release-worthy.
+- Jesli sprint dodaje nowa funkcje → **MINOR bump** (`0.5.0` → `0.6.0`).
+- Jesli sprint naprawia bugi → **PATCH bump** (`0.5.0` → `0.5.1`).
+- Jesli sprint robi i jedno i drugie → MINOR.
+- Bump robiony na WSZYSTKICH `package.json` (root, `apps/web`, `packages/*`) — musza byc zgodne.
+- Po bumpie zaktualizuj `CHANGELOG.md` → przenies zmiany z `[Unreleased]` do nowej sekcji release.
+- **Wersja w stopce (Footer) jest dynamiczna** — czyta `version` z `apps/web/package.json`. Nie hardcoduj jej.
+- Po zmianie wersji zweryfikuj, czy `<Footer version={...} />` w `AppShell.tsx` pokazuje poprawna wartosc (import z `package.json`).
+- `docs/VERSIONING.md` zawiera pelna polityke — odnos sie do niej w `thoughts/`.
+
 ## Baza danych i migracje
 
 Przed kazda zmiana DB przeczytaj:

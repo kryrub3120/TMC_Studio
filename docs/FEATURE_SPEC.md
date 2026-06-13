@@ -6,8 +6,8 @@
 
 ## Meta
 
-- **Version:** 0.5.0
-- **Last Updated:** 2026-06-10
+- **Version:** 0.6.0 (patrz `docs/VERSIONING.md`)
+- **Last Updated:** 2026-06-13 (v0.6.0 — Squad + redesign + i18n)
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -35,7 +35,15 @@
 ## Table of Contents
 
 1. [Board Elements](#1-board-elements)
-2. [Selection & Interaction](#2-selection--interaction)
+   - 1.1 [Players](#11-players)
+   - 1.2 [Orientation & Vision](#12-orientation--vision)
+   - 1.3 [Ball](#13-ball)
+   - 1.4 [Arrows](#14-arrows)
+   - 1.5 [Zones](#15-zones)
+   - 1.6 [Text Labels](#16-text-labels)
+   - 1.7 [Drawings](#17-drawings)
+   - 1.8 [Equipment](#18-equipment)
+   - 1.9 [Squad Bench](#19-squad-bench)
 3. [Canvas & Viewport](#3-canvas--viewport)
 4. [Pitch Configuration](#4-pitch-configuration)
 5. [Teams & Colors](#5-teams--colors)
@@ -590,17 +598,22 @@ Same as freehand, with different defaults:
 
 #### 1.8.1 Equipment Types & Variants
 
-| Type | Variants | Shortcut | Shift Variant |
-|------|----------|----------|---------------|
+| Type | Variants | Shortcut | Shift/Alt Variant |
+|------|----------|----------|-------------------|
 | `goal` | standard, mini | `J` | `Shift+J` (mini) |
 | `mannequin` | standard, flat | `M` | `Shift+M` (flat) |
-| `cone` | standard | `K` | — |
+| `cone` | standard, flat, tall | `K` | `Alt+K` (flat disc marker) — long-press / `Shift+K` (pole, legacy) |
 | `pole` | standard | `Shift+K` | — |
 | `ladder` | standard | `Y` | — |
 | `hoop` | standard | `Q` | — |
 | `hurdle` | standard | `U` | — |
 
-**Note:** Cone and Pole share the `K` key (Shift toggles between them)
+**Cone family (3 variants):**
+- **standard** (`K`) — classic orange training cone, base plate + 1 reflective stripe
+- **flat** (`Alt+K`) — low disc / marker dome (fastest to place, reads from any zoom)
+- **tall** (no shortcut) — taller slalom cone, base plate + 2 reflective stripes
+
+Mini glyphs in TopBar menu show distinct SVG icons for each variant. Cone shapes use `darken()` helper for subtle depth while staying recolourable. Pivot at base centre (y=0).
 
 #### 1.8.2 Properties
 
@@ -631,11 +644,110 @@ Same as freehand, with different defaults:
 - Hit bounds defined in `hitBounds.ts` per equipment type
 - Color prop passed through to all shapes
 
+**Cone rendering (cone.tsx):** Three visual variants sharing a grounded base plate:
+- **flat**: Ellipse base rim + Line dome + top opening ellipse
+- **standard**: Ellipse base plate + tapered cone body (apex y=-44) + 1 reflective stripe band
+- **tall**: Ellipse base plate + tapered cone body (apex y=-62) + 2 reflective stripe bands
+
+All variants use `darken(color, 0.22)` for base fill and white (#ffffff) for stripes/outline.
+
+**Hit bounds (hitBounds.ts):** Per-variant bounds with 2px margin:
+- flat: minX=-22s, minY=-14s, maxY=6.5s (dome peak y=-14, rim rx=22)
+- standard: minX=-20s, minY=-44s, maxY=6.5s (apex y=-44, baseRx=20)
+- tall: minX=-18.5s, minY=-62s, maxY=6s (apex y=-62, baseRx=18.5)
+
 **To add new equipment:**
 1. Create `{type}.tsx` with shape component
 2. Add to `EQUIPMENT_RENDERERS` map
 3. Add hit bounds to `getEquipmentHitBounds()`
 4. No changes to `EquipmentNode.tsx` needed (extensible design)
+
+---
+
+### 1.9 Squad Bench
+
+Predefined player roster below the pitch. Always rendered component, visibility toggled with eye icon.
+
+#### 1.9.1 Data Model
+
+```typescript
+interface SquadPlayer {
+  id: string;
+  name: string;
+  number: number;
+  team: Team; // 'home' | 'away' | 'team3' | 'team4'
+}
+```
+
+**Document fields:** `squad: SquadPlayer[]`, `squadVisible: boolean` (default: true)
+
+#### 1.9.2 UI: Squad Bench (bottom bar)
+
+**Location:** Below the canvas, above SmartBottomBar
+
+**Header:** "Squad Bench" label + count `{used}/{limit}` + gear icon (→ Settings→Squad) + eye toggle
+
+**Team switcher:** Single team visible at a time (default: Home). Dropdown button with team color dot + name + count + chevron. Click cycles through teams. Mini color dots below for direct jump.
+
+**Player slot (draggable):**
+- SVG glyph (team shape triangle/circle/square/diamond + number inside)
+- Name below (max 85px, truncated with ellipsis)
+- Hover: green glow shadow + border accent
+- Drag: cursor changes to grabbing
+
+**Empty/locked slots:**
+- Empty: dashed border, `+` icon, click opens inline quick-add form
+- Locked (Free beyond limit): kłódka icon, opacity reduced
+
+**Quick-add form (inline):**
+- Name input + Number input + Add/Cancel buttons
+- Enter submits, Escape cancels
+- Adds directly to squad (no navigation to Settings)
+
+**Collapsed state:** Shows player count hint + "tap eye to show"
+
+#### 1.9.3 Limits
+
+| Tier | Max players | Notes |
+|------|-------------|-------|
+| Free | 5 total | Beyond limit: locked slots |
+| Pro / Club Premium | 25 per team (100 total) | Empty slots show `+` |
+
+#### 1.9.4 Premium Gating
+
+- **canAccess** = `authIsPro` (true dla Pro/Team)
+- Gdy `!canAccess`:
+  - Przeciągalne tylko pierwsze 5 zawodników
+  - Reszta z kłódką
+  - Warning banner gdy limit osiągnięty: "⭐ Free plan allows 5 squad players"
+- Gdy `canAccess`:
+  - Pełna funkcjonalność drag & drop
+
+#### 1.9.5 Drag & Drop to Pitch
+
+**Drag source:** SquadBench player button (draggable, JSON serialized)
+**Drop target:** Canvas area (`onDragOver` + `onDrop` handler in BoardPage)
+**Action:** `addPlayerFromSquad(team, name, number)` → creates player with name as label + number
+**Ghost preview:** Native HTML5 drag preview (browser default)
+
+#### 1.9.6 Settings → Squad (Modal)
+
+**Location:** SettingsModal → Editor → Squad
+
+**Features:**
+- Show on board toggle
+- Free: upgrade CTA (button → PricingModal)
+- Pro: Add player form (name + number + team select → Team 1/2/3/4)
+- Player list with remove button per item
+- Color-coded team badges
+- "Squad is full!" warning when cap reached
+
+#### 1.9.7 Squad Preset (TopBar)
+
+**Location:** TopBar → Players dropdown → bottom section
+
+**CTA:** "Preset your squad — Easy drag & drop onto the pitch"
+**Action:** Opens Settings → Squad
 
 ---
 
@@ -1233,7 +1345,7 @@ Located in right sidebar (toggle with `I` key):
 
 ### Complete Shortcut List (~85 total)
 
-#### Element Creation (11)
+#### Element Creation (14)
 - `P` — Add home player
 - `Shift+P` — Add away player
 - `B` — Add ball
@@ -1242,7 +1354,8 @@ Located in right sidebar (toggle with `I` key):
 - `Shift+J` — Add goal (mini)
 - `M` — Add mannequin
 - `Shift+M` — Add mannequin (flat)
-- `K` — Add cone
+- `K` — Add cone (standard)
+- **`Alt+K`** — Add cone (flat disc marker)
 - `Shift+K` — Add pole
 - `Y` — Add ladder
 - `Q` — Add hoop
@@ -1409,57 +1522,92 @@ Context menu items exist for:
 
 ## 12. Export
 
-### 12.1 PNG Export (Single Step)
+### 12.1 UI: Export Dropdown (TopBar)
 
-**Trigger:** `Cmd+E` or TopBar → Export button
+**Trigger:** TopBar → Export dropdown button (obok Players/Arrows/Zones/Equipment)
+
+**Zawartość dropdown:**
+| Opcja | Skrót | Pro | Opis |
+|-------|-------|-----|------|
+| PNG — Current step | `⌘E` | — | Bieżący krok jako PNG |
+| PNG — All steps | `⇧⌘E` | — | Wszystkie kroki jako osobne PNG |
+| JPG — Current step | — | — | Bieżący krok jako JPG (białe tło, quality 0.92) |
+| PDF — All steps | `⇧⌘P` | ⭐ | Wielostronicowy PDF (Pro feature) |
+| GIF Animation | `⇧⌘G` | ⭐ | Animowany GIF (Pro feature, wymaga ≥2 kroków) |
+
+**Pro features:** Dla Guest/Free — przyciski są `disabled` z gwiazdką. Kliknięcie → PricingModal.
+Dla Pro/Team — wszystkie opcje dostępne.
+
+### 12.2 PNG Export (Single Step)
+
+**Trigger:** `⌘E` or TopBar → Export → PNG — Current step
 
 **Output:**
 - Format: PNG
 - Resolution: Canvas dimensions at current zoom
 - Transparency: Solid background (pitch theme)
-- Filename: `{project-name}-step-{N}.png`
+- Filename: `{project-name}.png`
 
-### 12.2 PNG Export (All Steps)
+### 12.3 PNG Export (All Steps)
 
-**Trigger:** `Shift+Cmd+E`
+**Trigger:** `⇧⌘E` or TopBar → Export → PNG — All steps
 
 **Output:**
 - One PNG per step
 - Filenames: `{project-name}-step-1.png`, `{project-name}-step-2.png`, ...
-- ZIP archive if multiple steps
 - Same resolution as single export
 
-### 12.3 GIF Export
+### 12.4 JPG Export
 
-**Trigger:** `Shift+Cmd+G`
+**Trigger:** TopBar → Export → JPG — Current step
 
 **Output:**
-- Animated GIF
+- Format: JPEG
+- Białe tło (Konva PNG → canvas → JPEG konwersja)
+- Quality: 0.92
+- Filename: `{project-name}.jpg`
+
+### 12.5 GIF Export (Pro ⭐)
+
+**Trigger:** `⇧⌘G` or TopBar → Export → GIF Animation
+
+**Entitlement:** `can('exportGIF')` → Guest/Free: PricingModal, Pro/Team: OK
+
+**Output:**
+- Animated GIF (gifenc library, lazy loaded)
 - Frame duration: Each step's configured duration
 - Loop: Infinite
-- Resolution: Scaled to reasonable size for GIF format
+- 256-color palette (quantize)
 - Filename: `{project-name}.gif`
 
-### 12.4 PDF Export
+**Wymagania:** Minimum 2 kroki (inaczej toast + abort)
 
-**Trigger:** `Shift+Cmd+P`
+### 12.6 PDF Export (Pro ⭐)
+
+**Trigger:** `⇧⌘P` or TopBar → Export → PDF — All steps
+
+**Entitlement:** `can('exportPDF')` → Guest/Free: PricingModal, Pro/Team: OK
 
 **Output:**
-- Multi-page PDF (one page per step)
-- Vector graphics where possible
-- Page size: A4 or Letter (configurable)
+- Multi-page PDF (one page per step) via jsPDF (lazy loaded)
+- Page size: Dopasowany do wymiarów canvas
+- Orientation: landscape/portrait auto
 - Filename: `{project-name}.pdf`
 
-**Note:** Recommended to enable Print Mode (`W`) before PDF export for optimal printing
+**Note:** Zalecany Print Mode (`W`) przed PDF exportem
 
-### 12.5 SVG Export (Experimental)
+### 12.7 SVG Export (Experimental)
+
+**Trigger:** Programmatic (hook `exportSVG`)
 
 **Output:**
 - Vector format
 - Scalable without quality loss
-- Experimental feature
+- Experimental feature (no UI entry point)
 
 ---
+
+## 13. Save & Persistence
 
 ## 13. Save & Persistence
 

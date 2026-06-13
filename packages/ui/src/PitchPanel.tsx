@@ -4,6 +4,7 @@
 
 import type { PitchSettings, PitchTheme } from '@tmc/core';
 import { PITCH_THEMES, DEFAULT_LINE_SETTINGS, PLAIN_PITCH_LINES } from '@tmc/core';
+import { useTranslation } from './i18n.js';
 
 export interface PitchPanelProps {
   pitchSettings: PitchSettings;
@@ -77,6 +78,7 @@ export function PitchPanel({
   isPrintMode = false, 
   onTogglePrintMode,
 }: PitchPanelProps) {
+  const { t } = useTranslation();
   const handleThemeSelect = (theme: PitchTheme) => {
     const themeColors = PITCH_THEMES[theme];
     onUpdatePitch({
@@ -102,34 +104,34 @@ export function PitchPanel({
   return (
     <div className="p-4 space-y-6">
       <div className="text-xs text-muted uppercase tracking-wider">
-        Pitch Appearance
+        {t('pitchPanel.title')}
       </div>
 
       {/* Theme presets */}
       <div className="space-y-2">
-        <label className="block text-xs text-muted">Theme</label>
+        <label className="block text-xs text-muted">{t('pitchPanel.theme')}</label>
         <div className="grid grid-cols-4 gap-2">
           <ThemeButton
             theme="grass"
-            label="Grass"
+            label={t('pitchPanel.grass')}
             isActive={pitchSettings.theme === 'grass'}
             onClick={() => handleThemeSelect('grass')}
           />
           <ThemeButton
             theme="indoor"
-            label="Indoor"
+            label={t('pitchPanel.indoor')}
             isActive={pitchSettings.theme === 'indoor'}
             onClick={() => handleThemeSelect('indoor')}
           />
           <ThemeButton
             theme="chalk"
-            label="Chalk"
+            label={t('pitchPanel.chalk')}
             isActive={pitchSettings.theme === 'chalk'}
             onClick={() => handleThemeSelect('chalk')}
           />
           <ThemeButton
             theme="futsal"
-            label="Futsal"
+            label={t('pitchPanel.futsal')}
             isActive={pitchSettings.theme === 'futsal'}
             onClick={() => handleThemeSelect('futsal')}
           />
@@ -138,7 +140,7 @@ export function PitchPanel({
 
       {/* Show stripes toggle */}
       <div className="flex items-center justify-between pt-3 border-t border-border">
-        <span className="text-sm text-text">Show Stripes</span>
+        <span className="text-sm text-text">{t('pitchPanel.showStripes')}</span>
         <button
           type="button"
           onClick={() => onUpdatePitch({ showStripes: !pitchSettings.showStripes })}
@@ -156,7 +158,7 @@ export function PitchPanel({
 
       {/* Without Lines toggle */}
       <div className="flex items-center justify-between">
-        <span className="text-sm text-text">Without Lines</span>
+        <span className="text-sm text-text">{t('pitchPanel.withoutLines')}</span>
         <button
           type="button"
           onClick={handleWithoutLinesToggle}
@@ -209,12 +211,12 @@ export function PitchPanel({
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
           <rect x="6" y="14" width="12" height="8" />
         </svg>
-        Print Friendly
+        {t('pitchPanel.printFriendly')}
       </button>
 
       {/* Custom colors section */}
       <div className="space-y-3 pt-3 border-t border-border">
-        <div className="text-xs text-muted">Custom Colors</div>
+        <div className="text-xs text-muted">{t('pitchPanel.customColors')}</div>
         
         {/* Primary color */}
         <div className="flex items-center gap-2">
@@ -225,7 +227,7 @@ export function PitchPanel({
             className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
           />
           <div className="flex-1">
-            <label className="block text-xs text-muted mb-1">Field Color</label>
+            <label className="block text-xs text-muted mb-1">{t('pitchPanel.fieldColor')}</label>
             <input
               type="text"
               value={pitchSettings.primaryColor.toUpperCase()}
@@ -249,7 +251,7 @@ export function PitchPanel({
             className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
           />
           <div className="flex-1">
-            <label className="block text-xs text-muted mb-1">Line Color</label>
+            <label className="block text-xs text-muted mb-1">{t('pitchPanel.lineColor')}</label>
             <input
               type="text"
               value={pitchSettings.lineColor.startsWith('rgba') ? 'white' : pitchSettings.lineColor.toUpperCase()}
@@ -268,7 +270,7 @@ export function PitchPanel({
 
       {/* Orientation toggle */}
       <div className="space-y-2 pt-3 border-t border-border">
-        <div className="text-xs text-muted">Orientation</div>
+        <div className="text-xs text-muted">{t('pitchPanel.orientation')}</div>
         <div className="flex gap-2">
           <button
             type="button"
@@ -279,7 +281,7 @@ export function PitchPanel({
                 : 'bg-surface2 text-text hover:bg-surface2/80'
             }`}
           >
-            ↔ Landscape
+            ↔ {t('pitchPanel.landscape')}
           </button>
           <button
             type="button"
@@ -290,7 +292,7 @@ export function PitchPanel({
                 : 'bg-surface2 text-text hover:bg-surface2/80'
             }`}
           >
-            ↕ Portrait
+            ↕ {t('pitchPanel.portrait')}
           </button>
         </div>
       </div>
@@ -298,7 +300,7 @@ export function PitchPanel({
 
       {/* Help text */}
       <div className="text-xs text-muted pt-2 border-t border-border">
-        Choose a preset theme or customize individual colors.
+        {t('pitchPanel.help')}
       </div>
     </div>
   );

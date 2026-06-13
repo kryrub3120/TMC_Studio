@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface RightPanelProps {
   selectedCount: number;
@@ -24,12 +25,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   selectedElement,
   onUpdateElement,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="w-64 h-full bg-gray-800 border-l border-gray-700 flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <h2 className="text-sm font-semibold text-white uppercase tracking-wide">
-          Properties
+          {t('legacy.rightPanel.properties')}
         </h2>
       </div>
 
@@ -37,16 +39,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       <div className="flex-1 p-4 overflow-y-auto">
         {selectedCount === 0 ? (
           <div className="text-gray-500 text-sm text-center py-8">
-            <p>No element selected</p>
+            <p>{t('legacy.rightPanel.none')}</p>
             <p className="mt-2 text-xs">
-              Click on a player or ball to see its properties
+              {t('legacy.rightPanel.noneHint')}
             </p>
           </div>
         ) : selectedCount > 1 ? (
           <div className="text-gray-400 text-sm">
-            <p className="font-medium text-white">{selectedCount} elements selected</p>
+            <p className="font-medium text-white">{t('legacy.rightPanel.selected', { count: selectedCount })}</p>
             <p className="mt-2 text-xs text-gray-500">
-              Multiple selection mode. Use Ctrl+D to duplicate or Delete to remove.
+              {t('legacy.rightPanel.multiHint')}
             </p>
           </div>
         ) : selectedElement ? (
@@ -54,7 +56,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             {/* Element type */}
             <div>
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
-                Type
+                {t('legacy.rightPanel.type')}
               </label>
               <div className="text-sm text-white capitalize flex items-center gap-2">
                 {selectedElement.type === 'player' ? (
@@ -66,12 +68,12 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                           selectedElement.team === 'home' ? '#e63946' : '#457b9d',
                       }}
                     />
-                    {selectedElement.team === 'home' ? 'Home' : 'Away'} Player
+                    {selectedElement.team === 'home' ? t('legacy.rightPanel.homePlayer') : t('legacy.rightPanel.awayPlayer')}
                   </>
                 ) : (
                   <>
                     <span className="w-3 h-3 rounded-full bg-white border border-gray-600" />
-                    Ball
+                    {t('legacy.rightPanel.ball')}
                   </>
                 )}
               </div>
@@ -81,7 +83,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             {selectedElement.type === 'player' && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
-                  Number
+                  {t('legacy.rightPanel.number')}
                 </label>
                 <input
                   type="number"
@@ -100,13 +102,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             {selectedElement.type === 'player' && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
-                  Label (optional)
+                  {t('legacy.rightPanel.label')}
                 </label>
                 <input
                   type="text"
                   value={selectedElement.label ?? ''}
                   onChange={(e) => onUpdateElement?.({ label: e.target.value })}
-                  placeholder="e.g. Messi"
+                  placeholder={t('legacy.rightPanel.labelPlaceholder')}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
                 />
               </div>
@@ -115,7 +117,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             {/* Position */}
             <div>
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
-                Position
+                {t('legacy.rightPanel.position')}
               </label>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="bg-gray-700 px-3 py-2 rounded-lg">
@@ -144,13 +146,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
       {/* Footer with tips */}
       <div className="p-4 border-t border-gray-700 text-xs text-gray-500">
-        <p className="font-medium text-gray-400 mb-2">Shortcuts</p>
+        <p className="font-medium text-gray-400 mb-2">{t('legacy.rightPanel.shortcuts')}</p>
         <ul className="space-y-1">
           <li>
-            <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-300">Shift</kbd> + click = multi-select
+            {t('legacy.rightPanel.shiftClick')}
           </li>
           <li>
-            <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-300">Del</kbd> = delete selection
+            {t('legacy.rightPanel.delDelete')}
           </li>
         </ul>
       </div>

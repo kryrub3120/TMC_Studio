@@ -7,6 +7,7 @@
 
 import React, { useEffect, useCallback, useRef } from 'react';
 import { SHORTCUT_SECTIONS, TOOL_ACTIONS, HELP_TIPS } from './helpSidebarData';
+import { useTranslation } from './i18n.js';
 
 export type ProjectSaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
@@ -76,6 +77,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
   isPrintMode = false,
   onRestartTutorial,
 }) => {
+  const { t } = useTranslation();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Focus close button when sidebar opens
@@ -111,10 +113,10 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
     }
   };
 
-  const saveStatusLabel = saveStatus === 'saving' ? 'Saving...'
-    : saveStatus === 'unsaved' || hasUnsavedChanges ? 'Unsaved changes'
-    : saveStatus === 'error' ? 'Save error'
-    : 'All changes saved';
+  const saveStatusLabel = saveStatus === 'saving' ? t('help.saving')
+    : saveStatus === 'unsaved' || hasUnsavedChanges ? t('help.unsaved')
+    : saveStatus === 'error' ? t('help.error')
+    : t('help.allSaved');
 
   const saveStatusIcon = saveStatus === 'saving' ? <SavingIcon />
     : saveStatus === 'error' ? <ErrorIcon />
@@ -124,7 +126,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
   return (
     <div
       role="dialog"
-      aria-label="Help panel"
+      aria-label={t('help.panelLabel')}
       aria-modal="false"
       className="
         fixed top-0 right-0 h-full w-80
@@ -137,11 +139,11 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-semibold text-text">Help & Shortcuts</h2>
+        <h2 className="text-sm font-semibold text-text">{t('help.title')}</h2>
         <button
           ref={closeButtonRef}
           onClick={onClose}
-          aria-label="Close help panel"
+          aria-label={t('help.close')}
           className="p-1.5 rounded-md hover:bg-surface2 text-muted hover:text-text transition-colors"
         >
           <CloseIcon className="w-4 h-4" />
@@ -152,11 +154,11 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
         {/* Section 1: Shortcuts */}
         <div>
-          <SectionHeader title="Keyboard Shortcuts" />
+          <SectionHeader title={t('help.shortcuts')} />
           <div className="space-y-2">
             {SHORTCUT_SECTIONS.map((section) => (
               <div key={section.title}>
-                <h4 className="text-[10px] font-medium text-muted/70 uppercase tracking-wider mb-1">{section.title}</h4>
+                <h4 className="text-[10px] font-medium text-muted/70 uppercase tracking-wider mb-1">{t(`cheatsheet.sections.${section.title}`)}</h4>
                 <div className="space-y-0.5">
                   {section.items.map((item) => (
                     <div key={item.key} className="flex items-center justify-between text-xs">
@@ -174,13 +176,13 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
 
         {/* Section 2: Tools */}
         <div>
-          <SectionHeader title="Quick Tools" />
+          <SectionHeader title={t('help.quickTools')} />
           <div className="grid grid-cols-2 gap-2">
             {TOOL_ACTIONS.map((tool) => (
               <button
                 key={tool.id}
                 onClick={() => handleToolAction(tool.action)}
-                title={tool.description}
+                title={t(`help.tools.${tool.id}.description`)}
                 className="
                   px-3 py-2 rounded-md
                   bg-surface2 hover:bg-surface
@@ -190,8 +192,8 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
                   text-left
                 "
               >
-                <span className="block">{tool.label}</span>
-                <span className="block text-[10px] text-muted mt-0.5">{tool.description}</span>
+                <span className="block">{t(`help.tools.${tool.id}.label`)}</span>
+                <span className="block text-[10px] text-muted mt-0.5">{t(`help.tools.${tool.id}.description`)}</span>
               </button>
             ))}
           </div>
@@ -199,12 +201,12 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
 
         {/* Section 3: Tips */}
         <div>
-          <SectionHeader title="Tips" />
+          <SectionHeader title={t('help.tips')} />
           <div className="space-y-2">
             {HELP_TIPS.map((tip) => (
               <div key={tip.id} className="flex items-start gap-2">
                 <span className="text-accent text-[10px] mt-0.5 flex-shrink-0">💡</span>
-                <p className="text-xs text-text">{tip.text}</p>
+                <p className="text-xs text-text">{t(`help.tipsList.${tip.id}`)}</p>
               </div>
             ))}
           </div>
@@ -212,18 +214,18 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
 
         {/* Section 5: Restart Tutorial */}
         <div>
-          <SectionHeader title="Tutorial" />
+          <SectionHeader title={t('help.tutorial')} />
           <button
             onClick={onRestartTutorial}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-surface2 hover:bg-surface border border-border text-xs text-text transition-colors"
           >
             <span className="text-accent">▶</span>
-            <span>Restart 5-step tutorial</span>
+            <span>{t('help.restartTutorial')}</span>
           </button>
         </div>
         {!isPrintMode && (
           <div>
-            <SectionHeader title="Save Status" />
+            <SectionHeader title={t('help.saveStatus')} />
             <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface2">
               {saveStatusIcon}
               <span className="text-xs text-text flex-1">{saveStatusLabel}</span>
@@ -232,7 +234,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
                   onClick={onManualSave}
                   className="text-xs px-2 py-1 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
                 >
-                  Save
+                  {t('help.save')}
                 </button>
               )}
             </div>

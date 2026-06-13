@@ -5,9 +5,143 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-06-13
 
 ### Added
+- **Export 100% resolution** (2026-06-13)
+  - Dynamiczny `pixelRatio` dla wszystkich formatów exportu: `Math.max(2, Math.ceil(canvasWidth / stageW))` — full canvas resolution niezależnie od zoom viewportu.
+  - PNG, PNG-all, JPG, GIF, PDF — wszystkie exportują w pełnej rozdzielczości boiska.
+  - Plik: `apps/web/src/hooks/useExportController.ts`.
+- **Wyginanie strzałek (łuki) — bend handle** (2026-06-13)
+  - Każdą strzałkę (pass / run / shoot / dribble) można wygiąć w gładki łuk. Po zaznaczeniu pojawia się niebieski uchwyt na środku — przeciągnięcie tworzy krzywą (kwadratowa Béziera), dwuklik prostuje.
+  - Wykorzystane istniejące pole `ArrowElement.curveControl`; uchwyt reprezentuje wierzchołek łuku (wygodniejszy UX niż surowy punkt kontrolny).
+  - Parametr `endpoint` rozszerzony o `'control'` w całym łańcuchu (ArrowNode → ArrowsLayer → BoardCanvas → store). `updateArrowEndpoint` ustawia/czyści `curveControl` (snap do prostej przy zbliżeniu do środka).
+  - Pliki: `packages/board/src/ArrowNode.tsx`, `apps/web/src/store/slices/elementsSlice.ts`, sygnatury w `ArrowsLayer`, `BoardCanvas`, `CanvasElements`, `CanvasAdapter`, `BoardCanvasSection`, `useCanvasEventsController`, `useCanvasInteraction`, `CommandRegistry`.
+- **Bramkarz — wyróżniony kolor + skrót** (2026-06-13)
+  - `applyFormation` oznacza bramkarza formacji (`role === 'GK'`) jako `isGoalkeeper`, więc po Shift+1..6 / 1..6 GK renderuje się w kolorze bramkarskim drużyny.
+  - Domyślne `goalkeeperColor` w `DEFAULT_TEAM_SETTINGS` są teraz odrębne i kontrastujące: Team 1 żółty `#fbbf24`, Team 2 pomarańczowy `#f97316`, Team 3 różowy, Team 4 cyan.
+  - Nowy skrót **Shift+G**: zaznaczony zawodnik z pola → zostaje bramkarzem; zaznaczony bramkarz / brak zaznaczenia → cykl koloru bramkarza drużyny (`cycleGoalkeeperColor`). Wpis dodany do ściągawki skrótów.
+  - Pliki: `packages/core/src/types.ts`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/hooks/useKeyboardShortcuts.ts`, `packages/ui/src/CheatSheetOverlay.tsx`.
+
+### Changed
+- **UI redesign — Faza 1+2: wspólne prymitywy + przebudowa inspektora** (2026-06-13)
+  - Nowy plik `packages/ui/src/primitives.tsx`: `Toggle`, `SettingRow`, `Section` (zwijana), `Field` + `inputClass`, `Slider`, `ColorSwatchRow`, `SegmentedControl`. Jedno źródło prawdy na tokenach semantycznych (patrz `docs/DESIGN_SYSTEM.md` §10.8).
+  - `RightInspector` — `PropsTab` przebudowany: kontekstowy nagłówek (chip drużyny + numer + pozycja jako tekst, zamiast fałszywych edytowalnych pól X/Y), opcje pogrupowane w zwijane sekcje **Identity / Appearance / Role / Advanced** (Advanced domyślnie zwinięte), wszystkie toggle/slider/pola z prymitywów. Usunięto emoji 🔄 (ikona SVG). Pasek 5 zakładek nie zawija się już do 2 rzędów (flex zamiast grid-cols-3).
+  - `SettingsModal` — 4 powielone inline toggle'e (motyw / siatka / snap / squad) zastąpione współdzielonym `Toggle`.
+  - Pliki: `packages/ui/src/primitives.tsx`, `packages/ui/src/index.ts`, `packages/ui/src/RightInspector.tsx`, `packages/ui/src/SettingsModal.tsx`, `docs/DESIGN_SYSTEM.md`.
+- **UI redesign — Faza 3: konsolidacja IA (inspektor odchudzony, ustawienia z lewą nawigacją)** (2026-06-13)
+  - `SettingsModal` przebudowany na **lewy pasek nawigacji** pogrupowany w sekcje **Account** (Profile / Security / Billing), **Editor** (Preferences / Squad) i **Board** (Teams / Pitch). Emoji w zakładkach zastąpione ikonami SVG.
+  - Zakładki **Teams** i **Pitch** przeniesione z inspektora do `SettingsModal` (sekcja Board) — renderują `TeamsPanel` / `PitchPanel`. Inspektor zszczuplony z **5 do 3 zakładek** (Props / Layers / Objects).
+  - Ustawienia drużyn/boiska/print-mode przepięte przez `ModalOrchestrator` → `AppShell` bezpośrednio ze store'a (`document.teamSettings`, `document.pitchSettings`, `updateTeamSettings`, `updatePitchSettings`, `isPrintMode`, `togglePrintMode`).
+  - Pliki: `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/RightInspector.tsx`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/app/orchestrators/ModalOrchestrator.tsx`, `apps/web/src/app/AppShell.tsx`.
+- **UI redesign — Faza 4: domknięcie planu** (2026-06-13)
+  - **Inspektor 3 → 2 zakładki:** Layers i Objects scalone w jeden panel (widoczność warstw + grupy u góry, przeszukiwalna lista obiektów poniżej). Zostają: Props / Layers.
+  - **Tryb motywu Light / Dark / System** — `useUIStore` dostał `themeMode` + `setThemeMode` z rozwiązywaniem `system` przez `matchMedia` i nasłuchem zmian OS. W `SettingsModal` → Preferences renderowany `SegmentedControl` zamiast przełącznika. Przepięte przez `ModalOrchestrator` → `AppShell`.
+  - **Wizualny szlif `SettingsModal`** — zahardkodowane klasy (`text-gray-*`, `bg-white/5`, `bg-blue-600`, `bg-gray-700`, `border-white/*`) zamienione na tokeny semantyczne (`text-muted`, `bg-surface2`, `bg-accent`, `border-border`); przyciski na tłach kolorowych zachowują biały tekst. Preferences używają `SettingRow` + `SegmentedControl`.
+  - **Multi-select w inspektorze** — zaznaczenie wielu elementów pokazuje wspólne właściwości: suwak krycia (batch) + Show/Hide labels. Nowa akcja store `updateSelectedElements`.
+  - Pliki: `packages/ui/src/RightInspector.tsx`, `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/primitives.tsx`, `apps/web/src/store/useUIStore.ts`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/app/orchestrators/ModalOrchestrator.tsx`, `apps/web/src/app/AppShell.tsx`.
+
+- **Layers — kompletne show/hide + Footer social** (2026-06-13)
+  - Panel warstw dostał brakujące przełączniki: **Equipment** i **Drawings** (wcześniej zahardkodowane na zawsze-widoczne), a „Labels" doprecyzowano na **Text & Labels**. `LayerVisibility`/`LayerType` rozszerzone w `useUIStore` i inspektorze; `BoardCanvasSection` realnie podpina `equipment`/`drawings` zamiast `true`.
+  - **Footer**: dodane ikony **X** i **LinkedIn** + numer wersji obok copyrightu (`Footer` ma teraz prop `version`).
+  - Naprawione blokery builda z równolegle edytowanego kodu (feature squad team3/team4): błąd składni JSX w liście squadu w `SettingsModal`, niespójny typ `onAddSquadPlayer` (ujednolicony na `Team` w `SettingsModal`/`ModalOrchestrator`), oraz brakujący w destrukturyzacji prop `onOpenSquadSettings` w `TopBar`.
+  - Pliki: `apps/web/src/store/useUIStore.ts`, `packages/ui/src/RightInspector.tsx`, `apps/web/src/app/board/BoardCanvasSection.tsx`, `packages/ui/src/Footer.tsx`, `apps/web/src/app/AppShell.tsx`, `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/TopBar.tsx`, `apps/web/src/app/orchestrators/ModalOrchestrator.tsx`.
+  - **Pozostało z planu:** nowe sekcje Settings (Language, Keyboard shortcuts, Editor defaults, Data & privacy, About) oraz i18n PL/EN/ES z przełącznikiem flagi (react-i18next — wymaga instalacji zależności).
+- **i18n PL/EN/ES + przełącznik flagi w top barze** (2026-06-13)
+  - Zero-zależnościowa warstwa i18n w `@tmc/ui` (`i18n.tsx`) z API wzorowanym 1:1 na **react-i18next** (`useTranslation().t`, `i18n.changeLanguage`) — silnik można później podmienić na react-i18next (pod macOS/Android/desktop) bez ruszania komponentów.
+  - Słowniki `packages/ui/src/locales/{en,pl,es}.ts` (kształt JSON, reużywalne między web / React Native / Electron). Wykrywanie języka z przeglądarki + zapamiętywanie w `localStorage`, fallback do EN.
+  - `LanguageSwitcher` — dropdown z flagami **SVG** (nie emoji): Polski / English / Español, z aktywnym stanem i obsługą klawiatury. Wpięty w prawy klaster `TopBar`.
+  - Przetłumaczone na start: `Footer` (Privacy/Terms/Cookies/Contact + pokaż/ukryj) oraz tytuły w `TopBar` (Focus/Theme/Help). Reszta stringów do uzupełnienia fazami (Settings, Inspector, toasty).
+  - `LanguageProvider` owija aplikację w `main.tsx`.
+  - Pliki: `packages/ui/src/i18n.tsx`, `packages/ui/src/LanguageSwitcher.tsx`, `packages/ui/src/locales/*.ts`, `packages/ui/src/index.ts`, `packages/ui/src/TopBar.tsx`, `packages/ui/src/Footer.tsx`, `apps/web/src/main.tsx`.
+- **Settings — nowa grupa „General" (Language / Shortcuts / About)** (2026-06-13)
+  - Lewa nawigacja `SettingsModal` dostała grupę **General**: **Language** (`SegmentedControl` PL/EN/ES spięty z i18n), **Shortcuts** (zwięzła ściągawka skrótów) i **About** (wersja + linki X/LinkedIn/GitHub/Contact). Ikony SVG w nawigacji.
+  - Pozostałe propozycje (Editor defaults, Data & privacy import/eksport JSON) odłożone — wymagają nowego stanu w store i hooków serializacji.
+  - Plik: `packages/ui/src/SettingsModal.tsx`.
+- **Eksport/import planszy (JSON) + rozszerzenie tłumaczeń** (2026-06-13)
+  - Store: `exportBoardToFile()` i `importBoardFromFile(file)` w `documentSlice` (na bazie `exportDocument`/`importDocument` z core). Import podmienia bieżącą planszę i resetuje historię. Wpięte przez `ModalOrchestrator` → `AppShell`; w `SettingsModal` sekcja **Data & privacy** (Export/Import).
+  - i18n: nowe namespace'y `inspector.*` i `settings.*` w `locales/{en,pl,es}.ts`. Przetłumaczony **RightInspector** — zakładki (Props/Layers), tytuły sekcji (Identity/Appearance/Role/Advanced/Numbering/Sequence), etykiety pól, multi-select, nazwy warstw, wyszukiwarka obiektów — oraz grupy nawigacji w Settings (Account/Editor/Board/General).
+  - Pliki: `apps/web/src/store/slices/documentSlice.ts`, `packages/ui/src/RightInspector.tsx`, `packages/ui/src/locales/*.ts`, `apps/web/src/app/orchestrators/ModalOrchestrator.tsx`, `apps/web/src/app/AppShell.tsx`.
+- **Tłumaczenia — CheatSheet + Command Palette** (2026-06-13)
+  - Namespace'y `cheatsheet.*` i `palette.*` w `locales/{en,pl,es}.ts`. `CheatSheetOverlay`: nagłówek, zakładki, tytuły sekcji i stopka po PL/EN/ES. `CommandPaletteModal`: placeholder wyszukiwania, „brak wyników" i nazwy kategorii.
+  - Pliki: `packages/ui/src/CheatSheetOverlay.tsx`, `packages/ui/src/CommandPaletteModal.tsx`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — etykiety komend + toasty skrótów** (2026-06-13)
+  - `createCommandActions` przyjmuje opcjonalny `t`, więc etykiety akcji w Command Palette korzystają teraz z `commands.*` zamiast stałych angielskich stringów. Dotyczy elementów, edycji, widoku, kroków/playbacku i eksportu.
+  - `useKeyboardShortcuts` używa `commands.toast.*` dla toastów po skrótach klawiszowych: dodawanie elementów/sprzętu, undo/redo, copy/paste, vision/orientation, grid, zapis, print mode, animacja, edycja tekstu, resize/rotation i formacje.
+  - Pliki: `apps/web/src/commands/commandPalette/createCommandActions.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/hooks/useKeyboardShortcuts.ts`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — główne modale i panele pomocy/projektów** (2026-06-13)
+  - Dodane namespace'y `emptyState.*`, `auth.*`, `confirm.*`, `limits.*`, `folders.*`, `pricing.*`, `projects.*`, `help.*`, `tutorial.*` w `locales/{en,pl,es}.ts`.
+  - Przetłumaczone: `EmptyStateOverlay`, `AuthModal`, `ConfirmModal`, `LimitReachedModal`, `CreateFolderModal`, `FolderOptionsModal`, `PricingModal`, najważniejszy chrome `ProjectsDrawer`, `HelpSidebar` oraz `TutorialOverlay` (teksty kroków, CTA, demo labels, aria-labels).
+  - Pliki: `packages/ui/src/{EmptyStateOverlay,AuthModal,ConfirmModal,LimitReachedModal,CreateFolderModal,FolderOptionsModal,PricingModal,ProjectsDrawer,HelpSidebar,TutorialOverlay}.tsx`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — dolny chrome, inspektor i panele narzędziowe** (2026-06-13)
+  - Dodane namespace'y `bottomSteps.*`, `selection.*`, `teamsPanel.*`, `pitchPanel.*`, `zoom.*`, `offline.*`, `shortcutsHint.*`, `bottomSheet.*`, `smartBottom.*` oraz brakujące klucze `inspector.*`, `palette.*`, `cheatsheet.*`, `commands.add-freehand-draw`.
+  - Przetłumaczone: `BottomStepsBar`, `FloatingHelpButton`, `SelectionToolbar`, `TeamsPanel`, `PitchPanel`, `ZoomWidget`, `OfflineBanner`, `ShortcutsHint`, `BottomSheet`, `SmartBottomBar`, `Footer`, `CheatSheetOverlay`, `CommandPaletteModal` i pozostałe widoczne etykiety/aria w `RightInspector`.
+  - Pliki: `packages/ui/src/{BottomStepsBar,FloatingHelpButton,SelectionToolbar,TeamsPanel,PitchPanel,ZoomWidget,OfflineBanner,ShortcutsHint,BottomSheet,SmartBottomBar,Footer,CheatSheetOverlay,CommandPaletteModal,RightInspector}.tsx`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — toasty aplikacji i store** (2026-06-13)
+  - Dodane namespace'y `exportToast.*`, `billingToast.*`, `settingsToast.*`, `projectToast.*`, `appToast.*`, `storeToast.*` oraz nie-hookowy helper `translate()` dla Zustand store / usług poza Reactem.
+  - Przetłumaczone toasty eksportu, billing portal, settings/account, projekty/foldery, payment return, login/dev login, limit kroków, menu kontekstowe planszy, zoom/online/offline/save retry oraz prompt zapisu pracy gościa do chmury.
+  - Pliki: `apps/web/src/hooks/{useExportController,useBillingController,useSettingsController,useProjectsController}.ts`, `apps/web/src/app/AppShell.tsx`, `apps/web/src/app/routes/useBoardPageState.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/store/{useUIStore,useAuthStore}.ts`, `packages/ui/src/i18n.tsx`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — Settings, TopBar, Squad i legacy UI** (2026-06-13)
+  - Rozszerzone namespace'y `topbar.*`, `settings.*`, `squadBench.*` i dodany `legacy.*`.
+  - Przetłumaczone: `TopBar` (menu narzędzi, eksport, status zapisu, account menu), `SettingsModal` (profil, security, billing, preferences, squad, language/shortcuts/about/data), `SquadBench` (inline quick add, team switcher, aria/title/hinty) oraz legacy `Toolbar`/`RightPanel`.
+  - Po audycie UI zostały tylko brandy/social aria, przykładowe placeholdery auth (`John Doe`, `you@example.com`) i literal `DELETE` w potwierdzeniu usunięcia konta.
+  - Pliki: `packages/ui/src/{TopBar,SettingsModal,SquadBench,Toolbar,RightPanel}.tsx`, `packages/ui/src/locales/*.ts`.
+- **Squad Bench redesign — visual polish + 4 teams + quick-add + usuwanie** (2026-06-13)
+  - **Export 100% resolution fix**: Dynamiczny `pixelRatio` dla wszystkich formatów (PNG, JPG, PDF, GIF) — `Math.max(2, Math.ceil(canvasWidth / stageW))`. Full board resolution niezależnie od zoomu.
+  - **Squad Bench redesign**: Circle glyph zamiast team shapes (identycznie jak na boisku), `DEFAULT_TEAM_SETTINGS` jako SSOT kolorów, `animate-fade-in` z kaskadowym `animation-delay`, hover glow (`shadow-[0_0_10px_rgba(46,230,166,0.25)]`), badge count per team section, `max-w-[85px]` zamiast 60px (naprawione obcinanie imion).
+  - **1 team visible + team switcher**: Zamiast 4 drużyn naraz — dropdown z kolorowym badge + nazwą + count, kropki do szybkiego skoku.
+  - **Inline quick-add**: Kliknięcie pustego slota `+` otwiera formularz (name + number), Enter zatwierdza, Escape anuluje. Bez nawigacji do Settings.
+  - **Usuwanie zawodnika**: Czerwony X w kółku na hover (top-right corner) w Squad Bench.
+  - **4 teams**: Settings → Squad select z Team 1/2/3/4, kolorowe badge dla team3/team4.
+  - **Free/Premium limity**: Free max 5 (reszta locked + kłódka), Premium 25/team.
+  - **isDirty fix**: Wszystkie akcje squad wołają `get().markDirty()` zamiast ręcznego `set({ isDirty: true })` — autozapis (i localStorage persistence) działa poprawnie.
+  - **TopBar CTA**: PlayersMenu → "Preset your squad — Easy drag & drop onto the pitch".
+  - **Unifikacja typu**: `SquadPlayerItem` + `SquadPlayerSettings` → jeden `SquadPlayer` z `@tmc/core`.
+  - Pliki: `packages/ui/src/SquadBench.tsx`, `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/TopBar.tsx`, `packages/ui/src/index.ts`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/app/board/BoardTopBarSection.tsx`, `apps/web/src/hooks/useExportController.ts`, `apps/web/src/store/slices/documentSlice.ts`.
+- **Docs update — Squad Bench w FEATURE_SPEC + DESIGN_SYSTEM** (2026-06-13)
+  - `docs/FEATURE_SPEC.md` — nowa sekcja §1.9 Squad Bench + ToC update.
+  - `docs/DESIGN_SYSTEM.md` — SquadBench w tabeli Navigation & Layout.
+  - Pliki: `docs/FEATURE_SPEC.md`, `docs/DESIGN_SYSTEM.md`.
+
+## [0.5.0] - 2026-06-13
+
+### Added
+- **Squad Bench — predefined player roster (Pro/Club Premium)** (2026-06-13)
+  - Nowe typy `SquadPlayer`, `DEFAULT_SQUAD` w `packages/core/src/types.ts`
+  - `createSquadPlayer()`, `generateSquadId()` w `packages/core/src/board.ts`
+  - Pola `squad` i `squadVisible` w `BoardDocument` — serializacja/wczytywanie
+  - Store: `addSquadPlayer`, `removeSquadPlayer`, `updateSquadPlayer`, `setSquad`, `setSquadVisible`, `toggleSquadVisible` w `documentSlice.ts`
+  - `addPlayerFromSquad(team, name, number)` w `elementsSlice.ts` — tworzy zawodnika z label + numer
+  - `SquadBench` — komponent pod boiskiem z zawodnikami home/away, przeciąganie na płytę, gear icon → settings, hide/show toggle
+  - Settings → Squad — edytor rosteru: dodawanie (name, number, team), lista z usuwaniem, toggle "Show on board", blokada dla Free z CTA upgrade
+  - Drag & drop z SquadBench na canvas — drop handler w BoardPage
+  - Premium gating — squad widoczny tylko dla Pro/Club Premium
+  - **Fix widoczności:** SquadBench zawsze renderowany, 3 stany: empty (CTA do Settings), lista zablokowana dla Free, lista aktywna dla Pro. Domyślnie `squadVisible: true`
+  - Zmodyfikowane pliki: `packages/core/src/types.ts`, `packages/core/src/board.ts`, `packages/core/src/serialization.ts`, `apps/web/src/store/slices/documentSlice.ts`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/app/routes/useBoardPageState.ts`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/app/AppShell.tsx`, `apps/web/src/app/orchestrators/ModalOrchestrator.tsx`, `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/SquadBench.tsx`, `packages/ui/src/index.ts`
+  - **Progress bar w SmartBottomBar** — mini pasek postępu nad step counterem, płynna animacja podczas playbacku
+- **Testy useAnimationPlayback** — 11 testów dla easing + logiki playbacku (loop, pause, next step)
+- **Cone family — 3 warianty** (Disc marker, Cone, Tall cone)
+  - `cone.tsx`: flat (dome/marker), standard (classic cone), tall (slalom) — każdy z base plate, reflective stripes
+  - `MiniEquipmentGlyph`: unikalne SVG glyphs dla każdego wariantu w TopBar
+  - `EQUIPMENT_ITEMS` w TopBar: Disc marker (Alt+K), Cone (K), Tall cone
+  - `useKeyboardShortcuts`: Alt+K → flat disc marker (wzór Z/Shift+Z/Alt+Z)
+  - `hitBounds.ts`: per-variant bounds (flat: apex y=-14, standard: apex y=-44, tall: apex y=-62)
+  - Skrót `ToolShortcut` ukryty gdy pusty (brak shortcut dla tall cone)
+- **Export dropdown w TopBar** (2026-06-13)
+  - Pojedynczy przycisk Export zastąpiony rozwijanym menu: PNG (⌘E), PNG all steps (⇧⌘E), JPG, PDF⭐ (⇧⌘P), GIF⭐ (⇧⌘G)
+  - Export JPG: biała płachta, quality 0.92 (darmowy)
+  - PDF i GIF oznaczone gwiazdką Pro, zablokowane dla Guest/Free → PricingModal
+  - Nowy kontrakt `onExport(format)` zamiast `onExport()`
+  - `exportJPG()` w exportUtils + ExportService + useExportController
+- **SmartBottomBar** (2026-06-13)
+  - Nowy kontekstualny bottom bar z 3 trybami: empty (quick actions), editing (undo/redo), animation (playback + step chips)
+  - Undo/Redo zawsze widoczne w bottom barze
+  - Bottom bar nie znika gdy animacja wyłączona
+  - Zero zbędnych linków (github, stopka)
+- **First Impression UX** (2026-06-13)
+  - Animated Formation Preview w EmptyStateOverlay — animowana formacja 4-3-3 w tle
+  - Celebration Confetti — subtelny efekt confetti przy pierwszym dodaniu elementu
+  - `@keyframes confettiDrop` w index.css
 - **Sprint F: Coach Tour onboarding + tutorial restart polish** (2026-06-12)
   - Prosty 5-step tooltip zastąpiony 6-krokowym **Coach Tour** dla first experience: shortcuts, Inspector/PPM, orientacja/vision, sprzęt treningowy, export, Pro/more options.
   - Tutorial ma spotlight na realnych elementach UI, animowaną strzałkę, target label, progress, keycaps, mini-demo dla każdego kroku oraz Back/Next/Skip.
@@ -71,8 +205,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Skróty w `CheatSheetOverlay` + pełna dokumentacja w `FEATURE_SPEC.md` (sekcja 1.4.6)
   - Zmodyfikowane pliki: `packages/core/src/types.ts`, `packages/core/src/board.ts`, `packages/board/src/ArrowNode.tsx`, `packages/ui/src/CheatSheetOverlay.tsx`, `apps/web/src/store/slices/drawingSlice.ts`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/store/slices/documentSlice.ts`, `apps/web/src/hooks/useKeyboardShortcuts.ts`, `apps/web/src/utils/canvasContextMenu.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/app/routes/useBoardPageState.ts`, `docs/FEATURE_SPEC.md`
 
-### Changed (User-Facing)
-- **Refaktor `createPlayer` — options-based, brak numeru dla pojedynczego zawodnika** (2026-06-09)
+### Changed
+- **Fix outdated komentarz w entitlements.ts** — gating jest już zintegrowany (PR-MON-EXPORT, PROJECT-LIMITS, STEP-LIMITS)
+- **SettingsModal → design tokeny** — `bg-surface`, `text-text`, `text-muted`, `bg-accent`, `border-border` zamiast hardcoded kolorów
+- **Refaktor `createPlayer`** — options-based, brak numeru dla pojedynczego zawodnika (2026-06-09)
   - `createPlayer` zmienione na `options`-based (`CreatePlayerOptions`) — `number` stał się opcjonalny
   - Domyślnie `number: undefined` → zawodnik tworzony skrótem **P** nie ma numeru
   - `isGoalkeeper: false` domyślnie, z backward-compat w renderze (stare projekty → `number === 1`)
@@ -196,3 +332,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cloud sync with Supabase
 - Free and Pro tiers with Stripe integration
 - Dark/light theme support
+
+[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.5.0...HEAD
+[0.6.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.5.0
+[0.2.2]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.2.2
+[0.2.1]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.2.1
+[0.2.0]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.2.0
+[0.1.0]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.1.0

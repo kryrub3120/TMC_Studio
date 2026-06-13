@@ -50,7 +50,7 @@ export const intentCommands = {
   /**
    * Update arrow endpoint during drag (no history)
    */
-  arrowEndpointDelta: (arrowId: string, endpoint: 'start' | 'end', position: Position) => {
+  arrowEndpointDelta: (arrowId: string, endpoint: 'start' | 'end' | 'control', position: Position) => {
     const { updateArrowEndpoint } = useBoardStore.getState();
     updateArrowEndpoint(arrowId, endpoint, position);
   },

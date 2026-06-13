@@ -19,6 +19,7 @@ import type {
 import {
   DEFAULT_PITCH_CONFIG,
   DEFAULT_PLAYER_DEFAULTS,
+  DEFAULT_TEAM_SETTINGS,
   createPlayer,
   createBall,
   createArrow,
@@ -37,6 +38,21 @@ import {
 import type { AppState } from '../types';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 import { SHARED_COLORS } from '@tmc/ui';
+
+/**
+ * Goalkeeper jersey palette used by the cycleGoalkeeperColor shortcut (Shift+G).
+ * Colors are chosen to contrast with the usual outfield colors.
+ */
+const GOALKEEPER_PALETTE = [
+  '#fbbf24', // amber / yellow
+  '#f97316', // orange
+  '#22c55e', // green
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#a855f7', // purple
+  '#84cc16', // lime
+  '#111111', // black
+];
 
 /** Get next available player number, with optional offset */
 function getNextPlayerNumber(elements: BoardElement[], team: Team, offset: number = 0): number {
@@ -111,6 +127,7 @@ export interface ElementsSlice {
   
   // Convenience creators
   addPlayerAtCursor: (team: Team) => void;
+  addPlayerFromSquad: (team: Team, name: string, number: number) => void;
   addBallAtCursor: () => void;
   addBallGroupAtCursor: () => void;
   addArrowAtCursor: (arrowType: ArrowType) => void;
@@ -129,7 +146,14 @@ export interface ElementsSlice {
   updateZonePoints: (id: ElementId, points: number[]) => void;
   /** Set equipment scale absolutely (drag-resize handles). Clamped 0.25..3. */
   setEquipmentScale: (id: ElementId, scale: number) => void;
-  updateArrowEndpoint: (id: ElementId, endpoint: 'start' | 'end', position: Position) => void;
+  updateArrowEndpoint: (id: ElementId, endpoint: 'start' | 'end' | 'control', position: Position) => void;
+  /**
+   * Goalkeeper shortcut (Shift+G): if a single outfield player is selected,
+   * promote it to goalkeeper; otherwise cycle the relevant team's
+   * goalkeeperColor through GOALKEEPER_PALETTE. Returns what happened so the
+   * caller can show a toast.
+   */
+  cycleGoalkeeperColor: () => { team: Team; color: string; promoted: boolean };
   
   // Arrow numbering (PR-ARROW-NUMBER)
   toggleArrowNumber: (id: ElementId) => void;
@@ -140,6 +164,8 @@ export interface ElementsSlice {
   deleteSelected: () => void;
   duplicateSelected: () => void;
   updateSelectedElement: (updates: Partial<PlayerElement>) => void;
+  /** Batch-apply updates to ALL selected player elements (multi-select editing). */
+  updateSelectedElements: (updates: Partial<PlayerElement>) => void;
   nudgeSelected: (dx: number, dy: number) => void;
   
   // Property adjustments
@@ -216,6 +242,22 @@ export const createElementsSlice: StateCreator<
       number,
       shape: prefs.shape,
       color: prefs.color,
+    });
+    get().addElement(player);
+  },
+  
+  addPlayerFromSquad: (team, name, number) => {
+    const { cursorPosition } = get();
+    const position = cursorPosition ?? { 
+      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
+      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
+    };
+    const player = createPlayer({
+      position,
+      team,
+      number,
+      label: name,
+      showLabel: true,
     });
     get().addElement(player);
   },
@@ -389,14 +431,69 @@ export const createElementsSlice: StateCreator<
         if (el.id === id && isArrowElement(el)) {
           if (endpoint === 'start') {
             return { ...el, startPoint: position };
-          } else {
+          } else if (endpoint === 'end') {
             return { ...el, endPoint: position };
+          } else {
+            // 'control' — bend the arrow into an arc. If the control point is
+            // dragged back near the straight midpoint, snap the arrow straight
+            // again by removing curveControl.
+            const midX = (el.startPoint.x + el.endPoint.x) / 2;
+            const midY = (el.startPoint.y + el.endPoint.y) / 2;
+            const dist = Math.hypot(position.x - midX, position.y - midY);
+            if (dist < 6) {
+              const { curveControl: _drop, ...rest } = el;
+              return rest;
+            }
+            return { ...el, curveControl: position };
           }
         }
         return el;
       }),
     }));
     // ⚠️ Don't push history during drag - only on drag end
+  },
+
+  cycleGoalkeeperColor: () => {
+    const { selectedIds, elements } = get();
+    const selectedPlayers = elements.filter(
+      (el) => selectedIds.includes(el.id) && isPlayerElement(el)
+    ) as PlayerElement[];
+
+    // Case 1: a single outfield player is selected -> make it the goalkeeper.
+    if (selectedPlayers.length === 1 && !selectedPlayers[0].isGoalkeeper) {
+      const target = selectedPlayers[0];
+      set({
+        elements: elements.map((el) =>
+          el.id === target.id && isPlayerElement(el)
+            ? { ...el, isGoalkeeper: true }
+            : el
+        ),
+      });
+      get().pushHistory();
+      const settings = get().getTeamSettings() ?? DEFAULT_TEAM_SETTINGS;
+      const color =
+        settings[target.team]?.goalkeeperColor ??
+        DEFAULT_TEAM_SETTINGS[target.team]?.goalkeeperColor ??
+        GOALKEEPER_PALETTE[0];
+      return { team: target.team, color, promoted: true };
+    }
+
+    // Case 2: cycle the goalkeeperColor of the relevant team. Prefer the team of
+    // a selected goalkeeper, then the first selected player, else 'home'.
+    const gkPlayer = selectedPlayers.find((p) => p.isGoalkeeper);
+    const team: Team = gkPlayer?.team ?? selectedPlayers[0]?.team ?? 'home';
+    const settings = get().getTeamSettings() ?? DEFAULT_TEAM_SETTINGS;
+    const current =
+      settings[team]?.goalkeeperColor ??
+      DEFAULT_TEAM_SETTINGS[team]?.goalkeeperColor ??
+      GOALKEEPER_PALETTE[0];
+    const idx = GOALKEEPER_PALETTE.findIndex(
+      (c) => c.toLowerCase() === current.toLowerCase()
+    );
+    const next = GOALKEEPER_PALETTE[(idx + 1) % GOALKEEPER_PALETTE.length];
+    get().updateTeamSettings(team, { goalkeeperColor: next });
+    get().pushHistory();
+    return { team, color: next, promoted: false };
   },
   
   toggleArrowNumber: (id) => {
@@ -537,6 +634,18 @@ export const createElementsSlice: StateCreator<
         }
         return el;
       }),
+    });
+    get().pushHistory();
+  },
+
+  updateSelectedElements: (updates) => {
+    const { selectedIds, elements } = get();
+    if (selectedIds.length === 0) return;
+    const idSet = new Set(selectedIds);
+    set({
+      elements: elements.map((el) =>
+        idSet.has(el.id) && isPlayerElement(el) ? { ...el, ...updates } : el
+      ),
     });
     get().pushHistory();
   },
@@ -858,15 +967,19 @@ export const createElementsSlice: StateCreator<
       (el) => !isPlayerElement(el) || el.team !== team
     );
     
-    const newPlayers = positions.map((pos: { x: number; y: number; number: number }) => {
+    const newPlayers = positions.map((pos: { x: number; y: number; role: string; number: number }) => {
       const prefs = resolvePlayerDefaults(team, document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS);
-      // Formations always assign numbers from formation definition (autoNumber-independent)
+      // Formations always assign numbers from formation definition (autoNumber-independent).
+      // Flag the goalkeeper so it renders in the team's distinct goalkeeperColor
+      // instead of the outfield color.
+      const isGoalkeeper = pos.role === 'GK';
       return createPlayer({
         position: { x: pos.x, y: pos.y },
         team,
         number: pos.number,
         shape: prefs.shape,
         color: prefs.color,
+        isGoalkeeper,
       });
     });
     

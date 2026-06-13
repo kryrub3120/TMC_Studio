@@ -4,6 +4,7 @@
  */
 
 import { useMemo } from 'react';
+import { useTranslation } from './i18n.js';
 
 type LimitType =
   | 'guest-step'
@@ -32,55 +33,46 @@ export function LimitReachedModal({
   onClose,
   onSeePlans,
 }: LimitReachedModalProps) {
+  const { t } = useTranslation();
   const content = useMemo(() => {
     const isGuest = type.startsWith('guest');
     const isStep = type.includes('step');
-    const resourceName = isStep ? 'steps' : 'projects';
-    const resourceNameSingular = isStep ? 'step' : 'project';
+    const resourceName = t(`limits.${isStep ? 'steps' : 'projects'}`);
+    const resourceNameSingular = t(`limits.${isStep ? 'step' : 'project'}`);
     
     // Mikro-kontekst: co dokładnie user zrobił
     const context = currentCount === 1 
-      ? `You already have ${currentCount} ${resourceNameSingular} — Guest mode allows only one.`
-      : `You've added ${currentCount} ${resourceName} — that's the Guest limit.`;
+      ? t('limits.guestOne', { count: currentCount, resource: resourceNameSingular })
+      : t('limits.guestMany', { count: currentCount, resource: resourceName });
     
     const freeContext = currentCount === 1
-      ? `You already have ${currentCount} ${resourceNameSingular} — Free plan allows ${maxCount}.`
-      : `You've created ${currentCount} ${resourceName} — that's the Free plan limit.`;
+      ? t('limits.freeOne', { count: currentCount, resource: resourceNameSingular, max: maxCount })
+      : t('limits.freeMany', { count: currentCount, resource: resourceName });
     
     if (isGuest) {
       return {
         emoji: '🚀',
-        title: "You've reached the Guest limit",
+        title: t('limits.guestTitle'),
         context,
-        description: "You're using TMC Studio without an account. Create a free account to keep building and save your work.",
-        benefits: [
-          'Up to 3 projects',
-          '10 steps per project',
-          'Cloud sync & backup',
-          'PNG export',
-        ],
-        primaryCTA: 'Continue for free',
+        description: t('limits.guestDescription'),
+        benefits: t('limits.guestBenefits').split('|'),
+        primaryCTA: t('limits.continueFree'),
         primaryAction: onSignup,
-        progressLabel: 'Guest usage',
+        progressLabel: t('limits.guestUsage'),
       };
     } else {
       return {
         emoji: '⭐',
-        title: 'Free plan limit reached',
+        title: t('limits.freeTitle'),
         context: freeContext,
-        description: "You've reached the limit of the Free plan. Upgrade to Pro to continue without restrictions.",
-        benefits: [
-          'Unlimited projects',
-          'Unlimited steps',
-          'GIF & PDF export',
-          'Priority support',
-        ],
-        primaryCTA: 'Upgrade to Pro',
+        description: t('limits.freeDescription'),
+        benefits: t('limits.proBenefits').split('|'),
+        primaryCTA: t('limits.upgradePro'),
         primaryAction: onUpgrade,
-        progressLabel: 'Free plan',
+        progressLabel: t('limits.freePlan'),
       };
     }
-  }, [type, currentCount, maxCount, onSignup, onUpgrade]);
+  }, [type, currentCount, maxCount, onSignup, onUpgrade, t]);
 
   if (!isOpen) return null;
 
@@ -141,7 +133,7 @@ export function LimitReachedModal({
           {/* Benefits */}
           <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6 text-left">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              What you get:
+              {t('limits.whatYouGet')}
             </p>
             <ul className="space-y-2">
               {content.benefits.map((benefit, index) => (
@@ -170,12 +162,12 @@ export function LimitReachedModal({
               onClick={onSeePlans}
               className="w-full px-6 py-2 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              Compare plans
+              {t('limits.comparePlans')}
             </button>
             
             {/* Microcopy - reassuring */}
             <p className="text-xs text-gray-500 text-center pt-1">
-              Free stays free forever. No credit card required.
+              {t('limits.reassurance')}
             </p>
           </div>
         </div>

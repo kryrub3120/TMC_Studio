@@ -44,6 +44,7 @@ Each plan has a specific set of entitlements:
 | **Max Folders** | 0 | 3 | ∞ | ∞ |
 | **Cloud Sync** | ❌ | ✅ | ✅ | ✅ |
 | **Export PNG** | ✅ | ✅ | ✅ | ✅ |
+| **Export JPG** | ✅ | ✅ | ✅ | ✅ |
 | **Export GIF** | ❌ | ❌ | ✅ | ✅ |
 | **Export PDF** | ❌ | ❌ | ✅ | ✅ |
 | **Team Features** | ❌ | ❌ | ❌ | ✅ |
@@ -155,7 +156,7 @@ These actions check against numeric limits and support soft-prompts:
 
 These actions are simple on/off based on plan:
 
-**`exportPNG`**
+**`exportPNG`** and **`exportJPG`**
 - All plans: true
 
 **`exportGIF`**

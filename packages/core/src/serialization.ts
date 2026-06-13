@@ -10,6 +10,7 @@ import {
   TeamSettings,
   DEFAULT_TEAM_SETTINGS,
   DEFAULT_PLAYER_DEFAULTS,
+  DEFAULT_SQUAD,
 } from './types.js';
 import { createInitialBoard } from './board.js';
 import { createStep } from './step.js';
@@ -40,6 +41,8 @@ export function createDocument(
     pitchConfig,
     teamSettings,
     playerDefaults: DEFAULT_PLAYER_DEFAULTS,
+    squad: DEFAULT_SQUAD,
+    squadVisible: true,
   };
 }
 

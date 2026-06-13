@@ -5,6 +5,7 @@
 import type { TeamSettings, TeamSetting, Team } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { SHARED_COLORS } from './colors';
+import { useTranslation } from './i18n.js';
 
 export interface TeamsPanelProps {
   teamSettings: TeamSettings;
@@ -21,6 +22,7 @@ function TeamSection({
   settings: TeamSetting;
   onUpdate: (settings: Partial<TeamSetting>) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-3">
       {/* Team header with color preview */}
@@ -29,12 +31,12 @@ function TeamSection({
           className="w-5 h-5 rounded-full border-2 border-white/20"
           style={{ backgroundColor: settings.primaryColor }}
         />
-        <span className="text-sm font-medium text-text">{team} Team</span>
+        <span className="text-sm font-medium text-text">{t('teamsPanel.teamSuffix', { team })}</span>
       </div>
 
       {/* Name input */}
       <div>
-        <label className="block text-xs text-muted mb-1">Name</label>
+        <label className="block text-xs text-muted mb-1">{t('teamsPanel.name')}</label>
         <input
           type="text"
           value={settings.name}
@@ -46,7 +48,7 @@ function TeamSection({
 
       {/* Primary Color picker */}
       <div>
-        <label className="block text-xs text-muted mb-1">Primary Color</label>
+        <label className="block text-xs text-muted mb-1">{t('teamsPanel.primaryColor')}</label>
         <div className="flex items-center gap-2 mb-2">
           <input
             type="color"
@@ -89,7 +91,7 @@ function TeamSection({
       
       {/* Goalkeeper Color picker */}
       <div>
-        <label className="block text-xs text-muted mb-1">Goalkeeper Color</label>
+        <label className="block text-xs text-muted mb-1">{t('teamsPanel.goalkeeperColor')}</label>
         <div className="flex items-center gap-2 mb-2">
           <input
             type="color"
@@ -135,18 +137,19 @@ function TeamSection({
 
 /** Teams shown in the panel (home/away kept for back-compat = Team 1/Team 2) */
 const TEAM_ORDER: Array<{ key: Team; label: string }> = [
-  { key: 'home', label: 'Team 1' },
-  { key: 'away', label: 'Team 2' },
-  { key: 'team3', label: 'Team 3' },
-  { key: 'team4', label: 'Team 4' },
+  { key: 'home', label: 'teamsPanel.team1' },
+  { key: 'away', label: 'teamsPanel.team2' },
+  { key: 'team3', label: 'teamsPanel.team3' },
+  { key: 'team4', label: 'teamsPanel.team4' },
 ];
 
 /** Main TeamsPanel component */
 export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
+  const { t } = useTranslation();
   return (
     <div className="p-4 space-y-6">
       <div className="text-xs text-muted uppercase tracking-wider">
-        Team Colors
+        {t('teamsPanel.title')}
       </div>
 
       {TEAM_ORDER.map(({ key, label }, idx) => {
@@ -155,7 +158,7 @@ export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
           <div key={key} className="space-y-6">
             {idx > 0 && <div className="border-t border-border" />}
             <TeamSection
-              team={label}
+              team={t(label)}
               settings={settings}
               onUpdate={(patch) => onUpdateTeam(key, patch)}
             />
@@ -166,7 +169,7 @@ export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
       {/* Help text */}
       <div className="pt-2 border-t border-border">
         <p className="text-xs text-muted">
-          Changes apply immediately to all players. Use Cmd+S to save.
+          {t('teamsPanel.help')}
         </p>
       </div>
     </div>

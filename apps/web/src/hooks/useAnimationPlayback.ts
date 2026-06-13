@@ -10,9 +10,9 @@ import { useEffect } from 'react';
 import { ANIMATION_ENABLED } from '../config/featureFlags';
 
 /**
- * Easing function for smooth animations
+ * Easing function for smooth animations — exported for testing
  */
-function easeInOutCubic(t: number): number {
+export function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 

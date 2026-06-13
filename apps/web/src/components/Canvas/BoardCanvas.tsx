@@ -63,7 +63,7 @@ export interface BoardCanvasProps {
   onElementDragStart?: (id: string) => boolean;
   onResizeZone?: (id: string, pos: { x: number; y: number }, width: number, height: number) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
-  onUpdateArrowEndpoint?: (id: string, endpoint: 'start' | 'end', pos: { x: number; y: number }) => void;
+  onUpdateArrowEndpoint?: (id: string, endpoint: 'start' | 'end' | 'control', pos: { x: number; y: number }) => void;
   onPlayerQuickEdit?: (id: string) => void;
 }
 

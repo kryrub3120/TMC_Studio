@@ -40,6 +40,8 @@ export interface BoardCanvasSectionProps {
     awayPlayers: boolean;
     ball: boolean;
     labels: boolean;
+    equipment: boolean;
+    drawings: boolean;
   };
   hiddenByGroup: Set<string>;
   
@@ -81,7 +83,7 @@ export interface BoardCanvasSectionProps {
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
   onUpdateZonePoints?: (id: string, points: number[]) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
-  onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
+  onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
   pushHistory: () => void;
@@ -490,9 +492,9 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
               homePlayers: layerVisibility.homePlayers,
               awayPlayers: layerVisibility.awayPlayers,
               ball: layerVisibility.ball,
-              equipment: true,
+              equipment: layerVisibility.equipment,
               text: layerVisibility.labels,
-              drawings: true,
+              drawings: layerVisibility.drawings,
             }}
             hiddenByGroup={hiddenByGroup}
             isPlaying={isPlaying}

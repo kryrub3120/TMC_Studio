@@ -1,6 +1,6 @@
 {
   "name": "tmc-studio",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "private": true,
   "description": "TMC Studio — Tactical Board and Animation by Tactics Made Clear",
   "packageManager": "pnpm@9.15.0",

@@ -12,6 +12,7 @@
 
 import { logger } from '../lib/logger';
 import { useCallback, useState, useEffect } from 'react';
+import { useTranslation } from '@tmc/ui';
 import { useBoardStore } from '../store';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -24,6 +25,7 @@ import {
   deleteFolder,
   toggleProjectFavorite,
   toggleProjectPinned,
+  updateProjectTags,
   toggleFolderPinned,
   moveProjectToFolder,
   updateFolderPosition,
@@ -72,6 +74,7 @@ export interface ProjectsController {
  */
 export function useProjectsController(params: UseProjectsControllerParams): ProjectsController {
   const { isDrawerOpen, onOpenLimitModal, onCloseDrawer } = params;
+  const { t } = useTranslation();
   
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -134,11 +137,11 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     const success = await loadFromCloud(id);
     if (success) {
       onCloseDrawer();
-      showToast('Project loaded ☁️');
+      showToast(t('projectToast.loaded'));
     } else {
-      showToast('Failed to load project');
+      showToast(t('projectToast.loadFailed'));
     }
-  }, [loadFromCloud, onCloseDrawer, showToast]);
+  }, [loadFromCloud, onCloseDrawer, showToast, t]);
   
   /**
    * Create a new project with entitlement checks
@@ -178,13 +181,13 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     
     // Free: soft-prompt at approaching limit
     if (authIsAuthenticated && !authIsPro && canCreate === 'soft-prompt') {
-      showToast(`You have ${cloudProjects.length + 1}/3 projects. Upgrade to Pro for unlimited!`);
+      showToast(t('projectToast.limitFree', { count: cloudProjects.length + 1 }));
     }
 
     // Create the project
     newDocument();
     onCloseDrawer();
-    showToast('New project created');
+    showToast(t('projectToast.created'));
     
     // Auto-save to cloud if authenticated
     if (authIsAuthenticated) {
@@ -192,13 +195,13 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
         const success = await saveToCloud();
         if (success) {
           await fetchCloudProjects();
-          showToast('Project saved to cloud ☁️');
+          showToast(t('projectToast.savedCloud'));
         } else {
-          showToast('Failed to save to cloud ❌');
+          showToast(t('projectToast.saveCloudFailed'));
         }
       } catch (error) {
         logger.error('Cloud save error:', error);
-        showToast('Cloud save error - check console ❌');
+        showToast(t('projectToast.cloudSaveError'));
       }
     }
   }, [
@@ -215,6 +218,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     fetchCloudProjects,
     onCloseDrawer,
     onOpenLimitModal,
+    t,
   ]);
   
   /**
@@ -224,26 +228,44 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     const success = await deleteProjectApi(id);
     if (success) {
       await fetchCloudProjects();
-      showToast('Project deleted');
+      showToast(t('projectToast.deleted'));
     } else {
-      showToast('Failed to delete project');
+      showToast(t('projectToast.deleteFailed'));
     }
-  }, [fetchCloudProjects, showToast]);
+  }, [fetchCloudProjects, showToast, t]);
   
   /**
    * Duplicate a project
    */
   const duplicateProject = useCallback(async (id: string) => {
+    // Capture source metadata before we clear the cloud id (createProject only
+    // persists name + document, so folder/tags/favorite/pinned must be re-applied).
+    const source = cloudProjects.find((p) => p.id === id) ?? null;
+
     // Load the project first, then save as new (cloudProjectId will be cleared)
     const success = await loadFromCloud(id);
     if (success) {
       // Reset cloud ID so save creates new project
       useBoardStore.setState({ cloudProjectId: null });
       await saveToCloud();
+
+      // Re-apply the source project's metadata to the freshly created duplicate.
+      const newId = useBoardStore.getState().cloudProjectId;
+      if (newId && source) {
+        try {
+          if (source.folder_id) await moveProjectToFolder(newId, source.folder_id);
+          if (source.tags && source.tags.length > 0) await updateProjectTags(newId, source.tags);
+          if (source.is_favorite) await toggleProjectFavorite(newId, true);
+          if (source.is_pinned) await toggleProjectPinned(newId, true);
+        } catch (err) {
+          logger.error('Failed to copy metadata to duplicated project:', err);
+        }
+      }
+
       await fetchCloudProjects();
-      showToast('Project duplicated ☁️');
+      showToast(t('projectToast.duplicated'));
     }
-  }, [loadFromCloud, saveToCloud, fetchCloudProjects, showToast]);
+  }, [cloudProjects, loadFromCloud, saveToCloud, fetchCloudProjects, showToast, t]);
   
   /**
    * Rename current project
@@ -257,8 +279,8 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       },
     }));
     markDirty(); // Trigger autosave to persist rename to cloud
-    showToast('Project renamed');
-  }, [markDirty, showToast]);
+    showToast(t('projectToast.renamed'));
+  }, [markDirty, showToast, t]);
   
   /**
    * Refresh projects list
@@ -267,23 +289,25 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     setIsLoading(true);
     await fetchCloudProjects();
     setIsLoading(false);
-    showToast('Projects refreshed');
-  }, [fetchCloudProjects, showToast]);
+    showToast(t('projectToast.refreshed'));
+  }, [fetchCloudProjects, showToast, t]);
   
   /**
    * Create a new folder
    */
   const createFolderHandler = useCallback(async (name: string, color: string, parentId?: string | null) => {
     try {
-      await createFolder({ name, color, icon: 'folder', parent_id: parentId ?? undefined });
+      // No `icon` passed: the drawer renders a color swatch, not folder.icon,
+      // so devCloud's '📁' default applies as harmless metadata.
+      await createFolder({ name, color, parent_id: parentId ?? undefined });
       await fetchFoldersData();
       await fetchCloudProjects(); // Refresh projects to get updated folder assignments
-      showToast(`Folder "${name}" created 📁`);
+      showToast(t('projectToast.folderCreated', { name }));
     } catch (error) {
       logger.error('Error creating folder:', error);
-      showToast('Failed to create folder ❌');
+      showToast(t('projectToast.folderCreateFailed'));
     }
-  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+  }, [fetchFoldersData, fetchCloudProjects, showToast, t]);
   
   /**
    * Update folder properties
@@ -293,22 +317,22 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await updateFolder(folderId, { name, color });
       await fetchFoldersData();
       await fetchCloudProjects();
-      showToast(`Folder "${name}" updated 📁`);
+      showToast(t('projectToast.folderUpdated', { name }));
     } catch (error) {
       logger.error('Error updating folder:', error);
-      showToast('Failed to update folder ❌');
+      showToast(t('projectToast.folderUpdateFailed'));
     }
-  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+  }, [fetchFoldersData, fetchCloudProjects, showToast, t]);
   
   /**
    * Delete a folder (projects remain)
    */
   const deleteFolderHandler = useCallback(async (folderId: string) => {
     useUIStore.getState().showConfirmModal({
-      title: 'Delete Folder?',
-      description: 'This will delete the folder and any subfolders inside it. Your projects will not be deleted — they will remain in your workspace.',
-      confirmLabel: 'Delete Folder',
-      cancelLabel: 'Cancel',
+      title: t('projectToast.deleteFolderTitle'),
+      description: t('projectToast.deleteFolderDescription'),
+      confirmLabel: t('projectToast.deleteFolderConfirm'),
+      cancelLabel: t('confirm.cancel'),
       danger: true,
       onConfirm: async () => {
         try {
@@ -316,18 +340,18 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
           if (success) {
             await fetchFoldersData();
             await fetchCloudProjects();
-            showToast('Folder deleted 🗑️');
+            showToast(t('projectToast.folderDeleted'));
           } else {
-            showToast('Failed to delete folder ❌');
+            showToast(t('projectToast.folderDeleteFailed'));
           }
         } catch (error) {
           logger.error('Error deleting folder:', error);
-          showToast('Failed to delete folder ❌');
+          showToast(t('projectToast.folderDeleteFailed'));
         }
         useUIStore.getState().closeConfirmModal();
       },
     });
-  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+  }, [fetchFoldersData, fetchCloudProjects, showToast, t]);
   
   /**
    * Toggle project favorite status
@@ -338,12 +362,12 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       const newValue = project ? !(project.is_favorite ?? false) : true;
       await toggleProjectFavorite(projectId, newValue);
       await fetchCloudProjects(); // Refresh projects
-      showToast(newValue ? 'Added to favorites ⭐' : 'Removed from favorites');
+      showToast(newValue ? t('projectToast.favoriteAdded') : t('projectToast.favoriteRemoved'));
     } catch (error) {
       logger.error('Error toggling favorite:', error);
-      showToast('Failed to update favorite ❌');
+      showToast(t('projectToast.favoriteFailed'));
     }
-  }, [cloudProjects, fetchCloudProjects, showToast]);
+  }, [cloudProjects, fetchCloudProjects, showToast, t]);
   
   /**
    * Move project to folder
@@ -352,12 +376,12 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     try {
       await moveProjectToFolder(projectId, folderId);
       await fetchCloudProjects(); // Refresh projects
-      showToast(folderId ? 'Project moved to folder 📁' : 'Project removed from folder');
+      showToast(folderId ? t('projectToast.movedToFolder') : t('projectToast.removedFromFolder'));
     } catch (error) {
       logger.error('Error moving project:', error);
-      showToast('Failed to move project ❌');
+      showToast(t('projectToast.moveProjectFailed'));
     }
-  }, [fetchCloudProjects, showToast]);
+  }, [fetchCloudProjects, showToast, t]);
   
   /**
    * Toggle project pin status
@@ -368,12 +392,12 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       const newValue = project ? !(project.is_pinned ?? false) : true;
       await toggleProjectPinned(projectId, newValue);
       await fetchCloudProjects(); // Refresh projects
-      showToast(newValue ? 'Project pinned 📌' : 'Project unpinned');
+      showToast(newValue ? t('projectToast.projectPinned') : t('projectToast.projectUnpinned'));
     } catch (error) {
       logger.error('Error toggling pin:', error);
-      showToast('Failed to update pin ❌');
+      showToast(t('projectToast.pinProjectFailed'));
     }
-  }, [cloudProjects, fetchCloudProjects, showToast]);
+  }, [cloudProjects, fetchCloudProjects, showToast, t]);
   
   /**
    * Toggle folder pin status
@@ -385,12 +409,12 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await toggleFolderPinned(folderId, newValue);
       await fetchFoldersData(); // Refresh folders
       await fetchCloudProjects(); // Also refresh projects
-      showToast(newValue ? 'Folder pinned 📌' : 'Folder unpinned');
+      showToast(newValue ? t('projectToast.folderPinned') : t('projectToast.folderUnpinned'));
     } catch (error) {
       logger.error('Error toggling folder pin:', error);
-      showToast('Failed to update folder pin ❌');
+      showToast(t('projectToast.pinFolderFailed'));
     }
-  }, [folders, fetchFoldersData, fetchCloudProjects, showToast]);
+  }, [folders, fetchFoldersData, fetchCloudProjects, showToast, t]);
   
   /**
    * Rename project by ID (for drawer inline rename)
@@ -399,12 +423,12 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     try {
       await renameProjectApi(projectId, newName);
       await fetchCloudProjects(); // Refresh projects
-      showToast('Project renamed ✏️');
+      showToast(t('projectToast.renamed'));
     } catch (error) {
       logger.error('Error renaming project:', error);
-      showToast('Failed to rename project ❌');
+      showToast(t('projectToast.renameProjectFailed'));
     }
-  }, [fetchCloudProjects, showToast]);
+  }, [fetchCloudProjects, showToast, t]);
   
   /**
    * Move folder to a new parent with position (for drag & drop)
@@ -414,15 +438,15 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       const success = await updateFolderPosition(folderId, parentId, position);
       if (success) {
         await fetchFoldersData();
-        showToast('Folder moved 📁');
+        showToast(t('projectToast.folderMoved'));
       } else {
-        showToast('Failed to move folder ❌');
+        showToast(t('projectToast.folderMoveFailed'));
       }
     } catch (error) {
       logger.error('Error moving folder:', error);
-      showToast('Failed to move folder ❌');
+      showToast(t('projectToast.folderMoveFailed'));
     }
-  }, [fetchFoldersData, showToast]);
+  }, [fetchFoldersData, showToast, t]);
 
   /**
    * Rename folder by ID (for drawer inline rename)
@@ -432,12 +456,12 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await renameFolderApi(folderId, newName);
       await fetchFoldersData(); // Refresh folders
       await fetchCloudProjects(); // Also refresh projects
-      showToast('Folder renamed ✏️');
+      showToast(t('projectToast.folderRenamed'));
     } catch (error) {
       logger.error('Error renaming folder:', error);
-      showToast('Failed to rename folder ❌');
+      showToast(t('projectToast.renameFolderFailed'));
     }
-  }, [fetchFoldersData, fetchCloudProjects, showToast]);
+  }, [fetchFoldersData, fetchCloudProjects, showToast, t]);
   
   return {
     // State

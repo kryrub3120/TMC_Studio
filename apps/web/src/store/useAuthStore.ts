@@ -6,8 +6,11 @@
  */
 
 import { logger } from '../lib/logger';
+// DEV-ONLY: see ../lib/devCloud.ts
+import { setDevCloudUser, clearDevCloudData, clearAllDevCloudData, isDevCloudActive } from '../lib/devCloud';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { translate as t } from '@tmc/ui';
 import {
   isSupabaseEnabled,
   getCurrentUser,
@@ -26,7 +29,10 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   error: string | null;
-  
+  /** DEV-ONLY: true when the current session was created via devLogin()
+   *  (test login button), not via real Supabase auth. */
+  isMockUser: boolean;
+
   // Actions
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -34,7 +40,18 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
-  
+  /** DEV-ONLY: instantly "log in" as a fake user with the given plan,
+   *  without going through Google/Supabase. Used by the "Test login"
+   *  buttons (only rendered when import.meta.env.DEV is true). */
+  devLogin: (tier: 'guest' | 'free' | 'pro' | 'team') => void;
+  /** DEV-ONLY: clear a mock session created via devLogin(). */
+  devLogout: () => void;
+  /** DEV-ONLY: wipe this mock user's devCloud projects/folders and reset the board. */
+  devClearData: () => void;
+  /** DEV-ONLY: wipe devCloud projects/folders for ALL test tiers (free/pro/team).
+   *  Useful for long test sessions where other tiers' data accumulates. */
+  devClearAllTiers: () => void;
+
   // Computed
   isAuthenticated: boolean;
   isPro: boolean;
@@ -49,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       isInitialized: false,
       error: null,
+      isMockUser: false,
       isAuthenticated: false,
       isPro: false,
       isTeam: false,
@@ -56,7 +74,34 @@ export const useAuthStore = create<AuthState>()(
       // Initialize auth - call on app startup (EVENT-BASED, NON-BLOCKING)
       initialize: async () => {
         logger.debug('[Auth] Initialize started (event-based)');
-        
+
+        // DEV-ONLY: if a mock (test login) session is active, skip Supabase
+        // entirely so the real auth listener doesn't override/clear it.
+        if (_get().isMockUser) {
+          // Guard against a desynced dev session: the mock user lives in this
+          // (persisted) store, but the devCloud "is logged in" flag lives in a
+          // separate localStorage key. If that key was cleared independently
+          // (e.g. by hand in DevTools) and there is no real Supabase to fall
+          // back to, sync would silently break. Reconcile by clearing the
+          // stale mock session instead of showing a logged-in user with no cloud.
+          if (!isDevCloudActive() && !supabase) {
+            logger.warn('[Auth] Mock session present but devCloud inactive - clearing stale mock session');
+            set({
+              user: null,
+              isAuthenticated: false,
+              isPro: false,
+              isTeam: false,
+              isMockUser: false,
+              isInitialized: true,
+              isLoading: false,
+            });
+            return;
+          }
+          logger.debug('[Auth] Mock dev session active - skipping Supabase init');
+          set({ isInitialized: true, isLoading: false });
+          return;
+        }
+
         if (!isSupabaseEnabled() || !supabase) {
           logger.debug('[Auth] Supabase disabled - using offline mode');
           set({ isInitialized: true, isLoading: false });
@@ -104,6 +149,19 @@ export const useAuthStore = create<AuthState>()(
                 logger.error('[Auth] Failed to load preferences:', error);
               }
 
+              // Prefetch projects/folders so project-limit counts are correct
+              // immediately after sign-in (before the drawer is ever opened).
+              try {
+                const { useBoardStore } = await import('./index');
+                const boardState = useBoardStore.getState();
+                await Promise.all([
+                  boardState.fetchCloudProjects(),
+                  boardState.fetchCloudFolders(),
+                ]);
+              } catch (error) {
+                logger.error('[Auth] Failed to prefetch projects/folders:', error);
+              }
+
               // PR-UX-1: Check for unsaved guest work and offer to save to cloud
               try {
                 const { useBoardStore } = await import('./index');
@@ -119,10 +177,10 @@ export const useAuthStore = create<AuthState>()(
                     const { useUIStore } = await import('./useUIStore');
                     
                     useUIStore.getState().showConfirmModal({
-                      title: '💾 Save Your Work?',
-                      description: 'You have unsaved work from your guest session. Would you like to save it to your cloud account?',
-                      confirmLabel: 'Save to Cloud',
-                      cancelLabel: 'Discard',
+                      title: t('storeToast.saveGuestTitle'),
+                      description: t('storeToast.saveGuestDescription'),
+                      confirmLabel: t('storeToast.saveGuestConfirm'),
+                      cancelLabel: t('storeToast.discard'),
                       danger: false,
                       onConfirm: async () => {
                         logger.debug('[Auth] User confirmed - saving guest work to cloud...');
@@ -133,10 +191,10 @@ export const useAuthStore = create<AuthState>()(
                           logger.debug('[Auth] ✓ Guest work saved to cloud');
                           
                           // Show success toast
-                          useUIStore.getState().showToast('✓ Your work has been saved to the cloud!');
+                          useUIStore.getState().showToast(t('storeToast.guestWorkSaved'));
                         } else {
                           logger.error('[Auth] ✗ Failed to save guest work');
-                          useUIStore.getState().showToast('⚠️ Failed to save. Try Cmd+S to save manually.');
+                          useUIStore.getState().showToast(t('storeToast.guestWorkSaveFailed'));
                         }
                         useUIStore.getState().closeConfirmModal();
                       },
@@ -297,6 +355,12 @@ export const useAuthStore = create<AuthState>()(
 
       // Sign out
       signOut: async () => {
+        // DEV-ONLY: mock sessions have no real Supabase session to clear.
+        if (_get().isMockUser) {
+          _get().devLogout();
+          return;
+        }
+
         set({ isLoading: true, error: null });
 
         try {
@@ -338,12 +402,137 @@ export const useAuthStore = create<AuthState>()(
 
       // Clear error
       clearError: () => set({ error: null }),
+
+      // ===== DEV-ONLY TEST AUTH =====
+      // Lets devs flip between guest/free/pro/team instantly without
+      // going through Google OAuth. Safe to delete this block (and the
+      // matching UI buttons) once real auth testing is no longer needed -
+      // it does not touch Supabase and has no effect on real users.
+      devLogin: (tier) => {
+        if (tier === 'guest') {
+          set({
+            user: null,
+            isAuthenticated: false,
+            isPro: false,
+            isTeam: false,
+            isMockUser: true,
+            error: null,
+          });
+          setDevCloudUser(null);
+          logger.debug('[Auth][DEV] Logged in as guest (mock)');
+          return;
+        }
+
+        const mockUser: User = {
+          id: `dev-${tier}-user`,
+          email: `dev-${tier}@tmcstudio.test`,
+          full_name: `Test ${tier.charAt(0).toUpperCase()}${tier.slice(1)} User`,
+          subscription_tier: tier,
+        };
+
+        set({
+          user: mockUser,
+          isAuthenticated: true,
+          isPro: tier === 'pro' || tier === 'team',
+          isTeam: tier === 'team',
+          isMockUser: true,
+          error: null,
+        });
+        setDevCloudUser(mockUser.id);
+        logger.debug(`[Auth][DEV] Logged in as mock ${tier} user`);
+
+        // Prefetch this mock user's devCloud projects/folders so limit counts
+        // are correct right away (mirrors the real sign-in prefetch above).
+        (async () => {
+          try {
+            const { useBoardStore } = await import('./index');
+            const boardState = useBoardStore.getState();
+            await Promise.all([
+              boardState.fetchCloudProjects(),
+              boardState.fetchCloudFolders(),
+            ]);
+          } catch (error) {
+            logger.error('[Auth][DEV] Failed to prefetch after devLogin:', error);
+          }
+        })();
+      },
+
+      devLogout: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          isPro: false,
+          isTeam: false,
+          isMockUser: false,
+          isLoading: false,
+          error: null,
+        });
+        setDevCloudUser(null);
+        logger.debug('[Auth][DEV] Mock session cleared');
+
+        // Mirror the real signOut's local cleanup so board state doesn't
+        // leak between test sessions.
+        (async () => {
+          try {
+            const { useBoardStore } = await import('./index');
+            const boardState = useBoardStore.getState();
+            boardState.newDocument();
+            localStorage.removeItem('tmc-studio-board');
+            boardState.clearAutoSaveTimer();
+          } catch (error) {
+            logger.error('[Auth][DEV] Failed to clean up board state:', error);
+          }
+        })();
+      },
+
+      devClearData: () => {
+        clearDevCloudData();
+        logger.debug('[Auth][DEV] Cleared devCloud data for current mock user');
+
+        (async () => {
+          try {
+            const { useBoardStore } = await import('./index');
+            const boardState = useBoardStore.getState();
+            boardState.newDocument();
+            localStorage.removeItem('tmc-studio-board');
+            await boardState.fetchCloudProjects();
+            await boardState.fetchCloudFolders();
+          } catch (error) {
+            logger.error('[Auth][DEV] Failed to refresh after clearing dev data:', error);
+          }
+        })();
+      },
+
+      devClearAllTiers: () => {
+        clearAllDevCloudData();
+        logger.debug('[Auth][DEV] Cleared devCloud data for ALL test tiers');
+
+        (async () => {
+          try {
+            const { useBoardStore } = await import('./index');
+            const boardState = useBoardStore.getState();
+            boardState.newDocument();
+            localStorage.removeItem('tmc-studio-board');
+            await boardState.fetchCloudProjects();
+            await boardState.fetchCloudFolders();
+          } catch (error) {
+            logger.error('[Auth][DEV] Failed to refresh after clearing all dev data:', error);
+          }
+        })();
+      },
     }),
     {
       name: 'tmc-auth',
       partialize: (state) => ({
         // Only persist non-sensitive data
         isInitialized: state.isInitialized,
+        // DEV-ONLY: persist mock test sessions across reloads so the
+        // "Test login" state survives a page refresh during testing.
+        isMockUser: state.isMockUser,
+        user: state.isMockUser ? state.user : undefined,
+        isAuthenticated: state.isMockUser ? state.isAuthenticated : undefined,
+        isPro: state.isMockUser ? state.isPro : undefined,
+        isTeam: state.isMockUser ? state.isTeam : undefined,
       }),
     }
   )

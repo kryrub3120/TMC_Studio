@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface ZoomWidgetProps {
   /** Current zoom level (0.25 - 2) */
@@ -61,6 +62,7 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
   onZoomFit,
   onToggleLock,
 }) => {
+  const { t } = useTranslation();
   const zoomPercent = Math.round(zoom * 100);
   const isAtMin = zoom <= ZOOM_MIN;
   const isAtMax = zoom >= ZOOM_MAX;
@@ -84,8 +86,8 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       <button
         onClick={onZoomOut}
         disabled={locked || isAtMin}
-        title="Zoom Out (Cmd -)"
-        aria-label="Zoom out"
+        title={t('zoom.out')}
+        aria-label={t('zoom.outAria')}
         className={`p-1.5 rounded-md transition-colors duration-fast ${
           locked || isAtMin
             ? 'text-muted/50 cursor-not-allowed'
@@ -99,7 +101,7 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       <div className="flex flex-col items-center gap-0.5 min-w-[48px]">
         <span
           className="text-center text-xs font-medium text-text tabular-nums leading-tight"
-          title={`Zoom: ${zoomPercent}%`}
+          title={t('zoom.value', { percent: zoomPercent })}
         >
           {zoomPercent}%
         </span>
@@ -116,8 +118,8 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       <button
         onClick={onZoomIn}
         disabled={locked || isAtMax}
-        title="Zoom In (Cmd +)"
-        aria-label="Zoom in"
+        title={t('zoom.in')}
+        aria-label={t('zoom.inAria')}
         className={`p-1.5 rounded-md transition-colors duration-fast ${
           locked || isAtMax
             ? 'text-muted/50 cursor-not-allowed'
@@ -134,8 +136,8 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       {onToggleLock && (
         <button
           onClick={onToggleLock}
-          title={locked ? 'Unlock view (enable zoom/pan)' : 'Lock view (prevent zoom/pan)'}
-          aria-label={locked ? 'Unlock viewport' : 'Lock viewport'}
+          title={locked ? t('zoom.unlock') : t('zoom.lock')}
+          aria-label={locked ? t('zoom.unlockAria') : t('zoom.lockAria')}
           aria-pressed={locked}
           className={`p-1.5 rounded-md transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             locked
@@ -151,8 +153,8 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
       <button
         onClick={onZoomFit}
         disabled={locked || isAtFit}
-        title="Fit to View (Shift+1)"
-        aria-label="Fit to view"
+        title={t('zoom.fitTitle')}
+        aria-label={t('zoom.fitAria')}
         className={`px-2 py-1 text-xs font-medium rounded-md transition-colors duration-fast ${
           locked || isAtFit
             ? 'text-muted/50 cursor-not-allowed'
@@ -161,7 +163,7 @@ export const ZoomWidget: React.FC<ZoomWidgetProps> = ({
             : 'text-muted hover:text-text hover:bg-surface2'
         }`}
       >
-        Fit
+        {t('zoom.fit')}
       </button>
     </div>
   );

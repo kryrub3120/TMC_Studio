@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface SelectionToolbarProps {
   /** Position relative to canvas */
@@ -78,6 +79,7 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
   onBringFront,
   onSendBack,
 }) => {
+  const { t } = useTranslation();
   // Calculate absolute position
   const left = canvasOffset.x + position.x;
   const top = canvasOffset.y + position.y;
@@ -95,7 +97,7 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
         {/* Duplicate */}
         <ToolbarButton
           icon={<DuplicateIcon className="w-4 h-4" />}
-          label="Duplicate (⌘D)"
+          label={t('selection.duplicate')}
           onClick={onDuplicate}
         />
         
@@ -105,12 +107,12 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
         {/* Layer order */}
         <ToolbarButton
           icon={<BringFrontIcon className="w-4 h-4" />}
-          label="Bring to Front"
+          label={t('selection.bringFront')}
           onClick={onBringFront}
         />
         <ToolbarButton
           icon={<SendBackIcon className="w-4 h-4" />}
-          label="Send to Back"
+          label={t('selection.sendBack')}
           onClick={onSendBack}
         />
         
@@ -120,7 +122,7 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
         {/* Delete */}
         <ToolbarButton
           icon={<DeleteIcon className="w-4 h-4" />}
-          label="Delete (Del)"
+          label={t('selection.delete')}
           onClick={onDelete}
           danger
         />

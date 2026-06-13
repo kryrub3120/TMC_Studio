@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Button } from './Button.js';
+import { useTranslation } from './i18n.js';
 
 export interface ToolbarProps {
   onAddPlayer: (team: 'home' | 'away') => void;
@@ -85,6 +86,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   canRedo,
   hasSelection,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 p-3 bg-gray-800 border-b border-gray-700">
       {/* Logo/Title */}
@@ -103,27 +105,27 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           size="sm"
           icon={<Icons.File />}
           onClick={onNewBoard}
-          title="New Board"
+          title={t('legacy.toolbar.newBoard')}
         >
-          New
+          {t('legacy.toolbar.new')}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           icon={<Icons.Save />}
           onClick={onSave}
-          title="Save (Ctrl+S)"
+          title={t('legacy.toolbar.saveTitle')}
         >
-          Save
+          {t('legacy.toolbar.save')}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           icon={<Icons.Upload />}
           onClick={onLoad}
-          title="Load"
+          title={t('legacy.toolbar.load')}
         >
-          Load
+          {t('legacy.toolbar.load')}
         </Button>
       </div>
 
@@ -137,29 +139,29 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           size="sm"
           icon={<Icons.Plus />}
           onClick={() => onAddPlayer('home')}
-          title="Add Home Player (P)"
+          title={t('legacy.toolbar.addHomePlayer')}
           className="text-red-400 hover:text-red-300"
         >
-          Home
+          {t('legacy.toolbar.home')}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           icon={<Icons.Plus />}
           onClick={() => onAddPlayer('away')}
-          title="Add Away Player"
+          title={t('legacy.toolbar.addAwayPlayer')}
           className="text-blue-400 hover:text-blue-300"
         >
-          Away
+          {t('legacy.toolbar.away')}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           icon={<Icons.Ball />}
           onClick={onAddBall}
-          title="Add Ball (B)"
+          title={t('legacy.toolbar.addBall')}
         >
-          Ball
+          {t('legacy.toolbar.ball')}
         </Button>
       </div>
 
@@ -174,9 +176,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           icon={<Icons.Copy />}
           onClick={onDuplicate}
           disabled={!hasSelection}
-          title="Duplicate (Ctrl+D)"
+          title={t('legacy.toolbar.duplicateTitle')}
         >
-          Duplicate
+          {t('legacy.toolbar.duplicate')}
         </Button>
         <Button
           variant="ghost"
@@ -184,10 +186,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           icon={<Icons.Trash />}
           onClick={onDelete}
           disabled={!hasSelection}
-          title="Delete (Del)"
+          title={t('legacy.toolbar.deleteTitle')}
           className="text-red-400 hover:text-red-300"
         >
-          Delete
+          {t('legacy.toolbar.delete')}
         </Button>
       </div>
 
@@ -202,7 +204,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           icon={<Icons.Undo />}
           onClick={onUndo}
           disabled={!canUndo}
-          title="Undo (Ctrl+Z)"
+          title={t('legacy.toolbar.undo')}
         />
         <Button
           variant="ghost"
@@ -210,7 +212,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           icon={<Icons.Redo />}
           onClick={onRedo}
           disabled={!canRedo}
-          title="Redo (Ctrl+Shift+Z)"
+          title={t('legacy.toolbar.redo')}
         />
       </div>
 
@@ -220,7 +222,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {/* Keyboard shortcuts hint */}
       <div className="text-xs text-gray-500">
         <span className="hidden md:inline">
-          P: Player | B: Ball | Ctrl+D: Duplicate | Ctrl+Z: Undo
+          {t('legacy.toolbar.hint')}
         </span>
       </div>
     </div>

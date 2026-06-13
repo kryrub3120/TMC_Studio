@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface FloatingHelpButtonProps {
   onClick: () => void;
@@ -25,13 +26,14 @@ export const FloatingHelpButton: React.FC<FloatingHelpButtonProps> = ({
   onClick,
   isPrintMode = false,
 }) => {
+  const { t } = useTranslation();
   if (isPrintMode) return null;
 
   return (
     <button
       onClick={onClick}
-      aria-label="Help and shortcuts"
-      title="Help & Shortcuts (?)"
+      aria-label={t('help.title')}
+      title={`${t('help.title')} (?)`}
       className="
         fixed bottom-6 right-6
         w-14 h-14 sm:w-14 sm:h-14

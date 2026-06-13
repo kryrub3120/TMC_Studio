@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface ConfirmModalProps {
   isOpen: boolean;
@@ -29,12 +30,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
@@ -182,7 +184,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               disabled={isSubmitting}
               className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cancelLabel}
+              {cancelLabel ?? t('confirm.cancel')}
             </button>
             <button
               ref={confirmButtonRef}
@@ -195,7 +197,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
             >
-              {isSubmitting ? 'Processing...' : confirmLabel}
+              {isSubmitting ? t('confirm.processing') : (confirmLabel ?? t('confirm.confirm'))}
             </button>
           </div>
         </div>

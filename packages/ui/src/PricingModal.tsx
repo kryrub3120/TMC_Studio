@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from './i18n.js';
 
 // NOTE: This import path works because ui package is in the monorepo
 // If build fails, we can pass stripe config as props instead
@@ -107,6 +108,7 @@ export function PricingModal({
   onSignUp,
   user,
 }: PricingModalProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,21 +160,21 @@ export function PricingModal({
       try {
         data = await response.json();
       } catch (parseError) {
-        throw new Error('Checkout failed. Please try again.');
+        throw new Error(t('pricing.checkoutFailed'));
       }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(data.error || t('pricing.checkoutSessionFailed'));
       }
 
       // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('Checkout failed. Please try again.');
+        throw new Error(t('pricing.checkoutFailed'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t('pricing.genericError'));
     } finally {
       setIsLoading(null);
     }
@@ -191,9 +193,9 @@ export function PricingModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-2xl font-bold text-text">Choose how you want to use TMC Studio</h2>
+            <h2 className="text-2xl font-bold text-text">{t('pricing.title')}</h2>
             <p className="text-muted mt-1">
-              Start free. Upgrade only if you need more.
+              {t('pricing.subtitle')}
             </p>
           </div>
           <button
@@ -226,26 +228,32 @@ export function PricingModal({
 
           <div className="grid md:grid-cols-3 gap-6">
             {plans.map((plan) => {
+              const planKey = plan.id as 'free' | 'pro' | 'team';
+              const planName = t(`pricing.plans.${planKey}.name`);
+              const planPrice = t(`pricing.plans.${planKey}.price`);
+              const planPeriod = t(`pricing.plans.${planKey}.period`);
+              const planMicrocopy = t(`pricing.plans.${planKey}.microcopy`);
+              const planFeatures = t(`pricing.plans.${planKey}.features`).split('|');
               const isCurrent = currentPlan === plan.id;
               const isHighlighted = plan.highlighted;
               
               // Free plan logic: Guest sees active CTA, authenticated sees Current Plan
-              let buttonLabel = plan.cta;
+              let buttonLabel = t(`pricing.plans.${planKey}.cta`);
               let buttonDisabled = isLoading === plan.id;
               
               if (plan.id === 'free') {
                 if (isAuthenticated) {
                   // Authenticated user on Free → Current Plan (disabled)
-                  buttonLabel = 'Current Plan';
+                  buttonLabel = t('pricing.currentPlan');
                   buttonDisabled = true;
                 } else {
                   // Guest → Continue for free (active)
-                  buttonLabel = 'Continue for free';
+                  buttonLabel = t('pricing.plans.free.cta');
                   buttonDisabled = false;
                 }
               } else if (isCurrent) {
                 // Pro/Team current plan
-                buttonLabel = 'Current Plan';
+                buttonLabel = t('pricing.currentPlan');
                 buttonDisabled = true;
               }
 
@@ -260,29 +268,29 @@ export function PricingModal({
                 >
                   {isHighlighted && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent text-white text-xs font-semibold rounded-full">
-                      Most Popular
+                      {t('pricing.mostPopular')}
                     </div>
                   )}
 
                   <div className="text-center mb-6">
                     <h3 className="text-lg font-semibold text-text">
-                      {plan.name}
+                      {planName}
                     </h3>
                     <div className="mt-2">
                       <span className="text-4xl font-bold text-text">
-                        {plan.price}
+                        {planPrice}
                       </span>
-                      <span className="text-muted">{plan.period}</span>
+                      <span className="text-muted">{planPeriod}</span>
                     </div>
-                    {plan.microcopy && (
+                    {planMicrocopy && (
                       <p className="text-xs text-muted/70 mt-2 italic">
-                        {plan.microcopy}
+                        {planMicrocopy}
                       </p>
                     )}
                   </div>
 
                   <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, i) => (
+                    {planFeatures.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm">
                         <svg
                           className={`w-5 h-5 flex-shrink-0 ${
@@ -334,7 +342,7 @@ export function PricingModal({
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                             />
                           </svg>
-                          Processing...
+                          {t('pricing.processing')}
                         </span>
                       ) : (
                         buttonLabel
@@ -342,7 +350,7 @@ export function PricingModal({
                     </button>
                     {plan.id === 'free' && !isAuthenticated && (
                       <p className="text-xs text-muted/60 text-center mt-2">
-                        Sign in with Google or email
+                        {t('pricing.signInHint')}
                       </p>
                     )}
                   </div>
@@ -355,8 +363,8 @@ export function PricingModal({
         {/* Footer */}
         <div className="p-6 border-t border-border bg-surface2/50 text-center">
           <p className="text-sm text-muted">
-            You can use TMC Studio for free forever.<br />
-            Upgrade only when you hit a real limit.
+            {t('pricing.footer')}<br />
+            {t('pricing.footerSecond')}
           </p>
         </div>
       </div>

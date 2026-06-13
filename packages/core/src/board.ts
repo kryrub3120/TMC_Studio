@@ -22,6 +22,7 @@ import {
   EquipmentVariant,
   DrawingType,
   PlayerShape,
+  SquadPlayer,
   isArrowElement,
 } from './types.js';
 
@@ -92,6 +93,21 @@ export function createPlayer(options: CreatePlayerOptions): PlayerElement {
   if (orientation === null) result.orientation = undefined;
 
   return result;
+}
+
+/** Generate a unique ID for squad players */
+export function generateSquadId(): string {
+  return `squad-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/** Create a new squad player entry */
+export function createSquadPlayer(name: string, number: number, team: Team): SquadPlayer {
+  return {
+    id: generateSquadId(),
+    name,
+    number,
+    team,
+  };
 }
 
 /** Create a new ball element */

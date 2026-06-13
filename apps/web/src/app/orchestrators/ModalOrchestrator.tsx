@@ -17,6 +17,7 @@ import {
   type FolderItem,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
+import type { TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -28,6 +29,8 @@ interface ModalOrchestratorProps {
   onSignInWithGoogle: () => Promise<void>;
   authError: string | null;
   authIsLoading: boolean;
+  /** DEV-ONLY: see useAuthStore.devLogin */
+  onDevLogin?: (tier: 'free' | 'pro' | 'team') => void;
   
   // Pricing Modal
   pricingModalOpen: boolean;
@@ -92,8 +95,27 @@ interface ModalOrchestratorProps {
   gridVisible: boolean;
   snapEnabled: boolean;
   onToggleTheme: () => void;
+  themeMode?: 'light' | 'dark' | 'system';
+  onSetThemeMode?: (mode: 'light' | 'dark' | 'system') => void;
   onToggleGrid: () => void;
   onToggleSnap: () => void;
+  
+  // Squad Bench (from board store)
+  squad?: Array<{ id: string; name: string; number: number; team: 'home' | 'away' }>;
+  squadVisible?: boolean;
+  isPro?: boolean;
+  onAddSquadPlayer?: (name: string, number: number, team: Team) => void;
+  onRemoveSquadPlayer?: (id: string) => void;
+  onSetSquadVisible?: (visible: boolean) => void;
+  // Board settings (Teams / Pitch — moved from the inspector)
+  teamSettings?: TeamSettings;
+  onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
+  pitchSettings?: PitchSettings;
+  onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
+  isPrintMode?: boolean;
+  onTogglePrintMode?: () => void;
+  onExportBoard?: () => void;
+  onImportBoard?: (file: File) => Promise<boolean>;
   
   // Upgrade Success Modal
   upgradeSuccessModalOpen: boolean;
@@ -116,6 +138,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onSignIn={props.onSignIn}
         onSignUp={props.onSignUp}
         onSignInWithGoogle={props.onSignInWithGoogle}
+        onDevLogin={props.onDevLogin}
         error={props.authError}
         isLoading={props.authIsLoading}
       />
@@ -221,8 +244,24 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         gridVisible={props.gridVisible}
         snapEnabled={props.snapEnabled}
         onToggleTheme={props.onToggleTheme}
+        themeMode={props.themeMode}
+        onSetThemeMode={props.onSetThemeMode}
         onToggleGrid={props.onToggleGrid}
         onToggleSnap={props.onToggleSnap}
+        squad={props.squad}
+        squadVisible={props.squadVisible}
+        isPro={props.isPro}
+        onAddSquadPlayer={props.onAddSquadPlayer}
+        onRemoveSquadPlayer={props.onRemoveSquadPlayer}
+        onSetSquadVisible={props.onSetSquadVisible}
+        teamSettings={props.teamSettings}
+        onUpdateTeam={props.onUpdateTeam}
+        pitchSettings={props.pitchSettings}
+        onUpdatePitch={props.onUpdatePitch}
+        isPrintMode={props.isPrintMode}
+        onTogglePrintMode={props.onTogglePrintMode}
+        onExportBoard={props.onExportBoard}
+        onImportBoard={props.onImportBoard}
       />
       
       {/* Upgrade Success Modal */}

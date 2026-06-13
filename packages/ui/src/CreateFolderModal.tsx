@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { FolderColorPicker } from './FolderColorPicker';
+import { useTranslation } from './i18n.js';
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export function CreateFolderModal({
   onClose,
   onCreate,
 }: CreateFolderModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [color, setColor] = useState('#3b82f6'); // Default blue
 
@@ -50,19 +52,19 @@ export function CreateFolderModal({
 
       {/* Modal */}
       <div className="relative bg-surface border border-border rounded-xl shadow-2xl w-full max-w-md p-6">
-        <h3 className="text-lg font-semibold text-text mb-4">Create Folder</h3>
+        <h3 className="text-lg font-semibold text-text mb-4">{t('folders.createTitle')}</h3>
 
         {/* Name Input */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-muted mb-2">
-            Folder Name
+            {t('folders.name')}
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="e.g. Tactics, Training Drills..."
+            placeholder={t('folders.placeholder')}
             autoFocus
             maxLength={100}
             className="w-full px-4 py-2.5 bg-surface2 border border-border/50 rounded-lg text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -72,7 +74,7 @@ export function CreateFolderModal({
         {/* Color Picker */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-muted mb-2">
-            Folder Color
+            {t('folders.color')}
           </label>
           <FolderColorPicker currentColor={color} onSelectColor={setColor} />
         </div>
@@ -83,14 +85,14 @@ export function CreateFolderModal({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-muted hover:text-text bg-surface2 hover:bg-surface rounded-lg transition-colors"
           >
-            Cancel
+            {t('folders.cancel')}
           </button>
           <button
             onClick={handleCreate}
             disabled={!name.trim()}
             className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:bg-accent/50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            Create Folder
+            {t('folders.create')}
           </button>
         </div>
       </div>

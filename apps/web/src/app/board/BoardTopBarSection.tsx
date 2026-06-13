@@ -2,7 +2,7 @@
  * BoardTopBarSection - TopBar wiring for BoardPage
  */
 
-import { TopBar } from '@tmc/ui';
+import { TopBar, type ExportFormat } from '@tmc/ui';
 import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team } from '@tmc/core';
 
 export interface BoardTopBarSectionProps {
@@ -23,7 +23,7 @@ export interface BoardTopBarSectionProps {
   isOnline?: boolean; // PR-L5-MINI
   
   // Handlers
-  onExport: () => void;
+  onExport: (format: ExportFormat) => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
   onOpenPalette: () => void;
@@ -33,12 +33,17 @@ export interface BoardTopBarSectionProps {
   onAddEquipment?: (type: EquipmentType, variant?: EquipmentVariant) => void;
   onAddBall?: (variant: 'single' | 'cluster') => void;
   onAddPlayer?: (team: Team) => void;
+  onOpenSquadSettings?: () => void;
   onOpenProjects: () => void;
   onRenameProject: (newName: string) => void;
   onToggleInspector: () => void;
   onOpenAccount: () => void;
   onUpgrade: () => void;
   onLogout?: () => void;
+  /** DEV-ONLY: see useAuthStore.devLogin */
+  onDevLogin?: (tier: 'guest' | 'free' | 'pro' | 'team') => void;
+  /** DEV-ONLY: see useAuthStore.devClearData */
+  onClearDevData?: () => void;
 }
 
 export function BoardTopBarSection(props: BoardTopBarSectionProps) {
@@ -63,12 +68,15 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
     onAddEquipment,
     onAddBall,
     onAddPlayer,
+    onOpenSquadSettings,
     onOpenProjects,
     onRenameProject,
     onToggleInspector,
     onOpenAccount,
     onUpgrade,
     onLogout,
+    onDevLogin,
+    onClearDevData,
   } = props;
 
   if (focusMode) return null;
@@ -94,12 +102,15 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
       onAddEquipment={onAddEquipment}
       onAddBall={onAddBall}
       onAddPlayer={onAddPlayer}
+      onOpenSquadSettings={onOpenSquadSettings}
       onOpenProjects={onOpenProjects}
       onRename={onRenameProject}
       onToggleInspector={onToggleInspector}
       onOpenAccount={onOpenAccount}
       onUpgrade={onUpgrade}
       onLogout={onLogout}
+      onDevLogin={onDevLogin}
+      onClearDevData={onClearDevData}
     />
   );
 }

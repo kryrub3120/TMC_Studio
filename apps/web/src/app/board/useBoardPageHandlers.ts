@@ -6,7 +6,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { ArrowType, Position, PlayerElement as PlayerElementType, ZoneShape } from '@tmc/core';
 import { isPlayerElement, isTextElement, isZoneElement, isArrowElement } from '@tmc/core';
-import type { CommandAction } from '@tmc/ui';
+import { useTranslation, type CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
 import { useBoardStore } from '../../store';
 import { useUIStore } from '../../store/useUIStore';
@@ -100,6 +100,7 @@ export interface BoardPageHandlersInput {
 }
 
 export function useBoardPageHandlers(input: BoardPageHandlersInput) {
+  const { t } = useTranslation();
   const {
     addPlayerAtCursor,
     addBallAtCursor,
@@ -396,8 +397,8 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     const finalRadius = radiusFromPercent(resizePopover.percent);
     commitSetPlayersRadius(resizePopover.ids, finalRadius);
     setResizePopover(null);
-    showToast(`Resized to ${resizePopover.percent}%`);
-  }, [resizePopover, commitSetPlayersRadius, showToast]);
+    showToast(t('commands.toast.resizedTo', { percent: resizePopover.percent }));
+  }, [resizePopover, commitSetPlayersRadius, showToast, t]);
 
   // B5: Preview reset
   const previewReset = useCallback(() => {
@@ -449,19 +450,19 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     const onlyPlayers = selected.length > 0 && selected.every(el => isPlayerElement(el as any));
     
     return {
-      onDelete: () => { deleteSelected(); hideMenu(); showToast('Deleted'); },
-      onDuplicate: () => { duplicateSelected(); hideMenu(); showToast('Duplicated'); },
-      onBringToFront: () => { hideMenu(); showToast('Layer control coming soon'); },
-      onSendToBack: () => { hideMenu(); showToast('Layer control coming soon'); },
-      onBringForward: () => { hideMenu(); showToast('Layer control coming soon'); },
-      onSendBackward: () => { hideMenu(); showToast('Layer control coming soon'); },
-      onCopy: () => { copySelection(); hideMenu(); showToast('Copied'); },
-      onPaste: () => { pasteClipboard(); hideMenu(); showToast('Pasted'); },
+      onDelete: () => { deleteSelected(); hideMenu(); showToast(t('commands.toast.deleted')); },
+      onDuplicate: () => { duplicateSelected(); hideMenu(); showToast(t('commands.toast.duplicated')); },
+      onBringToFront: () => { hideMenu(); showToast(t('commands.toast.layerControlSoon')); },
+      onSendToBack: () => { hideMenu(); showToast(t('commands.toast.layerControlSoon')); },
+      onBringForward: () => { hideMenu(); showToast(t('commands.toast.layerControlSoon')); },
+      onSendBackward: () => { hideMenu(); showToast(t('commands.toast.layerControlSoon')); },
+      onCopy: () => { copySelection(); hideMenu(); showToast(t('commands.toast.copied')); },
+      onPaste: () => { pasteClipboard(); hideMenu(); showToast(t('commands.toast.pasted')); },
       onSelectAll: () => { selectAll(); hideMenu(); },
-      onAddPlayer: () => { addPlayerAtCursor('home'); hideMenu(); showToast('Player added'); },
-      onAddBall: () => { addBallAtCursor(); hideMenu(); showToast('Ball added'); },
-      onAddArrow: () => { addArrowAtCursor('pass'); hideMenu(); showToast('Arrow added'); },
-      onAddZone: () => { addZoneAtCursor(); hideMenu(); showToast('Zone added'); },
+      onAddPlayer: () => { addPlayerAtCursor('home'); hideMenu(); showToast(t('commands.toast.playerAdded')); },
+      onAddBall: () => { addBallAtCursor(); hideMenu(); showToast(t('commands.toast.ballAdded')); },
+      onAddArrow: () => { addArrowAtCursor('pass'); hideMenu(); showToast(t('commands.toast.arrowAdded')); },
+      onAddZone: () => { addZoneAtCursor(); hideMenu(); showToast(t('commands.toast.zoneAdded')); },
       // B5: Resize handler - only provided when players-only selected
       ...(onlyPlayers && {
         onResize: (e?: React.MouseEvent) => {
@@ -479,7 +480,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       onCycleColor: () => {
         cycleSelectedColor(1);
         hideMenu();
-        showToast('Color changed');
+        showToast(t('commands.toast.colorChanged'));
       },
       onEdit: () => {
         const el = elements.find(e => e.id === menuElementId);
@@ -502,19 +503,19 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
           const newTeam = (el as any).team === 'home' ? 'away' : 'home';
           selectElement(el.id, false);
           updateSelectedElement({ team: newTeam });
-          showToast(`Switched to ${newTeam}`);
+          showToast(t('commands.toast.switchedTeam', { team: newTeam }));
         }
         hideMenu();
       },
       onChangePlayerColor: () => {
         cycleSelectedColor(1);
         hideMenu();
-        showToast('Player color changed (use Alt+↓/↑ to cycle)');
+        showToast(t('commands.toast.playerColorChanged'));
       },
       onChangeTextColor: () => {
         cycleSelectedColor(1);
         hideMenu();
-        showToast('Text color changed (use Alt+↓/↑ to cycle)');
+        showToast(t('commands.toast.textColorChanged'));
       },
       onEditArrowNumber: () => {
         // PR-ARROW-NUMBER: Simply toggle numbering via Smart Sequencing — no prompt
@@ -525,7 +526,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       onToggleAutoNumbering: () => {
         useBoardStore.getState().toggleAutoNumbering();
         const isOn = useBoardStore.getState().isAutoNumbering;
-        showToast(isOn ? 'Auto-numbering ON — new arrows get sequential numbers' : 'Auto-numbering OFF');
+        showToast(isOn ? t('commands.toast.autoNumberingOn') : t('commands.toast.autoNumberingOff'));
         hideMenu();
       },
       get isAutoNumbering() { return useBoardStore.getState().isAutoNumbering; },
@@ -535,7 +536,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor,
     cyclePlayerShape, cycleZoneShape, cycleSelectedColor,
     elements, menuElementId, hideMenu, showToast, selectElement, updateSelectedElement,
-    setEditingTextId, setEditingTextValue, handlePlayerQuickEdit, selectedIds, openResizePopover
+    setEditingTextId, setEditingTextValue, handlePlayerQuickEdit, selectedIds, openResizePopover, t
   ]);
 
   // Command palette actions
@@ -583,8 +584,10 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       isPlaying,
       isLooping,
       animationEnabled: ANIMATION_ENABLED,
+      t,
     });
   }, [
+    t,
     addPlayerAtCursor,
     addBallAtCursor,
     addArrowAtCursor,

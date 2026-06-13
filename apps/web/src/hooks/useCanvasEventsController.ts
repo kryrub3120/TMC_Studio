@@ -32,7 +32,7 @@ interface UseCanvasEventsOptions {
   // ✅ PR1: selectElement, selectElementsInRect via cmdRegistry
   // ✅ PR2: moveElementById, pushHistory via cmdRegistry
   clearSelection: () => void;
-  updateArrowEndpoint: (id: string, endpoint: 'start' | 'end', position: Position) => void;
+  updateArrowEndpoint: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   
   // Stage ref for boundary calculations
   stageRef: React.RefObject<any>;

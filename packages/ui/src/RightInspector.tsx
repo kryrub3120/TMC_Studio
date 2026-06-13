@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import type { TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
-import { TeamsPanel } from './TeamsPanel.js';
-import { PitchPanel } from './PitchPanel.js';
+import type { Team } from '@tmc/core';
 import { BottomSheet } from './BottomSheet.js';
+import { Toggle, Section, SettingRow, Slider, Field, inputClass } from './primitives.js';
+import { useTranslation } from './i18n.js';
 
 export interface InspectorElement {
   id: string;
@@ -41,9 +41,11 @@ export interface LayerVisibility {
   arrows: boolean;
   zones: boolean;
   labels: boolean;
+  equipment: boolean;
+  drawings: boolean;
 }
 
-export type LayerType = 'homePlayers' | 'awayPlayers' | 'ball' | 'arrows' | 'zones' | 'labels';
+export type LayerType = 'homePlayers' | 'awayPlayers' | 'ball' | 'arrows' | 'zones' | 'labels' | 'equipment' | 'drawings';
 
 export interface GroupData {
   id: string;
@@ -71,12 +73,6 @@ export interface RightInspectorProps {
   onToggleGroupVisibility?: (groupId: string) => void;
   onRenameGroup?: (groupId: string, name: string) => void;
   onQuickAction?: (action: string) => void;
-  teamSettings?: TeamSettings;
-  onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
-  pitchSettings?: PitchSettings;
-  onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
-  isPrintMode?: boolean;
-  onTogglePrintMode?: () => void;
   playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
   onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
   /** Viewport breakpoint for responsive layout */
@@ -85,9 +81,11 @@ export interface RightInspectorProps {
   onToggleAutoNumbering?: () => void;
   isAutoNumbering?: boolean;
   onRenumberArrows?: () => void;
+  /** Batch update for multi-select editing (opacity / show label). */
+  onUpdateSelectedElements?: (updates: { opacity?: number; showLabel?: boolean }) => void;
 }
 
-type TabType = 'props' | 'layers' | 'objects' | 'teams' | 'pitch';
+type TabType = 'props' | 'layers';
 
 /** Icons */
 const CollapseIcon: React.FC<{ className?: string; collapsed?: boolean }> = ({ className, collapsed }) => (
@@ -152,24 +150,25 @@ const UnlockIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 /** Quick Actions Panel - when nothing selected */
 const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ onAction }) => {
+  const { t } = useTranslation();
   const actions = [
-    { key: 'P', label: 'Add Home Player', action: 'add-home-player', color: '#e63946' },
-    { key: 'Shift+P', label: 'Add Away Player', action: 'add-away-player', color: '#457b9d' },
-    { key: 'B', label: 'Add Ball', action: 'add-ball', color: '#ffffff' },
-    { key: 'A', label: 'Pass Arrow', action: 'add-pass-arrow', color: 'currentColor' },
-    { key: 'R', label: 'Run Arrow', action: 'add-run-arrow', color: 'currentColor' },
-    { key: 'S', label: 'Shot Arrow', action: 'add-shoot-arrow', color: '#ef4444' },
-    { key: 'D', label: 'Dribble Arrow', action: 'add-dribble-arrow', color: '#1d4ed8' },
-    { key: 'Z', label: 'Zone', action: 'add-zone', color: 'currentColor' },
-    { key: 'Shift+Z', label: 'Ellipse Zone', action: 'add-ellipse-zone', color: 'currentColor' },
-    { key: 'Shift+D', label: 'Freehand Draw', action: 'add-freehand-draw', color: 'currentColor' },
-    { key: 'T', label: 'Text Label', action: 'add-text', color: 'currentColor' },
+    { key: 'P', label: t('commands.add-home-player'), action: 'add-home-player', color: '#e63946' },
+    { key: 'Shift+P', label: t('commands.add-away-player'), action: 'add-away-player', color: '#457b9d' },
+    { key: 'B', label: t('commands.add-ball'), action: 'add-ball', color: '#ffffff' },
+    { key: 'A', label: t('commands.add-pass-arrow'), action: 'add-pass-arrow', color: 'currentColor' },
+    { key: 'R', label: t('commands.add-run-arrow'), action: 'add-run-arrow', color: 'currentColor' },
+    { key: 'S', label: t('commands.add-shoot-arrow'), action: 'add-shoot-arrow', color: '#ef4444' },
+    { key: 'D', label: t('commands.add-dribble-arrow'), action: 'add-dribble-arrow', color: '#1d4ed8' },
+    { key: 'Z', label: t('commands.add-zone'), action: 'add-zone', color: 'currentColor' },
+    { key: 'Shift+Z', label: t('commands.add-ellipse-zone'), action: 'add-ellipse-zone', color: 'currentColor' },
+    { key: 'Shift+D', label: t('commands.add-freehand-draw'), action: 'add-freehand-draw', color: 'currentColor' },
+    { key: 'T', label: t('commands.add-text'), action: 'add-text', color: 'currentColor' },
   ];
 
   return (
     <div className="p-4">
       <h3 className="text-xs font-medium text-muted uppercase tracking-wide mb-3">
-        Quick Actions
+        {t('inspector.quickActions')}
       </h3>
       <div className="space-y-1">
         {actions.map((item) => (
@@ -198,7 +197,7 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
           onClick={() => onAction?.('open-palette')}
           className="w-full px-3 py-2 flex items-center justify-between rounded-lg bg-surface2 border border-border hover:border-accent transition-colors"
         >
-          <span className="text-sm text-text">Command Palette</span>
+          <span className="text-sm text-text">{t('inspector.commandPalette')}</span>
           <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border text-xs text-muted font-mono">
             ⌘K
           </kbd>
@@ -220,369 +219,199 @@ const PropsTab: React.FC<{
   onToggleAutoNumbering?: () => void;
   isAutoNumbering?: boolean;
   onRenumberArrows?: () => void;
+  /** Batch update for multi-select (opacity / show label). */
+  onUpdateSelectedElements?: (updates: { opacity?: number; showLabel?: boolean }) => void;
   /** Ref for label input (Sprint A — Enter→focus) */
   labelInputRef?: React.RefObject<HTMLInputElement>;
-}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, labelInputRef }) => {
+}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, onUpdateSelectedElements, labelInputRef }) => {
+  const [multiOpacity, setMultiOpacity] = useState(100);
+  const { t } = useTranslation();
   if (selectedCount === 0) {
     return <QuickActionsPanel onAction={onQuickAction} />;
   }
 
   if (selectedCount > 1) {
     return (
-      <div className="p-4 text-center">
-        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-surface2 flex items-center justify-center">
-          <svg className="w-6 h-6 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-          </svg>
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-2.5 mb-3">
+          <span className="w-7 h-7 rounded-md bg-surface2 flex items-center justify-center text-xs font-bold text-text shrink-0">{selectedCount}</span>
+          <p className="text-sm font-medium text-text">{t('inspector.selected', { count: selectedCount })}</p>
         </div>
-        <p className="text-sm text-text font-medium">{selectedCount} elements selected</p>
-        <p className="text-xs text-muted mt-1">Multi-select edit coming soon</p>
+        <Section title={t('inspector.appearance')} collapsible={false}>
+          <Slider
+            label={t('inspector.opacityAll')}
+            value={multiOpacity}
+            min={10}
+            max={100}
+            format={(v) => `${v}%`}
+            onChange={(v) => { setMultiOpacity(v); onUpdateSelectedElements?.({ opacity: v / 100 }); }}
+          />
+        </Section>
+        <Section title={t('inspector.labels')} collapsible={false}>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onUpdateSelectedElements?.({ showLabel: true })}
+              className="flex-1 px-3 py-2 rounded-md bg-surface2 border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors"
+            >
+              {t('inspector.showLabels')}
+            </button>
+            <button
+              onClick={() => onUpdateSelectedElements?.({ showLabel: false })}
+              className="flex-1 px-3 py-2 rounded-md bg-surface2 border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors"
+            >
+              {t('inspector.hideLabels')}
+            </button>
+          </div>
+        </Section>
+        <p className="text-xs text-muted mt-3">{t('inspector.multiHint')}</p>
       </div>
     );
   }
 
   if (!selectedElement) return null;
 
+  const el = selectedElement;
+  const teamColor = el.team === 'home' ? '#e63946' : el.team === 'away' ? '#457b9d' : '#888888';
+
   return (
-    <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]">
-      {/* Element Type */}
-      <div>
-        <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Type</label>
-        <p className="text-sm text-text capitalize">
-          {selectedElement.type}
-          {selectedElement.team && ` (${selectedElement.team})`}
-        </p>
-      </div>
-
-      {/* Position */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">X</label>
-          <input type="number" value={Math.round(selectedElement.x)} readOnly className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Y</label>
-          <input type="number" value={Math.round(selectedElement.y)} readOnly className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text" />
+    <div className="overflow-y-auto max-h-[calc(100vh-180px)]">
+      {/* Element header — type, team chip, live position (read-only) */}
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
+        <span
+          className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold text-white shrink-0"
+          style={{ backgroundColor: teamColor, border: el.type === 'ball' ? '1px solid #888' : 'none' }}
+        >
+          {el.type === 'player' ? (el.number ?? '–') : el.type[0].toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-text capitalize leading-tight">
+            {el.type}{el.team ? ` · ${el.team}` : ''}
+          </p>
+          <p className="text-[11px] text-muted tabular-nums">x {Math.round(el.x)}, y {Math.round(el.y)}</p>
         </div>
       </div>
 
-      {/* Player-specific fields */}
-      {selectedElement.type === 'player' && (
-        <>
-          {/* Number */}
-          <div>
-            <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Number</label>
-            <input
-              type="number"
-              min={1}
-              max={99}
-              value={selectedElement.number ?? ''}
-              onChange={(e) => {
-                const value = e.target.value.trim();
-                if (value === '') {
-                  onUpdateElement?.({ number: undefined });
-                } else {
-                  const num = parseInt(value);
-                  if (!isNaN(num) && num >= 1 && num <= 99) {
-                    onUpdateElement?.({ number: num });
-                  }
-                }
-              }}
-              placeholder="No number"
-              className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
-            />
-          </div>
-          
-          {/* Label */}
-          <div>
-            <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Player Label</label>
-            <input
-              ref={labelInputRef}
-              type="text"
-              value={selectedElement.label ?? ''}
-              onChange={(e) => onUpdateElement?.({ label: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  (e.target as HTMLInputElement).blur();
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              placeholder="Surname or nickname..."
-              aria-label="Player label"
-              className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
-            />
-          </div>
-          
-          {/* Show Label Toggle */}
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-muted uppercase tracking-wide">Show Label Below</label>
-            <button
-              onClick={() => onUpdateElement?.({ showLabel: !selectedElement.showLabel })}
-              className={`relative w-10 h-5 rounded-full transition-colors ${
-                selectedElement.showLabel ? 'bg-accent' : 'bg-surface2 border border-border'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                  selectedElement.showLabel ? 'translate-x-5' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
-          </div>
-          
-          {/* Font Size */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-muted uppercase tracking-wide">Font Size</label>
-              <span className="text-xs text-accent">{selectedElement.fontSize ?? 14}px</span>
-            </div>
-            <input
-              type="range"
-              min={8}
-              max={20}
-              value={selectedElement.fontSize ?? 14}
-              onChange={(e) => onUpdateElement?.({ fontSize: parseInt(e.target.value) })}
-              className="w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent"
-            />
-          </div>
-          
-          {/* Opacity */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-muted uppercase tracking-wide">Opacity</label>
-              <span className="text-xs text-accent">{Math.round((selectedElement.opacity ?? 1) * 100)}%</span>
-            </div>
-            <input
-              type="range"
-              min={10}
-              max={100}
-              value={Math.round((selectedElement.opacity ?? 1) * 100)}
-              onChange={(e) => onUpdateElement?.({ opacity: parseInt(e.target.value) / 100 })}
-              className="w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent"
-            />
-          </div>
-          
-          {/* Is Goalkeeper Toggle */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <div>
-              <label className="text-xs font-medium text-muted uppercase tracking-wide">Goalkeeper</label>
-              <p className="text-xs text-muted mt-0.5">Uses team GK color</p>
-            </div>
-            <button
-              onClick={() => onUpdateElement?.({ isGoalkeeper: !selectedElement.isGoalkeeper })}
-              className="relative w-10 h-5 rounded-full transition-colors border"
-              style={{
-                backgroundColor: selectedElement.isGoalkeeper ? '#fbbf24' : 'var(--color-surface2, #2a2a2a)',
-                borderColor: selectedElement.isGoalkeeper ? '#f59e0b' : 'var(--color-border, #404040)',
-              }}
-            >
-              <span
-                className="absolute top-0.5 w-4 h-4 rounded-full shadow transition-transform"
-                style={{
-                  backgroundColor: selectedElement.isGoalkeeper ? '#fff' : '#888',
-                  transform: selectedElement.isGoalkeeper ? 'translateX(20px)' : 'translateX(2px)',
-                }}
-              />
-            </button>
-          </div>
-
-          {/* Player Orientation Settings */}
-          {playerOrientationSettings && onUpdatePlayerOrientation && (
-            <>
-              <div data-tour="orientation-panel" className="pt-3 border-t border-border">
-                <h3 className="text-xs font-medium text-muted uppercase tracking-wide mb-3">Player Orientation</h3>
-                
-                {/* Show Orientation Toggle */}
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-medium text-text">Show orientation</label>
-                  <button
-                    onClick={() => onUpdatePlayerOrientation({ enabled: !playerOrientationSettings.enabled })}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
-                      playerOrientationSettings.enabled ? 'bg-accent' : 'bg-surface2 border border-border'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-                
-                {/* Show Arms Toggle */}
-                <div className="flex items-center justify-between mb-3">
-                  <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Show arms</label>
-                  <button
-                    onClick={() => onUpdatePlayerOrientation({ showArms: !playerOrientationSettings.showArms })}
-                    disabled={!playerOrientationSettings.enabled}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
-                      !playerOrientationSettings.enabled 
-                        ? 'bg-surface2 border border-border opacity-50 cursor-not-allowed'
-                        : playerOrientationSettings.showArms 
-                        ? 'bg-accent' 
-                        : 'bg-surface2 border border-border'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        playerOrientationSettings.showArms && playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-                
-                {/* Show Vision Toggle — undefined treated as false (OFF by default) */}
-                {(() => {
-                  const visionActive = playerOrientationSettings.showVision === true;
-                  return (
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-text' : 'text-muted'}`}>Vision cone</label>
-                        <p className={`text-[10px] mt-0.5 ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'}`}>V / Shift+V shortcut</p>
-                      </div>
-                      <button
-                        onClick={() => onUpdatePlayerOrientation({ showVision: !visionActive })}
-                        disabled={!playerOrientationSettings.enabled}
-                        className={`relative w-10 h-5 rounded-full transition-colors ${
-                          !playerOrientationSettings.enabled
-                            ? 'bg-surface2 border border-border opacity-50 cursor-not-allowed'
-                            : visionActive
-                            ? 'bg-accent'
-                            : 'bg-surface2 border border-border'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                            visionActive && playerOrientationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  );
-                })()}
-                
-                {/* Zoom Threshold */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className={`text-xs font-medium ${playerOrientationSettings.enabled ? 'text-muted' : 'text-muted/50'} uppercase tracking-wide`}>
-                      Zoom threshold
-                    </label>
-                    <span className="text-xs text-accent">{playerOrientationSettings.zoomThreshold ?? 40}%</span>
-                  </div>
+      <div className="px-4">
+        {/* ── Player ── */}
+        {el.type === 'player' && (
+          <>
+            <Section title={t('inspector.identity')} collapsible={false}>
+              <div className="flex gap-2.5">
+                <Field label={t('inspector.number')} className="w-20">
                   <input
-                    type="range"
-                    min={40}
-                    max={100}
-                    step={10}
-                    value={playerOrientationSettings.zoomThreshold ?? 40}
-                    onChange={(e) => onUpdatePlayerOrientation({ zoomThreshold: parseInt(e.target.value) })}
-                    disabled={!playerOrientationSettings.enabled}
-                    className={`w-full h-1.5 rounded-full bg-surface2 appearance-none cursor-pointer accent-accent ${
-                      !playerOrientationSettings.enabled ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                    type="number" min={1} max={99}
+                    value={el.number ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value.trim();
+                      if (v === '') { onUpdateElement?.({ number: undefined }); return; }
+                      const n = parseInt(v); if (!isNaN(n) && n >= 1 && n <= 99) onUpdateElement?.({ number: n });
+                    }}
+                    placeholder="—" className={inputClass}
                   />
-                  <div className="flex justify-between text-[10px] text-muted mt-1">
-                    <span>40%</span>
-                    <span>100%</span>
+                </Field>
+                <Field label={t('inspector.label')} className="flex-1">
+                  <input
+                    ref={labelInputRef} type="text"
+                    value={el.label ?? ''}
+                    onChange={(e) => onUpdateElement?.({ label: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                    placeholder={t('inspector.playerLabelPlaceholder')} aria-label={t('inspector.playerLabelAria')} className={inputClass}
+                  />
+                </Field>
+              </div>
+              <SettingRow
+                label={t('inspector.showLabelBelow')}
+                control={<Toggle checked={!!el.showLabel} onChange={() => onUpdateElement?.({ showLabel: !el.showLabel })} ariaLabel={t('inspector.showLabelBelowAria')} />}
+              />
+            </Section>
+
+            <Section title={t('inspector.appearance')} collapsible={false}>
+              <Slider label={t('inspector.labelSize')} value={el.fontSize ?? 14} min={8} max={20} format={(v) => `${v}px`} onChange={(v) => onUpdateElement?.({ fontSize: v })} />
+              <div className="mt-3">
+                <Slider label={t('inspector.opacity')} value={Math.round((el.opacity ?? 1) * 100)} min={10} max={100} format={(v) => `${v}%`} onChange={(v) => onUpdateElement?.({ opacity: v / 100 })} />
+              </div>
+            </Section>
+
+            <Section title={t('inspector.role')} collapsible={false}>
+              <SettingRow
+                label={t('inspector.goalkeeper')}
+                description={t('inspector.gkHint')}
+                control={<Toggle checked={!!el.isGoalkeeper} onChange={() => onUpdateElement?.({ isGoalkeeper: !el.isGoalkeeper })} ariaLabel={t('inspector.goalkeeperAria')} />}
+              />
+            </Section>
+
+            {playerOrientationSettings && onUpdatePlayerOrientation && (
+              <Section title={t('inspector.advanced')} defaultOpen={false}>
+                <div data-tour="orientation-panel">
+                  <SettingRow
+                    label={t('inspector.showOrientation')}
+                    control={<Toggle checked={playerOrientationSettings.enabled} onChange={() => onUpdatePlayerOrientation({ enabled: !playerOrientationSettings.enabled })} ariaLabel={t('inspector.showOrientationAria')} />}
+                  />
+                  <SettingRow
+                    label={t('inspector.showArms')}
+                    disabled={!playerOrientationSettings.enabled}
+                    control={<Toggle checked={playerOrientationSettings.showArms} disabled={!playerOrientationSettings.enabled} onChange={() => onUpdatePlayerOrientation({ showArms: !playerOrientationSettings.showArms })} ariaLabel={t('inspector.showArmsAria')} />}
+                  />
+                  <SettingRow
+                    label={t('inspector.visionCone')}
+                    description="V / Shift+V"
+                    disabled={!playerOrientationSettings.enabled}
+                    control={<Toggle checked={playerOrientationSettings.showVision === true} disabled={!playerOrientationSettings.enabled} onChange={() => onUpdatePlayerOrientation({ showVision: !(playerOrientationSettings.showVision === true) })} ariaLabel={t('inspector.visionConeAria')} />}
+                  />
+                  <div className="mt-2">
+                    <Slider label={t('inspector.zoomThreshold')} value={playerOrientationSettings.zoomThreshold ?? 40} min={40} max={100} step={10} disabled={!playerOrientationSettings.enabled} format={(v) => `${v}%`} onChange={(v) => onUpdatePlayerOrientation({ zoomThreshold: v })} />
                   </div>
                 </div>
-              </div>
-            </>
-          )}
-        </>
-      )}
-      
-      {/* Arrow-specific fields */}
-      {selectedElement.type === 'arrow' && (
-        <>
-          <div className="pt-3 border-t border-border">
-            <h3 className="text-xs font-medium text-muted uppercase tracking-wide mb-3">Arrow Numbering</h3>
-            
-            {/* Show Number Toggle */}
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-medium text-text">Show number</label>
-              <button
-                onClick={() => onUpdateElement?.({ showNumber: !selectedElement.showNumber })}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  selectedElement.showNumber ? 'bg-accent' : 'bg-surface2 border border-border'
-                }`}
-                aria-label="Toggle arrow number visibility"
-              >
-                <span
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                    selectedElement.showNumber ? 'translate-x-5' : 'translate-x-0.5'
-                  }`}
-                />
-              </button>
-            </div>
-            
-            {/* Number Input */}
-            <div className="mb-3">
-              <label className="block text-xs font-medium text-muted uppercase tracking-wide mb-1">Number</label>
-              <input
-                type="number"
-                min={1}
-                max={999}
-                value={selectedElement.arrowNumber ?? ''}
-                onChange={(e) => {
-                  const value = e.target.value.trim();
-                  if (value === '') {
-                    onUpdateElement?.({ arrowNumber: undefined });
-                  } else {
-                    const num = parseInt(value);
-                    if (!isNaN(num) && num >= 1) {
-                      onUpdateElement?.({ arrowNumber: num });
-                    }
-                  }
-                }}
-                placeholder="No number"
-                aria-label="Arrow number"
-                className="w-full px-2 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
+              </Section>
+            )}
+          </>
+        )}
+
+        {/* ── Arrow ── */}
+        {el.type === 'arrow' && (
+          <>
+            <Section title={t('inspector.numbering')} collapsible={false}>
+              <SettingRow
+                label={t('inspector.showNumber')}
+                control={<Toggle checked={!!el.showNumber} onChange={() => onUpdateElement?.({ showNumber: !el.showNumber })} ariaLabel={t('inspector.showNumberAria')} />}
               />
-            </div>
-          </div>
-          
-          {/* Arrow utilities */}
-          <div className="space-y-2">
-            {/* Auto-Numbering Toggle */}
-            {onToggleAutoNumbering !== undefined && (
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-muted uppercase tracking-wide">Auto-number arrows</label>
-                <button
-                  onClick={onToggleAutoNumbering}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${
-                    isAutoNumbering ? 'bg-accent' : 'bg-surface2 border border-border'
-                  }`}
-                  aria-label="Toggle auto-numbering"
-                >
-                  <span
-                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                      isAutoNumbering ? 'translate-x-5' : 'translate-x-0.5'
-                    }`}
+              <Field label={t('inspector.number')}>
+                <input
+                  type="number" min={1} max={999}
+                  value={el.arrowNumber ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    if (v === '') { onUpdateElement?.({ arrowNumber: undefined }); return; }
+                    const n = parseInt(v); if (!isNaN(n) && n >= 1) onUpdateElement?.({ arrowNumber: n });
+                  }}
+                  placeholder={t('inspector.arrowNumberPlaceholder')} aria-label={t('inspector.arrowNumberAria')} className={inputClass}
+                />
+              </Field>
+            </Section>
+
+            {(onToggleAutoNumbering !== undefined || onRenumberArrows) && (
+              <Section title={t('inspector.sequence')} collapsible={false}>
+                {onToggleAutoNumbering !== undefined && (
+                  <SettingRow
+                    label={t('inspector.autoNumber')}
+                    control={<Toggle checked={!!isAutoNumbering} onChange={onToggleAutoNumbering} ariaLabel={t('inspector.autoNumberAria')} />}
                   />
-                </button>
-              </div>
+                )}
+                {onRenumberArrows && (
+                  <button
+                    onClick={onRenumberArrows}
+                    className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-surface2 border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors"
+                    aria-label={t('inspector.renumberAria')}
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+                    {t('inspector.renumber')}
+                  </button>
+                )}
+              </Section>
             )}
-            
-            {/* Renumber Button */}
-            {onRenumberArrows && (
-              <button
-                onClick={onRenumberArrows}
-                className="w-full px-3 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text hover:bg-accent/10 hover:border-accent transition-colors"
-                aria-label="Renumber arrows"
-              >
-                🔄 Renumber arrows (1..N)
-              </button>
-            )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
@@ -597,6 +426,7 @@ const LayersTab: React.FC<{
   onToggleGroupVisibility?: (groupId: string) => void;
   onRenameGroup?: (groupId: string, name: string) => void;
 }> = ({ layerVisibility, groups, onToggle, onSelectGroup, onToggleGroupLock, onToggleGroupVisibility, onRenameGroup }) => {
+  const { t } = useTranslation();
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   
@@ -606,7 +436,9 @@ const LayersTab: React.FC<{
     { key: 'ball', label: 'Ball', color: '#ffffff' },
     { key: 'arrows', label: 'Arrows', color: '#888888' },
     { key: 'zones', label: 'Zones', color: '#888888' },
-    { key: 'labels', label: 'Labels', color: '#888888' },
+    { key: 'labels', label: 'Text & Labels', color: '#888888' },
+    { key: 'equipment', label: 'Equipment', color: '#888888' },
+    { key: 'drawings', label: 'Drawings', color: '#888888' },
   ];
   
   const handleStartEdit = (group: GroupData, e: React.MouseEvent) => {
@@ -638,7 +470,7 @@ const LayersTab: React.FC<{
       {groups && groups.length > 0 && (
         <div className="px-4 pb-2 mb-2 border-b border-border">
           <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
-            Groups
+            {t('inspector.groups')}
           </div>
           <div className="space-y-1">
             {groups.map((group) => (
@@ -663,7 +495,7 @@ const LayersTab: React.FC<{
                   <span 
                     className="flex-1 text-sm text-text truncate"
                     onDoubleClick={(e) => handleStartEdit(group, e)}
-                    title="Double-click to rename"
+                    title={t('inspector.doubleClickRename')}
                   >
                     {group.name}
                   </span>
@@ -672,7 +504,7 @@ const LayersTab: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleGroupLock?.(group.id); }}
                   className="p-1 hover:bg-surface rounded transition-colors"
-                  title={group.locked ? 'Unlock group' : 'Lock group'}
+                  title={group.locked ? t('inspector.unlockGroup') : t('inspector.lockGroup')}
                 >
                   {group.locked ? (
                     <LockIcon className="h-3 w-3 text-accent" />
@@ -683,7 +515,7 @@ const LayersTab: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleGroupVisibility?.(group.id); }}
                   className="p-1 hover:bg-surface rounded transition-colors"
-                  title={group.visible ? 'Hide group' : 'Show group'}
+                  title={group.visible ? t('inspector.hideGroup') : t('inspector.showGroup')}
                 >
                   {group.visible ? (
                     <EyeIcon className="h-3 w-3 text-accent" />
@@ -700,7 +532,7 @@ const LayersTab: React.FC<{
       {/* Layers Section */}
       <div className="px-4 pb-2">
         <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
-          Layers
+          {t('inspector.layers')}
         </div>
       </div>
       {layers.map((layer) => {
@@ -718,7 +550,7 @@ const LayersTab: React.FC<{
               className="w-3 h-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: layer.color, border: layer.color === '#ffffff' ? '1px solid #666' : 'none' }}
             />
-            <span className={`text-sm ${isVisible ? 'text-text' : 'text-muted'}`}>{layer.label}</span>
+            <span className={`text-sm ${isVisible ? 'text-text' : 'text-muted'}`}>{t(`inspector.layerNames.${layer.key}`)}</span>
           </button>
         );
       })}
@@ -733,6 +565,7 @@ const ObjectsTab: React.FC<{
   layerVisibility: LayerVisibility;
   onSelectElement?: (id: string) => void;
 }> = ({ elements, selectedElement, layerVisibility, onSelectElement }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'home' | 'away' | 'ball'>('all');
 
@@ -768,7 +601,7 @@ const ObjectsTab: React.FC<{
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search elements..."
+            placeholder={t('inspector.searchPlaceholder')}
             className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text placeholder-muted focus:outline-none focus:border-accent"
           />
         </div>
@@ -783,7 +616,7 @@ const ObjectsTab: React.FC<{
                 filter === f ? 'bg-accent/10 text-accent' : 'text-muted hover:text-text hover:bg-surface2'
               }`}
             >
-              {f}
+              {t(`inspector.filters.${f}`)}
             </button>
           ))}
         </div>
@@ -792,7 +625,7 @@ const ObjectsTab: React.FC<{
       {/* Element List */}
       <div className="flex-1 overflow-y-auto py-1">
         {filteredElements.length === 0 ? (
-          <div className="p-4 text-center text-sm text-muted">No elements found</div>
+          <div className="p-4 text-center text-sm text-muted">{t('inspector.noElements')}</div>
         ) : (
           filteredElements.map((el) => {
             const isHidden = isElementHidden(el);
@@ -837,12 +670,6 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onToggleGroupVisibility,
   onRenameGroup,
   onQuickAction,
-  teamSettings,
-  onUpdateTeam,
-  pitchSettings,
-  onUpdatePitch,
-  isPrintMode,
-  onTogglePrintMode,
   playerOrientationSettings,
   onUpdatePlayerOrientation,
   labelInputRef,
@@ -850,7 +677,9 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onToggleAutoNumbering,
   isAutoNumbering,
   onRenumberArrows,
+  onUpdateSelectedElements,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('props');
   const isBottomSheetLayout = breakpoint === 'sm';
   // isSheetOpen syncs with isOpen prop only on phone layout (TopBar toggle → open BottomSheet)
@@ -864,9 +693,6 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   const tabs: { id: TabType; label: string }[] = [
     { id: 'props', label: 'Props' },
     { id: 'layers', label: 'Layers' },
-    { id: 'objects', label: 'Objects' },
-    { id: 'teams', label: 'Teams' },
-    { id: 'pitch', label: 'Pitch' },
   ];
 
   // Close on Escape key
@@ -894,45 +720,49 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
         onToggleAutoNumbering={onToggleAutoNumbering}
         isAutoNumbering={isAutoNumbering}
         onRenumberArrows={onRenumberArrows}
+        onUpdateSelectedElements={onUpdateSelectedElements}
       />
     ) : activeTab === 'layers' ? (
-      <LayersTab
-        layerVisibility={layerVisibility}
-        groups={groups}
-        onToggle={onToggleLayerVisibility}
-        onSelectGroup={onSelectGroup}
-        onToggleGroupLock={onToggleGroupLock}
-        onToggleGroupVisibility={onToggleGroupVisibility}
-        onRenameGroup={onRenameGroup}
-      />
-    ) : activeTab === 'objects' ? (
-      <ObjectsTab
-        elements={elements}
-        selectedElement={selectedElement}
-        layerVisibility={layerVisibility}
-        onSelectElement={onSelectElement}
-      />
-    ) : activeTab === 'teams' && teamSettings && onUpdateTeam ? (
-      <TeamsPanel teamSettings={teamSettings} onUpdateTeam={onUpdateTeam} />
-    ) : activeTab === 'pitch' && pitchSettings && onUpdatePitch ? (
-      <PitchPanel pitchSettings={pitchSettings} onUpdatePitch={onUpdatePitch} isPrintMode={isPrintMode} onTogglePrintMode={onTogglePrintMode} />
+      <div className="flex flex-col h-full">
+        {/* Groups + layer visibility (capped, scrolls if tall) */}
+        <div className="flex-shrink-0 max-h-[45%] overflow-y-auto border-b border-border">
+          <LayersTab
+            layerVisibility={layerVisibility}
+            groups={groups}
+            onToggle={onToggleLayerVisibility}
+            onSelectGroup={onSelectGroup}
+            onToggleGroupLock={onToggleGroupLock}
+            onToggleGroupVisibility={onToggleGroupVisibility}
+            onRenameGroup={onRenameGroup}
+          />
+        </div>
+        {/* Searchable object list */}
+        <div className="flex-1 min-h-0">
+          <ObjectsTab
+            elements={elements}
+            selectedElement={selectedElement}
+            layerVisibility={layerVisibility}
+            onSelectElement={onSelectElement}
+          />
+        </div>
+      </div>
     ) : null;
   };
 
   // ─── Tab navigation row ──────────────────────────────────────────────
   const renderTabs = () => (
-    <div className="grid grid-cols-3 gap-1 p-2 border-b border-border flex-shrink-0">
+    <div className="flex gap-0.5 p-2 border-b border-border flex-shrink-0">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+          className={`flex-1 px-1 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
             activeTab === tab.id
               ? 'bg-accent/10 text-accent'
               : 'text-muted hover:text-text hover:bg-surface2'
           }`}
         >
-          {tab.label}
+          {t(`inspector.${tab.id}`)}
         </button>
       ))}
     </div>
@@ -957,8 +787,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           <button
             onClick={onToggle}
             className="hidden md:block absolute -left-8 top-3 z-canvas w-6 h-12 rounded-l-md bg-surface border border-r-0 border-border text-muted hover:text-text transition-colors"
-            title="Close Inspector (I)"
-            aria-label="Close inspector"
+            title={t('inspector.closeInspector')}
+            aria-label={t('inspector.closeInspectorAria')}
           >
             <CollapseIcon className="w-4 h-4" collapsed={false} />
           </button>
@@ -968,18 +798,18 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           {isOpen && (
             <>
               {/* Tab Headers */}
-              <div className="grid grid-cols-3 gap-1 p-2 border-b border-border">
+              <div className="flex gap-0.5 p-2 border-b border-border">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    className={`flex-1 px-1 py-1.5 text-[11px] font-medium rounded-md transition-colors ${
                       activeTab === tab.id
                         ? 'bg-accent/10 text-accent'
                         : 'text-muted hover:text-text hover:bg-surface2'
                     }`}
                   >
-                    {tab.label}
+                    {t(`inspector.${tab.id}`)}
                   </button>
                 ))}
               </div>
@@ -995,8 +825,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
             <button
               onClick={onToggle}
               className="h-full w-6 flex items-center justify-center text-muted hover:text-text transition-colors"
-              title="Open Inspector (I)"
-              aria-label="Open inspector"
+              title={t('inspector.openInspector')}
+              aria-label={t('inspector.openInspectorAria')}
             >
               <CollapseIcon className="w-4 h-4" collapsed={true} />
             </button>
@@ -1007,8 +837,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           <button
             onClick={onToggle}
             className="absolute -left-12 top-3 z-canvas w-10 h-10 rounded-l-md bg-accent shadow-lg flex items-center justify-center text-white hover:bg-accent-hover transition-colors"
-            title="Open Inspector (I)"
-            aria-label="Open inspector panel"
+            title={t('inspector.openInspector')}
+            aria-label={t('inspector.openInspectorPanelAria')}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -1024,8 +854,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           <button
             onClick={() => setIsSheetOpen(true)}
             className="fixed bottom-20 right-4 z-30 w-10 h-10 rounded-full bg-accent shadow-lg flex items-center justify-center text-white hover:bg-accent-hover active:scale-95 transition-all duration-fast"
-            aria-label="Open inspector panel"
-            title="Inspector (I)"
+            aria-label={t('inspector.openInspectorPanelAria')}
+            title={t('inspector.inspectorTitle')}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />

@@ -376,7 +376,7 @@ Services encapsulate cross-cutting concerns:
 | Service | Responsibility |
 |---------|---------------|
 | **AutosaveService** | Debounced cloud save after edits + thumbnail throttling (Sprint G) |
-| **ExportService** | PNG/GIF/PDF export logic |
+| **ExportService** | PNG/JPG/GIF/PDF export logic (singleton) |
 | **KeyboardService** | Keyboard shortcut handling |
 
 **Service Pattern:**

@@ -6,6 +6,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmModal } from './ConfirmModal';
+import { useTranslation } from './i18n.js';
 
 export interface ProjectItem {
   id: string;
@@ -205,6 +206,7 @@ export function ProjectsDrawer({
   onSignIn,
   onRefresh,
 }: ProjectsDrawerProps) {
+  const { t } = useTranslation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -395,22 +397,22 @@ export function ProjectsDrawer({
     
     const items: ContextMenuItem[] = [
       {
-        label: project.isPinned ? 'Unpin' : 'Pin to Top',
+        label: project.isPinned ? t('projects.unpin') : t('projects.pinTop'),
         icon: '📌',
         onClick: () => onTogglePinProject?.(project.id),
       },
       {
-        label: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+        label: project.isFavorite ? t('projects.removeFavorite') : t('projects.addFavorite'),
         icon: '⭐',
         onClick: () => onToggleFavorite?.(project.id),
       },
       {
-        label: 'Duplicate',
+        label: t('projects.duplicate'),
         icon: '📋',
         onClick: () => onDuplicateProject(project.id),
       },
       {
-        label: 'Delete',
+        label: t('projects.delete'),
         icon: '🗑️',
         onClick: () => setDeleteConfirmId(project.id),
         variant: 'danger' as const,
@@ -427,12 +429,12 @@ export function ProjectsDrawer({
     
     const items: ContextMenuItem[] = [
       {
-        label: folder.isPinned ? 'Unpin' : 'Pin to Top',
+        label: folder.isPinned ? t('projects.unpin') : t('projects.pinTop'),
         icon: '📌',
         onClick: () => onTogglePinFolder?.(folder.id),
       },
       {
-        label: 'Edit Folder',
+        label: t('projects.editFolder'),
         icon: '✏️',
         onClick: () => _onEditFolder?.(folder.id),
       },
@@ -441,7 +443,7 @@ export function ProjectsDrawer({
     // "Move to root" for nested folders
     if (folder.parentId && onMoveFolderToParent) {
       items.push({
-        label: 'Move to Root',
+        label: t('projects.moveRoot'),
         icon: '⬆️',
         onClick: () => {
           const rootSiblings = foldersWithCount.filter(f => !f.parentId);
@@ -452,7 +454,7 @@ export function ProjectsDrawer({
     }
     
     items.push({
-      label: 'Delete Folder',
+      label: t('projects.deleteFolder'),
       icon: '🗑️',
       onClick: () => _onDeleteFolder?.(folder.id),
       variant: 'danger' as const,
@@ -622,10 +624,10 @@ export function ProjectsDrawer({
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t('projects.time.justNow');
+    if (diffMins < 60) return t('projects.time.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('projects.time.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('projects.time.daysAgo', { count: diffDays });
     return date.toLocaleDateString();
   };
 
@@ -703,7 +705,7 @@ export function ProjectsDrawer({
               onKeyDown={handleRenameKeyDown}
               onClick={(e) => e.stopPropagation()}
               className="w-full text-xs font-medium bg-surface2 border border-accent rounded px-1.5 py-0.5 text-text outline-none"
-              placeholder="Project name"
+              placeholder={t('projects.projectName')}
             />
           ) : (
             <div className="flex items-center gap-1">
@@ -712,16 +714,16 @@ export function ProjectsDrawer({
               <span className="text-xs font-medium truncate">{project.name}</span>
               {/* Save status indicator */}
               {project.saveStatus === 'saving' && (
-                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" title="Saving..." />
+                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" title={t('projects.saving')} />
               )}
               {project.saveStatus === 'unsaved' && (
-                <span className="w-2 h-2 rounded-full bg-yellow-600 flex-shrink-0" title="Unsaved changes" />
+                <span className="w-2 h-2 rounded-full bg-yellow-600 flex-shrink-0" title={t('projects.unsaved')} />
               )}
               {project.saveStatus === 'error' && (
-                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Save error" />
+                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title={t('projects.saveError')} />
               )}
               {project.saveStatus === 'saved' && (
-                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Saved" />
+                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title={t('projects.saved')} />
               )}
             </div>
           )}
@@ -729,7 +731,7 @@ export function ProjectsDrawer({
         </div>
         {/* Current badge */}
         {isCurrent && (
-          <span className="text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full flex-shrink-0">Current</span>
+          <span className="text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full flex-shrink-0">{t('projects.current')}</span>
         )}
         {/* Hover actions */}
         {isHovered && !isCurrent && !isRenaming && (
@@ -737,7 +739,7 @@ export function ProjectsDrawer({
             <button
               onClick={(e) => { e.stopPropagation(); onDuplicateProject(project.id); }}
               className="p-1 hover:bg-surface rounded transition-colors"
-              title="Duplicate"
+              title={t('projects.duplicate')}
             >
               <svg className="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -746,7 +748,7 @@ export function ProjectsDrawer({
             <button
               onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }}
               className="p-1 hover:bg-red-500/20 rounded transition-colors"
-              title="Delete"
+              title={t('projects.delete')}
             >
               <svg className="w-3.5 h-3.5 text-muted hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -803,7 +805,7 @@ export function ProjectsDrawer({
                 onDragEnd={handleFolderDragEnd}
                 onClick={(e) => e.stopPropagation()}
                 className="opacity-0 group-hover/folder:opacity-100 cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 hover:bg-surface2 rounded transition-opacity"
-                title="Drag to reorder"
+                title={t('projects.dragReorder')}
               >
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                   <circle cx="9" cy="5" r="1.5" /><circle cx="15" cy="5" r="1.5" />
@@ -819,7 +821,7 @@ export function ProjectsDrawer({
                 toggleFolderCollapse(folder.id);
               }}
               className={`p-0.5 hover:bg-surface2 rounded transition-transform flex-shrink-0 ${!hasContent ? 'invisible' : ''}`}
-              title={isCollapsed ? 'Expand' : 'Collapse'}
+              title={isCollapsed ? t('projects.expand') : t('projects.collapse')}
             >
               <svg
                 className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
@@ -835,9 +837,9 @@ export function ProjectsDrawer({
             {folder.projectCount! > 0 && (
               <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
             )}
-            {isDropInside && <span className="text-xs text-accent">Drop inside</span>}
-            {isDropAbove && <span className="text-xs text-accent">Drop above</span>}
-            {isDropBelow && <span className="text-xs text-accent">Drop below</span>}
+            {isDropInside && <span className="text-xs text-accent">{t('projects.dropInside')}</span>}
+            {isDropAbove && <span className="text-xs text-accent">{t('projects.dropAbove')}</span>}
+            {isDropBelow && <span className="text-xs text-accent">{t('projects.dropBelow')}</span>}
           </div>
         </div>
         {/* Drop indicator line — below */}
@@ -854,7 +856,7 @@ export function ProjectsDrawer({
             {folderProjects.map((p) => renderInlineProject(p, level + 1))}
             {!hasSubfolders && folderProjects.length === 0 && (
               <div className="py-2 text-center" style={{ paddingLeft: paddingLeft + 12 }}>
-                <p className="text-xs text-muted/70">No projects yet</p>
+                <p className="text-xs text-muted/70">{t('projects.noProjectsYet')}</p>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -865,7 +867,7 @@ export function ProjectsDrawer({
                   }}
                   className="mt-1 text-xs text-accent hover:underline"
                 >
-                  + Create Project
+                  + {t('projects.createProject')}
                 </button>
               </div>
             )}
@@ -888,13 +890,13 @@ export function ProjectsDrawer({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-text">Projects</h2>
+            <h2 className="text-lg font-semibold text-text">{t('projects.title')}</h2>
             {isAuthenticated && onRefresh && (
               <button
                 onClick={onRefresh}
                 disabled={isLoading}
                 className="p-1.5 hover:bg-surface2 rounded-lg transition-colors disabled:opacity-50"
-                title="Refresh projects"
+                title={t('projects.refresh')}
               >
                 <svg className={`w-4 h-4 text-muted ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -905,7 +907,7 @@ export function ProjectsDrawer({
           <button
             onClick={onClose}
             className="p-2 hover:bg-surface2 rounded-lg transition-colors"
-            title="Close drawer"
+            title={t('projects.close')}
           >
             <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -922,7 +924,7 @@ export function ProjectsDrawer({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            New Project
+            {t('projects.newProject')}
           </button>
         </div>
 
@@ -938,14 +940,14 @@ export function ProjectsDrawer({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects..."
+                placeholder={t('projects.search')}
                 className="w-full pl-9 pr-3 py-2 bg-surface2 border border-border/50 rounded-lg text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-surface rounded transition-colors"
-                  title="Clear search"
+                  title={t('projects.clearSearch')}
                 >
                   <svg className="w-3 h-3 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -956,7 +958,7 @@ export function ProjectsDrawer({
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2">
-              <label htmlFor="sort-select" className="text-xs text-muted">Sort by:</label>
+              <label htmlFor="sort-select" className="text-xs text-muted">{t('projects.sortBy')}</label>
               <select
                 id="sort-select"
                 value={sortBy}
@@ -964,7 +966,9 @@ export function ProjectsDrawer({
                 className="text-xs bg-surface2 border border-border/50 rounded-md px-2 py-1 text-text focus:outline-none focus:ring-1 focus:ring-accent/50"
               >
                 {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {t(`projects.sort.${opt.value === 'name-asc' ? 'nameAsc' : opt.value === 'name-desc' ? 'nameDesc' : opt.value === 'last-opened' ? 'lastOpened' : opt.value}`)}
+                  </option>
                 ))}
               </select>
             </div>
@@ -972,7 +976,7 @@ export function ProjectsDrawer({
             {/* Results count */}
             {searchQuery && (
               <div className="text-xs text-muted">
-                {searchFilteredProjects.length} result{searchFilteredProjects.length !== 1 ? 's' : ''}
+                {t('projects.results', { count: searchFilteredProjects.length })}
               </div>
             )}
           </div>
@@ -990,7 +994,7 @@ export function ProjectsDrawer({
                     {!isSearching && (
                       <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1">
                         <span>📌</span>
-                        <span>Pinned</span>
+                        <span>{t('projects.pinned')}</span>
                       </div>
                     )}
                     {pinnedFolders.map((folder) => renderFolder(folder, 0))}
@@ -1002,12 +1006,12 @@ export function ProjectsDrawer({
                   <>
                     {!isSearching && pinnedFolders.length > 0 && (
                       <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider mt-2">
-                        Folders
+                        {t('projects.folders')}
                       </div>
                     )}
                     {!isSearching && !pinnedFolders.length && foldersWithCount.length > 0 && (
                       <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
-                        Folders
+                        {t('projects.folders')}
                       </div>
                     )}
                     {unpinnedFolders.map((folder) => renderFolder(folder, 0))}
@@ -1024,7 +1028,7 @@ export function ProjectsDrawer({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     <span className="font-medium">
-                      {selectedFolderId ? 'New Subfolder' : 'New Folder'}
+                      {selectedFolderId ? t('projects.newSubfolder') : t('projects.newFolder')}
                     </span>
                   </button>
                 )}
@@ -1052,7 +1056,7 @@ export function ProjectsDrawer({
                       toggleFolderCollapse('__all_projects__');
                     }}
                     className={`p-0.5 hover:bg-surface2 rounded transition-transform flex-shrink-0 ${rootProjects.length === 0 ? 'invisible' : ''}`}
-                    title={collapsedFolderIds.has('__all_projects__') ? 'Expand' : 'Collapse'}
+                    title={collapsedFolderIds.has('__all_projects__') ? t('projects.expand') : t('projects.collapse')}
                   >
                     <svg
                       className={`w-3 h-3 transition-transform ${collapsedFolderIds.has('__all_projects__') ? '' : 'rotate-90'}`}
@@ -1062,12 +1066,12 @@ export function ProjectsDrawer({
                     </svg>
                   </button>
                   <span className="text-sm">📋</span>
-                  <span className="text-sm font-medium">All Projects</span>
+                  <span className="text-sm font-medium">{t('projects.allProjects')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{rootProjects.length}</span>
                   {dropIndicator?.targetId === '__all_projects__' && (
-                    <span className="text-xs text-accent">Move to root</span>
+                    <span className="text-xs text-accent">{t('projects.moveToRoot')}</span>
                   )}
                 </div>
               </div>
@@ -1097,13 +1101,13 @@ export function ProjectsDrawer({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
               </svg>
             </div>
-            <p className="text-muted text-sm">Sign in to sync projects</p>
-            <p className="text-muted/70 text-xs mt-1">Cloud projects require authentication</p>
+            <p className="text-muted text-sm">{t('projects.signInSync')}</p>
+            <p className="text-muted/70 text-xs mt-1">{t('projects.authRequired')}</p>
             <button
               onClick={onSignIn}
               className="mt-4 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              Sign In
+              {t('projects.signIn')}
             </button>
           </div>
         )}
@@ -1114,8 +1118,8 @@ export function ProjectsDrawer({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
             </div>
-            <p className="text-muted text-sm">No projects yet</p>
-            <p className="text-muted/70 text-xs mt-1">Create your first project to get started</p>
+            <p className="text-muted text-sm">{t('projects.noProjectsYet')}</p>
+            <p className="text-muted/70 text-xs mt-1">{t('projects.createFirst')}</p>
           </div>
         )}
 
@@ -1129,7 +1133,7 @@ export function ProjectsDrawer({
               <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span>Cloud sync enabled</span>
+              <span>{t('projects.cloudSync')}</span>
             </div>
           ) : (
             <button
@@ -1139,7 +1143,7 @@ export function ProjectsDrawer({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
               </svg>
-              Sign in to sync to cloud
+              {t('projects.signInCloud')}
             </button>
           )}
         </div>
@@ -1161,10 +1165,10 @@ export function ProjectsDrawer({
         return (
           <ConfirmModal
             isOpen={true}
-            title="Delete Project"
-            description={projectToDelete ? `Are you sure you want to delete "${projectToDelete.name}"? This action cannot be undone.` : 'Are you sure you want to delete this project?'}
-            confirmLabel="Delete"
-            cancelLabel="Cancel"
+            title={t('projects.deleteTitle')}
+            description={projectToDelete ? t('projects.deleteDescription', { name: projectToDelete.name }) : t('projects.deleteFallback')}
+            confirmLabel={t('projects.delete')}
+            cancelLabel={t('confirm.cancel')}
             danger={true}
             onConfirm={() => {
               onDeleteProject(deleteConfirmId);

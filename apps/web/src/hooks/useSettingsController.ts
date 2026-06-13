@@ -12,6 +12,7 @@
 
 import { logger } from '../lib/logger';
 import { useCallback } from 'react';
+import { useTranslation } from '@tmc/ui';
 import { updateProfile, changePassword, deleteAccount } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -36,6 +37,7 @@ interface SettingsController {
  */
 export function useSettingsController(options: UseSettingsControllerOptions): SettingsController {
   const { onCloseModal, showToast } = options;
+  const { t } = useTranslation();
   const authUser = useAuthStore((s) => s.user);
 
   /**
@@ -46,12 +48,12 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
     try {
       await updateProfile(updates);
       await useAuthStore.getState().initialize();
-      showToast('Profile updated ✓');
+      showToast(t('settingsToast.profileUpdated'));
     } catch (error) {
       logger.error('Profile update error:', error);
       throw error;
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   /**
    * Upload avatar image to Supabase storage
@@ -76,12 +78,12 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
   const handleChangePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     try {
       await changePassword(currentPassword, newPassword);
-      showToast('Password changed ✓');
+      showToast(t('settingsToast.passwordChanged'));
     } catch (error) {
       logger.error('Password change error:', error);
       throw error;
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   /**
    * Delete user account permanently
@@ -94,12 +96,12 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
       if (onCloseModal) {
         onCloseModal();
       }
-      showToast('Account deleted. Goodbye! 👋');
+      showToast(t('settingsToast.accountDeleted'));
     } catch (error) {
       logger.error('Account deletion error:', error);
       throw error;
     }
-  }, [showToast, onCloseModal]);
+  }, [showToast, onCloseModal, t]);
 
   return {
     updateProfile: handleUpdateProfile,

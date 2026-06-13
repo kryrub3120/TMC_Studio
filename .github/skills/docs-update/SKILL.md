@@ -31,6 +31,18 @@ Aktualizacja dokumentacji po zmianach w sprincie.
 
 ---
 
+## Wersjonowanie
+
+Kazda zmiana moze wymagac bumpa wersji produktu. Zobacz `docs/VERSIONING.md`.
+
+Obowiazkowe:
+
+- Jesli sprint dodaje funkcje → MINOR bump. Jesli tylko bug fixy → PATCH.
+- Bump na WSZYSTKICH `package.json` (root, apps/web, packages/*).
+- Po bumpie: `CHANGELOG.md` → przenies `[Unreleased]` do nowej sekcji release.
+- Wersja w Footer jest dynamiczna (import z `package.json` w `AppShell.tsx`). Nie hardcoduj.
+- Po zmianie wersji zweryfikuj, czy `AppShell.tsx` ma `version={appPkg.version}`.
+
 ## Mapping zmian -> dokumenty
 
 | Typ zmiany | Dokumenty |
@@ -42,6 +54,7 @@ Aktualizacja dokumentacji po zmianach w sprincie.
 | Payment/Stripe | `docs/PAYMENT_FOUNDATION.md`, `docs/ENTITLEMENTS.md`, payment PR docs |
 | Entitlements/limits | `docs/ENTITLEMENTS.md`, `docs/MONETIZATION_PLAN.md`, `docs/FEATURE_SPEC.md` |
 | Architecture/process | `docs/SYSTEM_ARCHITECTURE.md`, `docs/AGENT_ORCHESTRATION.md`, `docs/INDEX.md` |
+| Wersjonowanie / bump | `docs/VERSIONING.md`, WSZYSTKIE `package.json`, `CHANGELOG.md` |
 | Release/significant change | `CHANGELOG.md` |
 
 ---

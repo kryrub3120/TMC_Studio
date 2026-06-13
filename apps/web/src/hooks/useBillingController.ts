@@ -12,6 +12,7 @@
 
 import { logger } from '../lib/logger';
 import { useState, useCallback } from 'react';
+import { useTranslation } from '@tmc/ui';
 import { useUIStore } from '../store/useUIStore';
 import { supabase } from '../lib/supabase';
 
@@ -39,6 +40,7 @@ export interface BillingController {
  * Hook that provides billing and payment management
  */
 export function useBillingController(_params?: UseBillingControllerParams): BillingController {
+  const { t } = useTranslation();
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const [upgradeSuccessModalOpen, setUpgradeSuccessModalOpen] = useState(false);
   const [subscriptionActivating, setSubscriptionActivating] = useState(false);
@@ -83,7 +85,7 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
     try {
       const { data: { session } } = await supabase!.auth.getSession();
       if (!session?.access_token) {
-        showToast('Please sign in first');
+        showToast(t('billingToast.signInFirst'));
         return;
       }
 
@@ -101,9 +103,9 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
       if (data.url) window.location.href = data.url;
     } catch (error) {
       logger.error('Billing portal error:', error);
-      showToast('Failed to open billing portal');
+      showToast(t('billingToast.portalFailed'));
     }
-  }, [showToast]);
+  }, [showToast, t]);
   
   return {
     // Modal state

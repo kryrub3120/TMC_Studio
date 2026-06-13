@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from './i18n.js';
 
 export interface CheatSheetOverlayProps {
   isVisible: boolean;
@@ -110,6 +111,7 @@ const shortcuts: { title: string; items: ShortcutItem[]; isAnimation?: boolean }
     items: [
       { key: '1-6', description: 'Apply Home Formation' },
       { key: 'Shift+1-6', description: 'Apply Away Formation' },
+      { key: 'Shift+G', description: 'Set GK / cycle GK color' },
     ],
   },
   {
@@ -145,6 +147,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
   onClose,
   showAnimationShortcuts = true,
 }) => {
+  const { t } = useTranslation();
   // isVisible from parent (e.g. "?" key toggles between trigger-only and expanded)
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('Elements');
@@ -226,12 +229,12 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-text flex items-center gap-2">
                 <KeyboardIcon className="w-4 h-4 text-accent" />
-                Keyboard Shortcuts
+                {t('cheatsheet.title')}
               </h3>
               <button
                 onClick={handleClose}
                 className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors duration-fast"
-                title="Close (or press ?)"
+                title={t('cheatsheet.close')}
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
@@ -242,7 +245,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
               <div
                 className="flex gap-1 mb-3 overflow-x-auto scrollbar-none"
                 role="tablist"
-                aria-label="Shortcut categories"
+                aria-label={t('cheatsheet.categories')}
               >
                 {tabDefs.map((tab) => (
                   <button
@@ -256,7 +259,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
                         : 'bg-surface2 text-muted hover:text-text hover:bg-surface2/80'
                     }`}
                   >
-                    {tab.label}
+                    {t(`cheatsheet.tabs.${tab.id}`)}
                   </button>
                 ))}
               </div>
@@ -268,7 +271,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
                 {activeGroup?.sections.map((section) => (
                 <div key={section.title}>
                   <h4 className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
-                    {section.title}
+                    {t(`cheatsheet.sections.${section.title}`)}
                   </h4>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                     {section.items.map((item) => (
@@ -288,7 +291,7 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
             {/* Footer */}
             <div className="mt-3 pt-3 border-t border-border">
               <p className="text-xs text-muted text-center">
-                Press <kbd className="px-1 py-0.5 rounded bg-surface2 border border-border font-mono text-[10px]">?</kbd> to toggle
+                {t('cheatsheet.press')} <kbd className="px-1 py-0.5 rounded bg-surface2 border border-border font-mono text-[10px]">?</kbd> {t('cheatsheet.toToggle')}
               </p>
             </div>
           </div>
@@ -299,8 +302,8 @@ export const CheatSheetOverlay: React.FC<CheatSheetOverlayProps> = ({
       <button
         onClick={handleToggle}
         className="pointer-events-auto z-cheatsheet p-2 rounded-full bg-surface/95 backdrop-blur-md border border-border shadow-md hover:bg-surface2 hover:border-accent/50 transition-all duration-fast active:scale-95"
-        title={expanded ? "Close Shortcuts (?)" : "Keyboard Shortcuts (?)"}
-        aria-label={expanded ? "Close keyboard shortcuts" : "Show keyboard shortcuts"}
+        title={expanded ? t('cheatsheet.closeShortcuts') : t('cheatsheet.keyboardShortcuts')}
+        aria-label={expanded ? t('cheatsheet.closeAria') : t('cheatsheet.showAria')}
       >
         <KeyboardIcon className="w-5 h-5 text-accent" />
       </button>

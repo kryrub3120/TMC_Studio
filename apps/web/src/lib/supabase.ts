@@ -8,6 +8,10 @@
 import { logger } from './logger';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { BoardDocument } from '@tmc/core';
+// DEV-ONLY: see ./devCloud.ts for details. Safe to remove together with
+// devCloud.ts and the isDevCloudActive() guards below.
+import { isDevCloudActive } from './devCloud';
+import * as devCloud from './devCloud';
 
 // Environment variables (Vite)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -41,7 +45,9 @@ export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
 
 // Check if Supabase is available
 export const isSupabaseEnabled = (): boolean => {
-  return supabase !== null;
+  // DEV-ONLY: treat an active dev mock session as "enabled" so cloud-gated
+  // UI (projects, folders, autosave) runs against the devCloud mock.
+  return supabase !== null || isDevCloudActive();
 };
 
 // =====================================================
@@ -179,6 +185,7 @@ export async function updateProfile(updates: { full_name?: string; avatar_url?: 
 
 /** Get user preferences from database */
 export async function getPreferences(): Promise<UserPreferences | null> {
+  if (isDevCloudActive()) return null; // DEV-ONLY: no mock preferences yet
   if (!supabase) return null;
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -200,6 +207,7 @@ export async function getPreferences(): Promise<UserPreferences | null> {
 
 /** Update user preferences in database */
 export async function updatePreferences(preferences: Partial<UserPreferences>): Promise<void> {
+  if (isDevCloudActive()) return; // DEV-ONLY: no-op for mock sessions
   if (!supabase) throw new Error('Supabase not configured');
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -365,6 +373,7 @@ export interface ProjectFolderUpdate {
 
 /** Get all projects for current user */
 export async function getProjects(): Promise<Project[]> {
+  if (isDevCloudActive()) return devCloud.getProjects(); // DEV-ONLY
   if (!supabase) return [];
   
   const { data, error } = await supabase
@@ -382,6 +391,7 @@ export async function getProjects(): Promise<Project[]> {
 
 /** Get single project by ID */
 export async function getProject(id: string): Promise<Project | null> {
+  if (isDevCloudActive()) return devCloud.getProject(id); // DEV-ONLY
   if (!supabase) return null;
   
   const { data, error } = await supabase
@@ -400,6 +410,7 @@ export async function getProject(id: string): Promise<Project | null> {
 
 /** Create new project */
 export async function createProject(project: ProjectInsert): Promise<Project | null> {
+  if (isDevCloudActive()) return devCloud.createProject(project); // DEV-ONLY
   if (!supabase) return null;
   
   // Ensure user profile exists (fixes FK constraint errors)
@@ -422,6 +433,7 @@ export async function createProject(project: ProjectInsert): Promise<Project | n
 
 /** Update existing project */
 export async function updateProject(id: string, updates: ProjectUpdate): Promise<Project | null> {
+  if (isDevCloudActive()) return devCloud.updateProject(id, updates); // DEV-ONLY
   if (!supabase) return null;
   
   const { data, error } = await supabase
@@ -441,6 +453,7 @@ export async function updateProject(id: string, updates: ProjectUpdate): Promise
 
 /** Delete project */
 export async function deleteProject(id: string): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.deleteProject(id); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -462,6 +475,7 @@ export async function deleteProject(id: string): Promise<boolean> {
 
 /** Get all folders for current user */
 export async function getFolders(): Promise<ProjectFolder[]> {
+  if (isDevCloudActive()) return devCloud.getFolders(); // DEV-ONLY
   if (!supabase) return [];
   
   const { data, error } = await supabase
@@ -479,6 +493,7 @@ export async function getFolders(): Promise<ProjectFolder[]> {
 
 /** Get single folder by ID */
 export async function getFolder(id: string): Promise<ProjectFolder | null> {
+  if (isDevCloudActive()) return devCloud.getFolder(id); // DEV-ONLY
   if (!supabase) return null;
   
   const { data, error } = await supabase
@@ -497,6 +512,7 @@ export async function getFolder(id: string): Promise<ProjectFolder | null> {
 
 /** Create new folder */
 export async function createFolder(folder: ProjectFolderInsert): Promise<ProjectFolder | null> {
+  if (isDevCloudActive()) return devCloud.createFolder(folder); // DEV-ONLY
   if (!supabase) return null;
   
   const currentUser = await getCurrentUser();
@@ -518,6 +534,7 @@ export async function createFolder(folder: ProjectFolderInsert): Promise<Project
 
 /** Update existing folder */
 export async function updateFolder(id: string, updates: ProjectFolderUpdate): Promise<ProjectFolder | null> {
+  if (isDevCloudActive()) return devCloud.updateFolder(id, updates); // DEV-ONLY
   if (!supabase) return null;
   
   const { data, error } = await supabase
@@ -537,6 +554,7 @@ export async function updateFolder(id: string, updates: ProjectFolderUpdate): Pr
 
 /** Delete folder */
 export async function deleteFolder(id: string): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.deleteFolder(id); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -554,6 +572,7 @@ export async function deleteFolder(id: string): Promise<boolean> {
 
 /** Move project to folder */
 export async function moveProjectToFolder(projectId: string, folderId: string | null): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.moveProjectToFolder(projectId, folderId); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -571,6 +590,7 @@ export async function moveProjectToFolder(projectId: string, folderId: string | 
 
 /** Toggle project favorite status */
 export async function toggleProjectFavorite(projectId: string, isFavorite: boolean): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.toggleProjectFavorite(projectId, isFavorite); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -588,6 +608,7 @@ export async function toggleProjectFavorite(projectId: string, isFavorite: boole
 
 /** Update project tags */
 export async function updateProjectTags(projectId: string, tags: string[]): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.updateProjectTags(projectId, tags); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -605,6 +626,7 @@ export async function updateProjectTags(projectId: string, tags: string[]): Prom
 
 /** Toggle project pinned status */
 export async function toggleProjectPinned(projectId: string, isPinned: boolean): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.toggleProjectPinned(projectId, isPinned); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -622,6 +644,7 @@ export async function toggleProjectPinned(projectId: string, isPinned: boolean):
 
 /** Toggle folder pinned status */
 export async function toggleFolderPinned(folderId: string, isPinned: boolean): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.toggleFolderPinned(folderId, isPinned); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -639,6 +662,7 @@ export async function toggleFolderPinned(folderId: string, isPinned: boolean): P
 
 /** Rename project */
 export async function renameProject(projectId: string, name: string): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.renameProject(projectId, name); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -660,6 +684,7 @@ export async function updateFolderPosition(
   parentId: string | null,
   position: number
 ): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.updateFolderPosition(folderId, parentId, position); // DEV-ONLY
   if (!supabase) return false;
 
   const { error } = await supabase
@@ -677,6 +702,7 @@ export async function updateFolderPosition(
 
 /** Rename folder */
 export async function renameFolder(folderId: string, name: string): Promise<boolean> {
+  if (isDevCloudActive()) return devCloud.renameFolder(folderId, name); // DEV-ONLY
   if (!supabase) return false;
   
   const { error } = await supabase
@@ -758,6 +784,7 @@ export async function getFeaturedTemplates(): Promise<Template[]> {
 
 /** Upload project thumbnail */
 export async function uploadThumbnail(projectId: string, file: Blob): Promise<string | null> {
+  if (isDevCloudActive()) return devCloud.uploadThumbnail(projectId, file); // DEV-ONLY: mock data-URL
   if (!supabase) return null;
   
   const fileName = `${projectId}/thumbnail.png`;

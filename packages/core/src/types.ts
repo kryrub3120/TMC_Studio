@@ -202,10 +202,12 @@ export interface TeamSettings {
 
 /** Default team settings */
 export const DEFAULT_TEAM_SETTINGS: TeamSettings = {
-  home: { name: 'Team 1', primaryColor: '#ef4444', secondaryColor: '#ffffff' },
-  away: { name: 'Team 2', primaryColor: '#3b82f6', secondaryColor: '#ffffff' },
-  team3: { name: 'Team 3', primaryColor: '#22c55e', secondaryColor: '#ffffff' },
-  team4: { name: 'Team 4', primaryColor: '#f97316', secondaryColor: '#ffffff' },
+  // Goalkeeper colors are deliberately distinct from every team's outfield
+  // color (and from each other) so the GK always stands out on the pitch.
+  home: { name: 'Team 1', primaryColor: '#ef4444', secondaryColor: '#ffffff', goalkeeperColor: '#fbbf24' }, // red outfield → amber/yellow GK
+  away: { name: 'Team 2', primaryColor: '#3b82f6', secondaryColor: '#ffffff', goalkeeperColor: '#f97316' }, // blue outfield → orange GK
+  team3: { name: 'Team 3', primaryColor: '#22c55e', secondaryColor: '#ffffff', goalkeeperColor: '#ec4899' }, // green outfield → pink GK
+  team4: { name: 'Team 4', primaryColor: '#f97316', secondaryColor: '#ffffff', goalkeeperColor: '#06b6d4' }, // orange outfield → cyan GK
 };
 
 /** Pitch theme presets */
@@ -374,6 +376,17 @@ export interface PlayerDefaults {
   awayColor?: string;
 }
 
+/** A predefined player in the squad bench (Pro feature) */
+export interface SquadPlayer {
+  id: string;
+  name: string;
+  number: number;
+  team: Team;
+}
+
+/** Default squad bench — empty (user defines their own) */
+export const DEFAULT_SQUAD: SquadPlayer[] = [];
+
 /** Default player defaults */
 export const DEFAULT_PLAYER_DEFAULTS: PlayerDefaults = {
   autoNumber: false,
@@ -393,6 +406,10 @@ export interface BoardDocument {
   pitchSettings?: PitchSettings; // Optional for backward compatibility
   playerOrientationSettings?: PlayerOrientationSettings; // Optional for backward compatibility
   playerDefaults?: PlayerDefaults; // Optional for backward compatibility
+  /** Squad bench — predefined players (Pro feature) */
+  squad?: SquadPlayer[];
+  /** Whether squad bench UI is visible */
+  squadVisible?: boolean;
 }
 
 /** History entry for undo/redo */

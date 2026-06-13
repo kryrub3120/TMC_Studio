@@ -1,6 +1,6 @@
 /**
  * Export utilities for TMC Studio
- * Supports: PNG, GIF, PDF, SVG
+ * Supports: PNG, JPG, GIF, PDF, SVG
  * 
  * Uses dynamic imports for heavy libraries (gifenc, jspdf)
  * to enable code splitting and reduce initial bundle size
@@ -11,6 +11,8 @@ export interface ExportOptions {
   pixelRatio?: number;
   stepDuration?: number;
 }
+
+export type ExportFormat = 'png' | 'png-all' | 'jpg' | 'pdf' | 'gif';
 
 /**
  * Export single frame as PNG
@@ -24,6 +26,34 @@ export function exportPNG(
   link.download = `${options.filename}.png`;
   link.href = dataUrl;
   link.click();
+}
+
+/**
+ * Export single frame as JPG (white background, quality 0.92)
+ */
+export function exportJPG(
+  stage: { toDataURL: (opts: { pixelRatio: number; mimeType?: string }) => string },
+  options: ExportOptions
+): void {
+  const pngDataUrl = stage.toDataURL({ pixelRatio: options.pixelRatio ?? 2 });
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    // White background for JPG
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const link = document.createElement('a');
+    link.download = `${options.filename}.jpg`;
+    link.href = jpgDataUrl;
+    link.click();
+  };
+  img.src = pngDataUrl;
 }
 
 /**

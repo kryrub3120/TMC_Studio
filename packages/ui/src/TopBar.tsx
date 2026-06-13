@@ -6,8 +6,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
+import { useTranslation } from './i18n.js';
+import { LanguageSwitcher } from './LanguageSwitcher.js';
 
 export type PlanType = 'guest' | 'free' | 'pro';
+export type ExportFormat = 'png' | 'png-all' | 'jpg' | 'pdf' | 'gif';
 
 export interface TopBarProps {
   projectName: string;
@@ -24,7 +27,8 @@ export interface TopBarProps {
   stepInfo?: string;
   /** Online/offline status (PR-L5-MINI) */
   isOnline?: boolean;
-  onExport: () => void;
+  /** Export with format selection — replaces single onExport */
+  onExport?: (format: ExportFormat) => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
   onOpenPalette: () => void;
@@ -39,6 +43,8 @@ export interface TopBarProps {
   onAddBall?: (variant: 'single' | 'cluster') => void;
   /** Add a player of the given team from top bar dropdown */
   onAddPlayer?: (team: Team) => void;
+  /** Open squad settings (Squad Bench management) */
+  onOpenSquadSettings?: () => void;
   /** Open projects drawer */
   onOpenProjects?: () => void;
   /** Rename project callback */
@@ -49,6 +55,12 @@ export interface TopBarProps {
   onOpenAccount?: () => void;
   onUpgrade?: () => void;
   onLogout?: () => void;
+  /** DEV-ONLY: quickly switch the mock test session's plan, or end it.
+   *  Only pass this in when import.meta.env.DEV is true. Safe to remove
+   *  later along with the matching block in useAuthStore. */
+  onDevLogin?: (tier: 'guest' | 'free' | 'pro' | 'team') => void;
+  /** DEV-ONLY: see onDevLogin / useAuthStore.devClearData */
+  onClearDevData?: () => void;
 }
 
 /** Sun icon for light mode */
@@ -191,7 +203,7 @@ const MiniBallClusterGlyph: React.FC = () => (
   </svg>
 );
 
-const MiniEquipmentGlyph: React.FC<{ type: EquipmentType }> = ({ type }) => {
+const MiniEquipmentGlyph: React.FC<{ type: EquipmentType; variant?: EquipmentVariant }> = ({ type, variant }) => {
   if (type === 'goal') {
     return <span className="h-5 w-7 rounded-t-md border-2 border-current border-b-0" />;
   }
@@ -204,7 +216,31 @@ const MiniEquipmentGlyph: React.FC<{ type: EquipmentType }> = ({ type }) => {
     );
   }
   if (type === 'cone') {
-    return <span className="h-0 w-0 border-x-[8px] border-b-[22px] border-x-transparent border-b-current" />;
+    if (variant === 'flat') {
+      // low disc / marker dome
+      return (
+        <svg viewBox="0 0 24 24" className="h-5 w-7" fill="currentColor">
+          <path d="M4 15c0-5.5 16-5.5 16 0z" />
+          <ellipse cx="12" cy="15.5" rx="9" ry="2" fillOpacity="0.55" />
+        </svg>
+      );
+    }
+    if (variant === 'tall') {
+      // taller, narrower cone on a base plate
+      return (
+        <svg viewBox="0 0 24 24" className="h-7 w-5" fill="currentColor">
+          <polygon points="12,2 16,18 8,18" />
+          <rect x="4" y="18.5" width="16" height="2.6" rx="1.2" />
+        </svg>
+      );
+    }
+    // standard cone on a base plate
+    return (
+      <svg viewBox="0 0 24 24" className="h-7 w-6" fill="currentColor">
+        <polygon points="12,4 17,18 7,18" />
+        <rect x="3" y="18.5" width="18" height="2.6" rx="1.2" />
+      </svg>
+    );
   }
   if (type === 'ladder') {
     return (
@@ -233,30 +269,32 @@ const MiniEquipmentGlyph: React.FC<{ type: EquipmentType }> = ({ type }) => {
 const EQUIPMENT_ITEMS: Array<{
   type: EquipmentType;
   variant?: EquipmentVariant;
-  label: string;
+  labelKey: string;
   shortcut: string;
 }> = [
-  { type: 'goal', label: 'Goal', shortcut: 'J' },
-  { type: 'goal', variant: 'mini', label: 'Mini goal', shortcut: 'Shift+J' },
-  { type: 'mannequin', label: 'Mannequin', shortcut: 'M' },
-  { type: 'cone', label: 'Cone', shortcut: 'K' },
-  { type: 'pole', label: 'Pole', shortcut: 'Shift+K' },
-  { type: 'ladder', label: 'Ladder', shortcut: 'Y' },
-  { type: 'hoop', label: 'Hoop', shortcut: 'Q' },
-  { type: 'hurdle', label: 'Hurdle', shortcut: 'U' },
+  { type: 'goal', labelKey: 'commands.toast.goal', shortcut: 'J' },
+  { type: 'goal', variant: 'mini', labelKey: 'commands.toast.miniGoal', shortcut: 'Shift+J' },
+  { type: 'mannequin', labelKey: 'commands.toast.mannequin', shortcut: 'M' },
+  { type: 'cone', variant: 'flat', labelKey: 'commands.toast.discMarker', shortcut: 'Alt+K' },
+  { type: 'cone', labelKey: 'commands.toast.cone', shortcut: 'K' },
+  { type: 'cone', variant: 'tall', labelKey: 'topbar.tallCone', shortcut: '' },
+  { type: 'pole', labelKey: 'commands.toast.pole', shortcut: 'Shift+K' },
+  { type: 'ladder', labelKey: 'commands.toast.ladder', shortcut: 'Y' },
+  { type: 'hoop', labelKey: 'commands.toast.hoop', shortcut: 'Q' },
+  { type: 'hurdle', labelKey: 'commands.toast.hurdle', shortcut: 'U' },
 ];
 
-const ARROW_ITEMS: Array<{ type: ArrowType; label: string; shortcut: string }> = [
-  { type: 'pass', label: 'Pass arrow', shortcut: 'A' },
-  { type: 'run', label: 'Run arrow', shortcut: 'R' },
-  { type: 'shoot', label: 'Shot arrow', shortcut: 'S' },
-  { type: 'dribble', label: 'Dribble arrow', shortcut: 'D' },
+const ARROW_ITEMS: Array<{ type: ArrowType; labelKey: string; shortcut: string }> = [
+  { type: 'pass', labelKey: 'commands.add-pass-arrow', shortcut: 'A' },
+  { type: 'run', labelKey: 'commands.add-run-arrow', shortcut: 'R' },
+  { type: 'shoot', labelKey: 'commands.add-shoot-arrow', shortcut: 'S' },
+  { type: 'dribble', labelKey: 'commands.add-dribble-arrow', shortcut: 'D' },
 ];
 
-const ZONE_ITEMS: Array<{ shape: ZoneShape; label: string; shortcut: string }> = [
-  { shape: 'rect', label: 'Rectangle zone', shortcut: 'Z' },
-  { shape: 'ellipse', label: 'Ellipse zone', shortcut: 'Shift+Z' },
-  { shape: 'polygon', label: 'Polygon zone', shortcut: 'Alt+Z' },
+const ZONE_ITEMS: Array<{ shape: ZoneShape; labelKey: string; shortcut: string }> = [
+  { shape: 'rect', labelKey: 'topbar.rectangleZone', shortcut: 'Z' },
+  { shape: 'ellipse', labelKey: 'commands.add-ellipse-zone', shortcut: 'Shift+Z' },
+  { shape: 'polygon', labelKey: 'topbar.polygonZone', shortcut: 'Alt+Z' },
 ];
 
 const ToolMenuButton: React.FC<{
@@ -328,17 +366,19 @@ const MiniPlayerGlyph: React.FC<{ team: Team }> = ({ team }) => {
   return <svg viewBox="0 0 24 24" className="h-5 w-5"><path d="M12 3l9 17H3z" fill={color} /></svg>;
 };
 
-const PLAYER_ITEMS: Array<{ team: Team; label: string; shortcut: string }> = [
-  { team: 'home', label: 'Team 1', shortcut: 'P' },
-  { team: 'away', label: 'Team 2', shortcut: 'Shift+P' },
-  { team: 'team3', label: 'Team 3', shortcut: 'Alt+P' },
-  { team: 'team4', label: 'Team 4', shortcut: 'Alt+Shift+P' },
+const PLAYER_ITEMS: Array<{ team: Team; labelKey: string; shortcut: string }> = [
+  { team: 'home', labelKey: 'teamsPanel.team1', shortcut: 'P' },
+  { team: 'away', labelKey: 'teamsPanel.team2', shortcut: 'Shift+P' },
+  { team: 'team3', labelKey: 'teamsPanel.team3', shortcut: 'Alt+P' },
+  { team: 'team4', labelKey: 'teamsPanel.team4', shortcut: 'Alt+Shift+P' },
 ];
 
 const PlayersMenu: React.FC<{
   onAddPlayer?: (team: Team) => void;
-}> = ({ onAddPlayer }) => {
+  onOpenSquadSettings?: () => void;
+}> = ({ onAddPlayer, onOpenSquadSettings }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { t } = useTranslation();
 
   if (!onAddPlayer) return null;
 
@@ -346,9 +386,9 @@ const PlayersMenu: React.FC<{
     <div className="relative">
       <ToolMenuButton
         dataTour="players"
-        title="Add players"
+        title={t('topbar.addPlayers')}
         icon={<PlayersIcon className="h-4 w-4" />}
-        label="Players"
+        label={t('topbar.players')}
         isOpen={isOpen}
         onClick={() => setIsOpen(!isOpen)}
       />
@@ -370,11 +410,35 @@ const PlayersMenu: React.FC<{
                     <MiniPlayerGlyph team={item.team} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <span className="block truncate text-[12px] font-semibold text-text">{t(item.labelKey)}</span>
                     <ToolShortcut shortcut={item.shortcut} />
                   </span>
                 </button>
               ))}
+            </div>
+
+            {/* Squad bench CTA */}
+            <div className="mt-2 pt-2 border-t border-border">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenSquadSettings?.();
+                }}
+                className="group flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-accent/10"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent group-hover:bg-accent/15">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="9" cy="8" r="3" />
+                    <path d="M3 20a6 6 0 0 1 12 0" />
+                    <path d="M16 6a3 3 0 0 1 0 6" />
+                    <path d="M20 20a6 6 0 0 0-4-5.6" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] font-semibold text-accent">{t('topbar.presetSquad')}</span>
+                  <span className="block text-[10px] text-muted">{t('topbar.squadHint')}</span>
+                </span>
+              </button>
             </div>
           </ToolMenuPanel>
         </>
@@ -387,6 +451,7 @@ const ArrowsMenu: React.FC<{
   onSelectArrowTool?: (type: ArrowType) => void;
 }> = ({ onSelectArrowTool }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { t } = useTranslation();
 
   if (!onSelectArrowTool) return null;
 
@@ -394,9 +459,9 @@ const ArrowsMenu: React.FC<{
     <div className="relative">
       <ToolMenuButton
         dataTour="arrows"
-        title="Show arrows"
+        title={t('topbar.showArrows')}
         icon={<ArrowsIcon className="h-4 w-4" />}
-        label="Arrows"
+        label={t('topbar.arrows')}
         isOpen={isOpen}
         onClick={() => setIsOpen(!isOpen)}
       />
@@ -418,7 +483,7 @@ const ArrowsMenu: React.FC<{
                     <MiniArrowGlyph type={item.type} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <span className="block truncate text-[12px] font-semibold text-text">{t(item.labelKey)}</span>
                     <ToolShortcut shortcut={item.shortcut} />
                   </span>
                 </button>
@@ -435,6 +500,7 @@ const ZonesMenu: React.FC<{
   onSelectZoneTool?: (shape: ZoneShape) => void;
 }> = ({ onSelectZoneTool }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { t } = useTranslation();
 
   if (!onSelectZoneTool) return null;
 
@@ -442,9 +508,9 @@ const ZonesMenu: React.FC<{
     <div className="relative">
       <ToolMenuButton
         dataTour="zones"
-        title="Show zones"
+        title={t('topbar.showZones')}
         icon={<ZonesIcon className="h-4 w-4" />}
-        label="Zones"
+        label={t('topbar.zones')}
         isOpen={isOpen}
         onClick={() => setIsOpen(!isOpen)}
       />
@@ -466,7 +532,7 @@ const ZonesMenu: React.FC<{
                     <MiniZoneGlyph shape={item.shape} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
+                    <span className="block truncate text-[12px] font-semibold text-text">{t(item.labelKey)}</span>
                     <ToolShortcut shortcut={item.shortcut} />
                   </span>
                 </button>
@@ -484,6 +550,7 @@ const EquipmentMenu: React.FC<{
   onAddBall?: (variant: 'single' | 'cluster') => void;
 }> = ({ onAddEquipment, onAddBall }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { t } = useTranslation();
 
   if (!onAddEquipment) return null;
 
@@ -491,9 +558,9 @@ const EquipmentMenu: React.FC<{
     <div className="relative">
       <ToolMenuButton
         data-tour="equipment"
-        title="Show equipment"
+        title={t('topbar.showEquipment')}
         icon={<EquipmentIcon className="h-4 w-4" />}
-        label="Equipment"
+        label={t('topbar.equipment')}
         isOpen={isOpen}
         onClick={() => setIsOpen(!isOpen)}
       />
@@ -517,7 +584,7 @@ const EquipmentMenu: React.FC<{
                       <MiniBallGlyph />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[12px] font-semibold text-text">Ball</span>
+                      <span className="block truncate text-[12px] font-semibold text-text">{t('commands.toast.ball')}</span>
                       <ToolShortcut shortcut="B" />
                     </span>
                   </button>
@@ -533,7 +600,7 @@ const EquipmentMenu: React.FC<{
                       <MiniBallClusterGlyph />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[12px] font-semibold text-text">Ball cluster</span>
+                      <span className="block truncate text-[12px] font-semibold text-text">{t('topbar.ballCluster')}</span>
                       <ToolShortcut shortcut="Shift+B" />
                     </span>
                   </button>
@@ -549,15 +616,133 @@ const EquipmentMenu: React.FC<{
                   className="group flex min-h-[54px] items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface2"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent group-hover:bg-accent/15">
-                    <MiniEquipmentGlyph type={item.type} />
+                    <MiniEquipmentGlyph type={item.type} variant={item.variant} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[12px] font-semibold text-text">{item.label}</span>
-                    <ToolShortcut shortcut={item.shortcut} />
+                    <span className="block truncate text-[12px] font-semibold text-text">{t(item.labelKey)}</span>
+                    {item.shortcut ? <ToolShortcut shortcut={item.shortcut} /> : null}
                   </span>
                 </button>
               ))}
             </div>
+          </ToolMenuPanel>
+        </>
+      )}
+    </div>
+  );
+};
+
+/** Pro feature star icon */
+const ProStarIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+  </svg>
+);
+
+/** ExportMenu - dropdown with all export format options */
+const ExportMenu: React.FC<{
+  onExport?: (format: ExportFormat) => void;
+  plan?: PlanType;
+}> = ({ onExport, plan = 'free' }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const { t } = useTranslation();
+
+  if (!onExport) return null;
+
+  const isPro = plan === 'pro';
+
+  const EXPPORT_ITEMS: Array<{
+    format: ExportFormat;
+    labelKey: string;
+    shortcut: string;
+    pro?: boolean;
+  }> = [
+    { format: 'png', labelKey: 'topbar.exportPngCurrent', shortcut: '⌘E' },
+    { format: 'png-all', labelKey: 'topbar.exportPngAll', shortcut: '⇧⌘E' },
+    { format: 'jpg', labelKey: 'topbar.exportJpgCurrent', shortcut: '' },
+    { format: 'pdf', labelKey: 'topbar.exportPdfAll', shortcut: '⇧⌘P', pro: true },
+    { format: 'gif', labelKey: 'topbar.exportGif', shortcut: '⇧⌘G', pro: true },
+  ];
+
+  return (
+    <div className="relative">
+      <ToolMenuButton
+        dataTour="export"
+        title={t('topbar.exportBoard')}
+        icon={<ExportIcon className="h-4 w-4" />}
+        label={t('topbar.export')}
+        isOpen={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      />
+      {isOpen && (
+        <>
+          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <ToolMenuPanel widthClass="w-[280px]">
+            <div className="grid grid-cols-1 gap-1.5">
+              {EXPPORT_ITEMS.map((item) => {
+                const isLocked = item.pro && !isPro;
+                return (
+                  <button
+                    key={item.format}
+                    onClick={() => {
+                      if (!isLocked) {
+                        onExport(item.format);
+                        setIsOpen(false);
+                      }
+                    }}
+                    disabled={isLocked}
+                    className={`
+                      group flex min-h-[44px] items-center gap-3 rounded-md px-3 py-2 text-left transition-colors
+                      ${isLocked
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-surface2'
+                      }
+                    `}
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent group-hover:bg-accent/15">
+                      {item.format === 'png' || item.format === 'png-all' || item.format === 'jpg' ? (
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                      ) : item.format === 'pdf' ? (
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                          <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polygon points="23 7 16 12 23 17 23 7" />
+                          <rect x="1" y="5" width="15" height="14" rx="2" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="block truncate text-[12px] font-semibold text-text">{t(item.labelKey)}</span>
+                        {item.pro && !isPro && (
+                          <ProStarIcon className="h-3 w-3 text-accent shrink-0" />
+                        )}
+                      </span>
+                      {item.shortcut && (
+                        <ToolShortcut shortcut={item.shortcut} />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {!isPro && (
+              <div className="mt-2 border-t border-border pt-2 px-1">
+                <span className="text-[10px] text-muted block text-center">
+                  {t('topbar.proMarked')}
+                </span>
+              </div>
+            )}
           </ToolMenuPanel>
         </>
       )}
@@ -609,8 +794,12 @@ const AccountMenu: React.FC<{
   onOpenAccount?: () => void;
   onUpgrade?: () => void;
   onLogout?: () => void;
-}> = ({ initials, plan, onOpenAccount, onUpgrade, onLogout }) => {
+  onDevLogin?: (tier: 'guest' | 'free' | 'pro' | 'team') => void;
+  /** DEV-ONLY: see onDevLogin / useAuthStore.devClearData */
+  onClearDevData?: () => void;
+}> = ({ initials, plan, onOpenAccount, onUpgrade, onLogout, onDevLogin, onClearDevData }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="relative">
@@ -619,7 +808,7 @@ const AccountMenu: React.FC<{
         data-tour="premium"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 p-1 rounded-md hover:bg-surface2 transition-colors"
-        title="Account"
+        title={t('topbar.account')}
       >
         {/* Avatar circle */}
         <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-accent font-medium text-xs">
@@ -633,7 +822,7 @@ const AccountMenu: React.FC<{
               : 'bg-muted/20 text-muted'
           }`}
         >
-          {plan === 'pro' ? 'Pro' : 'Free'}
+          {plan === 'pro' ? t('topbar.planPro') : t('topbar.planFree')}
         </span>
       </button>
 
@@ -655,7 +844,7 @@ const AccountMenu: React.FC<{
               }}
               className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface2 transition-colors"
             >
-              Account & Billing
+              {t('topbar.accountBilling')}
             </button>
             
             {plan === 'free' && (
@@ -666,10 +855,57 @@ const AccountMenu: React.FC<{
                 }}
                 className="w-full px-3 py-2 text-left text-sm text-accent font-medium hover:bg-surface2 transition-colors flex items-center gap-2"
               >
-                <span>⭐</span> Upgrade to Pro
+                <span>⭐</span> {t('topbar.upgradePro')}
               </button>
             )}
             
+            {/* DEV-ONLY: quick plan switcher for testing. Safe to delete
+                this block + onDevLogin prop once real-auth testing is done. */}
+            {onDevLogin && (
+              <>
+                <div className="h-px bg-border my-1" />
+                <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-yellow-500 font-semibold">
+                  {t('topbar.devTestLogin')}
+                </div>
+                <div className="px-3 pb-1.5 flex gap-1.5">
+                  {([
+                    { tier: 'guest', label: t('topbar.devGuest') },
+                    { tier: 'free', label: t('topbar.devFree') },
+                    { tier: 'pro', label: t('topbar.devSolo') },
+                    { tier: 'team', label: t('topbar.devTeam') },
+                  ] as const).map(({ tier, label }) => (
+                    <button
+                      key={tier}
+                      onClick={() => {
+                        setIsOpen(false);
+                        onDevLogin(tier);
+                      }}
+                      className={`flex-1 px-1 py-1 text-[10px] leading-tight rounded border transition-colors ${
+                        (plan as string) === tier
+                          ? 'border-accent text-accent'
+                          : 'border-border text-muted hover:text-text hover:bg-surface2'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {onClearDevData && (
+                  <div className="px-3 pb-1.5">
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        onClearDevData();
+                      }}
+                      className="w-full px-1 py-1 text-[10px] leading-tight rounded border border-dashed border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      {t('topbar.clearDevData')}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="h-px bg-border my-1" />
             
             <button
@@ -679,7 +915,7 @@ const AccountMenu: React.FC<{
               }}
               className="w-full px-3 py-2 text-left text-sm text-muted hover:text-text hover:bg-surface2 transition-colors"
             >
-              Log Out
+              {t('topbar.logOut')}
             </button>
           </div>
         </>
@@ -709,13 +945,17 @@ export const TopBar: React.FC<TopBarProps> = ({
   onAddEquipment,
   onAddBall,
   onAddPlayer,
+  onOpenSquadSettings,
   onOpenProjects,
   onRename,
   onToggleInspector,
   onOpenAccount,
   onUpgrade,
   onLogout,
+  onDevLogin,
+  onClearDevData,
 }) => {
+  const { t } = useTranslation();
   const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
   const cmdKey = isMac ? '⌘' : 'Ctrl';
   
@@ -774,7 +1014,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             onClick={onOpenProjects}
             className="p-1 -m-1 rounded hover:bg-surface2 transition-colors group"
-            title="Open Projects"
+            title={t('topbar.openProjects')}
           >
             <svg className="w-4 h-4 text-muted group-hover:text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -791,7 +1031,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               onBlur={handleSave}
               onKeyDown={handleKeyDown}
               className="text-text text-sm font-medium bg-surface2 border border-accent rounded px-2 py-0.5 w-[180px] outline-none"
-              placeholder="Project name"
+              placeholder={t('topbar.projectName')}
             />
           ) : (
             <button
@@ -800,7 +1040,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 setIsEditing(true);
               }}
               className="text-text text-sm font-medium truncate max-w-[200px] hover:text-accent transition-colors cursor-text"
-              title="Click to rename"
+              title={t('topbar.clickRename')}
             >
               {projectName}
             </button>
@@ -809,7 +1049,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Save status indicator (PR-L5-MINI) */}
           {!isOnline ? (
             <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">
-              Offline
+              {t('topbar.offline')}
             </span>
           ) : isSyncing ? (
             <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
@@ -817,7 +1057,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span>Saving...</span>
+              <span>{t('topbar.saving')}</span>
             </div>
           ) : (
             <span
@@ -827,7 +1067,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   : 'bg-orange-500/10 text-orange-500'
               }`}
             >
-              {isSaved ? 'Saved' : 'Unsaved'}
+              {isSaved ? t('topbar.saved') : t('topbar.unsaved')}
             </span>
           )}
           
@@ -860,25 +1100,23 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        <PlayersMenu onAddPlayer={onAddPlayer} />
+        <PlayersMenu onAddPlayer={onAddPlayer} onOpenSquadSettings={onOpenSquadSettings} />
         <ArrowsMenu onSelectArrowTool={onSelectArrowTool} />
         <ZonesMenu onSelectZoneTool={onSelectZoneTool} />
         <EquipmentMenu onAddEquipment={onAddEquipment} onAddBall={onAddBall} />
 
-        {/* Export */}
-        <IconButton onClick={onExport} title="Export PNG" dataTour="export">
-          <ExportIcon className="w-4 h-4" />
-        </IconButton>
+        {/* Export dropdown */}
+        <ExportMenu onExport={onExport} plan={plan} />
 
         {/* Focus Mode */}
-        <IconButton onClick={onToggleFocus} title="Focus Mode (F)" active={focusMode}>
+        <IconButton onClick={onToggleFocus} title={`${t('topbar.focusMode')} (F)`} active={focusMode}>
           <FocusIcon className="w-4 h-4" />
         </IconButton>
 
         {/* Theme Toggle */}
         <IconButton
           onClick={onToggleTheme}
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          title={theme === 'light' ? t('topbar.themeToDark') : t('topbar.themeToLight')}
         >
           {theme === 'light' ? (
             <MoonIcon className="w-4 h-4" />
@@ -887,8 +1125,11 @@ export const TopBar: React.FC<TopBarProps> = ({
           )}
         </IconButton>
 
+        {/* Language */}
+        <LanguageSwitcher />
+
         {/* Help */}
-        <IconButton onClick={onOpenHelp} title="Help & Shortcuts (?)" dataTour="help">
+        <IconButton onClick={onOpenHelp} title={`${t('topbar.help')} (?)`} dataTour="help">
           <HelpIcon className="w-4 h-4" />
         </IconButton>
 
@@ -897,7 +1138,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             onClick={onToggleInspector}
             className="xl:hidden p-2 rounded-md transition-all duration-fast hover:bg-surface2 active:scale-95 text-muted hover:text-text"
-            title="Toggle Inspector"
+            title={t('topbar.toggleInspector')}
           >
             <PanelRightIcon className="w-4 h-4" />
           </button>
@@ -912,6 +1153,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           onOpenAccount={onOpenAccount}
           onUpgrade={onUpgrade}
           onLogout={onLogout}
+          onDevLogin={onDevLogin}
+          onClearDevData={onClearDevData}
         />
       </div>
     </header>

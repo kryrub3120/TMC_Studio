@@ -1,8 +1,8 @@
 # 🎨 TMC Studio — Design System
 
-**Version:** 1.0.0  
+**Version:** 1.1.0 (design system — niezależne od produktu, patrz `docs/VERSIONING.md`)  
 **Created:** 2026-06-09  
-**Status:** Living Document  
+**Last Updated:** 2026-06-13  
 **Audience:** Wszystkie agenty (Implementer, Tester) — czytaj przed każdą zmianą UI.
 
 ---
@@ -189,6 +189,8 @@ Hierarchia nakładania — **nigdy nie używaj `z-` z hardcoded wartością**. U
 
 ## 8. Dark Mode
 
+**Tryb motywu (Faza 4):** `useUIStore.themeMode` przyjmuje `'light' | 'dark' | 'system'`. `'system'` rozwiązywane jest przez `matchMedia('(prefers-color-scheme: dark)')` z nasłuchem zmian OS; `theme` pozostaje rozwiązaną wartością `'light' | 'dark'` aplikowaną jako klasa `.dark` na `<html>`. UI wyboru: `SegmentedControl` w `SettingsModal → Preferences`.
+
 Aktywowany przez klasę `.dark` na elemencie `<html>`.
 
 **Zasady:**
@@ -219,6 +221,7 @@ Dostępne klasy animacji (zdefiniowane w `tokens.css` + `tailwind.config.js`):
 | `animate-slide-down` | slideDown | Pojawianie się od góry (-8px) |
 | `animate-toast` | toastSlide | Toast (1.2s, fade in → wait → fade out) |
 | `animate-in` | animateIn | Scale(0.95→1) z fade, 200ms |
+| `confettiDrop` | confettiDrop | Confetti spadające z góry, 1.5s (first element celebration) |
 
 ---
 
@@ -242,18 +245,20 @@ Wszystkie komponenty znajdują się w `packages/ui/src/`. Są eksportowane z `pa
 
 | Komponent | Props | Opis |
 |-----------|-------|------|
-| **TopBar** | `projectName`, `isSaved`, `focusMode`, `theme`, `plan?`, `userInitials?`, `isSyncing?`, `stepInfo?`, `isOnline?`, wiele callbacków | Górny pasek nawigacji. Zawiera: logo, nazwę projektu, status save, Export, Focus, Theme toggle, Help, Cmd+K. Responsywny (PR-UX3) |
+| **TopBar** | `projectName`, `isSaved`, `focusMode`, `theme`, `plan?`, `userInitials?`, `isSyncing?`, `stepInfo?`, `isOnline?`, `onExport(format)`, `onOpenSquadSettings?`, wiele callbacków | Górny pasek nawigacji. Zawiera: logo, nazwę projektu, status save, **Export dropdown** (PNG/PNG-all/JPG/PDF⭐/GIF⭐), Focus, Theme toggle, Help, Cmd+K, **EquipmentMenu z 3 wariantami cone** (standard/flat/tall), **PlayersMenu z CTA "Preset your squad"**. Responsywny (PR-UX3). Export ma gwiazdki Pro dla PDF/GIF |
+| **SquadBench** | `squad`, `visible`, `canAccess`, `freeLimit?`, `premiumPerTeamLimit?`, `onToggle`, `onOpenSettings`, `onDragStart`, `onQuickAddPlayer?` | Ławka rezerwowych pod canvasem. **Design:** shape glyph (team color + number), kaskadowa animacja fade-in, hover glow, badge count per team. **Team switcher:** jedna drużyna naraz + kropki do skoku. **Quick-add:** inline form (name + number). **Free:** 5 slotów, reszta locked. **Premium:** 25/team, puste sloty z + |
+| **SmartBottomBar** | `elementCount`, `canUndo/Redo`, `onUndo/Redo`, `onAddPlayer/Ball/Arrow`, `animationEnabled`, `steps[]`, callbacki | Kontekstualny dolny pasek — 3 tryby: empty (quick actions), editing (undo/redo + info), animation (playback + step chips). Zawsze widoczny |
 | **Toolbar** | `onAddPlayer`, `onAddBall`, `onDuplicate`, `onDelete`, `onUndo`, `onRedo`, `onSave`, `onLoad`, `onNewBoard`, `canUndo`, `canRedo`, `hasSelection` | Legacy toolbar. **UWAGA:** używa starych klas (`bg-gray-800`, `text-white`) — patrz sekcja 16 |
-| **BottomStepsBar** | `steps: StepInfo[]`, `currentIndex`, `duration`, callbacki | Dolny pasek kroków animacji |
+| **BottomStepsBar** | `steps: StepInfo[]`, `currentIndex`, `duration`, callbacki | Dolny pasek kroków animacji (zachowany dla kompatybilności, zastąpiony przez SmartBottomBar) |
 | **Footer** | (brak props) | Stopka z informacją o wersji |
 | **RightPanel** | Legacy right panel | Starszy panel boczny |
-| **RightInspector** | `elements`, `onUpdate`, `onDelete`, `onReorder`, `onSelectLayer` | Inspektor elementów (prawa strona). Responsywny drawer na xl (PR-UX3) |
+| **RightInspector** | `selectedElement`, `onUpdateElement`, `onUpdateSelectedElements`, `layerVisibility`, `groups`, … | Inspektor (prawa strona) z prymitywów (10.8). **Faza 4:** 2 zakładki — **Props** (kontekstowe, zwijane sekcje Identity/Appearance/Role/Advanced; multi-select = krycie batch + show/hide labels) i **Layers** (widoczność warstw + grupy + przeszukiwalna lista obiektów, scalone). Teams/Pitch w `SettingsModal`. Responsywny drawer/BottomSheet |
 
 ### 10.3 Overlays & Modals
 
 | Komponent | Props | Opis |
 |-----------|-------|------|
-| **EmptyStateOverlay** | `onOpenPalette`, `onNewBoard` | Ekran powitalny dla nowych użytkowników (PR-UX2) |
+| **EmptyStateOverlay** | `onOpenPalette`, `onNewBoard`, `showCelebration?` | Ekran powitalny dla nowych użytkowników (PR-UX2). Zawiera **AnimatedFormationPreview** (animowana formacja 4-3-3 w tle). Gdy pierwszy element dodany — **CelebrationConfetti** (⭐ nowość) |
 | **CheatSheetOverlay** | `isOpen`, `onClose` | Skróty klawiszowe (pełna lista) |
 | **ShortcutsHint** | (auto-show z useUIStore) | Krótka podpowiedź skrótów (1 raz na sesję — localStorage) |
 | **CommandPaletteModal** | `isOpen`, `onClose`, `actions: CommandAction[]` | Command palette (Cmd+K) |
@@ -290,7 +295,24 @@ Wszystkie komponenty znajdują się w `packages/ui/src/`. Są eksportowane z `pa
 | Komponent | Props | Opis |
 |-----------|-------|------|
 | **ToastHint** | `message`, `type` ('info'\|'success'\|'error'), `onDismiss` | Toast notification |
-| **SettingsModal** | `isOpen`, `onClose` | Modal ustawień |
+| **SettingsModal** | `isOpen`, `onClose`, `teamSettings?`, `pitchSettings?`, … | Modal ustawień. **Faza 3:** lewy pasek nawigacji pogrupowany — **Account** (Profile/Security/Billing), **Editor** (Preferences/Squad), **Board** (Teams/Pitch). Ikony SVG zamiast emoji, toggle'e na współdzielonym `Toggle` (10.8) |
+
+### 10.8 Shared Form Primitives ⭐ (2026-06-13)
+
+Plik: `packages/ui/src/primitives.tsx`. **Jedno źródło prawdy** dla małych kontrolek formularzy — zastępują ~9 ręcznie pisanych toggle'i i powielony kod w `SettingsModal` oraz `RightInspector`. Wszystkie zbudowane na tokenach semantycznych (`surface`/`surface2`/`text`/`muted`/`accent`/`border`), działają w light i dark mode.
+
+| Prymityw | Props | Opis |
+|----------|-------|------|
+| **Toggle** | `checked`, `onChange`, `disabled?`, `ariaLabel?`, `size?` ('sm'\|'md') | Jedyny poprawny przełącznik. `role="switch"`, focus ring. **Używaj zamiast inline'owych pill-buttonów.** |
+| **SettingRow** | `label`, `description?`, `control?`, `disabled?` | Etykieta + opis po lewej, kontrolka po prawej. Standard dla wierszy ustawień. |
+| **Section** | `title`, `defaultOpen?`, `collapsible?`, `right?` | Grupująca, zwijana sekcja (chevron). Podstawa progresywnego chowania opcji. |
+| **Field** | `label?`, `hint?` | Wrapper pola input z etykietą i podpowiedzią. Użyj z `inputClass`. |
+| **inputClass** | — | Współdzielony string klas dla `<input>` (tło surface2, focus ring accent). |
+| **Slider** | `label`, `value`, `min`, `max`, `step?`, `disabled?`, `format?`, `onChange` | Suwak z etykietą i live-odczytem wartości. |
+| **ColorSwatchRow** | `colors`, `value?`, `onChange`, `size?` | Rząd wybieralnych próbek koloru z zaznaczeniem (ring). |
+| **SegmentedControl** | `options`, `value`, `onChange`, `ariaLabel?` | Kontrolka segmentowa (np. Light/Dark/System). `role="radiogroup"`. |
+
+**ZASADA:** Nowe UI ustawień/właściwości buduj z tych prymitywów. Nie pisz kolejnych inline'owych toggle'i ani pól.
 
 ---
 

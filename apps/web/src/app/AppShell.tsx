@@ -6,8 +6,10 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Footer, type ProjectItem } from '@tmc/ui';
+import { Footer, useTranslation, type ProjectItem } from '@tmc/ui';
+import { DEFAULT_TEAM_SETTINGS, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { type ProjectFolder } from '../lib/supabase';
+import appPkg from '../../package.json';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { useBoardStore } from '../store';
@@ -18,7 +20,8 @@ import { ModalOrchestrator } from './orchestrators/ModalOrchestrator';
 /** Global app shell - orchestrates auth, billing, projects, settings */
 export function AppShell() {
   const navigate = useNavigate();
-  
+  const { t } = useTranslation();
+
   // Auth state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [limitReachedModalOpen, setLimitReachedModalOpen] = useState(false);
@@ -31,7 +34,7 @@ export function AppShell() {
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
   const [folderOptionsModalOpen, setFolderOptionsModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
-  
+
   // Auth store
   const authUser = useAuthStore((s) => s.user);
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -42,20 +45,34 @@ export function AppShell() {
   const signUp = useAuthStore((s) => s.signUp);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const clearAuthError = useAuthStore((s) => s.clearError);
-  
+  // DEV-ONLY: see useAuthStore.devLogin
+  const devLogin = useAuthStore((s) => s.devLogin);
+
   // UI store actions
   const showToast = useUIStore((s) => s.showToast);
   const footerVisible = useUIStore((s) => s.footerVisible);
   const toggleFooter = useUIStore((s) => s.toggleFooter);
-  
+
   // Board store - minimal global state
   const cloudProjects = useBoardStore((s) => s.cloudProjects);
   const cloudProjectId = useBoardStore((s) => s.cloudProjectId);
+  const document = useBoardStore((s) => s.document);
+  const addSquadPlayer = useBoardStore((s) => s.addSquadPlayer);
+  const removeSquadPlayer = useBoardStore((s) => s.removeSquadPlayer);
+  const setSquadVisible = useBoardStore((s) => s.setSquadVisible);
+  const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
+  const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
+  const isPrintMode = useUIStore((s) => s.isPrintMode);
+  const togglePrintMode = useUIStore((s) => s.togglePrintMode);
+  const exportBoardToFile = useBoardStore((s) => s.exportBoardToFile);
+  const importBoardFromFile = useBoardStore((s) => s.importBoardFromFile);
+  const themeMode = useUIStore((s) => s.themeMode);
+  const setThemeMode = useUIStore((s) => s.setThemeMode);
   const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
-  
+
   // Controllers
   const billingController = useBillingController();
-  
+
   const projectsController = useProjectsController({
     isDrawerOpen: projectsDrawerOpen,
     onOpenLimitModal: (type, current, max) => {
@@ -66,12 +83,12 @@ export function AppShell() {
     },
     onCloseDrawer: () => setProjectsDrawerOpen(false),
   });
-  
+
   const settingsController = useSettingsController({
     onCloseModal: () => setSettingsModalOpen(false),
     showToast,
   });
-  
+
   // Payment return flow
   usePaymentReturn({
     onActivateStart: () => {
@@ -81,36 +98,36 @@ export function AppShell() {
     onActivateSuccess: (tier) => {
       billingController.setSubscriptionActivating(false);
       billingController.openUpgradeSuccessModal(tier, true);
-      showToast('🎉 Upgrade successful!');
+      showToast(t('appToast.upgradeSuccessful'));
     },
     onActivateDelayed: () => {
       billingController.setSubscriptionActivating(false);
       billingController.closeUpgradeSuccessModal();
-      showToast('Your subscription is being activated. Refresh in a moment.');
+      showToast(t('appToast.subscriptionActivating'));
     },
     onPortalReturn: (tierChanged, newTier) => {
       if (tierChanged && newTier) {
         if (newTier === 'free') {
-          showToast('Subscription updated — you are now on Free.');
+          showToast(t('appToast.subscriptionFree'));
         } else if (newTier === 'pro') {
-          showToast('Subscription updated — Pro is active.');
+          showToast(t('appToast.subscriptionPro'));
         } else {
-          showToast('Subscription updated — Team is active.');
+          showToast(t('appToast.subscriptionTeam'));
         }
       } else {
-        showToast('Billing updated.');
+        showToast(t('appToast.billingUpdated'));
       }
     },
     onCancelled: () => {
-      showToast('Checkout cancelled');
+      showToast(t('appToast.checkoutCancelled'));
     },
   });
-  
+
   // Projects drawer handlers
   const handleOpenProjectsDrawer = useCallback(() => {
     setProjectsDrawerOpen(true);
   }, []);
-  
+
   const handleSelectProject = projectsController.selectProject;
   const handleCreateProject = projectsController.createProject;
   const handleDeleteProject = projectsController.deleteProject;
@@ -120,7 +137,7 @@ export function AppShell() {
   const handleToggleFavorite = projectsController.toggleFavorite;
   const handleMoveToFolder = projectsController.moveToFolder;
   const handleDeleteFolder = projectsController.deleteFolder;
-  
+
   const handleEditFolder = useCallback(async (folderId: string) => {
     const folder = projectsController.folders.find(f => f.id === folderId);
     if (folder) {
@@ -128,41 +145,41 @@ export function AppShell() {
       setFolderOptionsModalOpen(true);
     }
   }, [projectsController.folders]);
-  
+
   const handleUpdateFolder = useCallback(async (name: string, color: string) => {
     if (!editingFolder) return;
     await projectsController.updateFolder(editingFolder.id, name, color);
     setFolderOptionsModalOpen(false);
     setEditingFolder(null);
   }, [editingFolder, projectsController]);
-  
+
   // L1 Pin/Unpin handlers
   const handleTogglePinProject = projectsController.togglePinProject;
   const handleTogglePinFolder = projectsController.togglePinFolder;
-  
+
   // L1 Inline rename handlers
   const handleRenameProjectById = projectsController.renameProjectById;
   const handleRenameFolderById = projectsController.renameFolderById;
-  
+
   // PR-L5-MINI: Online/offline detection
   useEffect(() => {
     const handleOnline = () => {
       useUIStore.getState().setOnline(true);
     };
-    
+
     const handleOffline = () => {
       useUIStore.getState().setOnline(false);
     };
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  
+
   // Convert cloud projects to ProjectItem format
   const projectItems: ProjectItem[] = cloudProjects.map((p) => ({
     id: p.id,
@@ -176,7 +193,7 @@ export function AppShell() {
     isFavorite: p.is_favorite ?? false,
     isPinned: p.is_pinned ?? false,
   }));
-  
+
   return (
     <>
       {/* Main board page */}
@@ -193,7 +210,7 @@ export function AppShell() {
         }}
         onRenameProject={handleRenameProject}
       />
-      
+
       {/* Global Modals */}
       <ModalOrchestrator
         // Auth Modal
@@ -205,13 +222,20 @@ export function AppShell() {
         onSignIn={async (email, password) => {
           await signIn(email, password);
           setAuthModalOpen(false);
-          showToast('Welcome back!');
+          showToast(t('appToast.welcomeBack'));
         }}
         onSignUp={signUp}
         onSignInWithGoogle={signInWithGoogle}
+        // DEV-ONLY: "Test login" buttons in the auth modal. Remove this
+        // prop (and useAuthStore.devLogin) once done testing.
+        onDevLogin={import.meta.env.DEV ? (tier) => {
+          devLogin(tier);
+          setAuthModalOpen(false);
+          showToast(t('appToast.devLogin', { tier }));
+        } : undefined}
         authError={authError}
         authIsLoading={authIsLoading}
-        
+
         // Pricing Modal
         pricingModalOpen={billingController.pricingModalOpen}
         onClosePricingModal={() => billingController.closePricingModal()}
@@ -219,7 +243,7 @@ export function AppShell() {
         authIsPro={authIsPro}
         authIsAuthenticated={authIsAuthenticated}
         authUser={authUser}
-        
+
         // Limit Reached Modal
         limitReachedModalOpen={limitReachedModalOpen}
         limitReachedType={limitReachedType}
@@ -227,7 +251,7 @@ export function AppShell() {
         limitCountMax={limitCountMax}
         onCloseLimitReachedModal={() => setLimitReachedModalOpen(false)}
         onOpenPricingModal={() => billingController.openPricingModal()}
-        
+
         // Projects Drawer
         projectsDrawerOpen={projectsDrawerOpen}
         onCloseProjectsDrawer={() => setProjectsDrawerOpen(false)}
@@ -261,7 +285,7 @@ export function AppShell() {
           setCreateFolderParentId(parentId ?? null);
           setCreateFolderModalOpen(true);
         }}
-        
+
         // Create Folder Modal
         createFolderModalOpen={createFolderModalOpen}
         onCloseCreateFolderModal={() => {
@@ -269,7 +293,7 @@ export function AppShell() {
           setCreateFolderParentId(null);
         }}
         onCreateFolder={(name: string, color: string) => handleCreateFolder(name, color, createFolderParentId)}
-        
+
         // Folder Options Modal
         folderOptionsModalOpen={folderOptionsModalOpen}
         editingFolder={editingFolder}
@@ -278,7 +302,7 @@ export function AppShell() {
           setEditingFolder(null);
         }}
         onUpdateFolder={handleUpdateFolder}
-        
+
         // Settings Modal
         settingsModalOpen={settingsModalOpen}
         onCloseSettingsModal={() => setSettingsModalOpen(false)}
@@ -295,25 +319,45 @@ export function AppShell() {
         gridVisible={useUIStore.getState().gridVisible}
         snapEnabled={useUIStore.getState().snapEnabled}
         onToggleTheme={useUIStore.getState().toggleTheme}
+        themeMode={themeMode}
+        onSetThemeMode={setThemeMode}
         onToggleGrid={() => {
           useUIStore.getState().toggleGrid();
-          showToast(useUIStore.getState().gridVisible ? 'Grid hidden' : 'Grid visible');
+          showToast(useUIStore.getState().gridVisible ? t('commands.toast.gridHidden') : t('commands.toast.gridVisible'));
         }}
         onToggleSnap={() => {
           useUIStore.getState().toggleSnap();
-          showToast(useUIStore.getState().snapEnabled ? 'Snap enabled' : 'Snap disabled');
+          showToast(useUIStore.getState().snapEnabled ? t('commands.toast.snapEnabled') : t('commands.toast.snapDisabled'));
         }}
-        
+
+        // Squad Bench
+        squad={(document.squad ?? []).map(p => ({ id: p.id, name: p.name, number: p.number, team: p.team as 'home' | 'away' }))}
+        squadVisible={document.squadVisible ?? true}
+        isPro={authIsPro}
+        onAddSquadPlayer={(name, number, team) => addSquadPlayer(name, number, team as any)}
+        onRemoveSquadPlayer={(id) => removeSquadPlayer(id)}
+        onSetSquadVisible={(visible) => setSquadVisible(visible)}
+        // Board settings (Teams / Pitch — moved from inspector)
+        teamSettings={document.teamSettings ?? DEFAULT_TEAM_SETTINGS}
+        onUpdateTeam={updateTeamSettings}
+        pitchSettings={document.pitchSettings ?? DEFAULT_PITCH_SETTINGS}
+        onUpdatePitch={updatePitchSettings}
+        isPrintMode={isPrintMode}
+        onTogglePrintMode={togglePrintMode}
+        onExportBoard={exportBoardToFile}
+        onImportBoard={importBoardFromFile}
+
         // Upgrade Success Modal
         upgradeSuccessModalOpen={billingController.upgradeSuccessModalOpen}
         onCloseUpgradeSuccessModal={() => billingController.closeUpgradeSuccessModal()}
         upgradedTier={billingController.upgradedTier}
         subscriptionActivating={billingController.subscriptionActivating}
       />
-      
-      {/* Footer */}
-      <Footer 
-        onNavigate={(path) => navigate(path)} 
+
+      {/* Footer — version from package.json (source of truth, see VERSIONING.md) */}
+      <Footer
+        version={appPkg.version}
+        onNavigate={(path) => navigate(path)}
         isVisible={footerVisible}
         onToggle={toggleFooter}
       />
