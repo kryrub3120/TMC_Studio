@@ -46,6 +46,7 @@ Implementujesz tylko zatwierdzone plany z agenta `Plan`.
 - Zero inline styles - tylko klasy z design systemu projektu.
 - Animacje i przejscia musza byc zgodne z istniejacym stylem.
 - Obsluguj stany loading, error i empty.
+- i18n: zero hardcoded user-facing stringow. Nowe teksty przez `t()` (`useTranslation` z `@tmc/ui`), dodane w `en.ts`, `pl.ts` i `es.ts` z tymi samymi kluczami. Pelna regula: `docs/SYSTEM_ARCHITECTURE.md` §11 Tier 1.
 
 ---
 

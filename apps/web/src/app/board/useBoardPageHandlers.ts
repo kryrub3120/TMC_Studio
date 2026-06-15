@@ -153,6 +153,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     hideMenu,
     menuElementId,
   } = input;
+  const defaultArrowType = useUIStore((s) => s.defaultArrowType);
 
   // Quick action handler
   const handleQuickAction = useCallback((action: string) => {
@@ -179,10 +180,8 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   );
 
   // Element drag end handler
-  // TODO I5: Docelowo zastąpić cmdRegistry.canvas.moveElementLive +
-  //          cmdRegistry.history.commitUserAction (Intent/Effect pattern).
-  //          Aktualnie USE_NEW_CANVAS = false, więc ścieżka cmdRegistry jest
-  //          nieaktywna w produkcji — zachowujemy stary kontrakt.
+  // I5 follow-up: replace with cmdRegistry.canvas.moveElementLive +
+  // cmdRegistry.history.commitUserAction once the new canvas path is active.
   const handleElementDragEnd = useCallback(
     (id: string, position: Position) => {
       moveElementById(id, position);
@@ -461,7 +460,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       onSelectAll: () => { selectAll(); hideMenu(); },
       onAddPlayer: () => { addPlayerAtCursor('home'); hideMenu(); showToast(t('commands.toast.playerAdded')); },
       onAddBall: () => { addBallAtCursor(); hideMenu(); showToast(t('commands.toast.ballAdded')); },
-      onAddArrow: () => { addArrowAtCursor('pass'); hideMenu(); showToast(t('commands.toast.arrowAdded')); },
+      onAddArrow: () => { addArrowAtCursor(defaultArrowType); hideMenu(); showToast(t('commands.toast.arrowAdded')); },
       onAddZone: () => { addZoneAtCursor(); hideMenu(); showToast(t('commands.toast.zoneAdded')); },
       // B5: Resize handler - only provided when players-only selected
       ...(onlyPlayers && {
@@ -536,12 +535,20 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor,
     cyclePlayerShape, cycleZoneShape, cycleSelectedColor,
     elements, menuElementId, hideMenu, showToast, selectElement, updateSelectedElement,
-    setEditingTextId, setEditingTextValue, handlePlayerQuickEdit, selectedIds, openResizePopover, t
+    setEditingTextId, setEditingTextValue, handlePlayerQuickEdit, selectedIds, openResizePopover, defaultArrowType, t
   ]);
 
   // Command palette actions
   const commandActions: CommandAction[] = useMemo(() => {
     const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
+    const toggleGridWithToast = () => {
+      useUIStore.getState().toggleGrid();
+      showToast(useUIStore.getState().gridVisible ? t('commands.toast.gridVisible') : t('commands.toast.gridHidden'));
+    };
+    const toggleSnapWithToast = () => {
+      useUIStore.getState().toggleSnap();
+      showToast(useUIStore.getState().snapEnabled ? t('commands.toast.snapEnabled') : t('commands.toast.snapDisabled'));
+    };
     
     return createCommandActions({
       isMac,
@@ -563,6 +570,8 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       clearSelection: () => {},
       toggleInspector,
       toggleCheatSheet,
+      toggleGrid: toggleGridWithToast,
+      toggleSnap: toggleSnapWithToast,
       toggleFocusMode,
       showToast,
       addStepWithGating: addStep,

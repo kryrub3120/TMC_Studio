@@ -104,6 +104,7 @@ Zasady:
 - Nie hardcoduj wartosci.
 - Obsluguj bledy jawnie.
 - Jesli UI: uzywaj komponentow i klas z design systemu.
+- Jesli UI: zero hardcoded user-facing stringow — nowe teksty przez `t()` i dodane w `en.ts`, `pl.ts` i `es.ts` (te same klucze).
 - Jesli DB: uzyj migracji i dokumentuj ryzyko.
 
 ### 3. Tester Pass

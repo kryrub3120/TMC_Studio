@@ -267,7 +267,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           logger.error('[Auth] Initialization error:', error);
           set({
-            error: 'Failed to initialize authentication',
+            error: 'auth.errorInitFailed',
           });
         }
       },
@@ -275,7 +275,7 @@ export const useAuthStore = create<AuthState>()(
       // Sign in with email/password
       signIn: async (email: string, password: string) => {
         if (!isSupabaseEnabled()) {
-          set({ error: 'Authentication not available in offline mode' });
+          set({ error: 'auth.errorOfflineMode' });
           return;
         }
 
@@ -301,7 +301,7 @@ export const useAuthStore = create<AuthState>()(
       // Sign up with email/password
       signUp: async (email: string, password: string, fullName?: string) => {
         if (!isSupabaseEnabled()) {
-          set({ error: 'Authentication not available in offline mode' });
+          set({ error: 'auth.errorOfflineMode' });
           return;
         }
 
@@ -324,7 +324,7 @@ export const useAuthStore = create<AuthState>()(
       // Sign in with Google
       signInWithGoogle: async () => {
         if (!isSupabaseEnabled()) {
-          set({ error: 'Authentication not available in offline mode' });
+          set({ error: 'auth.errorOfflineMode' });
           return;
         }
 

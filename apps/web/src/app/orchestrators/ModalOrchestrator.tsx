@@ -17,7 +17,7 @@ import {
   type FolderItem,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
-import type { TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
+import type { ArrowType, TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -94,11 +94,17 @@ interface ModalOrchestratorProps {
   theme: 'light' | 'dark';
   gridVisible: boolean;
   snapEnabled: boolean;
+  gridSize: number;
+  defaultArrowType: ArrowType;
+  stepDuration: number;
   onToggleTheme: () => void;
   themeMode?: 'light' | 'dark' | 'system';
   onSetThemeMode?: (mode: 'light' | 'dark' | 'system') => void;
   onToggleGrid: () => void;
   onToggleSnap: () => void;
+  onSetGridSize: (size: number) => void;
+  onSetDefaultArrowType: (type: ArrowType) => void;
+  onSetStepDuration: (duration: number) => void;
   
   // Squad Bench (from board store)
   squad?: Array<{ id: string; name: string; number: number; team: 'home' | 'away' }>;
@@ -243,11 +249,17 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         theme={props.theme}
         gridVisible={props.gridVisible}
         snapEnabled={props.snapEnabled}
+        gridSize={props.gridSize}
+        defaultArrowType={props.defaultArrowType}
+        stepDuration={props.stepDuration}
         onToggleTheme={props.onToggleTheme}
         themeMode={props.themeMode}
         onSetThemeMode={props.onSetThemeMode}
         onToggleGrid={props.onToggleGrid}
         onToggleSnap={props.onToggleSnap}
+        onSetGridSize={props.onSetGridSize}
+        onSetDefaultArrowType={props.onSetDefaultArrowType}
+        onSetStepDuration={props.onSetStepDuration}
         squad={props.squad}
         squadVisible={props.squadVisible}
         isPro={props.isPro}

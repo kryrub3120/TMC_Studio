@@ -9,10 +9,30 @@
  * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-0
  */
 
-import { logger } from '../../lib/logger';
-import type { Position } from '@tmc/core';
+import {
+  DEFAULT_PITCH_CONFIG,
+  createArrow,
+  createEquipment,
+  createText,
+  createZone,
+  isArrowElement,
+  snapToGrid,
+} from '@tmc/core';
+import type { BoardElement, EquipmentType, Position } from '@tmc/core';
 import type { CanvasCommands, SelectionCommands, HistoryCommands } from '../types';
 import { useBoardStore } from '../../store';
+import { useUIStore } from '../../store/useUIStore';
+
+const getGridSize = () => useUIStore.getState().gridSize ?? DEFAULT_PITCH_CONFIG.gridSize;
+
+const getDefaultPosition = (): Position => ({
+  x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
+  y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
+});
+
+const commitElement = (element: BoardElement) => {
+  useBoardStore.getState().addElement(element);
+};
 
 /**
  * Create effect commands (pass-through to store for now)
@@ -50,44 +70,62 @@ export function createCanvasEffectCommands(): Pick<
       // ✅ addBallAtCursor already calls pushHistory
     },
 
-    addArrow: (type: 'pass' | 'run' | 'shoot' | 'dribble', start?: Position, _end?: Position) => {
+    addArrow: (type: 'pass' | 'run' | 'shoot' | 'dribble', start?: Position, end?: Position) => {
       const store = useBoardStore.getState();
-      if (start) {
-        store.setCursorPosition(start);
+      if (!start && !end) {
+        store.addArrowAtCursor(type);
+        return;
       }
-      store.addArrowAtCursor(type);
-      // ✅ addArrowAtCursor already calls pushHistory
-      // TODO: Handle start/end positions properly
+
+      const arrow = createArrow(start ?? getDefaultPosition(), type, getGridSize());
+      if (end) {
+        arrow.endPoint = snapToGrid(end, getGridSize());
+      }
+      if (store.isAutoNumbering) {
+        const highest = store.elements
+          .filter(isArrowElement)
+          .reduce((max, el) => Math.max(max, el.number ?? 0), 0);
+        arrow.number = highest + 1;
+        arrow.showNumber = true;
+      }
+      commitElement(arrow);
     },
 
-    addZone: (position?: Position, _width?: number, _height?: number) => {
+    addZone: (position?: Position, width?: number, height?: number) => {
       const store = useBoardStore.getState();
-      if (position) {
-        store.setCursorPosition(position);
+      if (!position && width === undefined && height === undefined) {
+        store.addZoneAtCursor();
+        return;
       }
-      store.addZoneAtCursor();
-      // ✅ addZoneAtCursor already calls pushHistory
-      // TODO: Handle width/height parameters
+
+      const zone = createZone(position ?? getDefaultPosition(), 'rect', getGridSize());
+      if (width !== undefined) zone.width = Math.max(1, width);
+      if (height !== undefined) zone.height = Math.max(1, height);
+      commitElement(zone);
     },
 
-    addText: (position?: Position, _content?: string) => {
+    addText: (position?: Position, content?: string) => {
       const store = useBoardStore.getState();
-      if (position) {
-        store.setCursorPosition(position);
+      if (!position && content === undefined) {
+        store.addTextAtCursor();
+        return;
       }
-      store.addTextAtCursor();
-      // ✅ addTextAtCursor already calls pushHistory
-      // TODO: Handle content parameter
+
+      const text = createText(
+        snapToGrid(position ?? getDefaultPosition(), getGridSize()),
+        content ?? 'Text'
+      );
+      commitElement(text);
     },
 
     addEquipment: (type: string, position?: Position) => {
       const store = useBoardStore.getState();
-      if (position) {
-        store.setCursorPosition(position);
+      if (!position) {
+        store.addEquipmentAtCursor(type as EquipmentType);
+        return;
       }
-      // Cast type to appropriate equipment type
-      store.addEquipmentAtCursor(type as any);
-      // ✅ addEquipmentAtCursor already calls pushHistory
+
+      commitElement(createEquipment(position, type as EquipmentType, 'standard', getGridSize()));
     },
 
     deleteElement: (id: string) => {
@@ -98,15 +136,15 @@ export function createCanvasEffectCommands(): Pick<
       // ✅ deleteSelected already calls pushHistory
     },
 
-    updateElement: (id: string, _updates: Partial<any>) => {
+    updateElement: (id: string, updates: Partial<any>) => {
       const store = useBoardStore.getState();
-      // This is a generic update - will be refined in later PRs
       const elements = store.elements;
       const element = elements.find((el) => el.id === id);
       if (!element) return;
 
-      // For now, use the existing update methods based on element type
-      // This will be refactored in later PRs
+      useBoardStore.setState({
+        elements: elements.map((el) => (el.id === id ? { ...el, ...updates } : el)),
+      });
       store.pushHistory();
     },
   };
@@ -150,13 +188,21 @@ export function createSelectionEffectCommands(): Pick<
     },
 
     groupSelected: () => {
-      // TODO: Implement grouping in later PRs
-      logger.warn('groupSelected not yet implemented');
+      const store = useBoardStore.getState();
+      const before = store.groups.length;
+      store.createGroup();
+      if (useBoardStore.getState().groups.length !== before) {
+        store.pushHistory();
+      }
     },
 
     ungroupSelected: () => {
-      // TODO: Implement ungrouping in later PRs
-      logger.warn('ungroupSelected not yet implemented');
+      const store = useBoardStore.getState();
+      const before = store.groups.length;
+      store.ungroupSelection();
+      if (useBoardStore.getState().groups.length !== before) {
+        store.pushHistory();
+      }
     },
   };
 }

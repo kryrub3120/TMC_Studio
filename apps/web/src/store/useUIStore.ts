@@ -7,6 +7,7 @@ import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
+import type { ArrowType } from '@tmc/core';
 
 /** Active tool types */
 export type ActiveTool =
@@ -99,6 +100,8 @@ interface UIState {
   commandPaletteOpen: boolean;
   gridVisible: boolean;
   snapEnabled: boolean;
+  gridSize: number;
+  defaultArrowType: ArrowType;
   footerVisible: boolean;
   hasSeenShortcutsHint: boolean;
   
@@ -165,6 +168,8 @@ interface UIState {
   closeCommandPalette: () => void;
   toggleGrid: () => void;
   toggleSnap: () => void;
+  setGridSize: (size: number) => void;
+  setDefaultArrowType: (type: ArrowType) => void;
   toggleFooter: () => void;
   setFooterVisible: (visible: boolean) => void;
   
@@ -298,6 +303,8 @@ export const useUIStore = create<UIState>()(
       commandPaletteOpen: false,
       gridVisible: false,
       snapEnabled: true,
+      gridSize: 10,
+      defaultArrowType: 'pass',
       footerVisible: true,
       hasSeenShortcutsHint: false, // One-time hint tracking
       layerVisibility: {
@@ -405,6 +412,11 @@ export const useUIStore = create<UIState>()(
         // Sync to cloud
         syncPreferencesToCloud({ snapEnabled: newValue });
       },
+      setGridSize: (size) => {
+        const next = Math.max(5, Math.min(40, Math.round(size)));
+        set({ gridSize: next });
+      },
+      setDefaultArrowType: (type) => set({ defaultArrowType: type }),
       
       toggleFooter: () => set((s) => ({ footerVisible: !s.footerVisible })),
       setFooterVisible: (visible) => set({ footerVisible: visible }),
@@ -557,6 +569,9 @@ export const useUIStore = create<UIState>()(
         hasSeenShortcutsHint: state.hasSeenShortcutsHint,
         gridVisible: state.gridVisible,
         snapEnabled: state.snapEnabled,
+        gridSize: state.gridSize,
+        defaultArrowType: state.defaultArrowType,
+        stepDuration: state.stepDuration,
         footerVisible: state.footerVisible,
         inspectorOpen: state.inspectorOpen,
         viewportLocked: state.viewportLocked, // PR-UX-3 ETAP 4

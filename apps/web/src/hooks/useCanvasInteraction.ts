@@ -7,7 +7,6 @@
  * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-1
  */
 
-import { logger } from '../lib/logger';
 import { useCallback, useRef } from 'react';
 import { useBoardStore } from '../store';
 import { useCommandRegistry } from './useCommandRegistry';
@@ -135,9 +134,7 @@ export function useCanvasInteraction() {
    * Handle player number quick edit
    */
   const handlePlayerQuickEdit = useCallback((playerId: string) => {
-    // This can trigger a modal or inline edit
-    logger.debug('Quick edit player:', playerId);
-    // TODO: Implement quick edit UI
+    useBoardStore.getState().selectElement(playerId, false);
   }, []);
   
   return {

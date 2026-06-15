@@ -55,6 +55,19 @@ Typowe pliki:
 
 ---
 
+## i18n (obowiazkowe)
+
+Kazdy user-facing tekst przechodzi przez warstwe tlumaczen. Zero hardcoded stringow w UI.
+
+- **3 jezyki zawsze:** nowy lub zmieniony tekst dodaj jako klucz w `packages/ui/src/locales/en.ts`, `pl.ts` ORAZ `es.ts`. Te same klucze, ta sama struktura we wszystkich trzech.
+- **Komponenty React:** `const { t } = useTranslation();` z `@tmc/ui`, uzywaj `t('namespace.key')`. Parametry: `t('key', { count })`.
+- **Kod nie-Reactowy** (store, slices, utils nie bedace hookami): nie wolaj `useTranslation()`. Zapisz sentinel-klucz (np. `auth.errorOfflineMode`) i tlumacz w komponencie renderujacym (wzorzec: `error.startsWith('auth.error') ? t(error) : error`).
+- **Nazewnictwo kluczy:** grupuj po obszarze/komponencie (`projectToast.*`, `settings.*`, `palette.*`). Nie tworz duplikatow — najpierw sprawdz, czy klucz juz istnieje.
+- **Nie tlumacz:** nazwy marki (`TMC Studio`), keywordy potwierdzen (`DELETE`), `logger.*`/`console.*`, komentarze, meta/SEO.
+- Pelna regula: `docs/SYSTEM_ARCHITECTURE.md` §11 Tier 1.
+
+---
+
 ## Konva / Canvas rules
 
 - Preview podczas drag/resize/rotate trzymaj lokalnie lub w intent path bez spamowania history.
@@ -91,6 +104,8 @@ Typowe pliki:
 - [ ] Konva/canvas nie tworzy dodatkowych history snapshotow podczas preview.
 - [ ] `packages/ui/src/index.ts` zaktualizowany, jesli dodano eksportowany komponent.
 - [ ] `docs/FEATURE_SPEC.md` zaktualizowany, jesli zmieniono user-facing behavior.
+- [ ] Brak hardcoded user-facing stringow — wszystko przez `t()`.
+- [ ] Nowe klucze i18n istnieja w `en.ts`, `pl.ts` ORAZ `es.ts` (te same klucze).
 
 ---
 
@@ -99,6 +114,10 @@ Typowe pliki:
 ```bash
 rg -n "style=\\{\\{|#[0-9a-fA-F]{3,8}|z-\\[|z-10|z-20|z-50|bg-gray|text-blue|border-gray" packages/ui apps/web/src packages/board/src
 rg -n "aria-label" packages/ui/src apps/web/src
+# i18n: wykryj kandydatow na hardcoded user-facing stringi w komponentach
+rg -n ">[A-Z][a-zA-Z ]{3,}<|(placeholder|title|aria-label|alt)=\"[A-Z][a-zA-Z ]{3,}\"" packages/ui/src apps/web/src --type tsx
+# i18n: sprawdz parytet nowego klucza we wszystkich jezykach (podmien NAZWA_KLUCZA)
+rg -n "NAZWA_KLUCZA:" packages/ui/src/locales/en.ts packages/ui/src/locales/pl.ts packages/ui/src/locales/es.ts
 pnpm --filter @tmc/web typecheck
 pnpm --filter @tmc/ui typecheck
 pnpm --filter @tmc/board typecheck

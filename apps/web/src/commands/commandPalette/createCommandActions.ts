@@ -32,6 +32,8 @@ export interface CreateCommandActionsDeps {
   // View
   toggleInspector: () => void;
   toggleCheatSheet: () => void;
+  toggleGrid: () => void;
+  toggleSnap: () => void;
   toggleFocusMode: () => void;
   showToast: (msg: string) => void;
 
@@ -100,8 +102,8 @@ export function createCommandActions(deps: CreateCommandActionsDeps): CommandAct
     // View
     { id: 'toggle-inspector', label: label('toggle-inspector', 'Toggle Inspector'), shortcut: 'I', category: 'view', onExecute: deps.toggleInspector },
     { id: 'toggle-cheatsheet', label: label('toggle-cheatsheet', 'Toggle Shortcuts'), shortcut: '?', category: 'view', onExecute: deps.toggleCheatSheet },
-    { id: 'toggle-grid', label: label('toggle-grid', 'Toggle Grid'), shortcut: 'G', category: 'view', onExecute: () => deps.showToast(toast('gridSoon', 'Grid coming soon')) },
-    { id: 'toggle-snap', label: label('toggle-snap', 'Toggle Snap'), shortcut: 'S', category: 'view', onExecute: () => deps.showToast(toast('snapSoon', 'Snap toggle coming soon')) },
+    { id: 'toggle-grid', label: label('toggle-grid', 'Toggle Grid'), shortcut: 'G', category: 'view', onExecute: deps.toggleGrid },
+    { id: 'toggle-snap', label: label('toggle-snap', 'Toggle Snap'), shortcut: 'S', category: 'view', onExecute: deps.toggleSnap },
     { id: 'focus-mode', label: label('focus-mode', 'Focus Mode'), shortcut: 'F', category: 'view', onExecute: deps.toggleFocusMode },
 
     // Steps & Playback (animation module — excluded when feature flag is off)

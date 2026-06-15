@@ -38,8 +38,8 @@ export const PRICE_TO_TIER: Record<string, 'pro' | 'team'> = {
 };
 
 /**
- * Get tier from Price ID (with fallback to 'pro')
+ * Get tier from Price ID (with fallback to 'free' for safety)
  */
-export function getTierFromPriceId(priceId: string): 'pro' | 'team' {
-  return PRICE_TO_TIER[priceId] ?? 'pro';
+export function getTierFromPriceId(priceId: string): 'free' | 'pro' | 'team' {
+  return PRICE_TO_TIER[priceId] ?? 'free';
 }

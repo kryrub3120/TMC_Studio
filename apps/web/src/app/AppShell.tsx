@@ -68,6 +68,12 @@ export function AppShell() {
   const importBoardFromFile = useBoardStore((s) => s.importBoardFromFile);
   const themeMode = useUIStore((s) => s.themeMode);
   const setThemeMode = useUIStore((s) => s.setThemeMode);
+  const gridSize = useUIStore((s) => s.gridSize);
+  const setGridSize = useUIStore((s) => s.setGridSize);
+  const defaultArrowType = useUIStore((s) => s.defaultArrowType);
+  const setDefaultArrowType = useUIStore((s) => s.setDefaultArrowType);
+  const stepDuration = useUIStore((s) => s.stepDuration);
+  const setStepDuration = useUIStore((s) => s.setStepDuration);
   const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
 
   // Controllers
@@ -318,17 +324,23 @@ export function AppShell() {
         theme={useUIStore.getState().theme}
         gridVisible={useUIStore.getState().gridVisible}
         snapEnabled={useUIStore.getState().snapEnabled}
+        gridSize={gridSize}
+        defaultArrowType={defaultArrowType}
+        stepDuration={stepDuration}
         onToggleTheme={useUIStore.getState().toggleTheme}
         themeMode={themeMode}
         onSetThemeMode={setThemeMode}
         onToggleGrid={() => {
           useUIStore.getState().toggleGrid();
-          showToast(useUIStore.getState().gridVisible ? t('commands.toast.gridHidden') : t('commands.toast.gridVisible'));
+          showToast(useUIStore.getState().gridVisible ? t('commands.toast.gridVisible') : t('commands.toast.gridHidden'));
         }}
         onToggleSnap={() => {
           useUIStore.getState().toggleSnap();
           showToast(useUIStore.getState().snapEnabled ? t('commands.toast.snapEnabled') : t('commands.toast.snapDisabled'));
         }}
+        onSetGridSize={setGridSize}
+        onSetDefaultArrowType={setDefaultArrowType}
+        onSetStepDuration={setStepDuration}
 
         // Squad Bench
         squad={(document.squad ?? []).map(p => ({ id: p.id, name: p.name, number: p.number, team: p.team as 'home' | 'away' }))}

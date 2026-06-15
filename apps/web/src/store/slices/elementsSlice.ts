@@ -28,6 +28,7 @@ import {
   createEquipment,
   createDrawing,
   moveElement,
+  snapToGrid,
   duplicateElements,
   removeElementsByIds,
   filterElementsByIds,
@@ -38,6 +39,9 @@ import {
 import type { AppState } from '../types';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 import { SHARED_COLORS } from '@tmc/ui';
+import { useUIStore } from '../useUIStore';
+
+const getGridSize = () => useUIStore.getState().gridSize ?? DEFAULT_PITCH_CONFIG.gridSize;
 
 /**
  * Goalkeeper jersey palette used by the cycleGoalkeeperColor shortcut (Shift+G).
@@ -242,6 +246,7 @@ export const createElementsSlice: StateCreator<
       number,
       shape: prefs.shape,
       color: prefs.color,
+      gridSize: getGridSize(),
     });
     get().addElement(player);
   },
@@ -258,6 +263,7 @@ export const createElementsSlice: StateCreator<
       number,
       label: name,
       showLabel: true,
+      gridSize: getGridSize(),
     });
     get().addElement(player);
   },
@@ -268,7 +274,7 @@ export const createElementsSlice: StateCreator<
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
-    const ball = createBall(position);
+    const ball = createBall(position, getGridSize());
     get().addElement(ball);
   },
   
@@ -278,7 +284,7 @@ export const createElementsSlice: StateCreator<
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
-    const ball = createBall(position, DEFAULT_PITCH_CONFIG.gridSize, 'cluster');
+    const ball = createBall(position, getGridSize(), 'cluster');
     get().addElement(ball);
   },
   
@@ -288,7 +294,7 @@ export const createElementsSlice: StateCreator<
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
-    const arrow = createArrow(position, arrowType);
+    const arrow = createArrow(position, arrowType, getGridSize());
     if (isAutoNumbering) {
       const nextNum = getHighestArrowNumber(elements) + 1;
       arrow.number = nextNum;
@@ -303,7 +309,7 @@ export const createElementsSlice: StateCreator<
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2 - 60,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2 - 40,
     };
-    const zone = createZone(position, shape);
+    const zone = createZone(position, shape, getGridSize());
     get().addElement(zone);
   },
   
@@ -313,7 +319,7 @@ export const createElementsSlice: StateCreator<
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
-    const text = createText(position, 'Text');
+    const text = createText(snapToGrid(position, getGridSize()), 'Text');
     get().addElement(text);
   },
   
@@ -323,7 +329,7 @@ export const createElementsSlice: StateCreator<
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };
-    const equipment = createEquipment(position, equipmentType, variant);
+    const equipment = createEquipment(position, equipmentType, variant, getGridSize());
     get().addElement(equipment);
   },
   
@@ -378,7 +384,7 @@ export const createElementsSlice: StateCreator<
   moveElementById: (id, position) => {
     set((state) => ({
       elements: state.elements.map((el) =>
-        el.id === id ? moveElement(el, position) : el
+        el.id === id ? moveElement(el, position, getGridSize()) : el
       ),
     }));
     // ⚠️ Don't push history on every move - only on drag end via endContinuous

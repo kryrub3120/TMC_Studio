@@ -4,11 +4,11 @@
  */
 
 import { useState, useRef } from 'react';
-import { Toggle, SettingRow, SegmentedControl } from './primitives.js';
+import { Toggle, SettingRow, SegmentedControl, Slider } from './primitives.js';
 import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
-import type { TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer } from '@tmc/core';
+import type { ArrowType, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer } from '@tmc/core';
 
 type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'language' | 'shortcuts' | 'about' | 'data';
 
@@ -57,9 +57,15 @@ interface SettingsModalProps {
   theme?: 'light' | 'dark';
   gridVisible?: boolean;
   snapEnabled?: boolean;
+  gridSize?: number;
+  defaultArrowType?: ArrowType;
+  stepDuration?: number;
   onToggleTheme?: () => void;
   onToggleGrid?: () => void;
   onToggleSnap?: () => void;
+  onSetGridSize?: (size: number) => void;
+  onSetDefaultArrowType?: (type: ArrowType) => void;
+  onSetStepDuration?: (duration: number) => void;
   themeMode?: 'light' | 'dark' | 'system';
   onSetThemeMode?: (mode: 'light' | 'dark' | 'system') => void;
   // Squad bench (Pro feature)
@@ -97,8 +103,14 @@ export function SettingsModal({
   theme = 'dark',
   gridVisible = false,
   snapEnabled = true,
+  gridSize = 10,
+  defaultArrowType = 'pass',
+  stepDuration = 0.8,
   onToggleGrid,
   onToggleSnap,
+  onSetGridSize,
+  onSetDefaultArrowType,
+  onSetStepDuration,
   themeMode,
   onSetThemeMode,
   squad = [],
@@ -673,6 +685,52 @@ export function SettingsModal({
                     description={t('settings.snapGridHint')}
                     control={<Toggle checked={snapEnabled} onChange={() => onToggleSnap?.()} ariaLabel={t('settings.snapGrid')} />}
                   />
+                </div>
+              </div>
+
+              <div>
+                <Slider
+                  label={t('settings.gridDensity')}
+                  value={gridSize}
+                  min={5}
+                  max={40}
+                  step={5}
+                  format={(value) => t('settings.pixelsValue', { value })}
+                  onChange={(value) => onSetGridSize?.(value)}
+                />
+                <p className="text-xs text-muted">{t('settings.gridDensityHint')}</p>
+              </div>
+
+              {/* Editor defaults */}
+              <div>
+                <h3 className="text-lg font-semibold text-text mb-2">{t('settings.editorDefaults')}</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-2">{t('settings.defaultArrow')}</label>
+                    <SegmentedControl
+                      ariaLabel={t('settings.defaultArrow')}
+                      value={defaultArrowType}
+                      onChange={(value) => onSetDefaultArrowType?.(value)}
+                      options={[
+                        { value: 'pass', label: t('settings.arrowPass') },
+                        { value: 'run', label: t('settings.arrowRun') },
+                        { value: 'shoot', label: t('settings.arrowShoot') },
+                        { value: 'dribble', label: t('settings.arrowDribble') },
+                      ]}
+                    />
+                    <p className="mt-1.5 text-xs text-muted">{t('settings.defaultArrowHint')}</p>
+                  </div>
+
+                  <Slider
+                    label={t('settings.defaultStepDuration')}
+                    value={stepDuration}
+                    min={0.2}
+                    max={5}
+                    step={0.1}
+                    format={(value) => t('settings.secondsValue', { value: value.toFixed(1) })}
+                    onChange={(value) => onSetStepDuration?.(value)}
+                  />
+                  <p className="text-xs text-muted">{t('settings.defaultStepDurationHint')}</p>
                 </div>
               </div>
 

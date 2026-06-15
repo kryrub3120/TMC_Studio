@@ -206,7 +206,7 @@ export interface ViewCommands {
 }
 
 // ============================================================================
-// Animation Commands (TODO: PR1+)
+// Animation Commands
 // ============================================================================
 
 export interface AnimationCommands {
@@ -217,7 +217,7 @@ export interface AnimationCommands {
 }
 
 // ============================================================================
-// Edit Commands (TODO: PR1+)
+// Edit Commands
 // ============================================================================
 
 export interface EditCommands {

@@ -281,7 +281,7 @@ export function BoardPage(props: BoardPageProps) {
                 showCelebration={showCelebration}
                 onAddPlayer={() => state.addPlayerAtCursor('home')}
                 onAddBall={state.addBallAtCursor}
-                onAddArrow={() => state.addArrowAtCursor('pass')}
+                onAddArrow={() => state.addArrowAtCursor(state.defaultArrowType)}
                 onOpenPalette={state.openCommandPalette}
               />
             }
@@ -480,7 +480,7 @@ export function BoardPage(props: BoardPageProps) {
         onRedo={state.redo}
         onAddPlayer={() => state.addPlayerAtCursor('home')}
         onAddBall={state.addBallAtCursor}
-        onAddArrow={() => state.addArrowAtCursor('pass')}
+        onAddArrow={() => state.addArrowAtCursor(state.defaultArrowType)}
         onOpenPalette={state.openCommandPalette}
         animationEnabled={ANIMATION_ENABLED}
         steps={state.stepsData}

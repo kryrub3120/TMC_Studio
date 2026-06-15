@@ -16,6 +16,7 @@ Aktualizacja dokumentacji po zmianach w sprincie.
 - Po zmianie entitlements/payment/auth/export.
 - Po dodaniu dokumentu.
 - Po dodaniu/zmianie komponentu biblioteki UI.
+- Po dodaniu lub zmianie user-facing tekstu — potwierdz, ze klucze i18n istnieja w `en.ts`, `pl.ts` i `es.ts` (te same klucze).
 - Przed finalnym `ACCEPT SPRINT`.
 
 ---

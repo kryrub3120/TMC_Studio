@@ -147,6 +147,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const activeTool = useUIStore((s) => s.activeTool);
   const setActiveTool = useUIStore((s) => s.setActiveTool);
   const gridVisible = useUIStore((s) => s.gridVisible);
+  const gridSize = useUIStore((s) => s.gridSize);
+  const defaultArrowType = useUIStore((s) => s.defaultArrowType);
   const isPrintMode = useUIStore((s) => s.isPrintMode);
   const isOnline = useUIStore((s) => s.isOnline);
   const breakpoint = useUIStore((s) => s.breakpoint);
@@ -219,10 +221,10 @@ export function useBoardPageState(props: BoardPageProps) {
   }, [groups]);
 
   // Pitch config
-  const pitchConfig = useMemo(() =>
-    getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
-    [pitchSettings?.orientation]
-  );
+  const pitchConfig = useMemo(() => ({
+    ...getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
+    gridSize,
+  }), [gridSize, pitchSettings?.orientation]);
 
   const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
   const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
@@ -370,6 +372,8 @@ export function useBoardPageState(props: BoardPageProps) {
   // useBoardPageHandlers as the single source of truth for all handlers.
 
   return {
+    t,
+
     // Refs
     stageRef,
     labelInputRef,
@@ -461,6 +465,8 @@ export function useBoardPageState(props: BoardPageProps) {
     activeTool,
     setActiveTool,
     gridVisible,
+    gridSize,
+    defaultArrowType,
     isPrintMode,
     isOnline,
     breakpoint,

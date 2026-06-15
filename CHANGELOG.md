@@ -67,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pliki: `packages/ui/src/CheatSheetOverlay.tsx`, `packages/ui/src/CommandPaletteModal.tsx`, `packages/ui/src/locales/*.ts`.
 - **Tłumaczenia — etykiety komend + toasty skrótów** (2026-06-13)
   - `createCommandActions` przyjmuje opcjonalny `t`, więc etykiety akcji w Command Palette korzystają teraz z `commands.*` zamiast stałych angielskich stringów. Dotyczy elementów, edycji, widoku, kroków/playbacku i eksportu.
-  - `useKeyboardShortcuts` używa `commands.toast.*` dla toastów po skrótach klawiszowych: dodawanie elementów/sprzętu, undo/redo, copy/paste, vision/orientation, grid, zapis, print mode, animacja, edycja tekstu, resize/rotation i formacje.
+  - `useKeyboardShortcuts` używa `commands.toast.*` / `commands.confirm.*` dla toastów i potwierdzeń po skrótach klawiszowych: dodawanie elementów/sprzętu, undo/redo, copy/paste, vision/orientation, grid, zapis, print mode, animacja, edycja tekstu, resize/rotation, formacje i czyszczenie planszy.
   - Pliki: `apps/web/src/commands/commandPalette/createCommandActions.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/hooks/useKeyboardShortcuts.ts`, `packages/ui/src/locales/*.ts`.
 - **Tłumaczenia — główne modale i panele pomocy/projektów** (2026-06-13)
   - Dodane namespace'y `emptyState.*`, `auth.*`, `confirm.*`, `limits.*`, `folders.*`, `pricing.*`, `projects.*`, `help.*`, `tutorial.*` w `locales/{en,pl,es}.ts`.
@@ -86,6 +86,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Przetłumaczone: `TopBar` (menu narzędzi, eksport, status zapisu, account menu), `SettingsModal` (profil, security, billing, preferences, squad, language/shortcuts/about/data), `SquadBench` (inline quick add, team switcher, aria/title/hinty) oraz legacy `Toolbar`/`RightPanel`.
   - Po audycie UI zostały tylko brandy/social aria, przykładowe placeholdery auth (`John Doe`, `you@example.com`) i literal `DELETE` w potwierdzeniu usunięcia konta.
   - Pliki: `packages/ui/src/{TopBar,SettingsModal,SquadBench,Toolbar,RightPanel}.tsx`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — strony legal** (2026-06-14)
+  - Dodany namespace `legal.*` w słownikach PL/EN/ES.
+  - Przetłumaczone statyczne strony: Privacy Policy, Terms of Service i Cookie Policy wraz z listami, linkami, opisami usług oraz przyciskiem powrotu.
+  - Pliki: `apps/web/src/pages/{PrivacyPolicy,TermsOfService,CookiePolicy}.tsx`, `packages/ui/src/locales/*.ts`.
+- **Tłumaczenia — domknięcie audytu UI** (2026-06-14)
+  - Placeholdery w `AuthModal` oraz aria-labels linków social w `Footer` przepięte na słowniki PL/EN/ES.
+  - Po audycie hardcoded copy pozostały tylko brandy/nazwy usług i literal `DELETE` w potwierdzeniu usunięcia konta.
+  - Pliki: `packages/ui/src/{AuthModal,Footer}.tsx`, `packages/ui/src/locales/*.ts`.
+- **Settings — Editor defaults** (2026-06-14)
+  - Preferences dostały sekcję **Editor defaults**: domyślny typ strzałki dla ogólnych akcji „Add Arrow" oraz domyślny czas kroku animacji.
+  - Ustawienia są persistowane w `useUIStore`; domyślna strzałka działa w pustym stanie planszy, SmartBottomBar i menu kontekstowym.
+  - Pliki: `apps/web/src/store/useUIStore.ts`, `apps/web/src/app/AppShell.tsx`, `apps/web/src/app/routes/useBoardPageState.ts`, `apps/web/src/app/board/{BoardPage,useBoardPageHandlers}.tsx`, `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/locales/*.ts`.
+- **Command Palette — Grid/Snap actions** (2026-06-14)
+  - `toggle-grid` i `toggle-snap` w Command Palette wykonują teraz realne akcje zamiast pokazywać komunikat „coming soon".
+  - Naprawiony odwrócony toast w Settings po przełączeniu widoczności siatki.
+  - Pliki: `apps/web/src/commands/commandPalette/createCommandActions.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts`, `apps/web/src/app/AppShell.tsx`, `packages/ui/src/locales/*.ts`.
+- **Settings — Grid density** (2026-06-14)
+  - Preferences dostały suwak gęstości siatki 5–40 px. Wartość jest persistowana w `useUIStore`, steruje renderem siatki boiska i snapowaniem nowych oraz przesuwanych elementów.
+  - Pliki: `apps/web/src/store/useUIStore.ts`, `apps/web/src/app/routes/useBoardPageState.ts`, `apps/web/src/store/slices/elementsSlice.ts`, `apps/web/src/app/{AppShell,orchestrators/ModalOrchestrator}.tsx`, `packages/ui/src/SettingsModal.tsx`, `packages/ui/src/locales/*.ts`.
+- **Command effects — add/update/group parity** (2026-06-14)
+  - `board/effect.ts` obsługuje teraz parametry pozycji/rozmiaru/tekstu dla dodawania strzałek, stref, tekstu i sprzętu oraz realne `groupSelected`/`ungroupSelected` bez ostrzeżeń „not implemented".
+  - Główne `createCommandRegistry()` podpina `animation.play/pause/stop` oraz `edit.cut/copy/paste` do istniejących store actions zamiast placeholderów.
+  - Usunięty nieaktualny TODO Quick Edit z legacy hooka interakcji; inline edit numeru zawodnika pozostaje podpięty przez `BoardPage` i `BoardOverlays`.
+  - Pliki: `apps/web/src/commands/{registry,types}.ts`, `apps/web/src/commands/board/effect.ts`, `apps/web/src/hooks/useCanvasInteraction.ts`.
+- **Tłumaczenia — auth store error states** (2026-06-14)
+  - Stałe angielskie komunikaty błędów w `useAuthStore` zamienione na sentinel-klucze (`auth.errorInitFailed`, `auth.errorOfflineMode`); `AuthModal` tłumaczy je przy renderze, dynamiczne błędy Supabase przechodzą bez zmian.
+  - Pliki: `apps/web/src/store/useAuthStore.ts`, `packages/ui/src/AuthModal.tsx`, `packages/ui/src/locales/*.ts`.
+- **Polityka i18n — agenci + docs** (2026-06-14)
+  - Skodyfikowana reguła „każdy user-facing tekst w 3 językach (en/pl/es)" jako binding Hard Rule w `docs/SYSTEM_ARCHITECTURE.md` §11 Tier 1; operacyjna checklista + komendy w skillu `ui-delivery`.
+  - Odwołania dodane w agentach MasterAutopilot (zasady nadrzędne, DoD, MasterVerifier), Implementer i Delivery oraz w skillu `docs-update`.
+  - Pliki: `docs/SYSTEM_ARCHITECTURE.md`, `.github/skills/{ui-delivery,docs-update}/SKILL.md`, `.github/agents/{master-autopilot,implementer,delivery}.md`.
 - **Squad Bench redesign — visual polish + 4 teams + quick-add + usuwanie** (2026-06-13)
   - **Export 100% resolution fix**: Dynamiczny `pixelRatio` dla wszystkich formatów (PNG, JPG, PDF, GIF) — `Math.max(2, Math.ceil(canvasWidth / stageW))`. Full board resolution niezależnie od zoomu.
   - **Squad Bench redesign**: Circle glyph zamiast team shapes (identycznie jak na boisku), `DEFAULT_TEAM_SETTINGS` jako SSOT kolorów, `animate-fade-in` z kaskadowym `animation-delay`, hover glow (`shadow-[0_0_10px_rgba(46,230,166,0.25)]`), badge count per team section, `max-w-[85px]` zamiast 60px (naprawione obcinanie imion).
@@ -333,7 +364,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Free and Pro tiers with Stripe integration
 - Dark/light theme support
 
-[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.6.0...HEAD
 [0.6.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.5.0
 [0.2.2]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.2.2

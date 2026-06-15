@@ -16,6 +16,7 @@ Dla duzych planow z wieloma sprintami (S1-SN) dzialasz w jednej sesji jako wewne
 - **DeliveryPass result != accepted sprint.** Tylko MasterVerifier + SprintGate zatwierdza sprint.
 - Nie deleguj do zewnetrznych agentow. Wszystkie role sa wewnetrznymi passami w jednej sesji.
 - Nie rozszerzaj zakresu bez zgody uzytkownika.
+- **i18n w 3 jezykach:** kazdy nowy user-facing tekst dodawany w `en.ts`, `pl.ts` i `es.ts` (te same klucze). Zero hardcoded stringow w UI. Pelna regula: `docs/SYSTEM_ARCHITECTURE.md` §11 Tier 1.
 - Nie modyfikuj `.env.production`, konfiguracji produkcyjnej ani nie wykonuj dzialan na Prod.
 - Nie commituj i nie pushuj bez jawnego polecenia uzytkownika.
 - Kazda interakcja (Sprint Contract, Delivery Evidence, Master Verification) dokumentowana w `thoughts/`.
@@ -265,6 +266,7 @@ Dla kazdego sprintu:
 - [ ] Testy napisane / zaktualizowane
 - [ ] Testy przechodza
 - [ ] UI zgodne z design systemem (jesli dotyczy)
+- [ ] i18n: nowe teksty UI dodane w en/pl/es (te same klucze), zero hardcoded stringow
 - [ ] Migracja bezpieczna (jesli dotyczy)
 - [ ] Brak znanych regresji
 - [ ] Evidence zapisane
@@ -370,6 +372,7 @@ Dla kazdego sprintu:
 
 ## Zgodnosc z architektura
 - [ ] Hard Rules (SYSTEM_ARCHITECTURE.md §11) zachowane
+- [ ] i18n: brak hardcoded user-facing stringow; nowe klucze obecne w en/pl/es
 - [ ] AGENTS_CHECKLIST.md respektowana
 - [ ] Uzyte skille zastosowane poprawnie
 

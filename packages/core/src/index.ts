@@ -13,3 +13,6 @@ export * from './step.js';
 
 // Serialization
 export * from './serialization.js';
+
+// Color utilities
+export * from './colorUtils.js';

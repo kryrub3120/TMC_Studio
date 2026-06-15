@@ -5,26 +5,18 @@
 import { useState } from 'react';
 import { useTranslation } from './i18n.js';
 
-// NOTE: This import path works because ui package is in the monorepo
-// If build fails, we can pass stripe config as props instead
-let STRIPE_PRICES: any;
-try {
-  // Dynamic import to handle potential build issues across packages
-  STRIPE_PRICES = require('../../apps/web/src/config/stripe').STRIPE_PRICES;
-} catch (error) {
-  console.warn('[PricingModal] Could not import Stripe config, using fallback');
-  // Fallback: Hardcoded Price IDs (keep in sync with apps/web/src/config/stripe.ts)
-  STRIPE_PRICES = {
-    pro: {
-      monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV',
-      yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',
-    },
-    team: {
-      monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8',
-      yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',
-    },
-  };
-}
+// Stripe Price IDs — single source of truth for PricingModal
+// Keep in sync with apps/web/src/config/stripe.ts and netlify/functions/_stripeConfig.ts
+const STRIPE_PRICES = {
+  pro: {
+    monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV', // $9/mo (TEST)
+    yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',  // $90/yr (TEST)
+  },
+  team: {
+    monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8', // $29/mo (TEST)
+    yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',  // $290/yr (TEST)
+  },
+} as const;
 
 interface PricingModalProps {
   isOpen: boolean;

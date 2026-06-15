@@ -377,9 +377,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           // Shift+C = Clear all elements on this step
           e.preventDefault();
           useUIStore.getState().showConfirmModal({
-            title: 'Clear All Elements?',
-            description: 'This will remove all elements from the current step. You can undo this action with Cmd+Z.',
-            confirmLabel: 'Clear All',
+            title: t('commands.confirm.clearAllTitle'),
+            description: t('commands.confirm.clearAllDescription'),
+            confirmLabel: t('commands.confirm.clearAllConfirm'),
             danger: true,
             onConfirm: () => {
               setElements([]);
@@ -462,9 +462,9 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           e.preventDefault();
           const res = cycleGoalkeeperColor();
           const teamLabel =
-            res.team === 'home' ? 'Home' :
-            res.team === 'away' ? 'Away' :
-            res.team === 'team3' ? 'Team 3' : 'Team 4';
+            res.team === 'home' ? t('teamsPanel.team1') :
+            res.team === 'away' ? t('teamsPanel.team2') :
+            res.team === 'team3' ? t('teamsPanel.team3') : t('teamsPanel.team4');
           showTranslatedToast(
             res.promoted ? 'goalkeeperSet' : 'goalkeeperColor',
             { team: teamLabel, color: res.color.toUpperCase() }

@@ -605,6 +605,8 @@ Source of truth: this document, `docs/ARCHITECTURE_OVERVIEW.md`, and `docs/IMPLE
 - **One vertical slice per PR.** Follow PR0–PR6 migration plan. Never big-bang.
 - **PR0 = scaffolding only** (types, folders, contracts). ❌ No wiring, ❌ no runtime behavior changes.
 
+- **i18n — wszystkie user-facing teksty przez `t()` w 3 jezykach (BINDING):** UI NIE zawiera hardcoded user-facing stringow. Kazdy nowy lub zmieniony tekst widoczny dla uzytkownika MUSI byc dodany jako klucz w **`packages/ui/src/locales/en.ts`, `pl.ts` ORAZ `es.ts`** — te same klucze we wszystkich trzech plikach. Komponenty React czytaja przez `useTranslation()` z `@tmc/ui`. Kod nie-Reactowy (store/slices/utils) nie wola `useTranslation()` — zapisuje sentinel-klucz (np. `auth.errorOfflineMode`), a tlumaczenie odbywa sie w warstwie renderujacej. **Wyjatki (nie tlumaczyc):** nazwa marki (`TMC Studio`), keywordy potwierdzen (`DELETE`), logi `logger.*`/`console.*`, komentarze, meta/SEO w `index.html`.
+
 ### 🧩 Tier 1b — New Components Rules (Sprint E/F/G)
 
 #### HelpSidebar & FloatingHelpButton (Sprint E)

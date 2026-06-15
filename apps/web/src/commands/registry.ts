@@ -10,7 +10,7 @@
  * @see docs/REFACTOR_ROADMAP.md - PR-REFACTOR-0
  */
 
-import { logger } from '../lib/logger';
+import { useBoardStore } from '../store';
 import { useUIStore } from '../store/useUIStore';
 import type { CommandRegistry } from './types';
 import { createBoardCommands } from './board';
@@ -28,18 +28,24 @@ export function createCommandRegistry(): CommandRegistry {
   return {
     board: createBoardCommands(),
     
-    // Animation commands - placeholder for now (TODO: PR1+)
     animation: {
-      play: () => logger.warn('animation.play not yet implemented'),
-      pause: () => logger.warn('animation.pause not yet implemented'),
-      stop: () => logger.warn('animation.stop not yet implemented'),
+      play: () => useUIStore.getState().play(),
+      pause: () => useUIStore.getState().pause(),
+      stop: () => {
+        const ui = useUIStore.getState();
+        ui.pause();
+        ui.setAnimationProgress(0);
+      },
     },
     
-    // Edit commands - placeholder for now (TODO: PR1+)
     edit: {
-      cut: () => logger.warn('edit.cut not yet implemented'),
-      copy: () => logger.warn('edit.copy not yet implemented'),
-      paste: () => logger.warn('edit.paste not yet implemented'),
+      cut: () => {
+        const store = useBoardStore.getState();
+        store.copySelection();
+        store.deleteSelected();
+      },
+      copy: () => useBoardStore.getState().copySelection(),
+      paste: () => useBoardStore.getState().pasteClipboard(),
     },
 
     // View commands (PR-UX-3 ETAP 4)

@@ -104,7 +104,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const displayError = localError || error;
+  // Store may emit a translation key (e.g. 'auth.errorOfflineMode') for
+  // fixed errors; Supabase errors come through as raw messages. Translate
+  // only the known sentinel keys, pass everything else through verbatim.
+  const translatedError = error && error.startsWith('auth.error') ? t(error) : error;
+  const displayError = localError || translatedError;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -229,7 +233,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder={t('auth.fullNamePlaceholder')}
                   className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -243,7 +247,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />

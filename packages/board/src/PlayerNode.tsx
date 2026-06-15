@@ -13,6 +13,7 @@ import {
   clampToBounds,
   DEFAULT_TEAM_SETTINGS,
   DEFAULT_PLAYER_ORIENTATION_SETTINGS,
+  resolveReadableTextColor,
 } from '@tmc/core';
 
 /** Normalize angle to 0..360 */
@@ -103,7 +104,10 @@ function getTeamColors(
   return {
     fill: primaryHex,
     stroke: darkenColor(primaryHex, 20),
-    text: teamSetting.secondaryColor,
+    // Prefer the team's chosen secondary color, but fall back to auto
+    // black/white when it wouldn't be readable against the fill color
+    // (e.g. green team + white text).
+    text: resolveReadableTextColor(primaryHex, teamSetting.secondaryColor),
   };
 }
 
@@ -165,10 +169,9 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   const facingDeg = player.orientation ?? 0;
   const facingKonva = facingDeg - 90;
 
-  // Numer: obraca się z ciałem, ale flip 180 dla czytelności (TYLKO tekst)
-  const norm = ((facingDeg % 360) + 360) % 360;
-  const flipText = norm > 90 && norm < 270;
-  const textRotation = orientationEnabled ? (flipText ? facingKonva + 180 : facingKonva) : 0;
+  // Numer zawodnika to identyfikator, nie kierunek — nigdy się nie obraca,
+  // niezależnie od orientacji/ustawień ciała.
+  const textRotation = 0;
 
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;

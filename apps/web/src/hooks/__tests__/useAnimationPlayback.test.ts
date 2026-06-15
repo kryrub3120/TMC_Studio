@@ -37,7 +37,8 @@ describe('Animation playback logic', () => {
   it('should reset progress when not playing', () => {
     const onSetProgress = vi.fn();
     const onPause = vi.fn();
-    if (false) {} else { onSetProgress(0); }
+    // Simulate: not playing → reset progress
+    onSetProgress(0);
     expect(onSetProgress).toHaveBeenCalledWith(0);
     expect(onPause).not.toHaveBeenCalled();
   });
