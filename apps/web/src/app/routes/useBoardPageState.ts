@@ -6,7 +6,7 @@
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
 import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, hasPosition } from '@tmc/core';
-import { useTranslation, type InspectorElement, type ElementInList } from '@tmc/ui';
+import { useTranslation, type InspectorElement, type ElementInList, type SettingsTab } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore, useInitializeTheme } from '../../store/useUIStore';
@@ -20,10 +20,14 @@ const USE_NEW_CANVAS = false;
 export interface BoardPageProps {
   onOpenProjectsDrawer: () => void;
   onOpenAuthModal: () => void;
-  onOpenSettingsModal: () => void;
+  onOpenSettingsModal: (tab?: SettingsTab) => void;
   onOpenPricingModal: () => void;
   onOpenLimitModal: (type: 'guest-step' | 'guest-project' | 'free-step' | 'free-project', current: number, max: number) => void;
   onRenameProject: (newName: string) => void;
+  /** App version (package.json) shown in the bottom bar's compact footer row */
+  appVersion?: string;
+  /** Navigate to a legal page (privacy/terms/cookies) from the bottom bar's footer links */
+  onNavigateFooter?: (path: string) => void;
 }
 
 export function useBoardPageState(props: BoardPageProps) {
@@ -49,7 +53,7 @@ export function useBoardPageState(props: BoardPageProps) {
   const devClearData = useAuthStore((s) => s.devClearData);
 
   // Entitlements
-  const { can } = useEntitlements();
+  const { can, plan } = useEntitlements();
 
   // Initialize theme
   useInitializeTheme();
@@ -137,6 +141,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const theme = useUIStore((s) => s.theme);
   const focusMode = useUIStore((s) => s.focusMode);
   const inspectorOpen = useUIStore((s) => s.inspectorOpen);
+  const inspectorWidth = useUIStore((s) => s.inspectorWidth);
+  const setInspectorWidth = useUIStore((s) => s.setInspectorWidth);
   const cheatSheetVisible = useUIStore((s) => s.cheatSheetVisible);
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen);
   const activeToast = useUIStore((s) => s.activeToast);
@@ -152,6 +158,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const isPrintMode = useUIStore((s) => s.isPrintMode);
   const isOnline = useUIStore((s) => s.isOnline);
   const breakpoint = useUIStore((s) => s.breakpoint);
+  const bottomBarHeight = useUIStore((s) => s.bottomBarHeight);
+  const bottomBarCollapsed = useUIStore((s) => s.bottomBarCollapsed);
 
   // UI store actions
   const toggleTheme = useUIStore((s) => s.toggleTheme);
@@ -162,6 +170,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const closeCommandPalette = useUIStore((s) => s.closeCommandPalette);
   const showToast = useUIStore((s) => s.showToast);
   const toggleLayerVisibility = useUIStore((s) => s.toggleLayerVisibility);
+  const setBottomBarHeight = useUIStore((s) => s.setBottomBarHeight);
+  const toggleBottomBarCollapsed = useUIStore((s) => s.toggleBottomBarCollapsed);
   const zoomIn = useUIStore((s) => s.zoomIn);
   const zoomOut = useUIStore((s) => s.zoomOut);
   const zoomFit = useUIStore((s) => s.zoomFit);
@@ -361,6 +371,7 @@ export function useBoardPageState(props: BoardPageProps) {
     onFocusLabelInput,
     addStep,
     onOpenPricingModal, // PR3
+    onOpenProjectsDrawer: props.onOpenProjectsDrawer,
     contextMenuVisible: contextMenu.menuState.visible,
     stageRef,
   });
@@ -385,6 +396,7 @@ export function useBoardPageState(props: BoardPageProps) {
     authUser,
     authIsAuthenticated,
     authIsPro,
+    plan, // for role-aware tutorial
     signOut,
     devLogin,
     devClearData,
@@ -455,6 +467,8 @@ export function useBoardPageState(props: BoardPageProps) {
     theme,
     focusMode,
     inspectorOpen,
+    inspectorWidth,
+    setInspectorWidth,
     cheatSheetVisible,
     commandPaletteOpen,
     activeToast,
@@ -468,6 +482,10 @@ export function useBoardPageState(props: BoardPageProps) {
     gridSize,
     defaultArrowType,
     isPrintMode,
+    bottomBarHeight,
+    bottomBarCollapsed,
+    setBottomBarHeight,
+    toggleBottomBarCollapsed,
     isOnline,
     breakpoint,
 

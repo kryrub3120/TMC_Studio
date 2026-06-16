@@ -56,6 +56,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isPro: boolean;
   isTeam: boolean;
+  /** Club Premium team ID if user is a member of a team */
+  teamId: string | null;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -70,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isPro: false,
       isTeam: false,
+      teamId: null,
 
       // Initialize auth - call on app startup (EVENT-BASED, NON-BLOCKING)
       initialize: async () => {
@@ -91,6 +94,7 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: false,
               isPro: false,
               isTeam: false,
+              teamId: null,
               isMockUser: false,
               isInitialized: true,
               isLoading: false,
@@ -129,6 +133,7 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: !!user,
               isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
               isTeam: user?.subscription_tier === 'team',
+              teamId: user?.team_id ?? null,
             });
 
             // Load preferences from cloud if user is authenticated
@@ -143,6 +148,12 @@ export const useAuthStore = create<AuthState>()(
                   if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
                   if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
                   if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                  if (cloudPrefs.bottomBar) {
+                    useUIStore.setState({
+                      bottomBarHeight: cloudPrefs.bottomBar.height,
+                      bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
+                    });
+                  }
                   logger.debug('[Auth] Preferences loaded from cloud');
                 }
               } catch (error) {
@@ -243,6 +254,12 @@ export const useAuthStore = create<AuthState>()(
                       if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
                       if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
                       if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                      if (cloudPrefs.bottomBar) {
+                        useUIStore.setState({
+                          bottomBarHeight: cloudPrefs.bottomBar.height,
+                          bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
+                        });
+                      }
                       logger.debug('[Auth] Preferences loaded from cloud');
                     }
                   } catch (error) {
@@ -370,6 +387,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isPro: false,
             isTeam: false,
+            teamId: null,
             isLoading: false,
           });
           logger.debug('[Auth] Successfully signed out');
@@ -414,8 +432,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             isPro: false,
-            isTeam: false,
-            isMockUser: true,
+            isTeam: false,            teamId: null,            isMockUser: true,
             error: null,
           });
           setDevCloudUser(null);
@@ -435,6 +452,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isPro: tier === 'pro' || tier === 'team',
           isTeam: tier === 'team',
+          teamId: tier === 'team' ? 'dev-team-id' : null,
           isMockUser: true,
           error: null,
         });
@@ -463,6 +481,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           isPro: false,
           isTeam: false,
+          teamId: null,
           isMockUser: false,
           isLoading: false,
           error: null,

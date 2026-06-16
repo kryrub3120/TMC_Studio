@@ -42,6 +42,8 @@ export function BoardPage(props: BoardPageProps) {
     onOpenSettingsModal,
     onOpenPricingModal,
     onRenameProject,
+    appVersion,
+    onNavigateFooter,
   } = props;
 
   // ─── Viewport transform ref (PR-UX-3 ETAP 1) ───────────────────────
@@ -51,7 +53,7 @@ export function BoardPage(props: BoardPageProps) {
 
   // State hook
   const state = useBoardPageState(props);
-  
+
   // ─── First element celebration ─────────────────────────────────────
   const [showCelebration, setShowCelebration] = useState(false);
   const prevElementCount = useRef(0);
@@ -219,7 +221,7 @@ export function BoardPage(props: BoardPageProps) {
         onAddEquipment={state.addEquipmentAtCursor}
         onAddBall={(variant) => (variant === 'cluster' ? state.addBallGroupAtCursor() : state.addBallAtCursor())}
         onAddPlayer={(team) => state.addPlayerAtCursor(team)}
-        onOpenSquadSettings={onOpenSettingsModal}
+        onOpenSquadSettings={() => onOpenSettingsModal('squad')}
         onOpenProjects={onOpenProjectsDrawer}
         onRenameProject={onRenameProject}
         onToggleInspector={state.toggleInspector}
@@ -350,14 +352,20 @@ export function BoardPage(props: BoardPageProps) {
             saveStatus={state.projectSaveStatus}
             isPrintMode={state.isPrintMode}
             onRestartTutorial={handleRestartTutorial}
+            plan={state.plan}
+            onOpenPricing={props.onOpenPricingModal}
+            onOpenTeamPanel={() => {} /* TODO: gdy TeamPanel istnieje */}
+            onOpenSettings={props.onOpenSettingsModal}
+            onOpenAuthModal={props.onOpenAuthModal}
           />
 
-          {/* Tutorial Overlay (Sprint F) — controlled by state.showTutorial */}
+          {/* Tutorial Overlay (Sprint F + H1) — role-aware, controlled by state.showTutorial */}
           {state.showTutorial && (
             <TutorialOverlay
               isVisible={true}
               onDismiss={handleTutorialDismiss}
               onComplete={handleTutorialComplete}
+              plan={state.plan}
             />
           )}
 
@@ -418,6 +426,8 @@ export function BoardPage(props: BoardPageProps) {
         {!state.focusMode && (
         <RightInspector
           isOpen={state.inspectorOpen}
+          width={state.inspectorWidth}
+          onWidthChange={state.setInspectorWidth}
           onToggle={() => {
             // Mutex: close CheatSheet when Inspector opens
             if (!state.inspectorOpen && state.cheatSheetVisible) {
@@ -460,6 +470,8 @@ export function BoardPage(props: BoardPageProps) {
       </div>
 
       {/* Squad Bench — zawsze renderowany, SquadBench zarządza widocznością */}
+      {/* Bottom padding reserves space so content isn't hidden behind the floating bottom bar */}
+      <div style={{ paddingBottom: state.bottomBarHeight }}>
       <SquadBench
         squad={state.squad}
         visible={state.squadVisible}
@@ -467,11 +479,12 @@ export function BoardPage(props: BoardPageProps) {
         freeLimit={5}
         premiumPerTeamLimit={25}
         onToggle={state.toggleSquadVisible}
-        onOpenSettings={onOpenSettingsModal}
+        onOpenSettings={() => onOpenSettingsModal('squad')}
         onDragStart={() => {}}
         onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
         onRemovePlayer={(id) => state.removeSquadPlayer(id)}
       />
+      </div>
       <SmartBottomBar
         elementCount={state.elements.length}
         canUndo={state.canUndo}
@@ -500,6 +513,11 @@ export function BoardPage(props: BoardPageProps) {
         onDurationChange={state.setStepDuration}
         animationProgress={state.animationProgress}
         stepInfo={state.boardDoc.steps.length > 1 ? `Step ${state.currentStepIndex + 1}/${state.boardDoc.steps.length}` : undefined}
+        height={state.bottomBarHeight}
+        onHeightChange={state.setBottomBarHeight}
+        collapsed={false}
+        version={appVersion}
+        onNavigate={onNavigateFooter}
       />
 
       {/* Command Palette */}

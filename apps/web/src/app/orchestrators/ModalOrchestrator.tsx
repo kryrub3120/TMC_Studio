@@ -15,6 +15,8 @@ import {
   ConfirmModal,
   type ProjectItem,
   type FolderItem,
+  type OrganizationPanelProps,
+  type SettingsTab,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
 import type { ArrowType, TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
@@ -84,6 +86,7 @@ interface ModalOrchestratorProps {
   
   // Settings Modal
   settingsModalOpen: boolean;
+  settingsInitialTab?: SettingsTab;
   onCloseSettingsModal: () => void;
   onUpdateProfile: (data: { full_name?: string; avatar_url?: string }) => Promise<void>;
   onUploadAvatar: (file: File) => Promise<string | null>;
@@ -91,6 +94,7 @@ interface ModalOrchestratorProps {
   onDeleteAccount: (password: string) => Promise<void>;
   onManageBilling: () => Promise<void>;
   onUpgradeFromSettings: () => void;
+  organizationPanelProps?: OrganizationPanelProps;
   theme: 'light' | 'dark';
   gridVisible: boolean;
   snapEnabled: boolean;
@@ -238,6 +242,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
       {/* Settings Modal */}
       <SettingsModal
         isOpen={props.settingsModalOpen}
+        initialTab={props.settingsInitialTab}
         onClose={props.onCloseSettingsModal}
         user={props.authUser ?? null}
         onUpdateProfile={props.onUpdateProfile}
@@ -274,6 +279,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onTogglePrintMode={props.onTogglePrintMode}
         onExportBoard={props.onExportBoard}
         onImportBoard={props.onImportBoard}
+        organizationPanelProps={props.organizationPanelProps}
       />
       
       {/* Upgrade Success Modal */}

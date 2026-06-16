@@ -70,6 +70,17 @@ export const ZOOM_MIN = 0.25;
 export const ZOOM_MAX = 2;
 export const ZOOM_STEP = 0.25;
 
+/** SmartBottomBar resizable height constraints (px) */
+export const DEFAULT_BOTTOM_BAR_HEIGHT = 56; // matches old fixed h-14
+export const BOTTOM_BAR_MIN_HEIGHT = 48;
+export const BOTTOM_BAR_MAX_HEIGHT = 240;
+export const BOTTOM_BAR_COLLAPSED_HEIGHT = 8;
+
+/** RightInspector resizable width constraints (px) */
+export const DEFAULT_INSPECTOR_WIDTH = 280;
+export const INSPECTOR_MIN_WIDTH = 220;
+export const INSPECTOR_MAX_WIDTH = 480;
+
 /** Viewport breakpoint type */
 export type Breakpoint = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -104,6 +115,11 @@ interface UIState {
   defaultArrowType: ArrowType;
   footerVisible: boolean;
   hasSeenShortcutsHint: boolean;
+
+  // Bottom bar (SmartBottomBar) resizable height + collapsed state
+  bottomBarHeight: number;
+  bottomBarCollapsed: boolean;
+  inspectorWidth: number;
   
   // Layer visibility (for Layers tab)
   layerVisibility: LayerVisibility;
@@ -146,6 +162,9 @@ interface UIState {
   showTutorial: boolean;
   tutorialForceVisible: boolean;
   
+  // Club Premium Welcome (Sprint H3)
+  clubWelcomeSeen: boolean;
+  
   // Actions - Theme
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -172,6 +191,12 @@ interface UIState {
   setDefaultArrowType: (type: ArrowType) => void;
   toggleFooter: () => void;
   setFooterVisible: (visible: boolean) => void;
+
+  // Actions - Bottom bar
+  setBottomBarHeight: (height: number) => void;
+  setInspectorWidth: (width: number) => void;
+  toggleBottomBarCollapsed: () => void;
+  setBottomBarCollapsed: (collapsed: boolean) => void;
   
   // Actions - Tools
   setActiveTool: (tool: ActiveTool) => void;
@@ -222,6 +247,9 @@ interface UIState {
   setShowTutorial: (show: boolean) => void;
   /** Replay the 5-step tutorial — resets completed flag and forces show */
   replayTutorial: () => void;
+  
+  // Actions - Club Welcome (Sprint H3)
+  setClubWelcomeSeen: (seen: boolean) => void;
   
   // Breakpoint
   breakpoint: Breakpoint;
@@ -278,7 +306,14 @@ const updateSystemThemeListener = (mode: ThemeMode, onChange: (t: Theme) => void
 };
 
 /** Sync preferences to cloud */
-const syncPreferencesToCloud = async (prefs: { theme?: Theme; gridVisible?: boolean; snapEnabled?: boolean; cheatSheetVisible?: boolean }) => {
+const syncPreferencesToCloud = async (prefs: {
+  theme?: Theme;
+  gridVisible?: boolean;
+  snapEnabled?: boolean;
+  cheatSheetVisible?: boolean;
+  bottomBar?: { height: number; collapsed: boolean };
+  inspector?: { width: number };
+}) => {
   try {
     const { updatePreferences, isSupabaseEnabled } = await import('../lib/supabase');
     if (isSupabaseEnabled()) {
@@ -307,6 +342,9 @@ export const useUIStore = create<UIState>()(
       defaultArrowType: 'pass',
       footerVisible: true,
       hasSeenShortcutsHint: false, // One-time hint tracking
+      bottomBarHeight: DEFAULT_BOTTOM_BAR_HEIGHT,
+      bottomBarCollapsed: false,
+      inspectorWidth: DEFAULT_INSPECTOR_WIDTH,
       layerVisibility: {
         homePlayers: true,
         awayPlayers: true,
@@ -333,6 +371,7 @@ export const useUIStore = create<UIState>()(
       tutorialCompleted: false,
       showTutorial: false,
       tutorialForceVisible: false,
+      clubWelcomeSeen: false,
       breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
@@ -420,6 +459,33 @@ export const useUIStore = create<UIState>()(
       
       toggleFooter: () => set((s) => ({ footerVisible: !s.footerVisible })),
       setFooterVisible: (visible) => set({ footerVisible: visible }),
+
+      // Bottom bar actions (drag-resizable SmartBottomBar)
+      setBottomBarHeight: (height) => {
+        const clamped = Math.max(
+          BOTTOM_BAR_MIN_HEIGHT,
+          Math.min(BOTTOM_BAR_MAX_HEIGHT, Math.round(height))
+        );
+        set({ bottomBarHeight: clamped });
+        syncPreferencesToCloud({ bottomBar: { height: clamped, collapsed: get().bottomBarCollapsed } });
+      },
+      setInspectorWidth: (width) => {
+        const clamped = Math.max(
+          INSPECTOR_MIN_WIDTH,
+          Math.min(INSPECTOR_MAX_WIDTH, Math.round(width))
+        );
+        set({ inspectorWidth: clamped });
+        syncPreferencesToCloud({ inspector: { width: clamped } });
+      },
+      toggleBottomBarCollapsed: () => {
+        const collapsed = !get().bottomBarCollapsed;
+        set({ bottomBarCollapsed: collapsed });
+        syncPreferencesToCloud({ bottomBar: { height: get().bottomBarHeight, collapsed } });
+      },
+      setBottomBarCollapsed: (collapsed) => {
+        set({ bottomBarCollapsed: collapsed });
+        syncPreferencesToCloud({ bottomBar: { height: get().bottomBarHeight, collapsed } });
+      },
 
       // Tool actions
       setActiveTool: (tool) => {
@@ -558,6 +624,7 @@ export const useUIStore = create<UIState>()(
       setTutorialCompleted: (completed) => set({ tutorialCompleted: completed }),
       setShowTutorial: (show) => set({ showTutorial: show, tutorialForceVisible: show ? get().tutorialForceVisible : false }),
       replayTutorial: () => set({ tutorialCompleted: false, showTutorial: true, tutorialForceVisible: true }),
+      setClubWelcomeSeen: (seen) => set({ clubWelcomeSeen: seen }),
     }),
     {
       name: 'tmc-ui-settings',
@@ -576,6 +643,10 @@ export const useUIStore = create<UIState>()(
         inspectorOpen: state.inspectorOpen,
         viewportLocked: state.viewportLocked, // PR-UX-3 ETAP 4
         tutorialCompleted: state.tutorialCompleted, // Sprint F
+        clubWelcomeSeen: state.clubWelcomeSeen, // Sprint H3
+        bottomBarHeight: state.bottomBarHeight,
+        bottomBarCollapsed: state.bottomBarCollapsed,
+        inspectorWidth: state.inspectorWidth,
       }),
       onRehydrateStorage: () => (state) => {
         // Apply theme on rehydration

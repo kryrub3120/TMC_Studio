@@ -6,14 +6,16 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Footer, useTranslation, type ProjectItem } from '@tmc/ui';
+import { useTranslation, type ProjectItem, type SettingsTab, ClubWelcomeModal } from '@tmc/ui';
 import { DEFAULT_TEAM_SETTINGS, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { type ProjectFolder } from '../lib/supabase';
 import appPkg from '../../package.json';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { useBoardStore } from '../store';
-import { useBillingController, useProjectsController, useSettingsController, usePaymentReturn } from '../hooks';
+import { startBoardSession, track, EVENTS } from '../lib/analytics';
+import { useBillingController, useProjectsController, useSettingsController, usePaymentReturn, useOrganization } from '../hooks';
+import { createOrganization as createOrganizationApi } from '../lib/organizations';
 import { BoardPage } from './board/BoardPage';
 import { ModalOrchestrator } from './orchestrators/ModalOrchestrator';
 
@@ -29,11 +31,13 @@ export function AppShell() {
   const [limitCountCurrent, setLimitCountCurrent] = useState(0);
   const [limitCountMax, setLimitCountMax] = useState(0);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab | undefined>(undefined);
   const [projectsDrawerOpen, setProjectsDrawerOpen] = useState(false);
   const [createFolderModalOpen, setCreateFolderModalOpen] = useState(false);
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
   const [folderOptionsModalOpen, setFolderOptionsModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
+  const [clubWelcomeModalOpen, setClubWelcomeModalOpen] = useState(false);
 
   // Auth store
   const authUser = useAuthStore((s) => s.user);
@@ -47,11 +51,12 @@ export function AppShell() {
   const clearAuthError = useAuthStore((s) => s.clearError);
   // DEV-ONLY: see useAuthStore.devLogin
   const devLogin = useAuthStore((s) => s.devLogin);
+  const teamId = useAuthStore((s) => s.teamId);
 
   // UI store actions
   const showToast = useUIStore((s) => s.showToast);
-  const footerVisible = useUIStore((s) => s.footerVisible);
-  const toggleFooter = useUIStore((s) => s.toggleFooter);
+  const clubWelcomeSeen = useUIStore((s) => s.clubWelcomeSeen);
+  const setClubWelcomeSeen = useUIStore((s) => s.setClubWelcomeSeen);
 
   // Board store - minimal global state
   const cloudProjects = useBoardStore((s) => s.cloudProjects);
@@ -79,9 +84,16 @@ export function AppShell() {
   // Controllers
   const billingController = useBillingController();
 
+  // S6: editor mount — start time-to-first-export timer + funnel event.
+  useEffect(() => {
+    startBoardSession();
+    track(EVENTS.OPEN_BOARD);
+  }, []);
+
   const projectsController = useProjectsController({
     isDrawerOpen: projectsDrawerOpen,
     onOpenLimitModal: (type, current, max) => {
+      track(EVENTS.LIMIT_HIT, { type, current, max });
       setLimitReachedType(type);
       setLimitCountCurrent(current);
       setLimitCountMax(max);
@@ -95,6 +107,8 @@ export function AppShell() {
     showToast,
   });
 
+  const organizationPanelProps = useOrganization();
+
   // Payment return flow
   usePaymentReturn({
     onActivateStart: () => {
@@ -102,6 +116,7 @@ export function AppShell() {
       billingController.openUpgradeSuccessModal("pro", true);
     },
     onActivateSuccess: (tier) => {
+      track(EVENTS.UPGRADE, { tier });
       billingController.setSubscriptionActivating(false);
       billingController.openUpgradeSuccessModal(tier, true);
       showToast(t('appToast.upgradeSuccessful'));
@@ -200,21 +215,57 @@ export function AppShell() {
     isPinned: p.is_pinned ?? false,
   }));
 
+  // Club Welcome Modal trigger: show once for first-time Club Premium admins
+  // that haven't seen the welcome flow yet AND have a team
+  useEffect(() => {
+    if (teamId && !clubWelcomeSeen) {
+      setClubWelcomeModalOpen(true);
+    }
+  }, [teamId, clubWelcomeSeen]);
+
+  const handleClubWelcomeComplete = useCallback(() => {
+    setClubWelcomeSeen(true);
+    setClubWelcomeModalOpen(false);
+  }, [setClubWelcomeSeen]);
+
+  const handleClubWelcomeSkip = useCallback(() => {
+    setClubWelcomeSeen(true);
+    setClubWelcomeModalOpen(false);
+  }, [setClubWelcomeSeen]);
+
+  const handleSaveTeamName = useCallback(async (name: string) => {
+    try {
+      await createOrganizationApi(name);
+      showToast(t('appToast.clubCreated'));
+    } catch {
+      showToast(t('club.errors.createFailed'));
+      throw new Error('Failed to create club');
+    }
+  }, [showToast, t]);
+
   return (
     <>
       {/* Main board page */}
       <BoardPage
         onOpenProjectsDrawer={handleOpenProjectsDrawer}
         onOpenAuthModal={() => setAuthModalOpen(true)}
-        onOpenSettingsModal={() => setSettingsModalOpen(true)}
+        onOpenSettingsModal={(tab) => {
+          setSettingsInitialTab(tab);
+          setSettingsModalOpen(true);
+        }}
         onOpenPricingModal={() => billingController.openPricingModal()}
         onOpenLimitModal={(type, current, max) => {
+          track(EVENTS.LIMIT_HIT, { type, current, max });
           setLimitReachedType(type);
           setLimitCountCurrent(current);
           setLimitCountMax(max);
           setLimitReachedModalOpen(true);
         }}
         onRenameProject={handleRenameProject}
+
+        // Footer (merged into bottom bar) — version from package.json (source of truth, see VERSIONING.md)
+        appVersion={appPkg.version}
+        onNavigateFooter={(path: string) => navigate(path)}
       />
 
       {/* Global Modals */}
@@ -311,6 +362,7 @@ export function AppShell() {
 
         // Settings Modal
         settingsModalOpen={settingsModalOpen}
+        settingsInitialTab={settingsInitialTab}
         onCloseSettingsModal={() => setSettingsModalOpen(false)}
         onUpdateProfile={settingsController.updateProfile}
         onUploadAvatar={settingsController.uploadAvatar}
@@ -321,6 +373,7 @@ export function AppShell() {
           setSettingsModalOpen(false);
           billingController.openPricingModal();
         }}
+        organizationPanelProps={organizationPanelProps}
         theme={useUIStore.getState().theme}
         gridVisible={useUIStore.getState().gridVisible}
         snapEnabled={useUIStore.getState().snapEnabled}
@@ -366,12 +419,18 @@ export function AppShell() {
         subscriptionActivating={billingController.subscriptionActivating}
       />
 
-      {/* Footer — version from package.json (source of truth, see VERSIONING.md) */}
-      <Footer
-        version={appPkg.version}
-        onNavigate={(path) => navigate(path)}
-        isVisible={footerVisible}
-        onToggle={toggleFooter}
+      {/* Club Premium Welcome Modal (Sprint H3) */}
+      <ClubWelcomeModal
+        isOpen={clubWelcomeModalOpen}
+        onClose={handleClubWelcomeSkip}
+        onComplete={handleClubWelcomeComplete}
+        onSaveTeamName={handleSaveTeamName}
+        onOpenTeamPanel={() => {
+          setClubWelcomeModalOpen(false);
+          setSettingsModalOpen(true);
+          setSettingsInitialTab('club');
+        }}
+        currentTeamName={document.name}
       />
     </>
   );

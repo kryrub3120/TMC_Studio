@@ -1,0 +1,6 @@
+# Tauri / Rust build artifacts
+/target
+/gen/schemas
+
+# stray icon scratch files
+icons/_*.png

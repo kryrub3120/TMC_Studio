@@ -58,9 +58,10 @@ export interface UseEntitlementsResult {
 export function useEntitlements(): UseEntitlementsResult {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const teamId = useAuthStore((s) => s.teamId);
 
   return useMemo(() => {
-    const plan = derivePlan(isAuthenticated, user?.subscription_tier);
+    const plan = derivePlan(isAuthenticated, user?.subscription_tier, teamId);
     const entitlements = getEntitlements(plan);
 
     return {
@@ -71,5 +72,5 @@ export function useEntitlements(): UseEntitlementsResult {
       isPro: plan === 'pro' || plan === 'team',
       isTeam: plan === 'team',
     };
-  }, [isAuthenticated, user?.subscription_tier]);
+  }, [isAuthenticated, user?.subscription_tier, teamId]);
 }

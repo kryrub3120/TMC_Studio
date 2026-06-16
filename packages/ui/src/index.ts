@@ -78,6 +78,9 @@ export type { TeamsPanelProps } from './TeamsPanel.js';
 export { PitchPanel } from './PitchPanel.js';
 export type { PitchPanelProps } from './PitchPanel.js';
 
+export { OrganizationPanel } from './OrganizationPanel.js';
+export type { OrganizationPanelProps, OrganizationMemberView, InvitationView, OrgRole, InvitationRole } from './OrganizationPanel.js';
+
 export { QuickEditOverlay } from './QuickEditOverlay.js';
 export type { QuickEditOverlayProps } from './QuickEditOverlay.js';
 
@@ -95,9 +98,14 @@ export type { ProjectItem, FolderItem } from './ProjectsDrawer.js';
 export { ContextMenu } from './ContextMenu.js';
 export type { ContextMenuItem } from './ContextMenu.js';
 export { FolderColorPicker } from './FolderColorPicker.js';
+
+// Club Premium Onboarding (Sprint H3)
+export { ClubWelcomeModal } from './ClubWelcomeModal.js';
+export type { ClubWelcomeModalProps } from './ClubWelcomeModal.js';
 export { FolderOptionsModal } from './FolderOptionsModal.js';
 export { CreateFolderModal } from './CreateFolderModal.js';
 export { SettingsModal } from './SettingsModal.js';
+export type { SettingsTab } from './SettingsModal.js';
 export { UpgradeSuccessModal } from './UpgradeSuccessModal.js';
 export { LimitReachedModal } from './LimitReachedModal.js';
 export { ConfirmModal } from './ConfirmModal.js';
@@ -117,11 +125,18 @@ export type { HelpSidebarProps, ProjectSaveStatus } from './HelpSidebar.js';
 export { SHORTCUT_SECTIONS, TOOL_ACTIONS, HELP_TIPS } from './helpSidebarData.js';
 export type { HelpShortcutItem, HelpSection, ToolAction, HelpTip } from './helpSidebarData.js';
 
-// Tutorial (Sprint F)
+// FAQ (Sprint H2)
+export { FaqSearch } from './FaqSearch.js';
+export { FaqCategory } from './FaqCategory.js';
+export { FaqItem } from './FaqItem.js';
+export { getFaqForPlan, searchFaq, FAQ_CATEGORIES } from './helpFaqData.js';
+export type { FaqCategory as FaqCategoryType, FaqItem as FaqItemType, FaqCta } from './helpFaqData.js';
+
+// Tutorial (Sprint F + H1)
 export { TutorialOverlay } from './TutorialOverlay.js';
 export type { TutorialOverlayProps } from './TutorialOverlay.js';
-export { TUTORIAL_STEPS } from './tutorialSteps.js';
-export type { TutorialStep } from './tutorialSteps.js';
+export { getStepsForPlan, getStepForPlan, TUTORIAL_STEPS } from './tutorialSteps.js';
+export type { TutorialStep, Plan, TutorialStepContent } from './tutorialSteps.js';
 
 // Color utilities
 export { SHARED_COLORS, getColorsForMode, sanitizeColorForPrint } from './colors.js';

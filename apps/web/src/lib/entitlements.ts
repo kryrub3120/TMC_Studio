@@ -111,13 +111,17 @@ export function getEntitlements(plan: Plan): Entitlements {
  * 
  * @param isAuthenticated - Whether user is authenticated
  * @param subscriptionTier - User's subscription tier from database
+ * @param teamId - If set, user is a Club Premium member
  * @returns Derived plan
  */
 export function derivePlan(
   isAuthenticated: boolean,
-  subscriptionTier?: 'free' | 'pro' | 'team'
+  subscriptionTier?: 'free' | 'pro' | 'team',
+  teamId?: string | null
 ): Plan {
   if (!isAuthenticated) return 'guest';
+  // If user is part of a club team, they get team entitlements
+  if (teamId) return 'team';
   return subscriptionTier ?? 'free';
 }
 

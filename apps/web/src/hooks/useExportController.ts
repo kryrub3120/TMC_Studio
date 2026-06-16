@@ -9,6 +9,7 @@
  */
 
 import { logger } from '../lib/logger';
+import { trackExport } from '../lib/analytics';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import type Konva from 'konva';
 import { useTranslation } from '@tmc/ui';
@@ -83,6 +84,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
     link.download = `${boardDoc.name || 'tactics'}.png`;
     link.href = dataUrl;
     link.click();
+    trackExport('png');
     showToast(t('exportToast.pngExported'));
   }, [stageRef, boardDoc.name, showToast, canvasWidth, t]);
 
@@ -176,6 +178,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
           if (percent === 50) showToast(t('exportToast.gifEncoding'));
         }
       );
+      trackExport('gif');
       showToast(t('exportToast.gifExported'));
     } catch (error) {
       showToast(t('exportToast.gifFailed'));
@@ -217,6 +220,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
         boardDoc.steps.length,
         { filename: boardDoc.name || 'tactics' }
       );
+      trackExport('pdf');
       showToast(t('exportToast.pdfExported'));
     } catch (error) {
       showToast(t('exportToast.pdfFailed'));
@@ -242,6 +246,7 @@ export function useExportController(params: UseExportControllerParams): ExportCo
         canvasHeight,
         { filename: boardDoc.name || 'tactics' }
       );
+      trackExport('svg');
       showToast(t('exportToast.svgExported'));
     } catch (error) {
       showToast(t('exportToast.svgFailed'));

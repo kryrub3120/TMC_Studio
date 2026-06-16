@@ -46,3 +46,28 @@ export function sanitizeColorForPrint(
   
   return color;
 }
+
+/**
+ * Predefined team kit presets (primary/secondary/goalkeeper).
+ * Each preset is chosen to give good contrast between primary fill
+ * and secondary (number/text) color out of the box.
+ */
+export interface TeamKitPreset {
+  id: string;
+  /** i18n key for the display name */
+  labelKey: string;
+  primaryColor: string;
+  secondaryColor: string;
+  goalkeeperColor: string;
+}
+
+export const TEAM_KIT_PRESETS: TeamKitPreset[] = [
+  { id: 'red-white', labelKey: 'teamsPanel.kits.redWhite', primaryColor: '#ef4444', secondaryColor: '#ffffff', goalkeeperColor: '#fbbf24' },
+  { id: 'blue-white', labelKey: 'teamsPanel.kits.blueWhite', primaryColor: '#3b82f6', secondaryColor: '#ffffff', goalkeeperColor: '#f97316' },
+  { id: 'green-white', labelKey: 'teamsPanel.kits.greenWhite', primaryColor: '#22c55e', secondaryColor: '#ffffff', goalkeeperColor: '#ec4899' },
+  { id: 'black-white', labelKey: 'teamsPanel.kits.blackWhite', primaryColor: '#000000', secondaryColor: '#ffffff', goalkeeperColor: '#fbbf24' },
+  { id: 'white-black', labelKey: 'teamsPanel.kits.whiteBlack', primaryColor: '#ffffff', secondaryColor: '#000000', goalkeeperColor: '#3b82f6' },
+  { id: 'yellow-blue', labelKey: 'teamsPanel.kits.yellowBlue', primaryColor: '#eab308', secondaryColor: '#1d4ed8', goalkeeperColor: '#16a34a' },
+  { id: 'orange-black', labelKey: 'teamsPanel.kits.orangeBlack', primaryColor: '#f97316', secondaryColor: '#000000', goalkeeperColor: '#3b82f6' },
+  { id: 'navy-skyblue', labelKey: 'teamsPanel.kits.navySkyblue', primaryColor: '#1e3a8a', secondaryColor: '#7dd3fc', goalkeeperColor: '#fbbf24' },
+];

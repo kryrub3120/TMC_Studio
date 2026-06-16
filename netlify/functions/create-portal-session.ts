@@ -6,6 +6,7 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from './_rateLimit';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-12-15.clover',
@@ -17,6 +18,20 @@ const supabase = createClient(
 );
 
 const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
+  // Rate limiting: max 3 requests per IP per minute
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown';
+  const rateCheck = checkRateLimit(
+    typeof clientIp === 'string' ? clientIp : clientIp[0],
+    { maxRequests: 3, windowMs: 60_000 }
+  );
+  if (!rateCheck.allowed) {
+    return {
+      statusCode: 429,
+      headers: { 'Retry-After': String(rateCheck.retryAfter), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+    };
+  }
+
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',

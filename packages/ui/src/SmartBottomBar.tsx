@@ -9,7 +9,7 @@
  * Never shows github/external links. Pure utility.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { StepInfo, Duration } from './BottomStepsBar.js';
 import { useTranslation } from './i18n.js';
 
@@ -148,7 +148,30 @@ export interface SmartBottomBarProps {
   
   /** Animation progress 0-1 (for progress bar) */
   animationProgress?: number;
+
+  /** Resizable height (px). Drag handle on top edge adjusts this. */
+  height?: number;
+  /** Min/max height for the drag handle (px) */
+  minHeight?: number;
+  maxHeight?: number;
+  /** Called with the new height while/after dragging */
+  onHeightChange?: (height: number) => void;
+  /** Collapsed = thin strip, content hidden, click to expand */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+
+  /** App version shown in the compact footer-links row (e.g. '0.5.0') */
+  version?: string;
+  /** Called when a footer legal link is clicked (privacy/terms/cookies) */
+  onNavigate?: (path: string) => void;
 }
+
+const DEFAULT_HEIGHT = 64;
+const DEFAULT_MIN_HEIGHT = 56;
+const DEFAULT_MAX_HEIGHT = 200;
+const COLLAPSED_HEIGHT = 10;
+/** Height of the slim footer-links row appended below the main controls row */
+const FOOTER_ROW_HEIGHT = 22;
 
 // ─── Duration options ─────────────────────────────────────────
 
@@ -218,6 +241,14 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
   onDurationChange,
   stepInfo,
   animationProgress = 0,
+  height = DEFAULT_HEIGHT,
+  minHeight = DEFAULT_MIN_HEIGHT,
+  maxHeight = DEFAULT_MAX_HEIGHT,
+  onHeightChange,
+  collapsed = false,
+  onToggleCollapsed,
+  version,
+  onNavigate,
 }) => {
   const { t } = useTranslation();
   const isEmpty = elementCount === 0;
@@ -245,14 +276,78 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
     else if (e.key === 'Escape') { setEditingIndex(null); setEditValue(''); }
   };
 
+  // ─── Drag handle: resize bar height by dragging its top edge ───
+  const dragStateRef = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  const handleResizeMouseMove = useCallback((e: MouseEvent) => {
+    const drag = dragStateRef.current;
+    if (!drag || !onHeightChange) return;
+    // Bar is anchored to the bottom of the viewport, so dragging the top
+    // edge UP (negative delta) should INCREASE the height.
+    const delta = drag.startY - e.clientY;
+    const next = Math.max(minHeight, Math.min(maxHeight, drag.startHeight + delta));
+    onHeightChange(next);
+  }, [onHeightChange, minHeight, maxHeight]);
+
+  const handleResizeMouseUp = useCallback(() => {
+    dragStateRef.current = null;
+    window.removeEventListener('mousemove', handleResizeMouseMove);
+    window.removeEventListener('mouseup', handleResizeMouseUp);
+  }, [handleResizeMouseMove]);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    if (!onHeightChange || collapsed) return;
+    e.preventDefault();
+    dragStateRef.current = { startY: e.clientY, startHeight: height };
+    window.addEventListener('mousemove', handleResizeMouseMove);
+    window.addEventListener('mouseup', handleResizeMouseUp);
+  };
+
+  // Cleanup any leftover listeners on unmount
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMouseMove);
+      window.removeEventListener('mouseup', handleResizeMouseUp);
+    };
+  }, [handleResizeMouseMove, handleResizeMouseUp]);
+
+  const barHeight = collapsed ? COLLAPSED_HEIGHT : height;
+
   return (
-    <footer className="h-14 px-3 flex items-center justify-between bg-surface border-t border-border z-bottombar gap-2">
+    <footer
+      className="fixed bottom-0 left-0 right-0 flex flex-col relative bg-surface border-t border-border shadow-[0_-2px_12px_rgba(0,0,0,0.12)] z-bottombar overflow-hidden"
+      style={{ height: barHeight, transition: dragStateRef.current ? 'none' : 'height 0.15s ease-out' }}
+    >
+      {/* DRAG HANDLE — top edge, drag to resize the bar's height */}
+      {onHeightChange && !collapsed && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="absolute top-0 left-0 right-0 h-2 -translate-y-1/2 cursor-row-resize group flex items-center justify-center z-10"
+          title={t('smartBottom.resize')}
+        >
+          <div className="w-10 h-1 rounded-full bg-border group-hover:bg-accent transition-colors" />
+        </div>
+      )}
+
+      {/* COLLAPSE/EXPAND toggle — small tab centered on the top edge */}
+      {onToggleCollapsed && (
+        <button
+          onClick={onToggleCollapsed}
+          className="absolute top-0 right-3 -translate-y-full px-2 py-0.5 rounded-t-md bg-surface border border-border border-b-0 text-muted hover:text-text transition-colors text-[10px] z-10"
+          title={collapsed ? t('smartBottom.expand') : t('smartBottom.collapse')}
+        >
+          {collapsed ? '▲' : '▼'}
+        </button>
+      )}
+
+      {collapsed ? null : (<>
+      <div className="flex-1 min-h-0 flex items-center justify-between gap-2 px-2 overflow-hidden">
       {/* LEFT: Undo/Redo (always visible) */}
       <div className="flex items-center gap-0.5 shrink-0">
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          className="p-2 rounded-md text-muted hover:text-text hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded-md text-muted hover:text-text hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title={t('smartBottom.undo')}
         >
           <UndoIcon className="w-4 h-4" />
@@ -260,7 +355,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
         <button
           onClick={onRedo}
           disabled={!canRedo}
-          className="p-2 rounded-md text-muted hover:text-text hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded-md text-muted hover:text-text hover:bg-surface2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title={t('smartBottom.redo')}
         >
           <RedoIcon className="w-4 h-4" />
@@ -302,7 +397,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
           </div>
         ) : hasAnimation ? (
           /* ─── MODE 2: Animation (playback + step chips) ─── */
-          <div className="flex items-center gap-1 w-full justify-center animate-fade-in">
+          <div data-tour="steps" className="flex items-center gap-1 w-full justify-center animate-fade-in">
             {/* Playback controls */}
             <div className="flex items-center gap-0.5 shrink-0">
               <button onClick={onPrevStep} disabled={currentStepIndex === 0}
@@ -411,6 +506,47 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
           <span className="hidden sm:block">{currentStepIndex + 1}/{steps.length}</span>
         </div>
       )}
+      </div>
+
+      {/* Compact footer-links row (merged from app Footer) */}
+      <div
+        className="shrink-0 flex items-center justify-center gap-3 px-3 text-[10px] text-muted border-t border-border/50 overflow-hidden"
+        style={{ height: FOOTER_ROW_HEIGHT }}
+      >
+        <div className="flex items-center gap-1.5 truncate shrink-0">
+          <span className="font-semibold text-text">TMC Studio</span>
+          {version && <span className="opacity-70">v{version}</span>}
+        </div>
+        <span className="hidden sm:inline w-px h-3 bg-border shrink-0" />
+        <div className="hidden sm:flex items-center gap-3 shrink-0">
+          <a href="/download" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/download'); } }} className="text-accent hover:text-accent-hover font-medium transition-colors cursor-pointer">
+            {t('footer.download')}
+          </a>
+          <a href="/privacy" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/privacy'); } }} className="hover:text-text transition-colors cursor-pointer">
+            {t('footer.privacy')}
+          </a>
+          <a href="/terms" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/terms'); } }} className="hover:text-text transition-colors cursor-pointer">
+            {t('footer.terms')}
+          </a>
+          <a href="/cookies" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/cookies'); } }} className="hover:text-text transition-colors cursor-pointer">
+            {t('footer.cookies')}
+          </a>
+          <a href="mailto:support@tmcstudio.app" className="hover:text-text transition-colors">
+            {t('footer.contact')}
+          </a>
+          <a href="https://x.com/tmcstudio" target="_blank" rel="noopener noreferrer" className="hover:text-text transition-colors" aria-label={t('footer.social.x')}>
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </a>
+          <a href="https://www.linkedin.com/company/tmcstudio" target="_blank" rel="noopener noreferrer" className="hover:text-text transition-colors" aria-label={t('footer.social.linkedin')}>
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+            </svg>
+          </a>
+        </div>
+      </div>
+      </>)}
     </footer>
   );
 };

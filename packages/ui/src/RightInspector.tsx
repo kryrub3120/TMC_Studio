@@ -3,7 +3,7 @@
  * Shows element properties, layer visibility toggles, and element navigation
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { Team } from '@tmc/core';
 import { BottomSheet } from './BottomSheet.js';
 import { Toggle, Section, SettingRow, Slider, Field, inputClass } from './primitives.js';
@@ -83,9 +83,19 @@ export interface RightInspectorProps {
   onRenumberArrows?: () => void;
   /** Batch update for multi-select editing (opacity / show label). */
   onUpdateSelectedElements?: (updates: { opacity?: number; showLabel?: boolean }) => void;
+  /** Resizable width (px) of the desktop sidebar. Drag handle on the left edge adjusts this. */
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  /** Called with the new width while/after dragging. */
+  onWidthChange?: (width: number) => void;
 }
 
 type TabType = 'props' | 'layers';
+
+const DEFAULT_INSPECTOR_WIDTH = 280;
+const MIN_INSPECTOR_WIDTH = 220;
+const MAX_INSPECTOR_WIDTH = 480;
 
 /** Icons */
 const CollapseIcon: React.FC<{ className?: string; collapsed?: boolean }> = ({ className, collapsed }) => (
@@ -678,6 +688,10 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   isAutoNumbering,
   onRenumberArrows,
   onUpdateSelectedElements,
+  width = DEFAULT_INSPECTOR_WIDTH,
+  minWidth = MIN_INSPECTOR_WIDTH,
+  maxWidth = MAX_INSPECTOR_WIDTH,
+  onWidthChange,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('props');
@@ -705,6 +719,40 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onToggle]);
+
+  // ─── Drag handle: resize sidebar width by dragging its left edge ───
+  const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const handleResizeMouseMove = useCallback((e: MouseEvent) => {
+    const drag = dragStateRef.current;
+    if (!drag || !onWidthChange) return;
+    // Sidebar is anchored to the right edge, so dragging the left edge LEFT
+    // (negative delta) should INCREASE the width.
+    const delta = drag.startX - e.clientX;
+    const next = Math.max(minWidth, Math.min(maxWidth, drag.startWidth + delta));
+    onWidthChange(next);
+  }, [onWidthChange, minWidth, maxWidth]);
+
+  const handleResizeMouseUp = useCallback(() => {
+    dragStateRef.current = null;
+    window.removeEventListener('mousemove', handleResizeMouseMove);
+    window.removeEventListener('mouseup', handleResizeMouseUp);
+  }, [handleResizeMouseMove]);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    if (!onWidthChange) return;
+    e.preventDefault();
+    dragStateRef.current = { startX: e.clientX, startWidth: width };
+    window.addEventListener('mousemove', handleResizeMouseMove);
+    window.addEventListener('mouseup', handleResizeMouseUp);
+  };
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMouseMove);
+      window.removeEventListener('mouseup', handleResizeMouseUp);
+    };
+  }, [handleResizeMouseMove, handleResizeMouseUp]);
 
   // ─── Shared tab content renderer ─────────────────────────────────────
   const renderTabContent = () => {
@@ -794,7 +842,20 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           </button>
         )}
 
-        <div className={`flex flex-col h-full ${isOpen ? 'w-[280px]' : 'w-0 overflow-hidden'}`}>
+        <div
+          className={`flex flex-col h-full relative ${isOpen ? 'overflow-hidden' : 'w-0 overflow-hidden'}`}
+          style={isOpen ? { width } : undefined}
+        >
+          {/* RESIZE HANDLE — left edge, drag to resize the sidebar's width */}
+          {isOpen && onWidthChange && (
+            <div
+              onMouseDown={handleResizeMouseDown}
+              className="absolute top-0 left-0 bottom-0 w-2 -translate-x-1/2 cursor-col-resize group flex items-center justify-center z-10"
+              title={t('inspector.resize')}
+            >
+              <div className="w-1 h-10 rounded-full bg-border group-hover:bg-accent transition-colors" />
+            </div>
+          )}
           {isOpen && (
             <>
               {/* Tab Headers */}

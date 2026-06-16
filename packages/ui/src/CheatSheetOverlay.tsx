@@ -79,6 +79,8 @@ const shortcuts: { title: string; items: ShortcutItem[]; isAnimation?: boolean }
       { key: 'F', description: 'Focus Mode' },
       { key: 'I', description: 'Toggle Inspector' },
       { key: 'O', description: 'Toggle Orientation' },
+      { key: 'Shift+O', description: 'Toggle Player Orientation Mode' },
+      { key: '⌘P', description: 'Open Projects' },
       { key: 'W', description: 'Print Friendly Mode' },
       { key: 'V', description: 'Cycle Pitch View' },
       { key: '+', description: 'Zoom In' },

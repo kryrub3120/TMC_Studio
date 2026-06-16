@@ -128,8 +128,8 @@ export function PricingModal({
       // Build checkout request with user context
       const checkoutBody: any = {
         priceId: plan.priceId,
-        successUrl: `${window.location.origin}/?checkout=success`,
-        cancelUrl: `${window.location.origin}/?checkout=cancelled`,
+        successUrl: `${window.location.origin}/app?checkout=success`,
+        cancelUrl: `${window.location.origin}/app?checkout=cancelled`,
       };
 
       // Pass user data for webhook correlation

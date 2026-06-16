@@ -33,7 +33,7 @@ export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
         persistSession: true,
         detectSessionInUrl: true,
         storageKey: 'tmc-auth-token',
-        flowType: 'implicit', // Use implicit flow (simpler, no PKCE)
+        flowType: 'pkce', // PKCE flow — industry standard, more secure than implicit
       },
       global: {
         headers: {
@@ -61,6 +61,7 @@ export type User = {
   avatar_url?: string;
   subscription_tier: 'free' | 'pro' | 'team';
   stripe_customer_id?: string | null;
+  team_id?: string | null;
   preferences?: UserPreferences;
 };
 
@@ -69,6 +70,7 @@ export type UserPreferences = {
   gridVisible?: boolean;
   snapEnabled?: boolean;
   cheatSheetVisible?: boolean;
+  bottomBar?: { height: number; collapsed?: boolean };
 };
 
 /** Get current authenticated user */
@@ -285,7 +287,7 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       // Redirect to home page - Supabase handles token extraction
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/app`,
     },
   });
   

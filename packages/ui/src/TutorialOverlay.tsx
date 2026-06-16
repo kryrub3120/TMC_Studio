@@ -1,16 +1,19 @@
 /**
  * TutorialOverlay - guided first-run Coach Tour.
  * Uses a spotlight, directional arrow, keycaps and small product demos.
+ * Role-aware: adapts content per plan (guest/free/pro/team).
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TUTORIAL_STEPS, type TutorialStep } from './tutorialSteps';
+import { getStepsForPlan, type TutorialStep, type Plan } from './tutorialSteps';
 import { useTranslation } from './i18n.js';
 
 export interface TutorialOverlayProps {
   isVisible: boolean;
   onDismiss: () => void;
   onComplete: () => void;
+  /** User's plan for role-aware content. Defaults to 'guest'. */
+  plan?: Plan;
 }
 
 interface TourRect {
@@ -67,6 +70,7 @@ const DemoHeader: React.FC<{ label: string }> = ({ label }) => (
   </div>
 );
 
+// ─── Step 1: Shortcuts / Players Demo ──────────────────────────────
 const ShortcutDemo = () => {
   const { t } = useTranslation();
   return (
@@ -75,11 +79,11 @@ const ShortcutDemo = () => {
       <div className="space-y-1.5">
         {[
           ['P', t('tutorial.demos.homePlayer')],
-          ['A', t('tutorial.demos.passArrow')],
-          ['?', t('tutorial.demos.shortcutSheet')],
+          ['Shift+P', t('tutorial.demos.awayPlayer')],
+          ['1-6', t('tutorial.demos.formation')],
         ].map(([key, label]) => (
           <div key={key} className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5">
-            <span className="w-7 rounded border border-border bg-surface2 py-0.5 text-center text-[11px] font-bold text-accent">
+            <span className="w-16 rounded border border-border bg-surface2 py-0.5 text-center text-[11px] font-bold text-accent">
               {key}
             </span>
             <span className="text-[11px] text-text">{label}</span>
@@ -90,27 +94,36 @@ const ShortcutDemo = () => {
   );
 };
 
-const InspectorDemo = () => {
+// ─── Step 2: Arrows Demo ───────────────────────────────────────────
+const ArrowsDemo = () => {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-2 rounded-lg border border-border bg-bg/60 p-3">
-      <div>
-        <DemoHeader label={t('tutorial.demos.inspector')} />
-        <div className="space-y-1.5">
-          <div className="h-2 rounded bg-accent/70" />
-          <div className="h-2 w-3/4 rounded bg-surface2" />
-          <div className="h-2 w-1/2 rounded bg-surface2" />
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.arrows')} />
+      <div className="space-y-2">
+        {[
+          { key: 'A', color: 'bg-[#1a1a1a]', label: t('tutorial.demos.passArrow') },
+          { key: 'R', color: 'bg-orange-500', label: t('tutorial.demos.runArrow') },
+          { key: 'S', color: 'bg-red-500', label: t('tutorial.demos.shootArrow') },
+        ].map(({ key, color, label }) => (
+          <div key={key} className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5">
+            <span className="w-7 rounded border border-border bg-surface2 py-0.5 text-center text-[11px] font-bold text-accent">
+              {key}
+            </span>
+            <div className={`h-0.5 w-8 rounded ${color}`} />
+            <span className="text-[11px] text-text">{label}</span>
+          </div>
+        ))}
+        <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted">
+          <span className="rounded bg-surface2 px-1.5 py-0.5 font-mono">Shift+N</span>
+          <span>{t('tutorial.demos.autoNumber')}</span>
         </div>
-      </div>
-      <div className="tour-float rounded-md border border-border bg-surface px-2 py-1.5 shadow-lg">
-        <div className="mb-1 h-1.5 w-12 rounded bg-accent/70" />
-        <div className="mb-1 h-1.5 w-10 rounded bg-surface2" />
-        <div className="h-1.5 w-8 rounded bg-red-400/60" />
       </div>
     </div>
   );
 };
 
+// ─── Step 3: Orientation + Vision Demo ─────────────────────────────
 const OrientationDemo = () => (
   <div className="relative h-28 overflow-hidden rounded-lg border border-border bg-[linear-gradient(90deg,rgba(46,230,166,.12)_1px,transparent_1px),linear-gradient(0deg,rgba(46,230,166,.12)_1px,transparent_1px)] bg-[size:18px_18px]">
     <div className="absolute inset-x-5 top-1/2 h-px bg-pitch-lines/50" />
@@ -121,30 +134,127 @@ const OrientationDemo = () => (
         <div className="absolute left-1/2 top-0 h-3 w-1 -translate-x-1/2 rounded bg-white" />
       </div>
     </div>
+    {/* Second player showing vision off */}
+    <div className="absolute right-[18%] top-[55%] opacity-50">
+      <div className="h-6 w-6 rounded-full border border-white/40 bg-team-away" />
+    </div>
   </div>
 );
 
+// ─── Step 4: Equipment + Zones Demo ────────────────────────────────
 const EquipmentDemo = () => (
   <div className="relative h-28 rounded-lg border border-border bg-pitch/30 p-3">
+    {/* Goal */}
     <div className="absolute left-4 top-5 h-10 w-14 rounded-sm border-2 border-white/80" />
-    <div className="absolute bottom-5 left-24 grid grid-cols-4 gap-1">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <span key={index} className="h-1.5 w-4 rounded-full bg-yellow-300/90" />
+    {/* Cones */}
+    <div className="absolute bottom-5 left-20 flex gap-1.5">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <span key={index} className="h-0 w-0 border-x-[6px] border-b-[14px] border-x-transparent border-b-orange-400" />
       ))}
     </div>
-    <div className="absolute right-14 top-7 flex gap-2">
-      {[0, 1, 2].map((item) => (
-        <span
-          key={item}
-          className="tour-pop h-0 w-0 border-x-[7px] border-b-[18px] border-x-transparent border-b-orange-400"
-          style={{ animationDelay: `${item * 120}ms` }}
-        />
+    {/* Ladder */}
+    <div className="absolute right-14 top-6 grid grid-cols-3 gap-0.5">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <span key={index} className="h-3 w-4 rounded-sm border border-white/60" />
       ))}
     </div>
-    <div className="absolute bottom-5 right-5 h-5 w-12 rounded-t-lg border-2 border-muted" />
+    {/* Zone */}
+    <div className="absolute bottom-4 right-4 h-8 w-16 rounded-md border-2 border-dashed border-red-400/60 bg-red-400/10" />
+    {/* Hurdle */}
+    <div className="absolute bottom-4 left-4 h-5 w-10 rounded-t-lg border-2 border-muted" />
   </div>
 );
 
+// ─── Step 5: Squad Bench Demo ──────────────────────────────────────
+const SquadDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.squad')} />
+      <div className="flex items-center gap-2">
+        {[
+          { name: 'Smith', num: 9, color: 'bg-team-home' },
+          { name: 'Jones', num: 10, color: 'bg-team-home' },
+          { name: 'Lee', num: 7, color: 'bg-team-away' },
+        ].map((player) => (
+          <div
+            key={player.num}
+            className="tour-float flex flex-col items-center gap-1 rounded-md border border-border bg-surface px-2 py-1.5"
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${player.color} text-[10px] font-bold text-white`}>
+              {player.num}
+            </div>
+            <span className="truncate text-[9px] text-text">{player.name}</span>
+          </div>
+        ))}
+        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-muted text-muted">
+          +
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Step 6: Steps & Animation Demo ────────────────────────────────
+const StepsDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.steps')} />
+      {/* Timeline */}
+      <div className="flex items-center gap-1.5">
+        {[1, 2, 3].map((step, index) => (
+          <div key={step} className="flex items-center gap-1.5">
+            <div className={`flex h-8 w-8 items-center justify-center rounded-md border text-[11px] font-bold ${
+              index === 0 ? 'border-accent bg-accent/15 text-accent' : 'border-border bg-surface2 text-muted'
+            }`}>
+              {step}
+            </div>
+            {index < 2 && <div className="h-px w-3 bg-border" />}
+          </div>
+        ))}
+      </div>
+      {/* Playback controls */}
+      <div className="mt-2 flex items-center gap-2 text-[10px] text-muted">
+        <span className="rounded bg-surface2 px-1.5 py-0.5 font-mono">Space</span>
+        <span>{t('tutorial.demos.play')}</span>
+        <span className="text-border">|</span>
+        <span className="rounded bg-surface2 px-1.5 py-0.5 font-mono">N</span>
+        <span>{t('tutorial.demos.newStep')}</span>
+        <span className="text-border">|</span>
+        <span className="rounded bg-surface2 px-1.5 py-0.5 font-mono">L</span>
+        <span>{t('tutorial.demos.loop')}</span>
+      </div>
+    </div>
+  );
+};
+
+// ─── Step 7: Save & Projects Demo ──────────────────────────────────
+const SaveDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.save')} />
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-surface2 px-1.5 py-0.5 text-[10px] font-mono font-bold text-accent">⌘S</span>
+          <span className="text-[11px] text-text">{t('tutorial.demos.saveShortcut')}</span>
+          <span className="ml-auto h-2 w-2 rounded-full bg-green-500" />
+        </div>
+        <div className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5">
+          <span className="flex h-6 w-6 items-center justify-center rounded bg-accent/10 text-[10px] text-accent">📁</span>
+          <div className="flex-1">
+            <div className="text-[11px] font-medium text-text">{t('tutorial.demos.myProject')}</div>
+            <div className="text-[9px] text-muted">{t('tutorial.demos.justNow')}</div>
+          </div>
+          <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[9px] text-green-500">{t('tutorial.demos.saved')}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Step 8: Export Demo ───────────────────────────────────────────
 const ExportDemo = () => {
   const { t } = useTranslation();
   return (
@@ -163,28 +273,44 @@ const ExportDemo = () => {
         <span className="h-px flex-1 bg-border" />
         <span className="rounded-md bg-surface2 px-2 py-1 text-[11px] text-text">{t('tutorial.demos.share')}</span>
       </div>
+      <div className="mt-2 flex items-center gap-2 text-[10px] text-muted">
+        <span className="rounded bg-surface2 px-1.5 py-0.5 font-mono">?</span>
+        <span>{t('tutorial.demos.shortcutSheet')}</span>
+      </div>
     </div>
   );
 };
 
-const PremiumDemo = () => {
+// ─── Step 9: Team / Club Admin Demo ────────────────────────────────
+const TeamDemo = () => {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {[
-        t('tutorial.demos.projects'),
-        t('tutorial.demos.cloud'),
-        t('tutorial.demos.pro'),
-      ].map((item, index) => (
-        <div
-          key={item}
-          className="tour-pop rounded-lg border border-border bg-bg/60 p-2 text-center"
-          style={{ animationDelay: `${index * 100}ms` }}
-        >
-          <div className="mx-auto mb-2 h-6 w-6 rounded-full bg-accent/15 ring-1 ring-accent/30" />
-          <div className="text-[10px] font-semibold text-text">{item}</div>
+    <div className="rounded-lg border border-border bg-bg/60 p-3">
+      <DemoHeader label={t('tutorial.demos.team')} />
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-[10px] font-bold text-accent">
+            AK
+          </div>
+          <div className="flex-1">
+            <div className="text-[11px] font-medium text-text">Alex K.</div>
+            <div className="text-[9px] text-accent font-medium">{t('tutorial.demos.admin')}</div>
+          </div>
         </div>
-      ))}
+        <div className="flex items-center gap-2 rounded-md bg-surface/80 px-2 py-1.5 opacity-70">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-team-away/30 text-[10px] font-bold text-team-away">
+            SJ
+          </div>
+          <div className="flex-1">
+            <div className="text-[11px] font-medium text-text">Sam J.</div>
+            <div className="text-[9px] text-muted">{t('tutorial.demos.member')}</div>
+          </div>
+          <span className="rounded bg-surface2 px-1.5 py-0.5 text-[9px] text-muted">{t('tutorial.demos.active')}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-accent">
+          <span className="rounded-md border border-accent/30 px-2 py-1 font-medium">{t('tutorial.demos.inviteMember')}</span>
+        </div>
+      </div>
     </div>
   );
 };
@@ -193,18 +319,24 @@ const StepDemo: React.FC<{ step: TutorialStep }> = ({ step }) => {
   switch (step.demo) {
     case 'shortcuts':
       return <ShortcutDemo />;
-    case 'inspector':
-      return <InspectorDemo />;
+    case 'arrows':
+      return <ArrowsDemo />;
     case 'orientation':
       return <OrientationDemo />;
     case 'equipment':
       return <EquipmentDemo />;
+    case 'squad':
+      return <SquadDemo />;
+    case 'steps':
+      return <StepsDemo />;
+    case 'save':
+      return <SaveDemo />;
     case 'export':
       return <ExportDemo />;
-    case 'premium':
-      return <PremiumDemo />;
+    case 'team':
+      return <TeamDemo />;
     default:
-      return null;
+      return <ShortcutDemo />;
   }
 };
 
@@ -212,6 +344,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   isVisible,
   onDismiss,
   onComplete,
+  plan = 'guest',
 }) => {
   const { t } = useTranslation();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -221,8 +354,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const currentStep: TutorialStep | undefined = TUTORIAL_STEPS[currentStepIndex];
-  const isLastStep = currentStepIndex === TUTORIAL_STEPS.length - 1;
+  const steps = React.useMemo(() => getStepsForPlan(plan), [plan]);
+  const currentStep: TutorialStep | undefined = steps[currentStepIndex];
+  const isLastStep = currentStepIndex === steps.length - 1;
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -455,7 +589,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                   {t(`${stepKey}.eyebrow`)}
                 </div>
                 <div className="mt-1 text-[11px] font-medium text-muted">
-                  {t('tutorial.step', { current: currentStep.id, total: TUTORIAL_STEPS.length })}
+                  {t('tutorial.step', { current: currentStep.id, total: steps.length })}
                 </div>
               </div>
               <button
@@ -467,9 +601,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               </button>
             </div>
             <div className="flex gap-1">
-              {TUTORIAL_STEPS.map((_, idx) => (
+              {steps.map((s, idx) => (
                 <div
-                  key={idx}
+                  key={s.id}
                   className={`h-1 flex-1 rounded-full transition-colors ${
                     idx <= currentStepIndex ? 'bg-accent' : 'bg-surface2'
                   }`}

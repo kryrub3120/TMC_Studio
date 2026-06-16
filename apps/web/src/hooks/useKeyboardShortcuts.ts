@@ -47,6 +47,9 @@ export interface UseKeyboardShortcutsParams {
   // Pricing modal (PR3)
   onOpenPricingModal?: () => void;
   
+  // Open the Projects drawer (Ctrl/Cmd+P)
+  onOpenProjectsDrawer?: () => void;
+
   // Context menu state (for guards)
   contextMenuVisible: boolean;
 
@@ -58,6 +61,7 @@ export interface UseKeyboardShortcutsParams {
  * Hook that registers all keyboard shortcuts
  */
 export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
+  const { onOpenProjectsDrawer } = params;
   const {
     handleExportPNG,
     handleExportAllSteps,
@@ -226,6 +230,10 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (isCmd && e.shiftKey) {
           e.preventDefault();
           handleExportPDF();
+        } else if (isCmd) {
+          // Ctrl/Cmd+P = open Projects drawer (overrides browser print)
+          e.preventDefault();
+          onOpenProjectsDrawer?.();
         } else if (!isCmd && e.altKey && e.shiftKey) {
           e.preventDefault();
           addPlayerAtCursor('team4');
@@ -576,7 +584,16 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       case 'o':
-        // O = Toggle orientation
+        // Shift+O = Toggle player-orientation editing mode (handles/cones on players)
+        if (!isCmd && e.shiftKey) {
+          e.preventDefault();
+          const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
+          const nextEnabled = !orientationSettings.enabled;
+          updatePlayerOrientationSettings({ enabled: nextEnabled });
+          showTranslatedToast(nextEnabled ? 'orientationModeOn' : 'orientationModeOff');
+          break;
+        }
+        // O = Toggle pitch orientation (landscape/portrait)
         if (!isCmd) {
           e.preventDefault();
           const currentOrientation = getPitchSettings()?.orientation ?? 'landscape';
@@ -949,6 +966,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     setPlayerOrientation, resetPlayerOrientation, updatePlayerOrientationSettings, togglePlayerVision, // Vision/orientation
     handleExportPNG, handleExportAllSteps, handleExportPDF, handleExportGIF,
     showToast, onStartEditingText, onStartEditingPlayerNumber, onOpenPricingModal, // PR3
+    onOpenProjectsDrawer,
   ]);
   
   // Attach/detach event listener

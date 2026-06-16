@@ -4,7 +4,7 @@
 
 import type { TeamSettings, TeamSetting, Team } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
-import { SHARED_COLORS } from './colors';
+import { SHARED_COLORS, TEAM_KIT_PRESETS } from './colors';
 import { useTranslation } from './i18n.js';
 
 export interface TeamsPanelProps {
@@ -32,6 +32,32 @@ function TeamSection({
           style={{ backgroundColor: settings.primaryColor }}
         />
         <span className="text-sm font-medium text-text">{t('teamsPanel.teamSuffix', { team })}</span>
+      </div>
+
+      {/* Kit presets */}
+      <div>
+        <label className="block text-xs text-muted mb-1">{t('teamsPanel.kitPresets')}</label>
+        <div className="flex flex-wrap gap-2">
+          {TEAM_KIT_PRESETS.map((kit) => (
+            <button
+              key={kit.id}
+              type="button"
+              onClick={() =>
+                onUpdate({
+                  primaryColor: kit.primaryColor,
+                  secondaryColor: kit.secondaryColor,
+                  goalkeeperColor: kit.goalkeeperColor,
+                })
+              }
+              title={t(kit.labelKey)}
+              className="flex rounded overflow-hidden border border-white/20 hover:scale-110 transition-transform"
+            >
+              <span className="w-3 h-5" style={{ backgroundColor: kit.primaryColor }} />
+              <span className="w-3 h-5" style={{ backgroundColor: kit.secondaryColor }} />
+              <span className="w-3 h-5" style={{ backgroundColor: kit.goalkeeperColor }} />
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Name input */}

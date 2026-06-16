@@ -1,0 +1,21 @@
+# Security Policy for TMC Studio
+# ==============================
+
+# Contact
+Contact: mailto:krystian.rubajczyk@gmail.com
+Encryption: https://keybase.io/kryrub3120/pgp_keys.asc
+
+# Preferred languages
+Preferred-Languages: en, pl
+
+# Canonical URI
+Canonical: https://tmcstudio.app/.well-known/security.txt
+
+# Expiry
+Expires: 2027-06-15T00:00:00.000Z
+
+# Acknowledgments
+Acknowledgments: https://tmcstudio.app/security-acknowledgments
+
+# Policy
+Policy: https://tmcstudio.app/security-policy

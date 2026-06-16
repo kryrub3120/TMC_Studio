@@ -623,7 +623,76 @@ ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE project_shares ENABLE ROW LEVEL SECURITY;
 ```
 
-### JSONB Document Schema
+#### `organizations` Table
+
+Club/team organizations for Team plan collaboration (added by 20260615000000):
+
+```sql
+CREATE TABLE organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL CHECK (length(name) > 0 AND length(name) <= 100),
+  owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Indexes
+CREATE INDEX idx_organizations_owner_id ON organizations(owner_id);
+```
+
+**RLS:** `org_select_member` — members can view their org. `org_insert_self` — user can create org. `org_update_admin` — only owner can update.
+
+#### `organization_members` Table
+
+Membership with simplified roles (owner / member). Added by 20260615000000, simplified by 20260615000002:
+
+```sql
+CREATE TABLE organization_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'member')),
+  invited_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  UNIQUE (organization_id, user_id)
+);
+
+-- Indexes
+CREATE INDEX idx_org_members_org_id ON organization_members(organization_id);
+CREATE INDEX idx_org_members_user_id ON organization_members(user_id);
+```
+
+**Guard:** Deletion/role-change of the 'owner' row is blocked by trigger `guard_owner_membership` — use `transfer_ownership()` RPC instead.
+
+#### `invitations` Table
+
+Email invitations to join an organization (added by 20260615000000):
+
+```sql
+CREATE TABLE invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  email TEXT NOT NULL CHECK (email = lower(email)),
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member')),
+  token UUID NOT NULL DEFAULT gen_random_uuid(),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked', 'expired')),
+  invited_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '14 days'),
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Indexes
+CREATE UNIQUE INDEX idx_invitations_token ON invitations(token);
+CREATE INDEX idx_invitations_org_id ON invitations(organization_id);
+CREATE INDEX idx_invitations_email ON invitations(email);
+-- Only one pending invitation per (org, email)
+CREATE UNIQUE INDEX idx_invitations_pending_unique ON invitations(organization_id, email) WHERE status = 'pending';
+```
+
+**RPC:** `accept_invitation(token)` — atomic accept by authenticated user (email must match). `get_invitation_preview(token)` — preview for unauthenticated users.
+
+#### `project_tags` Table (continued)
 
 The `document` column stores the complete `BoardDocument`:
 

@@ -21,6 +21,7 @@ import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { getTierFromPriceId } from './_stripeConfig';
+import { checkRateLimit } from './_rateLimit';
 
 // Environment variables
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY!;
@@ -257,12 +258,95 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   if (userId) {
     console.log(`Using client_reference_id for user lookup: ${userId}`);
     await updateUserById(userId, customerId, tier, expiresAt);
+
+    // If team tier, create team + team_members row (idempotent)
+    if (tier === 'team') {
+      await ensureTeamForUser(userId, customerId);
+    }
     return;
   }
 
   // FALLBACK: Customer ID or email lookup (for older sessions without client_reference_id)
   console.log('No client_reference_id, falling back to customer lookup');
   await updateUserByCustomerId(customerId, tier, expiresAt);
+
+  // If team tier, find user and create team
+  if (tier === 'team') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('stripe_customer_id', customerId)
+      .single();
+    if (profile) {
+      await ensureTeamForUser(profile.id, customerId);
+    }
+  }
+}
+
+/**
+ * Create a team + team_members row for Club Premium checkout.
+ * Idempotent — checks stripe_customer_id before creating.
+ */
+async function ensureTeamForUser(userId: string, customerId: string): Promise<void> {
+  // Check if team already exists for this customer (idempotent)
+  const { data: existingTeam } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  if (existingTeam) {
+    console.log(`Team already exists for customer ${customerId}, skipping creation`);
+    return;
+  }
+
+  // Create team
+  const { data: team, error: teamError } = await supabase
+    .from('teams')
+    .insert({
+      name: 'My Club',
+      owner_id: userId,
+      stripe_customer_id: customerId,
+      max_members: 5,
+    })
+    .select('id')
+    .single();
+
+  if (teamError || !team) {
+    console.error('Failed to create team:', teamError);
+    throw teamError;
+  }
+
+  console.log(`✅ Created team ${team.id} for user ${userId}`);
+
+  // Add owner as admin member
+  const { error: memberError } = await supabase
+    .from('team_members')
+    .insert({
+      team_id: team.id,
+      user_id: userId,
+      role: 'admin',
+    });
+
+  if (memberError) {
+    console.error('Failed to add admin member:', memberError);
+    throw memberError;
+  }
+
+  console.log(`✅ Added user ${userId} as admin of team ${team.id}`);
+
+  // Update user's team_id in profiles
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ team_id: team.id })
+    .eq('id', userId);
+
+  if (profileError) {
+    console.error('Failed to update profile team_id:', profileError);
+    throw profileError;
+  }
+
+  console.log(`✅ Updated profile team_id for user ${userId}`);
 }
 
 /**
@@ -403,6 +487,21 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     return {
       statusCode: 400,
       body: JSON.stringify({ error: `Webhook Error: ${message}` }),
+    };
+  }
+
+  // Rate limiting: max 20 webhook events per IP per minute
+  // Liberal limit — Stripe retries legitimate events
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown';
+  const rateCheck = checkRateLimit(
+    typeof clientIp === 'string' ? clientIp : clientIp[0],
+    { maxRequests: 20, windowMs: 60_000 }
+  );
+  if (!rateCheck.allowed) {
+    console.warn(`Webhook rate limit exceeded for ${stripeEvent.type}`);
+    return {
+      statusCode: 429,
+      body: JSON.stringify({ error: 'Rate limit exceeded' }),
     };
   }
 

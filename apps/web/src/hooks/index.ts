@@ -13,6 +13,8 @@ export { useExportController } from './useExportController';
 export { usePaymentReturn } from './usePaymentReturn';
 export { useProjectsController } from './useProjectsController';
 export { useSettingsController } from './useSettingsController';
+export { useOrganization } from './useOrganization';
 export { useDrawingController } from './useDrawingController';
 export { useCanvasEventsController } from './useCanvasEventsController';
 export type { PaymentReturnCallbacks } from './usePaymentReturn';
+export { useDocumentMeta } from './useDocumentMeta';

@@ -233,7 +233,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   };
 
   return (
-    <div className="px-4 py-2 bg-surface border-t border-border" data-testid="squad-bench">
+    <div className="px-4 py-2 bg-surface border-t border-border" data-testid="squad-bench" data-tour="squad">
       {/* Header row */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">

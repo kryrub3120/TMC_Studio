@@ -3,14 +3,15 @@
  * TMC Studio - Profile, Security, Billing, Preferences
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Toggle, SettingRow, SegmentedControl, Slider } from './primitives.js';
 import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
 import type { ArrowType, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer } from '@tmc/core';
+import { OrganizationPanel, type OrganizationPanelProps } from './OrganizationPanel.js';
 
-type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'language' | 'shortcuts' | 'about' | 'data';
+export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'about' | 'data';
 
 interface User {
   id: string;
@@ -34,6 +35,7 @@ function NavIcon({ id }: { id: SettingsTab }) {
     case 'squad': return (<svg {...c}><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="M16 6a3 3 0 0 1 0 6" /><path d="M20 20a6 6 0 0 0-4-5.6" /></svg>);
     case 'teams': return (<svg {...c}><path d="M4 7l4-3 4 2 4-2 4 3-3 3v8H7v-8z" /></svg>);
     case 'pitch': return (<svg {...c}><rect x="3" y="5" width="18" height="14" rx="1" /><line x1="12" y1="5" x2="12" y2="19" /><circle cx="12" cy="12" r="2" /></svg>);
+    case 'club': return (<svg {...c}><path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M10 21v-6h4v6" /></svg>);
     case 'language': return (<svg {...c}><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" /></svg>);
     case 'shortcuts': return (<svg {...c}><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></svg>);
     case 'about': return (<svg {...c}><circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="8" x2="12" y2="8" /></svg>);
@@ -45,6 +47,8 @@ function NavIcon({ id }: { id: SettingsTab }) {
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Tab to show when the modal opens (defaults to 'profile'). */
+  initialTab?: SettingsTab;
   user: User | null;
   onUpdateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
   onUploadAvatar?: (file: File) => Promise<string | null>;
@@ -87,11 +91,14 @@ interface SettingsModalProps {
   /** Data & privacy */
   onExportBoard?: () => void;
   onImportBoard?: (file: File) => Promise<boolean>;
+  /** Club / organization management (Team plan). When provided, adds a 'Club' settings tab. */
+  organizationPanelProps?: OrganizationPanelProps;
 }
 
 export function SettingsModal({
   isOpen,
   onClose,
+  initialTab,
   user,
   onUpdateProfile,
   onUploadAvatar,
@@ -127,9 +134,17 @@ export function SettingsModal({
   onTogglePrintMode,
   onExportBoard,
   onImportBoard,
+  organizationPanelProps,
 }: SettingsModalProps) {
   const { t, language, setLanguage } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab ?? 'profile');
+
+  // Jump to the requested tab whenever the modal is (re)opened.
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab ?? 'profile');
+    }
+  }, [isOpen, initialTab]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -158,6 +173,11 @@ export function SettingsModal({
       { id: 'profile' as SettingsTab, label: t('settings.profile') },
       { id: 'security' as SettingsTab, label: t('settings.security') },
       { id: 'billing' as SettingsTab, label: t('settings.billing') },
+    ] },
+    // Club & Members gets its own top-level, prominent section - this is a
+    // core product feature for the Team plan, not a minor board setting.
+    { group: 'club', items: [
+      ...(organizationPanelProps ? [{ id: 'club' as SettingsTab, label: t('organizationPanel.title') }] : []),
     ] },
     { group: 'editor', items: [
       { id: 'preferences' as SettingsTab, label: t('settings.preferences') },
@@ -901,6 +921,11 @@ export function SettingsModal({
               <h3 className="text-lg font-semibold text-text mb-4">{t('settings.pitch')}</h3>
               <PitchPanel pitchSettings={pitchSettings} onUpdatePitch={onUpdatePitch} isPrintMode={isPrintMode} onTogglePrintMode={onTogglePrintMode} />
             </div>
+          )}
+
+          {/* Club Tab */}
+          {activeTab === 'club' && organizationPanelProps && (
+            <OrganizationPanel {...organizationPanelProps} />
           )}
 
           {/* Language Tab */}

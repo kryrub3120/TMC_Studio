@@ -1,3 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /app
+Disallow: /invite
+
 Sitemap: https://tmcstudio.app/sitemap.xml
