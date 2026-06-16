@@ -17,20 +17,16 @@ export function UpdatePrompt() {
   const [notes, setNotes] = useState<string>('');
   const [pct, setPct] = useState(0);
   // The Tauri Update object (typed at runtime; package present only in desktop build).
-  const [update, setUpdate] = useState<{
-    version: string;
-    body?: string;
-    downloadAndInstall: (cb: (e: UpdateEvent) => void) => Promise<void>;
-  } | null>(null);
+  // Tauri Update object (typed loosely; only present in the desktop build).
+  const [update, setUpdate] = useState<any>(null);
 
   useEffect(() => {
     if (!isTauri) return;
     let cancelled = false;
     (async () => {
       try {
-        // @ts-expect-error - resolved at runtime in the Tauri desktop build
         const { check } = await import('@tauri-apps/plugin-updater');
-        const found = await check();
+        const found: any = await check();
         if (found && !cancelled) {
           setUpdate(found);
           setVersion(found.version);
@@ -59,7 +55,6 @@ export function UpdatePrompt() {
           if (total) setPct(Math.min(100, Math.round((received / total) * 100)));
         } else if (e.event === 'Finished') setPct(100);
       });
-      // @ts-expect-error - resolved at runtime in the Tauri desktop build
       const { relaunch } = await import('@tauri-apps/plugin-process');
       await relaunch();
     } catch {
