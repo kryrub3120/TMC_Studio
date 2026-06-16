@@ -12,6 +12,13 @@ Poniżej wszystko klikasz w aplikacji GitHub Desktop i na stronie GitHuba.
 
 ---
 
+## Krok 0 — wydajemy z gałęzi `main` (produkcja)
+Releasujemy kod produkcyjny, więc najpierw scal `develop` → `main`:
+- W **GitHub Desktop**: Branch → **Merge into current branch** (przełącz na `main`,
+  scal `develop`), potem **Push origin**.
+- Albo na GitHubie: zrób **Pull Request** `develop` → `main` i **Merge**.
+Workflow w Kroku 3 uruchamiasz wtedy na gałęzi `main`.
+
 ## Krok 1 — wyślij zmiany do GitHuba (GitHub Desktop)
 1. Pobierz i zainstaluj **GitHub Desktop** (github.com/apps/desktop), zaloguj się.
 2. Otwórz w nim repozytorium `TMC_Studio` (File → Add Local Repository → wskaż folder projektu).
@@ -19,20 +26,32 @@ Poniżej wszystko klikasz w aplikacji GitHub Desktop i na stronie GitHuba.
    (np. „Aplikacja desktop") i kliknij **Commit to main**.
 4. Kliknij **Push origin** (u góry).
 
-## Krok 2 — dodaj 2 sekrety (strona GitHuba, w przeglądarce)
+## Krok 2 — dodaj 2 sekrety PRODUKCYJNE (strona GitHuba, w przeglądarce)
+Aplikacja desktop ma łączyć się z **produkcyjną** bazą (tą samą co live `tmcstudio.app`),
+NIE z deweloperską. Użyj wartości projektu PROD `pgacjczecyfnwsaadyvj`:
+
 GitHub → repo `TMC_Studio` → **Settings** → **Secrets and variables** → **Actions**
-→ **New repository secret**. Dodaj dwa (wartości są w pliku `.env.local`):
-- `VITE_SUPABASE_URL` = `https://euxauavanukyfofhkrqp.supabase.co`
-- `VITE_SUPABASE_ANON_KEY` = (długi token z `.env.local`)
+→ **New repository secret**. Dodaj dwa:
+- `VITE_SUPABASE_URL` = `https://pgacjczecyfnwsaadyvj.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnYWNqY3plY3lmbndzYWFkeXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1MjI3NDAsImV4cCI6MjA4MzA5ODc0MH0.w2IADZBnckX80lRmNu53JrE95W-UcZ1_oQfenRGyHpg`
+
+> Którą bazą gada desktop, decydują TE sekrety (przy buildzie), nie gałąź gita.
+> Wartości pochodzą z `apps/web/.env.local.prod.bak` (i z produkcyjnego buildu).
+> Uwaga: Stripe jest na razie w trybie TEST — płatności nie są jeszcze realne.
 
 ## Krok 3 — zbuduj wersję (jeden przycisk na stronie)
 GitHub → repo → zakładka **Actions** → po lewej **Desktop Release** →
 przycisk **Run workflow** → w polu wpisz `v0.6.0` → **Run workflow**.
 Poczekaj ~10–20 min (zielony ptaszek = gotowe). GitHub sam zbuduje `.dmg` i `.exe`.
 
-## Krok 4 — opublikuj
-GitHub → repo → **Releases** → zobaczysz **draft** z plikami `.dmg` / `.exe`
-→ **Edit** → **Publish release**.
+## Krok 3.5 — TEST REALNY (z draftu, zanim ktokolwiek zobaczy)
+Workflow tworzy **draft** release — widoczny tylko dla Ciebie.
+GitHub → repo → **Releases** → otwórz draft → pobierz `.dmg` (Mac) / `.exe` (Windows)
+→ zainstaluj u siebie i przetestuj na **produkcyjnej** bazie (logowanie, zapis, itd.).
+Dopóki nie klikniesz Publish, użytkownicy NIC nie widzą.
+
+## Krok 4 — opublikuj (dopiero gdy testy OK)
+GitHub → repo → **Releases** → draft → **Edit** → **Publish release**.
 
 ✅ Od tej chwili `tmcstudio.app/download` pokazuje przyciski i pobiera te pliki.
 

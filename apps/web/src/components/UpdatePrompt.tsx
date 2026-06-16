@@ -28,7 +28,7 @@ export function UpdatePrompt() {
     let cancelled = false;
     (async () => {
       try {
-        // @ts-ignore - resolved at runtime in the Tauri desktop build
+        // @ts-expect-error - resolved at runtime in the Tauri desktop build
         const { check } = await import('@tauri-apps/plugin-updater');
         const found = await check();
         if (found && !cancelled) {
@@ -59,7 +59,7 @@ export function UpdatePrompt() {
           if (total) setPct(Math.min(100, Math.round((received / total) * 100)));
         } else if (e.event === 'Finished') setPct(100);
       });
-      // @ts-ignore - resolved at runtime in the Tauri desktop build
+      // @ts-expect-error - resolved at runtime in the Tauri desktop build
       const { relaunch } = await import('@tauri-apps/plugin-process');
       await relaunch();
     } catch {
