@@ -978,7 +978,7 @@ export function SettingsModal({
                   { label: 'X', href: 'https://x.com/tmcstudio' },
                   { label: 'LinkedIn', href: 'https://www.linkedin.com/company/tmcstudio' },
                   { label: 'GitHub', href: 'https://github.com/tmcstudio' },
-                  { label: t('settings.contact'), href: 'mailto:support@tmcstudio.app' },
+                  { label: t('settings.contact'), href: 'mailto:support@tacticsmadeclear.store' },
                 ].map((link) => (
                   <a
                     key={link.label}

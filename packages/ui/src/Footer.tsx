@@ -57,13 +57,6 @@ export function Footer({ className = '', version, onNavigate, isVisible = true, 
           {/* Center - Compact legal links */}
           <div className="hidden sm:flex items-center gap-4">
             <a
-              href="/download"
-              onClick={(e) => handleLinkClick(e, '/download')}
-              className="text-accent hover:text-accent-hover font-medium transition-colors cursor-pointer"
-            >
-              {t('footer.download')}
-            </a>
-            <a
               href="/privacy"
               onClick={(e) => handleLinkClick(e, '/privacy')}
               className="hover:text-text transition-colors cursor-pointer"
@@ -85,7 +78,7 @@ export function Footer({ className = '', version, onNavigate, isVisible = true, 
               {t('footer.cookies')}
             </a>
             <a
-              href="mailto:support@tmcstudio.app"
+              href="mailto:support@tacticsmadeclear.store"
               className="hover:text-text transition-colors"
             >
               {t('footer.contact')}

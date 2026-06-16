@@ -131,7 +131,7 @@ export interface ElementsSlice {
   
   // Convenience creators
   addPlayerAtCursor: (team: Team) => void;
-  addPlayerFromSquad: (team: Team, name: string, number: number) => void;
+  addPlayerFromSquad: (team: Team, name: string, number: number, position?: Position) => void;
   addBallAtCursor: () => void;
   addBallGroupAtCursor: () => void;
   addArrowAtCursor: (arrowType: ArrowType) => void;
@@ -251,9 +251,9 @@ export const createElementsSlice: StateCreator<
     get().addElement(player);
   },
   
-  addPlayerFromSquad: (team, name, number) => {
+  addPlayerFromSquad: (team, name, number, dropPosition) => {
     const { cursorPosition } = get();
-    const position = cursorPosition ?? { 
+    const position = dropPosition ?? cursorPosition ?? {
       x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
       y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
     };

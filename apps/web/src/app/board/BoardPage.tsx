@@ -244,7 +244,16 @@ export function BoardPage(props: BoardPageProps) {
           try {
             const data = JSON.parse(e.dataTransfer.getData('text/plain'));
             if (data && data.name !== undefined && data.number !== undefined) {
-              state.addPlayerFromSquad(data.team, data.name, data.number);
+              const stage = state.stageRef.current;
+              const rect = stage?.container().getBoundingClientRect();
+              const { panX, panY, zoom } = viewportTransformRef.current;
+              const dropPosition = rect && zoom > 0
+                ? {
+                    x: (e.clientX - rect.left - panX) / zoom,
+                    y: (e.clientY - rect.top - panY) / zoom,
+                  }
+                : undefined;
+              state.addPlayerFromSquad(data.team, data.name, data.number, dropPosition);
             }
           } catch { /* not a squad player drop */ }
         }}

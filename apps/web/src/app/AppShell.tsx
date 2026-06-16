@@ -144,6 +144,21 @@ export function AppShell() {
     },
   });
 
+  // Purchase intent from the public /pricing page. `/app?upgrade=pro|team`
+  // opens the pricing modal directly so visitors land on checkout, not a
+  // blank board. Runs once on mount, then strips the param from the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const upgrade = params.get('upgrade');
+    if (upgrade === 'pro' || upgrade === 'team') {
+      billingController.openPricingModal();
+      params.delete('upgrade');
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Projects drawer handlers
   const handleOpenProjectsDrawer = useCallback(() => {
     setProjectsDrawerOpen(true);

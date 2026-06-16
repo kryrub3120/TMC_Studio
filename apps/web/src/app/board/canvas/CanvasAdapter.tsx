@@ -107,6 +107,8 @@ export interface CanvasAdapterProps {
 export function CanvasAdapter(props: CanvasAdapterProps) {
   const {
     stageRef,
+    canvasWidth,
+    canvasHeight,
     containerWidth,
     containerHeight,
     groupZoom,
@@ -187,6 +189,8 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
       onContextMenu={onContextMenu}
     >
       <CanvasElements
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
         elements={elements}
         selectedIds={selectedIds}
         hiddenByGroup={hiddenByGroup}

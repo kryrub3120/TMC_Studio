@@ -60,6 +60,81 @@ interface AuthState {
   teamId: string | null;
 }
 
+const GUEST_WORK_MIGRATION_KEY = 'tmc-guest-work-migration-intent';
+const AUTH_CALLBACK_PARAMS = ['code', 'state', 'error', 'error_code', 'error_description'];
+
+function hasAuthCallbackInUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return AUTH_CALLBACK_PARAMS.some((key) => params.has(key)) ||
+    window.location.hash.includes('access_token') ||
+    window.location.hash.includes('error');
+}
+
+function cleanAuthCallbackUrl() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  let changed = false;
+
+  AUTH_CALLBACK_PARAMS.forEach((key) => {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  });
+
+  if (url.hash.includes('access_token') || url.hash.includes('error')) {
+    url.hash = '';
+    changed = true;
+  }
+
+  if (changed) {
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(null, '', next || '/app');
+  }
+}
+
+function hasGuestWorkMigrationIntent(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(GUEST_WORK_MIGRATION_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function clearGuestWorkMigrationIntent() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(GUEST_WORK_MIGRATION_KEY);
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+async function rememberGuestWorkMigrationIntent(isAuthenticated: boolean) {
+  if (typeof window === 'undefined') return;
+  if (isAuthenticated) {
+    clearGuestWorkMigrationIntent();
+    return;
+  }
+
+  try {
+    const { useBoardStore } = await import('./index');
+    const boardState = useBoardStore.getState();
+    const hasLocalWork = (boardState.document.steps[0]?.elements.length ?? 0) > 0;
+    const notSavedToCloud = !boardState.cloudProjectId;
+
+    if (hasLocalWork && notSavedToCloud) {
+      window.localStorage.setItem(GUEST_WORK_MIGRATION_KEY, 'true');
+    } else {
+      clearGuestWorkMigrationIntent();
+    }
+  } catch (error) {
+    logger.error('[Auth] Failed to mark guest work migration intent:', error);
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, _get) => ({
@@ -116,10 +191,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isInitialized: true, isLoading: false });
 
         try {
-          // Check if OAuth callback (has hash with access_token)
-          const hasOAuthHash = window.location.hash && window.location.hash.includes('access_token');
+          const hasAuthCallback = hasAuthCallbackInUrl();
           
-          if (hasOAuthHash) {
+          if (hasAuthCallback) {
             logger.debug('[Auth] OAuth callback detected - will clean URL after processing');
           }
 
@@ -180,7 +254,7 @@ export const useAuthStore = create<AuthState>()(
                 const hasLocalWork = boardState.document.steps[0]?.elements.length > 0;
                 const notSavedToCloud = !boardState.cloudProjectId;
                 
-                if (hasLocalWork && notSavedToCloud) {
+                if (hasGuestWorkMigrationIntent() && hasLocalWork && notSavedToCloud) {
                   logger.debug('[Auth] Detected unsaved guest work - prompting user to save');
                   
                   // Small delay to let UI update first
@@ -193,11 +267,15 @@ export const useAuthStore = create<AuthState>()(
                       confirmLabel: t('storeToast.saveGuestConfirm'),
                       cancelLabel: t('storeToast.discard'),
                       danger: false,
+                      onCancel: () => {
+                        clearGuestWorkMigrationIntent();
+                      },
                       onConfirm: async () => {
                         logger.debug('[Auth] User confirmed - saving guest work to cloud...');
                         const success = await boardState.saveToCloud();
                         
                         if (success) {
+                          clearGuestWorkMigrationIntent();
                           await boardState.fetchCloudProjects();
                           logger.debug('[Auth] ✓ Guest work saved to cloud');
                           
@@ -217,18 +295,27 @@ export const useAuthStore = create<AuthState>()(
               }
             }
 
-            // Clean OAuth hash from URL after successful login
-            if (hasOAuthHash && user) {
-              logger.debug('[Auth] Cleaning OAuth hash from URL');
-              window.history.replaceState(null, '', window.location.pathname);
+            // Clean OAuth callback params/hash from URL after successful login
+            if (hasAuthCallback && user) {
+              logger.debug('[Auth] Cleaning OAuth callback from URL');
+              cleanAuthCallbackUrl();
             }
           });
           
           logger.debug('[Auth] Listener active');
 
+          if (hasAuthCallback) {
+            window.setTimeout(() => {
+              if (hasAuthCallbackInUrl()) {
+                logger.debug('[Auth] Cleaning stale OAuth callback from URL');
+                cleanAuthCallbackUrl();
+              }
+            }, 3000);
+          }
+
           // ✅ Check for existing session ONLY if NOT OAuth callback
-          // (OAuth hash will be processed by Supabase and trigger onAuthStateChange)
-          if (!hasOAuthHash) {
+          // (OAuth callback will be processed by Supabase and trigger onAuthStateChange)
+          if (!hasAuthCallback) {
             logger.debug('[Auth] Checking for existing session...');
             try {
               const { data: { session } } = await supabase.auth.getSession();
@@ -299,6 +386,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
+          await rememberGuestWorkMigrationIntent(_get().isAuthenticated);
           await supabaseSignIn(email, password);
           const user = await getCurrentUser();
           set({
@@ -350,6 +438,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           logger.debug('[Auth] Starting Google sign in...');
           
+          await rememberGuestWorkMigrationIntent(_get().isAuthenticated);
+
           // H4: Save current work to localStorage BEFORE OAuth redirect
           // This prevents loss of unsaved work during the redirect flow
           try {
@@ -382,6 +472,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           await supabaseSignOut();
+          clearGuestWorkMigrationIntent();
           set({
             user: null,
             isAuthenticated: false,

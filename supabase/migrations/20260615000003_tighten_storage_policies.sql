@@ -7,31 +7,29 @@
 --   3. Add explicit DENY for avatars/thumbnails DELETE by non-owners
 --   4. Rate limiting hint: storage.object.event insert/update already bounded by auth.uid()
 
--- =====================================================
--- 1. AVATARS — TIGHTEN DELETE POLICY
--- =====================================================
+DO LANGUAGE plpgsql $$
+BEGIN
+  -- Only the owner can delete their own avatar
+  EXECUTE 'CREATE POLICY "Users can delete own avatar"
+    ON storage.objects FOR DELETE
+    USING (
+      bucket_id = ''avatars''
+      AND auth.uid()::text = (storage.foldername(name))[1]
+    )';
 
--- Only the owner can delete their own avatar
-CREATE POLICY "Users can delete own avatar"
-  ON storage.objects FOR DELETE
-  USING (
-    bucket_id = 'avatars'
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
-
--- =====================================================
--- 2. THUMBNAILS — TIGHTEN DELETE POLICY
--- =====================================================
-
--- Only authenticated user who created the thumbnail can delete it
--- (thumbnails are stored under user_id/ prefix)
-CREATE POLICY "Users can delete own thumbnails"
-  ON storage.objects FOR DELETE
-  USING (
-    bucket_id = 'thumbnails'
-    AND auth.role() = 'authenticated'
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
+  -- Only authenticated user who created the thumbnail can delete it
+  EXECUTE 'CREATE POLICY "Users can delete own thumbnails"
+    ON storage.objects FOR DELETE
+    USING (
+      bucket_id = ''thumbnails''
+      AND auth.role() = ''authenticated''
+      AND auth.uid()::text = (storage.foldername(name))[1]
+    )';
+EXCEPTION
+  WHEN SQLSTATE '42P01' THEN
+    RAISE NOTICE 'storage.objects not available yet, skipping tighten storage policies';
+END;
+$$;
 
 -- Thumbnails upload already requires authentication (existing policy)
 -- Thumbnails view is public by design (shared boards)

@@ -15,6 +15,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "supabase:link": "supabase link --project-ref euxauavanukyfofhkrqp",
+    "supabase:link-prod": "supabase link --project-ref pgacjczecyfnwsaadyvj",
     "supabase:push": "supabase db push",
     "supabase:status": "supabase projects list",
     "supabase:diff": "supabase db diff"

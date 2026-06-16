@@ -1,12 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://tmcstudio.app/</loc><priority>1.0</priority></url>
-  <url><loc>https://tmcstudio.app/pricing</loc><priority>0.8</priority></url>
-  <url><loc>https://tmcstudio.app/download</loc><priority>0.6</priority></url>
-  <url><loc>https://tmcstudio.app/privacy</loc><priority>0.3</priority></url>
-  <url><loc>https://tmcstudio.app/terms</loc><priority>0.3</priority></url>
-  <url><loc>https://tmcstudio.app/cookies</loc><priority>0.3</priority></url>
-  <url><loc>https://tmcstudio.app/refunds</loc><priority>0.3</priority></url>
-  <url><loc>https://tmcstudio.app/legal</loc><priority>0.3</priority></url>
-  <url><loc>https://tmcstudio.app/accessibility</loc><priority>0.3</priority></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://tmcstudio.app/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://tmcstudio.app/"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://tmcstudio.app/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://tmcstudio.app/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tmcstudio.app/"/>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://tmcstudio.app/pricing"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://tmcstudio.app/pricing"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://tmcstudio.app/pricing"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tmcstudio.app/pricing"/>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/privacy</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/terms</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/cookies</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/refunds</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/legal</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://tmcstudio.app/accessibility</loc>
+    <priority>0.3</priority>
+  </url>
 </urlset>

@@ -300,7 +300,10 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
           cancelLabel={confirmModal.cancelLabel}
           danger={confirmModal.danger}
           onConfirm={confirmModal.onConfirm}
-          onCancel={closeConfirmModal}
+          onCancel={() => {
+            confirmModal.onCancel?.();
+            closeConfirmModal();
+          }}
         />
       )}
     </>

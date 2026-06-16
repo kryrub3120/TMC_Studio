@@ -2,8 +2,12 @@
  * analytics — privacy-aware, consent-gated event tracking.
  *
  * No events are sent unless the user granted analytics consent via the cookie
- * banner (see components/CookieConsentBanner). There is no provider wired yet;
- * events are structured-logged and ready to forward to Plausible/PostHog.
+ * banner (see components/CookieConsentBanner).
+ *
+ * Provider: Plausible-compatible API. Supports:
+ *  - `window.plausible` (if Plausible script is loaded)
+ *  - Fallback via `navigator.sendBeacon` to a self-hosted endpoint or Plausible
+ *    proxy (configure PLUASIBLE_HOST / VITE_PLAUSIBLE_HOST env var).
  *
  * Key product metric: time-to-first-export (TTFE) — proves the "30 seconds"
  * promise. We start a timer when the editor mounts and record the delta on the
@@ -11,6 +15,8 @@
  */
 import { logger } from './logger';
 import { getCookieConsent } from '../components/CookieConsentBanner';
+
+const PLAUSIBLE_HOST = import.meta.env.VITE_PLAUSIBLE_HOST || 'https://plausible.io';
 
 export const EVENTS = {
   LANDING_VIEW: 'landing_view',
@@ -33,11 +39,27 @@ function analyticsAllowed(): boolean {
   return getCookieConsent()?.analytics === true;
 }
 
+/** Forward an event to Plausible-compatible endpoint. */
+function forward(event: string, props: Record<string, unknown>): void {
+  try {
+    // If Plausible script is loaded, use it (supports custom props via callback)
+    if (typeof (window as any).plausible === 'function') {
+      (window as any).plausible(event, { props });
+      return;
+    }
+    // Fallback: sendBeacon to Plausible proxy endpoint
+    const payload = { name: event, url: window.location.href, domain: window.location.hostname, props };
+    const body = JSON.stringify(payload);
+    navigator.sendBeacon(`${PLAUSIBLE_HOST}/api/event`, new Blob([body], { type: 'application/json' }));
+  } catch {
+    // analytics failure is non-blocking — silently ignore
+  }
+}
+
 /** Track an event (no-op unless analytics consent was granted). */
 export function track(event: string, props: Record<string, unknown> = {}): void {
   if (!analyticsAllowed()) return;
-  // TODO(provider): forward to Plausible/PostHog, e.g.
-  //   (window as any).plausible?.(event, { props });
+  forward(event, props);
   logger.debug('[analytics]', event, props);
 }
 

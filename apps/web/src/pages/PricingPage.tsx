@@ -2,9 +2,9 @@
  * PricingPage — public `/pricing` page.
  *
  * Comparison of Guest / Free / Pro / Team built from the single source of
- * truth (`ENTITLEMENTS_BY_PLAN`). Upgrade CTAs route to `/app`, where the
- * existing auth + billing flow (PricingModal / useBillingController) handles
- * sign-in and Stripe Checkout — we don't duplicate checkout logic here.
+ * truth (`ENTITLEMENTS_BY_PLAN`). Paid CTAs route to `/app?upgrade=<plan>`,
+ * which auto-opens the in-app pricing modal (PricingModal / useBillingController)
+ * to start sign-in + Stripe Checkout — we don't duplicate checkout logic here.
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useTranslation, LanguageSwitcher } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
 import { ENTITLEMENTS_BY_PLAN, type Plan } from '../lib/entitlements';
+import { usePublicLightTheme } from './PublicPageShell';
 
 type Cycle = 'monthly' | 'yearly';
 
@@ -26,8 +27,30 @@ const PLANS: Plan[] = ['guest', 'free', 'pro', 'team'];
 
 export function PricingPage() {
   const { t } = useTranslation();
+  usePublicLightTheme();
   useDocumentMeta({ title: t('seo.pricing.title'), description: t('seo.pricing.description'), path: '/pricing' });
   useEffect(() => { track(EVENTS.PRICING_VIEW); }, []);
+
+  // Structured data: FAQPage for billing questions
+  useEffect(() => {
+    const faqData = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        { '@type': 'Question', name: t('pricingPage.faq.q1'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a1') } },
+        { '@type': 'Question', name: t('pricingPage.faq.q2'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a2') } },
+        { '@type': 'Question', name: t('pricingPage.faq.q3'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a3') } },
+        { '@type': 'Question', name: t('pricingPage.faq.q4'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a4') } },
+      ],
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'tmc-faq-structured-data';
+    script.textContent = JSON.stringify(faqData);
+    document.head.appendChild(script);
+    return () => { document.head.querySelector('#tmc-faq-structured-data')?.remove(); };
+  }, [t]);
+
   const [cycle, setCycle] = useState<Cycle>('monthly');
 
   const num = (v: number | 'unlimited') =>
@@ -80,7 +103,7 @@ export function PricingPage() {
                 key={c}
                 type="button"
                 onClick={() => setCycle(c)}
-                aria-pressed={cycle === c}
+                aria-current={cycle === c ? 'true' : undefined}
                 className={`rounded-md px-4 py-1.5 text-base font-medium transition-colors ${cycle === c ? 'bg-accent text-white' : 'text-muted hover:text-text'}`}
               >
                 {t(`pricingPage.billing.${c}`)}
@@ -97,8 +120,14 @@ export function PricingPage() {
           {PLANS.map((p) => {
             const m = planMeta[p];
             const highlight = p === 'pro';
+            const upgradeHref = p === 'pro' || p === 'team' ? `/app?upgrade=${p}` : '/app';
             return (
-              <div key={p} className={`flex flex-col rounded-xl border p-6 ${highlight ? 'border-accent bg-surface' : 'border-border bg-surface'}`}>
+              <div key={p} className={`relative flex flex-col rounded-xl border p-6 ${highlight ? 'border-accent bg-surface ring-1 ring-accent' : 'border-border bg-surface'}`}>
+                {highlight && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
+                    {t('pricing.mostPopular')}
+                  </span>
+                )}
                 <h2 className="text-xl font-semibold">{m.name}</h2>
                 <p className="mt-1 text-sm text-muted">{m.tagline}</p>
                 <div className="mt-4 flex items-end gap-1">
@@ -106,7 +135,7 @@ export function PricingPage() {
                   {m.period && <span className="pb-1 text-base text-muted">{m.period}</span>}
                 </div>
                 <Link
-                  to="/app"
+                  to={upgradeHref}
                   className={`mt-6 inline-flex items-center justify-center rounded-md px-4 py-2.5 text-base font-medium transition-colors ${highlight ? 'bg-accent text-white hover:bg-accent-hover' : 'border border-border text-text hover:bg-surface2'}`}
                 >
                   {m.cta}

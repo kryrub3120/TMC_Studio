@@ -519,9 +519,6 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
         </div>
         <span className="hidden sm:inline w-px h-3 bg-border shrink-0" />
         <div className="hidden sm:flex items-center gap-3 shrink-0">
-          <a href="/download" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/download'); } }} className="text-accent hover:text-accent-hover font-medium transition-colors cursor-pointer">
-            {t('footer.download')}
-          </a>
           <a href="/privacy" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/privacy'); } }} className="hover:text-text transition-colors cursor-pointer">
             {t('footer.privacy')}
           </a>
@@ -531,7 +528,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
           <a href="/cookies" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/cookies'); } }} className="hover:text-text transition-colors cursor-pointer">
             {t('footer.cookies')}
           </a>
-          <a href="mailto:support@tmcstudio.app" className="hover:text-text transition-colors">
+          <a href="mailto:support@tacticsmadeclear.store" className="hover:text-text transition-colors">
             {t('footer.contact')}
           </a>
           <a href="https://x.com/tmcstudio" target="_blank" rel="noopener noreferrer" className="hover:text-text transition-colors" aria-label={t('footer.social.x')}>

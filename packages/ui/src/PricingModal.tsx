@@ -5,6 +5,8 @@
 import { useState } from 'react';
 import { useTranslation } from './i18n.js';
 
+type Cycle = 'monthly' | 'yearly';
+
 // Stripe Price IDs — single source of truth for PricingModal
 // Keep in sync with apps/web/src/config/stripe.ts and netlify/functions/_stripeConfig.ts
 const STRIPE_PRICES = {
@@ -43,54 +45,42 @@ interface Plan {
   cta: string;
 }
 
-const plans: Plan[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 'Included',
-    priceId: '',
-    period: ' after sign-in',
-    microcopy: 'This is the default plan after login',
-    features: [
-      'Up to 3 projects',
-      'Cloud sync & backup',
-      'PNG export',
-      'Organize with folders',
-    ],
-    cta: 'Continue for free',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '$9',
-    priceId: STRIPE_PRICES.pro.monthly, // Real Stripe Price ID
-    period: '/month',
-    microcopy: 'For coaches who create a lot of drills and exports',
-    features: [
-      'Unlimited projects',
-      'GIF & PDF export',
-      'Unlimited steps',
-      'Priority support',
-    ],
-    highlighted: true,
-    cta: 'Upgrade to Pro',
-  },
-  {
-    id: 'team',
-    name: 'Team',
-    price: '$29',
-    priceId: STRIPE_PRICES.team.monthly, // Real Stripe Price ID
-    period: '/month',
-    microcopy: 'Pro + invite your staff by email',
-    features: [
-      '5 team members',
-      'Shared billing',
-      'Individual workspaces',
-      'Everything in Pro',
-    ],
-    cta: 'Upgrade to Team',
-  },
-];
+function getPlans(cycle: Cycle, t: (key: string) => string): Plan[] {
+  return [
+    {
+      id: 'free',
+      name: t('pricing.plans.free.name'),
+      price: t('pricing.plans.free.price'),
+      priceId: '',
+      period: t('pricing.plans.free.period'),
+      microcopy: t('pricing.plans.free.microcopy'),
+      features: t('pricing.plans.free.features').split('|'),
+      cta: t('pricing.plans.free.cta'),
+    },
+    {
+      id: 'pro',
+      name: t('pricing.plans.pro.name'),
+      price: cycle === 'yearly' ? '$90' : '$9',
+      priceId: cycle === 'yearly' ? STRIPE_PRICES.pro.yearly : STRIPE_PRICES.pro.monthly,
+      period: cycle === 'yearly' ? t('pricing.billing.perYear') : t('pricing.billing.perMonth'),
+      microcopy: t('pricing.plans.pro.microcopy'),
+      features: t('pricing.plans.pro.features').split('|'),
+      highlighted: true,
+      cta: t('pricing.plans.pro.cta'),
+    },
+    {
+      id: 'team',
+      name: t('pricing.plans.team.name'),
+      price: cycle === 'yearly' ? '$290' : '$29',
+      priceId: cycle === 'yearly' ? STRIPE_PRICES.team.yearly : STRIPE_PRICES.team.monthly,
+      period: cycle === 'yearly' ? t('pricing.billing.perYear') : t('pricing.billing.perMonth'),
+      microcopy: t('pricing.plans.team.microcopy'),
+      features: t('pricing.plans.team.features').split('|'),
+      highlighted: false,
+      cta: t('pricing.plans.team.cta'),
+    },
+  ];
+}
 
 export function PricingModal({
   isOpen,
@@ -101,10 +91,13 @@ export function PricingModal({
   user,
 }: PricingModalProps) {
   const { t } = useTranslation();
+  const [cycle, setCycle] = useState<Cycle>('monthly');
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const plans = getPlans(cycle, t);
 
   const handleSelectPlan = async (plan: Plan) => {
     // Free plan: Sign up for guests, no-op for existing Free users
@@ -192,6 +185,7 @@ export function PricingModal({
           </div>
           <button
             onClick={onClose}
+            aria-label={t('common.close')}
             className="p-2 hover:bg-surface2 rounded-lg transition-colors"
           >
             <svg
@@ -208,6 +202,26 @@ export function PricingModal({
               />
             </svg>
           </button>
+        </div>
+
+        {/* Billing cycle toggle */}
+        <div className="px-6 pt-2 pb-0 flex items-center justify-center gap-3">
+          <div className="inline-flex rounded-lg border border-border bg-surface2 p-1" role="group" aria-label="Billing cycle">
+            {(['monthly', 'yearly'] as Cycle[]).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCycle(c)}
+                aria-current={cycle === c ? 'true' : undefined}
+                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${cycle === c ? 'bg-accent text-white' : 'text-muted hover:text-text'}`}
+              >
+                {t(`pricing.billing.${c}`)}
+              </button>
+            ))}
+          </div>
+          {cycle === 'yearly' && (
+            <span className="text-xs font-medium text-accent">{t('pricing.billing.yearlyHint')}</span>
+          )}
         </div>
 
         {/* Plans */}

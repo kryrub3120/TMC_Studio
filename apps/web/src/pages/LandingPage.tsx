@@ -11,6 +11,7 @@ import { useTranslation, LanguageSwitcher } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { useEffect } from 'react';
 import { track, EVENTS } from '../lib/analytics';
+import { usePublicLightTheme } from './PublicPageShell';
 
 const Kbd = ({ children }: { children: React.ReactNode }) => (
   <kbd className="inline-flex items-center rounded-sm border border-border bg-surface2 px-1.5 py-0.5 font-mono text-xs text-text">
@@ -29,8 +30,50 @@ function Pillar({ title, desc }: { title: string; desc: string }) {
 
 export function LandingPage() {
   const { t } = useTranslation();
+  usePublicLightTheme();
   useDocumentMeta({ title: t('seo.landing.title'), description: t('seo.landing.description'), path: '/' });
   useEffect(() => { track(EVENTS.LANDING_VIEW); }, []);
+
+  // Structured data for SEO: SoftwareApplication + FAQPage
+  useEffect(() => {
+    const faqData = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'SoftwareApplication',
+          name: 'TMC Studio',
+          applicationCategory: 'Multimedia',
+          operatingSystem: 'Web, macOS, Windows',
+          offers: {
+            '@type': 'AggregateOffer',
+            offer: [
+              { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
+              { '@type': 'Offer', name: 'Pro', price: '9', priceCurrency: 'USD' },
+              { '@type': 'Offer', name: 'Team', price: '29', priceCurrency: 'USD' },
+            ],
+            priceCurrency: 'USD',
+          },
+          description: t('seo.landing.description'),
+          url: 'https://tmcstudio.app/',
+        },
+        {
+          '@type': 'FAQPage',
+          mainEntity: [
+            { '@type': 'Question', name: t('pricingPage.faq.q1'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a1') } },
+            { '@type': 'Question', name: t('pricingPage.faq.q2'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a2') } },
+            { '@type': 'Question', name: t('pricingPage.faq.q3'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a3') } },
+            { '@type': 'Question', name: t('pricingPage.faq.q4'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a4') } },
+          ],
+        },
+      ],
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'tmc-structured-data';
+    script.textContent = JSON.stringify(faqData);
+    document.head.appendChild(script);
+    return () => { document.head.querySelector('#tmc-structured-data')?.remove(); };
+  }, [t]);
 
   return (
     <div className="min-h-screen bg-bg font-sans text-text">
@@ -45,7 +88,6 @@ export function LandingPage() {
           <nav className="hidden items-center gap-6 md:flex" aria-label="Primary">
             <a href="#features" className="text-base text-muted hover:text-text">{t('landing.nav.features')}</a>
             <Link to="/pricing" className="text-base text-muted hover:text-text">{t('landing.nav.pricing')}</Link>
-            <Link to="/download" className="text-base text-muted hover:text-text">{t('landing.nav.download')}</Link>
           </nav>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
@@ -86,12 +128,8 @@ export function LandingPage() {
         <section id="how" className="border-t border-border bg-surface/40">
           <div className="mx-auto max-w-6xl px-4 py-16">
             <h2 className="text-center text-3xl font-bold tracking-tight">{t('landing.how.title')}</h2>
-            <ol className="mt-10 grid gap-6 md:grid-cols-3">
-              {[
-                { n: '1', k: 's1', kb: <Kbd>1–6</Kbd> },
-                { n: '2', k: 's2', kb: <><Kbd>A</Kbd> <Kbd>R</Kbd></> },
-                { n: '3', k: 's3', kb: <Kbd>Cmd+E</Kbd> },
-              ].map((s) => (
+            <div className="mt-10 grid gap-6 md:grid-cols-3" role="list">
+              {[{n:'1',k:'s1',kb:<Kbd>1–6</Kbd>},{n:'2',k:'s2',kb:<><Kbd>A</Kbd> <Kbd>R</Kbd></>},{n:'3',k:'s3',kb:<Kbd>Cmd+E</Kbd>}].map((s)=>(
                 <li key={s.n} className="rounded-lg border border-border bg-surface p-5">
                   <div className="flex items-center gap-2">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-sm font-bold text-white">{s.n}</span>
@@ -101,7 +139,7 @@ export function LandingPage() {
                   <p className="mt-1 text-base text-muted">{t(`landing.how.${s.k}Desc`)}</p>
                 </li>
               ))}
-            </ol>
+            </div>
           </div>
         </section>
 
@@ -123,15 +161,6 @@ export function LandingPage() {
             <p className="mt-4 text-lg text-muted">{t('landing.keyboard.desc')}</p>
             <p className="mt-4 text-base text-muted"><Kbd>Cmd+K</Kbd> — {t('landing.keyboard.palette')}</p>
           </div>
-        </section>
-
-        {/* Everywhere / download */}
-        <section className="mx-auto max-w-3xl px-4 py-16 text-center">
-          <h2 className="text-3xl font-bold tracking-tight">{t('landing.everywhere.title')}</h2>
-          <p className="mt-4 text-lg text-muted">{t('landing.everywhere.desc')}</p>
-          <Link to="/download" className="mt-6 inline-block rounded-md border border-border px-6 py-3 text-lg font-medium text-text transition-colors hover:bg-surface">
-            {t('landing.everywhere.cta')}
-          </Link>
         </section>
 
         {/* Use cases */}
@@ -175,7 +204,6 @@ export function LandingPage() {
             <Link to="/refunds" className="text-base text-muted hover:text-text">{t('landing.footer.refunds')}</Link>
             <Link to="/legal" className="text-base text-muted hover:text-text">{t('landing.footer.legalNotice')}</Link>
             <Link to="/accessibility" className="text-base text-muted hover:text-text">{t('landing.footer.accessibility')}</Link>
-            <Link to="/download" className="text-base text-muted hover:text-text">{t('footer.download')}</Link>
           </nav>
         </div>
         <div className="border-t border-border px-4 py-4 text-center text-sm text-muted">

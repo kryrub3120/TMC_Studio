@@ -1,45 +1,55 @@
 import { useTranslation } from '@tmc/ui';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
+import {
+  COMPANY_DETAILS,
+  CONTACT_EMAILS,
+  LegalLink,
+  LegalSection,
+  PublicPageShell,
+} from './PublicPageShell';
 
 export function LegalNoticePage() {
   const { t } = useTranslation();
+  const title = t('legal.legalNotice.title');
+  const description = t('legal.legalNotice.intro');
+  useDocumentMeta({ title: `${title} | TMC Studio`, description, path: '/legal' });
+
   return (
-    <div className="min-h-screen bg-bg text-text">
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-4xl font-bold mb-2">{t('legal.legalNotice.title')}</h1>
-        <p className="text-muted mb-8">{t('legal.legalNotice.intro')}</p>
-        <div className="prose prose-invert max-w-none space-y-6">
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">{t('legal.legalNotice.providerTitle')}</h2>
-            <p className="text-muted leading-relaxed whitespace-pre-line">{t('legal.legalNotice.providerBody')}</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">{t('legal.legalNotice.contactTitle')}</h2>
-            <p className="text-muted leading-relaxed">
-              {t('legal.legalNotice.contactBody')}{' '}
-              <a href="mailto:privacy@tmcstudio.app" className="text-accent hover:underline">privacy@tmcstudio.app</a>
-            </p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">{t('legal.legalNotice.vatTitle')}</h2>
-            <p className="text-muted leading-relaxed">{t('legal.legalNotice.vatBody')}</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">{t('legal.legalNotice.responsibleTitle')}</h2>
-            <p className="text-muted leading-relaxed">{t('legal.legalNotice.responsibleBody')}</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">{t('legal.legalNotice.odrTitle')}</h2>
-            <p className="text-muted leading-relaxed">
-              {t('legal.legalNotice.odrBody')}{' '}
-              <a href="https://ec.europa.eu/consumers/odr" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr</a>
-            </p>
-          </section>
-        </div>
-        <div className="mt-12 pt-8 border-t border-border">
-          <a href="/" className="inline-flex items-center gap-2 text-accent hover:underline">{t('legal.back')}</a>
-        </div>
-      </div>
-    </div>
+    <PublicPageShell title={title} description={description}>
+      <LegalSection title={t('legal.legalNotice.providerTitle')}>
+        <p className="whitespace-pre-line">
+          {COMPANY_DETAILS.name}{'\n'}
+          {COMPANY_DETAILS.address}{'\n'}
+          KRS: {COMPANY_DETAILS.krs}{'\n'}
+          NIP: {COMPANY_DETAILS.nip}{'\n'}
+          REGON: {COMPANY_DETAILS.regon}{'\n'}
+          {t('legal.legalNotice.registeredAt', { date: COMPANY_DETAILS.registeredAt })}
+        </p>
+      </LegalSection>
+
+      <LegalSection title={t('legal.legalNotice.contactTitle')}>
+        <p>
+          {t('legal.legalNotice.contactBody')}{' '}
+          <LegalLink href={`mailto:${CONTACT_EMAILS.legal}`}>{CONTACT_EMAILS.legal}</LegalLink>
+        </p>
+      </LegalSection>
+
+      <LegalSection title={t('legal.legalNotice.vatTitle')}>
+        <p>{t('legal.legalNotice.vatBody', { nip: COMPANY_DETAILS.nip })}</p>
+      </LegalSection>
+
+      <LegalSection title={t('legal.legalNotice.responsibleTitle')}>
+        <p>{t('legal.legalNotice.responsibleBody')}</p>
+      </LegalSection>
+
+      <LegalSection title={t('legal.legalNotice.odrTitle')}>
+        <p>
+          {t('legal.legalNotice.odrBody')}{' '}
+          <LegalLink href="https://ec.europa.eu/consumers/odr">https://ec.europa.eu/consumers/odr</LegalLink>
+        </p>
+      </LegalSection>
+    </PublicPageShell>
   );
 }
+
 export default LegalNoticePage;

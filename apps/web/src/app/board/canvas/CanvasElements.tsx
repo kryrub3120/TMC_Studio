@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { Layer, Line, Transformer } from 'react-konva';
+import { Layer, Line, Rect, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings, EquipmentElement } from '@tmc/core';
 import { isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement } from '@tmc/core';
@@ -12,6 +12,8 @@ import { Pitch, PlayerNode, BallNode, ArrowNode, ZoneNode, TextNode, ArrowPrevie
 
 export interface CanvasElementsProps {
   // Data
+  canvasWidth: number;
+  canvasHeight: number;
   elements: BoardElement[];
   selectedIds: string[];
   hiddenByGroup: Set<string>;
@@ -80,6 +82,8 @@ export interface CanvasElementsProps {
 export const CanvasElements = React.memo(function CanvasElements(props: CanvasElementsProps) {
   const {
     elements,
+    canvasWidth,
+    canvasHeight,
     selectedIds,
     hiddenByGroup,
     layerVisibility,
@@ -155,6 +159,17 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
       scaleX={groupZoom}
       scaleY={groupZoom}
     >
+      {isPrintMode && (
+        <Rect
+          x={0}
+          y={0}
+          width={canvasWidth}
+          height={canvasHeight}
+          fill="#ffffff"
+          listening={false}
+        />
+      )}
+
       <Pitch config={pitchConfig} pitchSettings={pitchSettings} gridVisible={gridVisible} />
 
       {/* Zones */}

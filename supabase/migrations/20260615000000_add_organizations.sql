@@ -137,7 +137,7 @@ CREATE TRIGGER on_organization_created
 -- Matches on token + the user's own email (so an invite can't be hijacked
 -- by a different account that merely guesses the token).
 CREATE OR REPLACE FUNCTION public.accept_invitation(p_token UUID)
-RETURNS TABLE (organization_id UUID, role TEXT) AS $$
+RETURNS TABLE (out_organization_id UUID, out_role TEXT) AS $$
 DECLARE
   v_invitation public.invitations;
   v_user_email TEXT;

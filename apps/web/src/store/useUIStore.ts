@@ -48,6 +48,7 @@ export interface ConfirmModalConfig {
   cancelLabel?: string;
   danger?: boolean;
   onConfirm: () => void;
+  onCancel?: () => void;
 }
 
 /** Layer visibility types */

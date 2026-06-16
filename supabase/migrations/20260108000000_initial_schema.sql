@@ -3,6 +3,11 @@
 -- Description: Creates core tables for user profiles, projects, sharing, and templates
 
 -- =====================================================
+-- 0. EXTENSIONS
+-- =====================================================
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+-- =====================================================
 -- 1. PROFILES TABLE (extends auth.users)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -216,46 +221,62 @@ CREATE POLICY "Authors can create templates"
   WITH CHECK (author_id = auth.uid());
 
 -- =====================================================
--- 6. STORAGE BUCKETS
+-- 6. STORAGE BUCKETS (wrapped for idempotency)
 -- =====================================================
 
--- Create storage bucket for project thumbnails
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('thumbnails', 'thumbnails', true)
-ON CONFLICT (id) DO NOTHING;
+DO LANGUAGE plpgsql $$
+BEGIN
+  -- Create storage bucket for project thumbnails
+  INSERT INTO storage.buckets (id, name, public)
+  VALUES ('thumbnails', 'thumbnails', true)
+  ON CONFLICT (id) DO NOTHING;
 
--- Create storage bucket for user avatars
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO NOTHING;
+  -- Create storage bucket for user avatars
+  INSERT INTO storage.buckets (id, name, public)
+  VALUES ('avatars', 'avatars', true)
+  ON CONFLICT (id) DO NOTHING;
+EXCEPTION
+  WHEN others THEN
+    -- storage schema may not be ready yet (async init) — skip gracefully
+    RAISE NOTICE 'storage.buckets not available yet, skipping bucket creation';
+END;
+$$;
 
--- Storage policies for thumbnails
-CREATE POLICY "Anyone can view thumbnails"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'thumbnails');
+-- Storage policies (wrapped for idempotency — storage schema may init async)
+DO LANGUAGE plpgsql $$
+BEGIN
+  -- Storage policies for thumbnails
+  EXECUTE 'CREATE POLICY "Anyone can view thumbnails"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = ''thumbnails'')';
 
-CREATE POLICY "Users can upload own thumbnails"
-  ON storage.objects FOR INSERT
-  WITH CHECK (
-    bucket_id = 'thumbnails' 
-    AND auth.role() = 'authenticated'
-  );
+  EXECUTE 'CREATE POLICY "Users can upload own thumbnails"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+      bucket_id = ''thumbnails'' 
+      AND auth.role() = ''authenticated''
+    )';
 
--- Storage policies for avatars
-CREATE POLICY "Anyone can view avatars"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'avatars');
+  -- Storage policies for avatars
+  EXECUTE 'CREATE POLICY "Anyone can view avatars"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = ''avatars'')';
 
-CREATE POLICY "Users can upload own avatar"
-  ON storage.objects FOR INSERT
-  WITH CHECK (
-    bucket_id = 'avatars' 
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
+  EXECUTE 'CREATE POLICY "Users can upload own avatar"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+      bucket_id = ''avatars'' 
+      AND auth.uid()::text = (storage.foldername(name))[1]
+    )';
 
-CREATE POLICY "Users can update own avatar"
-  ON storage.objects FOR UPDATE
-  USING (
-    bucket_id = 'avatars' 
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
+  EXECUTE 'CREATE POLICY "Users can update own avatar"
+    ON storage.objects FOR UPDATE
+    USING (
+      bucket_id = ''avatars'' 
+      AND auth.uid()::text = (storage.foldername(name))[1]
+    )';
+EXCEPTION
+  WHEN SQLSTATE '42P01' THEN
+    RAISE NOTICE 'storage.objects not available yet, skipping storage policies';
+END;
+$$;
