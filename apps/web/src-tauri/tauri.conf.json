@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm turbo run build --filter=@tmc/web^... && pnpm --filter=@tmc/web dev",
-    "beforeBuildCommand": "pnpm turbo run build --filter=@tmc/web"
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
     "windows": [
