@@ -29,8 +29,6 @@ export default defineConfig({
           'vendor-zustand': ['zustand'],
           // Split PDF generation (large library)
           'vendor-jspdf': ['jspdf'],
-          // Split HTML-to-image library
-          'vendor-html2canvas': ['html2canvas'],
           // Split GIF encoding (rarely used)
           'vendor-gif': ['gifenc'],
         },

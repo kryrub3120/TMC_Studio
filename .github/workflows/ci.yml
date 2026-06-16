@@ -7,10 +7,7 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '20'
-  # Node.js 24 migration — GitHub Actions runners will use Node 24 by default
-  # from June 16, 2026. This opt-in avoids deprecation warnings.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: '24'
 
 jobs:
   lint-and-typecheck:
@@ -82,7 +79,7 @@ jobs:
   #     - name: Checkout code
   #       uses: actions/checkout@v4
   #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v2
+  #       uses: pnpm/action-setup@v4
   #       with:
   #         version: 9
   #     - name: Setup Node.js

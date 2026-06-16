@@ -13,11 +13,6 @@ name: Desktop Release
 #            APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
 #   Windows: WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD
 
-env:
-  # Node.js 24 migration — GitHub Actions runners will use Node 24 by default
-  # from June 16, 2026. This opt-in avoids deprecation warnings.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 on:
   push:
     tags:
@@ -58,7 +53,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: pnpm
 
       - name: Install Rust toolchain
