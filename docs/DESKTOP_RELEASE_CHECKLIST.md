@@ -26,18 +26,34 @@ Workflow w Kroku 3 uruchamiasz wtedy na gałęzi `main`.
    (np. „Aplikacja desktop") i kliknij **Commit to main**.
 4. Kliknij **Push origin** (u góry).
 
-## Krok 2 — dodaj 2 sekrety PRODUKCYJNE (strona GitHuba, w przeglądarce)
+## Krok 2 — dodaj sekrety PRODUKCYJNE (strona GitHuba, w przeglądarce)
 Aplikacja desktop ma łączyć się z **produkcyjną** bazą (tą samą co live `tmcstudio.app`),
 NIE z deweloperską. Użyj wartości projektu PROD `pgacjczecyfnwsaadyvj`:
 
 GitHub → repo `TMC_Studio` → **Settings** → **Secrets and variables** → **Actions**
-→ **New repository secret**. Dodaj dwa:
+→ **New repository secret**. Dodaj:
 - `VITE_SUPABASE_URL` = `https://pgacjczecyfnwsaadyvj.supabase.co`
 - `VITE_SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnYWNqY3plY3lmbndzYWFkeXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1MjI3NDAsImV4cCI6MjA4MzA5ODc0MH0.w2IADZBnckX80lRmNu53JrE95W-UcZ1_oQfenRGyHpg`
 
 > Którą bazą gada desktop, decydują TE sekrety (przy buildzie), nie gałąź gita.
 > Wartości pochodzą z `apps/web/.env.local.prod.bak` (i z produkcyjnego buildu).
 > Uwaga: Stripe jest na razie w trybie TEST — płatności nie są jeszcze realne.
+
+### Krok 2.5 — podpis i notaryzacja macOS
+
+Jeśli `.dmg` ma otwierać się normalnie po pobraniu z internetu, dodaj też sekrety
+Apple Developer ID. Bez nich build może być technicznie poprawny, ale Gatekeeper
+pokaże komunikat „Apple nie może zweryfikować, czy TMC Studio nie zawiera
+szkodliwego oprogramowania”.
+
+Wymagane sekrety:
+- `APPLE_CERTIFICATE` — base64 z eksportu certyfikatu `.p12` Developer ID Application
+- `APPLE_CERTIFICATE_PASSWORD` — hasło ustawione przy eksporcie `.p12`
+- `APPLE_SIGNING_IDENTITY` — nazwa z `security find-identity -v -p codesigning`
+- `APPLE_ID` — e-mail konta Apple Developer
+- `APPLE_PASSWORD` — app-specific password dla Apple ID
+- `APPLE_TEAM_ID` — Team ID z Apple Developer
+- `KEYCHAIN_PASSWORD` — dowolne silne hasło do tymczasowego keychaina w CI
 
 ## Krok 3 — zbuduj wersję (jeden przycisk na stronie)
 GitHub → repo → zakładka **Actions** → po lewej **Desktop Release** →

@@ -97,10 +97,10 @@ Build instalatora `.dmg` lokalnie:
    window.location.origin`, co w Tauri to `tauri://localhost` i nie zadziała
    w embedded webview. Do testów działa **logowanie e-mail/hasło**. Pełny OAuth
    wymaga `tauri-plugin-deep-link` + custom scheme w Supabase (osobny krok).
-2. **Podpisywanie kodu** — bez certyfikatów buildy są niepodpisane:
-   - macOS: Gatekeeper pokaże ostrzeżenie (otwórz przez prawy klik → Open).
-     Docelowo: Apple Developer ID + notaryzacja.
-   - Windows: SmartScreen pokaże ostrzeżenie. Docelowo: certyfikat code-signing.
+2. **Podpisywanie kodu** — publiczne buildy macOS wymagają Apple Developer ID
+   + notaryzacji. Bez sekretów Apple w GitHub Actions Gatekeeper zablokuje appkę
+   albo pokaże ostrzeżenie; do testów można użyć prawy klik → Open / Privacy & Security.
+   Windows bez certyfikatu nadal może pokazać SmartScreen.
 3. **Auto-update** — można dodać `tauri-plugin-updater` + `latest.json` (osobny krok).
 4. **Ikona** — wygenerowana z `favicon.svg`. Dla finalnego logo:
    `pnpm tauri icon ścieżka/do/logo.png` (nadpisze `src-tauri/icons/`).
@@ -196,8 +196,8 @@ Kod updatera (Rust + popup `UpdatePrompt`) **zostaje w projekcie**, ale jest nie
 4. Workflow zbuduje macOS + Windows → **draft release** z instalatorami.
 5. Opublikuj draft → strona `/download` zaczyna działać.
 
-Instalatory są niepodpisane → przy pierwszym uruchomieniu:
-- macOS: prawy klik na aplikacji → **Open** (omija Gatekeeper),
+Instalatory bez sekretów Apple/Windows są niepodpisane → przy pierwszym uruchomieniu:
+- macOS: prawy klik na aplikacji → **Open** albo Privacy & Security → Open Anyway,
 - Windows: **More info → Run anyway** (SmartScreen).
 
 ### Włączenie auto-updatera PÓŹNIEJ (gdy zechcesz, darmowe)
@@ -209,5 +209,6 @@ Klucz updatera jest **darmowy i własny** (to nie cert Apple). Gdy będziesz got
 3. Sekrety: `TAURI_SIGNING_PRIVATE_KEY` (treść pliku klucza) + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 4. Wydaj nową wersję — od tej wersji aplikacja sama proponuje aktualizacje.
 
-(Cert Apple Developer / Windows code-signing to osobna, płatna sprawa — dopiero gdy
-pojawią się pierwsi klienci. Nie jest potrzebny do testów ani do updatera.)
+(Cert Apple Developer / Windows code-signing to osobna, płatna sprawa. Mac publiczny
+download wymaga Apple Developer ID + notaryzacji, jeśli ma otwierać się bez blokady
+Gatekeepera.)
