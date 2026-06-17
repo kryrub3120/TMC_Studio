@@ -63,6 +63,7 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 | `IMPLEMENTATION_CONTRACTS.md` | Kontrakty implementacyjne |
 | `DB_CONVENTIONS.md` | Reguly DB/Supabase |
 | `DESIGN_SYSTEM.md` | Reguly UI i design systemu |
+| `BRAND_ASSETS.md` | Logo, favicon, OG, social — konstrukcja i uzycie assetow marki |
 | `COMMANDS_MAP.md` | Mapa komend |
 | `DRAG_DROP_PATTERN.md` | Wzorce drag/drop canvasu |
 | `UX_PATTERNS.md` | Wzorce UX |

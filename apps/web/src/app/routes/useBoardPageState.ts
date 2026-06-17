@@ -567,7 +567,7 @@ export function useBoardPageState(props: BoardPageProps) {
 
     // Squad bench
     squad: boardDoc.squad ?? [],
-    squadVisible: boardDoc.squadVisible ?? true,
+    squadVisible: boardDoc.squadVisible ?? false,
     addSquadPlayer,
     removeSquadPlayer,
     setSquadVisible,

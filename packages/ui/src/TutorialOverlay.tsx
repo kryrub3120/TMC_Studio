@@ -315,6 +315,37 @@ const TeamDemo = () => {
   );
 };
 
+/**
+ * TourHand — animated hand/cursor that physically points at the spotlighted target.
+ * `tap` = pulse/tap motion (default). `drag` = drag-and-drop motion (squad step).
+ */
+const TourHand: React.FC<{ rect: TourRect; variant: 'tap' | 'drag' }> = ({ rect, variant }) => {
+  const x = rect.left + rect.width * 0.5;
+  const y = rect.top + rect.height * 0.6;
+  return (
+    <div
+      className="pointer-events-none absolute"
+      style={{ top: y, left: x, zIndex: 1 }}
+      aria-hidden="true"
+    >
+      {/* click ripple */}
+      <span className="tour-hand-ripple absolute -left-4 -top-4 block h-12 w-12 rounded-full border-2 border-accent/70" />
+      {/* hand cursor */}
+      <div className={variant === 'drag' ? 'tour-hand-drag' : 'tour-hand-tap'}>
+        <svg width="38" height="38" viewBox="0 0 32 32" className="drop-shadow-[0_3px_8px_rgba(0,0,0,0.5)]">
+          <path
+            d="M14 3.6a2 2 0 0 1 4 0V14h1.4V8.6a2 2 0 0 1 4 0V16h1.4v-2.6a2 2 0 0 1 4 0v7.8c0 5-3.4 8.2-8.4 8.2h-2c-3 0-4.9-1.3-6.5-3.5l-4.1-5.7a2 2 0 0 1 3.2-2.4L14 17.2V3.6Z"
+            fill="#FFFFFF"
+            stroke="#0B1220"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+};
+
 const StepDemo: React.FC<{ step: TutorialStep }> = ({ step }) => {
   switch (step.demo) {
     case 'shortcuts':
@@ -550,6 +581,10 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
         </div>
       )}
 
+      {targetRect && (
+        <TourHand rect={targetRect} variant={currentStep.demo === 'squad' ? 'drag' : 'tap'} />
+      )}
+
       {arrowPath && (
         <svg className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
           <defs>
@@ -690,6 +725,34 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
         @keyframes tour-orient {
           0%, 100% { transform: rotate(-24deg); }
           50% { transform: rotate(42deg); }
+        }
+
+        .tour-hand-tap { animation: tour-hand-tap 1500ms ease-in-out infinite; transform-origin: 8px 8px; }
+        .tour-hand-drag { animation: tour-hand-drag 2600ms ease-in-out infinite; transform-origin: 8px 8px; }
+        .tour-hand-ripple { animation: tour-hand-ripple 1500ms ease-out infinite; }
+
+        @keyframes tour-hand-tap {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          45% { transform: translate(-3px, -6px) scale(0.9); }
+          60% { transform: translate(-3px, -6px) scale(0.9); }
+        }
+
+        @keyframes tour-hand-drag {
+          0% { transform: translate(0, 0) scale(0.92); }
+          15% { transform: translate(0, 0) scale(0.82); }
+          70% { transform: translate(-60px, 90px) scale(0.82); }
+          85% { transform: translate(-60px, 90px) scale(0.92); }
+          100% { transform: translate(0, 0) scale(0.92); }
+        }
+
+        @keyframes tour-hand-ripple {
+          0% { transform: scale(0.4); opacity: 0; }
+          40% { opacity: 0.9; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .tour-hand-tap, .tour-hand-drag, .tour-hand-ripple, .tour-arrow, .tour-float, .tour-orient { animation: none !important; }
         }
       `}</style>
     </div>

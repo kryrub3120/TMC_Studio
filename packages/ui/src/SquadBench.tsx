@@ -233,7 +233,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   };
 
   return (
-    <div className="px-4 py-2 bg-surface border-t border-border" data-testid="squad-bench" data-tour="squad">
+    <div className="px-3 py-1.5 bg-surface" data-testid="squad-bench" data-tour="squad">
       {/* Header row */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
@@ -323,7 +323,8 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
           </div>
 
           {!canAccess && (
-            <p className="mb-2 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-1.5 text-[11px] leading-snug text-muted">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[10px] leading-tight text-muted/70">
+              <span className="inline-block h-1 w-1 shrink-0 rounded-full bg-amber-400/70" />
               {t('squadBench.freeLimitNotice', { freeLimit, premiumLimit: premiumPerTeamLimit })}
             </p>
           )}
@@ -436,10 +437,10 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
 
       {/* Collapsed hint */}
       {!visible && (
-        <p className="text-xs text-muted/60 italic flex items-center gap-1 animate-fade-in">
+        <p className="text-[11px] text-muted/60 italic flex items-center gap-1 animate-fade-in">
           {isEmpty
-            ? 'Set up your squad in Settings →'
-            : `${squad.length} player${squad.length !== 1 ? 's' : ''} in squad — tap eye to show`
+            ? t('squadBench.collapsedSetup')
+            : t('squadBench.collapsedCount', { count: squad.length })
           }
         </p>
       )}

@@ -881,6 +881,8 @@ export const en = {
     numberPlaceholder: '#',
     cancel: 'Cancel',
     dragHint: 'Drag a player onto the pitch to place them',
+    collapsedSetup: 'Set up your squad in Settings →',
+    collapsedCount: '{{count}} in squad — tap the eye to show',
   },
   pitchPanel: {
     title: 'Pitch Appearance',

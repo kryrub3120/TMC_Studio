@@ -259,7 +259,7 @@ export function BoardPage(props: BoardPageProps) {
         }}
       >
         {/* Canvas area */}
-      <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden p-4 relative">
+      <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden p-2 sm:p-3 relative">
           <BoardCanvasSection
             stageRef={state.stageRef}
             canvasWidth={state.canvasWidth}
@@ -478,21 +478,30 @@ export function BoardPage(props: BoardPageProps) {
         )}
       </div>
 
-      {/* Squad Bench — zawsze renderowany, SquadBench zarządza widocznością */}
-      {/* Bottom padding reserves space so content isn't hidden behind the floating bottom bar */}
-      <div style={{ paddingBottom: state.bottomBarHeight }}>
-      <SquadBench
-        squad={state.squad}
-        visible={state.squadVisible}
-        canAccess={state.authIsPro}
-        freeLimit={5}
-        premiumPerTeamLimit={25}
-        onToggle={state.toggleSquadVisible}
-        onOpenSettings={() => onOpenSettingsModal('squad')}
-        onDragStart={() => {}}
-        onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
-        onRemovePlayer={(id) => state.removeSquadPlayer(id)}
-      />
+      {/* Spacer — rezerwuje wysokość przyklejonego dolnego paska, by canvas nie chował się pod nim. */}
+      <div style={{ height: state.bottomBarHeight }} aria-hidden="true" />
+
+      {/* Squad Bench — pływający HUD nad dolnym paskiem.
+          NIE zabiera wysokości kolumny → boisko pozostaje dominującym obszarem roboczym.
+          Domyślnie zwinięty (squadVisible=false) = cienka belka. */}
+      <div
+        className="fixed left-0 right-0 z-floating flex justify-center px-3 pointer-events-none"
+        style={{ bottom: state.bottomBarHeight + 8 }}
+      >
+        <div className="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-surface/95 shadow-2xl backdrop-blur">
+          <SquadBench
+            squad={state.squad}
+            visible={state.squadVisible}
+            canAccess={state.authIsPro}
+            freeLimit={5}
+            premiumPerTeamLimit={25}
+            onToggle={state.toggleSquadVisible}
+            onOpenSettings={() => onOpenSettingsModal('squad')}
+            onDragStart={() => {}}
+            onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
+            onRemovePlayer={(id) => state.removeSquadPlayer(id)}
+          />
+        </div>
       </div>
       <SmartBottomBar
         elementCount={state.elements.length}

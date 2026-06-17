@@ -763,6 +763,8 @@ export const pl: Dictionary = {
     numberPlaceholder: '#',
     cancel: 'Anuluj',
     dragHint: 'Przeciągnij zawodnika na boisko, aby go ustawić',
+    collapsedSetup: 'Skonfiguruj kadrę w Ustawieniach →',
+    collapsedCount: '{{count}} w kadrze — kliknij oko, aby pokazać',
   },
   pitchPanel: {
     title: 'Wygląd boiska',

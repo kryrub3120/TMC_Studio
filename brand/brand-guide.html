@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMC Studio — Brand Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy:   #0B1220;
+    --teal:   #12CFA0;
+    --teal2:  #2EE6A6;
+    --teal-d: #0FB58C;
+    --slate:  #516079;
+    --muted:  #A7B3C9;
+    --light:  #E8EEF9;
+    --bg:     #F6F8FC;
+    --surface:#FFFFFF;
+    --border: #D7DFEA;
+  }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--navy);
+    padding: 80px 80px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(18,207,160,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(18,207,160,.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(18,207,160,.12);
+    border: 1px solid rgba(18,207,160,.3);
+    color: var(--teal);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 4px;
+    margin-bottom: 32px;
+  }
+  .hero h1 {
+    font-size: 72px;
+    font-weight: 800;
+    color: var(--teal);
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  .hero h1 span {
+    color: var(--light);
+    font-weight: 300;
+    font-size: 38px;
+    letter-spacing: 12px;
+    display: block;
+    margin-top: 6px;
+  }
+  .hero-sub {
+    color: var(--slate);
+    font-size: 16px;
+    margin-top: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+  .section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+  .section:last-child { border-bottom: none; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 40px;
+    letter-spacing: -0.5px;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  /* ── COLOR SWATCHES ── */
+  .swatch {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .swatch-color {
+    height: 100px;
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+  }
+  .swatch-hex {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.3);
+    color: white;
+  }
+  .swatch-info { padding: 14px 16px; background: white; }
+  .swatch-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .swatch-role { font-size: 12px; color: var(--slate); }
+
+  /* ── LOGO SHOWCASES ── */
+  .logo-card {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .logo-card-preview {
+    padding: 48px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+  }
+  .logo-card-preview img, .logo-card-preview svg { max-width: 100%; max-height: 120px; }
+  .logo-card-preview.dark { background: var(--navy); }
+  .logo-card-preview.light { background: var(--bg); }
+  .logo-card-preview.teal { background: var(--teal); }
+  .logo-card-info { padding: 16px 20px; background: white; border-top: 1px solid var(--border); }
+  .logo-card-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .logo-card-file { font-size: 12px; color: var(--slate); font-family: monospace; }
+  .logo-card-download {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--teal);
+    text-decoration: none;
+    border: 1px solid rgba(18,207,160,.3);
+    padding: 5px 12px;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+  .logo-card-download:hover { background: rgba(18,207,160,.08); }
+
+  /* ── TYPOGRAPHY ── */
+  .type-specimen {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 16px;
+  }
+  .type-meta { font-size: 11px; color: var(--slate); font-family: monospace; margin-bottom: 12px; letter-spacing: 1px; }
+  .type-800 { font-weight: 800; font-size: 48px; letter-spacing: -1.5px; line-height: 1; }
+  .type-700 { font-weight: 700; font-size: 32px; letter-spacing: -0.5px; }
+  .type-600 { font-weight: 600; font-size: 24px; }
+  .type-400 { font-weight: 400; font-size: 16px; color: var(--slate); }
+  .type-300 { font-weight: 300; font-size: 14px; color: var(--muted); }
+
+  /* ── SPACING / RADIUS ── */
+  .token-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .token-row:last-child { border-bottom: none; }
+  .token-demo { flex-shrink: 0; }
+  .token-name { font-size: 13px; font-weight: 600; min-width: 120px; font-family: monospace; }
+  .token-value { font-size: 13px; color: var(--slate); font-family: monospace; }
+  .spacing-demo { background: var(--teal); border-radius: 2px; height: 8px; }
+  .radius-demo { background: var(--navy); height: 32px; width: 80px; }
+
+  /* ── DO / DON'T ── */
+  .rule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rule-card {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .rule-header {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .rule-header.do { background: rgba(18,207,160,.1); color: #0a8f6e; }
+  .rule-header.dont { background: rgba(255,80,80,.08); color: #c0392b; }
+  .rule-body { padding: 16px; background: white; }
+  .rule-item { font-size: 13px; color: var(--navy); padding: 4px 0; }
+  .rule-item::before { content: "• "; color: var(--slate); }
+
+  /* ── ICON SET ── */
+  .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px; }
+  .icon-cell {
+    aspect-ratio: 1;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 8px;
+  }
+  .icon-cell svg { color: var(--navy); }
+  .icon-label { font-size: 10px; color: var(--slate); text-align: center; line-height: 1.2; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--navy);
+    color: var(--slate);
+    padding: 40px 80px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-logo { color: var(--teal); font-weight: 800; font-size: 20px; letter-spacing: -0.5px; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">Brand Identity System</div>
+    <h1>TMC <span>STUDIO</span></h1>
+    <p class="hero-sub">Draw tactics in seconds · Tactical Board & Animation · by Tactics Made Clear · v1.1 · 2026</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── 1. COLORS ── -->
+  <section class="section">
+    <div class="section-label">01 — Color System</div>
+    <div class="section-title">Brand Colors</div>
+
+    <div class="grid-4" style="margin-bottom:24px;">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#0B1220;">
+          <span class="swatch-hex">#0B1220</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Midnight Navy</div>
+          <div class="swatch-role">Primary · BG Dark</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#12CFA0;">
+          <span class="swatch-hex">#12CFA0</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Tactical Teal</div>
+          <div class="swatch-role">Accent · Hero Color</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#2EE6A6;">
+          <span class="swatch-hex">#2EE6A6</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Bright Teal</div>
+          <div class="swatch-role">Accent · Dark Mode</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#0FB58C;">
+          <span class="swatch-hex">#0FB58C</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Deep Teal</div>
+          <div class="swatch-role">Accent Hover</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-4">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#E8EEF9;">
+          <span class="swatch-hex" style="background:rgba(0,0,0,.15);color:#0B1220;">#E8EEF9</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Off White</div>
+          <div class="swatch-role">Text on Dark</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#516079;">
+          <span class="swatch-hex">#516079</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Slate</div>
+          <div class="swatch-role">Muted Text</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#F6F8FC; border-bottom:1px solid #D7DFEA;">
+          <span class="swatch-hex" style="background:rgba(0,0,0,.1);color:#0B1220;">#F6F8FC</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Cloud White</div>
+          <div class="swatch-role">BG Light</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#2d8a3e;">
+          <span class="swatch-hex">#2d8a3e</span>
+        </div>
+        <div class="swatch-info">
+          <div class="swatch-name">Pitch Green</div>
+          <div class="swatch-role">Field Color</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 2. TYPOGRAPHY ── -->
+  <section class="section">
+    <div class="section-label">02 — Typography</div>
+    <div class="section-title">Type System · Inter</div>
+
+    <div class="type-specimen">
+      <div class="type-meta">Inter 800 · Display / Logo</div>
+      <div class="type-800" style="color:#0B1220;">TMC Studio</div>
+    </div>
+    <div class="type-specimen">
+      <div class="type-meta">Inter 700 · Heading</div>
+      <div class="type-700">Tactical Board & Animation</div>
+    </div>
+    <div class="type-specimen">
+      <div class="type-meta">Inter 600 · Subheading</div>
+      <div class="type-600">Fast. Professional. Precise.</div>
+    </div>
+    <div class="type-specimen">
+      <div class="type-meta">Inter 400 · Body</div>
+      <div class="type-400">TMC Studio is a fast, professional football tactics board for analysts, coaches, and content creators. Built by Tactics Made Clear.</div>
+    </div>
+    <div class="type-specimen">
+      <div class="type-meta">Inter 300 · Caption / Meta</div>
+      <div class="type-300">Keyboard shortcut • Add Home Player • Press P</div>
+    </div>
+
+    <div style="background:#111B2E;border-radius:12px;padding:28px;margin-top:16px;border:1px solid #22314D;">
+      <div class="type-meta" style="color:#516079;">Letter-spacing for ALL-CAPS labels — 8–14px</div>
+      <p style="font-size:13px;font-weight:600;color:#2EE6A6;letter-spacing:12px;text-transform:uppercase;margin-top:8px;">STUDIO · TACTICS · ANIMATION</p>
+    </div>
+  </section>
+
+  <!-- ── 3. LOGO SYSTEM ── -->
+  <section class="section">
+    <div class="section-label">03 — Logo System</div>
+    <div class="section-title">Logo Variants</div>
+
+    <div class="grid-2" style="margin-bottom:24px;">
+      <div class="logo-card">
+        <div class="logo-card-preview dark">
+          <img src="logo-mark.svg" alt="Logo Mark Dark">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">Logo Mark — Dark (Primary)</div>
+          <div class="logo-card-file">logo-mark.svg</div>
+          <a href="logo-mark.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-card-preview light">
+          <img src="logo-mark-on-light.svg" alt="Logo Mark Light">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">Logo Mark — Light</div>
+          <div class="logo-card-file">logo-mark-on-light.svg</div>
+          <a href="logo-mark-on-light.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="logo-card" style="margin-bottom:24px;">
+      <div class="logo-card-preview dark" style="padding:48px 48px;">
+        <img src="logo-horizontal.svg" alt="Logo Horizontal" style="max-height:80px;">
+      </div>
+      <div class="logo-card-info">
+        <div class="logo-card-name">Horizontal Wordmark (Primary Use)</div>
+        <div class="logo-card-file">logo-horizontal.svg · Recommended for headers, nav bars, emails</div>
+        <a href="logo-horizontal.svg" download class="logo-card-download">↓ Download SVG</a>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="logo-card">
+        <div class="logo-card-preview dark">
+          <img src="logo-stacked.svg" alt="Logo Stacked" style="max-height:140px;">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">Stacked Logo</div>
+          <div class="logo-card-file">logo-stacked.svg · Square compositions</div>
+          <a href="logo-stacked.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-card-preview dark">
+          <img src="logo-white.svg" alt="Logo White" style="max-height:70px;">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">White / Monochrome</div>
+          <div class="logo-card-file">logo-white.svg · On colored backgrounds</div>
+          <a href="logo-white.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. SOCIAL / DIGITAL ── -->
+  <section class="section">
+    <div class="section-label">04 — Digital Assets</div>
+    <div class="section-title">Social & Web</div>
+
+    <div class="grid-3">
+      <div class="logo-card">
+        <div class="logo-card-preview dark" style="padding:24px;">
+          <img src="favicon.svg" style="width:64px;height:64px;image-rendering:pixelated;">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">Favicon</div>
+          <div class="logo-card-file">favicon.svg · 32×32</div>
+          <a href="favicon.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-card-preview dark" style="padding:20px;">
+          <img src="social-profile.svg" style="width:120px;height:120px;border-radius:50%;">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">Social Profile</div>
+          <div class="logo-card-file">social-profile.svg · Twitter / LinkedIn</div>
+          <a href="social-profile.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+      <div class="logo-card">
+        <div class="logo-card-preview dark" style="padding:16px;">
+          <img src="og-banner.svg" style="width:100%;border-radius:6px;">
+        </div>
+        <div class="logo-card-info">
+          <div class="logo-card-name">OG Banner / YouTube Header</div>
+          <div class="logo-card-file">og-banner.svg · 1200×630</div>
+          <a href="og-banner.svg" download class="logo-card-download">↓ Download SVG</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 5. DESIGN TOKENS ── -->
+  <section class="section">
+    <div class="section-label">05 — Spacing & Radii</div>
+    <div class="section-title">Design Tokens</div>
+
+    <div class="grid-2">
+      <div>
+        <p style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--slate);letter-spacing:2px;text-transform:uppercase;">Spacing</p>
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div class="token-row">
+            <div class="token-demo"><div class="spacing-demo" style="width:4px;"></div></div>
+            <div class="token-name">--spacing-xs</div>
+            <div class="token-value">4px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="spacing-demo" style="width:8px;"></div></div>
+            <div class="token-name">--spacing-sm</div>
+            <div class="token-value">8px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="spacing-demo" style="width:12px;"></div></div>
+            <div class="token-name">--spacing-md</div>
+            <div class="token-value">12px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="spacing-demo" style="width:16px;"></div></div>
+            <div class="token-name">--spacing-lg</div>
+            <div class="token-value">16px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="spacing-demo" style="width:24px;"></div></div>
+            <div class="token-name">--spacing-xl</div>
+            <div class="token-value">24px</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--slate);letter-spacing:2px;text-transform:uppercase;">Border Radius</p>
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div class="token-row">
+            <div class="token-demo"><div class="radius-demo" style="border-radius:4px;width:40px;height:24px;background:var(--navy);"></div></div>
+            <div class="token-name">--radius-sm</div>
+            <div class="token-value">4px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="radius-demo" style="border-radius:8px;width:40px;height:24px;background:var(--navy);"></div></div>
+            <div class="token-name">--radius-md</div>
+            <div class="token-value">8px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="radius-demo" style="border-radius:12px;width:40px;height:24px;background:var(--navy);"></div></div>
+            <div class="token-name">--radius-lg</div>
+            <div class="token-value">12px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="radius-demo" style="border-radius:16px;width:40px;height:24px;background:var(--navy);"></div></div>
+            <div class="token-name">--radius-xl</div>
+            <div class="token-value">16px</div>
+          </div>
+          <div class="token-row">
+            <div class="token-demo"><div class="radius-demo" style="border-radius:9999px;width:40px;height:24px;background:var(--navy);"></div></div>
+            <div class="token-name">--radius-full</div>
+            <div class="token-value">9999px</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 6. USAGE RULES ── -->
+  <section class="section">
+    <div class="section-label">06 — Usage Rules</div>
+    <div class="section-title">Do & Don't</div>
+
+    <div class="rule-grid">
+      <div class="rule-card">
+        <div class="rule-header do">✓ Do</div>
+        <div class="rule-body">
+          <div class="rule-item">Use the dark version on white/light backgrounds</div>
+          <div class="rule-item">Use the white version on teal or photo backgrounds</div>
+          <div class="rule-item">Keep logo mark clear space = 1× icon width on all sides</div>
+          <div class="rule-item">Use Tactical Teal (#12CFA0) as the sole accent color</div>
+          <div class="rule-item">Use Inter for all text across all channels</div>
+          <div class="rule-item">Letter-spacing 8–14px for ALL-CAPS labels</div>
+          <div class="rule-item">Maintain minimum logo size: 32px wide for mark only</div>
+        </div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-header dont">✗ Don't</div>
+        <div class="rule-body">
+          <div class="rule-item">Don't stretch or distort the logo</div>
+          <div class="rule-item">Don't place the dark logo on dark backgrounds</div>
+          <div class="rule-item">Don't recolor the logo in unauthorized colors</div>
+          <div class="rule-item">Don't add drop shadows or effects to the logo</div>
+          <div class="rule-item">Don't use the logo below 32px width</div>
+          <div class="rule-item">Don't mix Inter with decorative or serif fonts</div>
+          <div class="rule-item">Don't use low-contrast text (min 4.5:1 contrast ratio)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 7. VOICE ── -->
+  <section class="section">
+    <div class="section-label">07 — Brand Voice</div>
+    <div class="section-title">Tone & Messaging</div>
+
+    <div class="grid-3">
+      <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:28px;">
+        <div style="font-size:28px;margin-bottom:12px;">⚡</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:8px;">Fast & Precise</div>
+        <div style="font-size:13px;color:var(--slate);line-height:1.7;">Every interaction should feel instant. No bloat, no friction. Professionals need tools that keep up with their thinking.</div>
+      </div>
+      <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:28px;">
+        <div style="font-size:28px;margin-bottom:12px;">🎯</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:8px;">Tactical & Confident</div>
+        <div style="font-size:13px;color:var(--slate);line-height:1.7;">We speak the language of coaches and analysts. Direct, specific, no fluff. We know the game as well as our users do.</div>
+      </div>
+      <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:28px;">
+        <div style="font-size:28px;margin-bottom:12px;">🎬</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:8px;">Professional Creator</div>
+        <div style="font-size:13px;color:var(--slate);line-height:1.7;">Content creators deserve pro tools too. Studio-quality output, not just diagrams. We help ideas become shareable moments.</div>
+      </div>
+    </div>
+
+    <div style="background:var(--navy);border-radius:12px;padding:32px;margin-top:24px;">
+      <p style="font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--teal);margin-bottom:20px;">Tagline Options</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="color:var(--teal);font-size:18px;font-weight:800;line-height:1.4;">"Draw tactics<br>in seconds." <span style="font-size:11px;font-weight:600;opacity:.7;">PRIMARY</span></div>
+        <div style="color:var(--light);font-size:18px;font-weight:700;line-height:1.4;">"Draw it. Animate it.<br>Share it."</div>
+        <div style="color:var(--light);font-size:18px;font-weight:700;line-height:1.4;">"Where tactics<br>come to life."</div>
+        <div style="color:var(--light);font-size:18px;font-weight:700;line-height:1.4;">"Fast, professional<br>tactics for the modern game."</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-logo">TMC <span style="color:#516079;font-weight:300;font-size:14px;letter-spacing:6px;"> STUDIO</span></div>
+  <div>Brand Identity System · v1.1 · © 2026 Tactics Made Clear</div>
+</div>
+
+</body>
+</html>

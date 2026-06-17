@@ -763,6 +763,8 @@ export const es: Dictionary = {
     numberPlaceholder: '#',
     cancel: 'Cancelar',
     dragHint: 'Arrastra un jugador al campo para colocarlo',
+    collapsedSetup: 'Configura tu plantilla en Ajustes →',
+    collapsedCount: '{{count}} en plantilla — toca el ojo para mostrar',
   },
   pitchPanel: {
     title: 'Apariencia del campo',

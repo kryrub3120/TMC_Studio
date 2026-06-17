@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 200" width="880" height="200">
+  <g transform="translate(20, 20) scale(0.3125)">
+    <rect width="512" height="512" rx="96" fill="white" fill-opacity="0.12"/>
+    <g stroke="white" opacity="0.6" fill="none">
+      <rect x="50" y="241" width="10" height="30" stroke-width="5" stroke-linejoin="round"/>
+      <rect x="452" y="241" width="10" height="30" stroke-width="5" stroke-linejoin="round"/>
+      <rect x="60" y="115" width="392" height="282" stroke-width="7"/>
+      <path d="M 60 129 A 14 14 0 0 1 74 115" stroke-width="4"/>
+      <path d="M 438 115 A 14 14 0 0 1 452 129" stroke-width="4"/>
+      <path d="M 74 397 A 14 14 0 0 1 60 383" stroke-width="4"/>
+      <path d="M 452 383 A 14 14 0 0 1 438 397" stroke-width="4"/>
+      <line x1="256" y1="115" x2="256" y2="397" stroke-width="5"/>
+      <circle cx="256" cy="256" r="44" stroke-width="5"/>
+      <circle cx="256" cy="256" r="5" fill="white" stroke="none"/>
+      <rect x="60" y="181" width="62" height="150" stroke-width="4.5"/>
+      <circle cx="101" cy="256" r="4" fill="white" stroke="none"/>
+      <path d="M 122 224.3 A 38 38 0 0 1 122 287.7" stroke-width="4.5"/>
+      <rect x="390" y="181" width="62" height="150" stroke-width="4.5"/>
+      <circle cx="411" cy="256" r="4" fill="white" stroke="none"/>
+      <path d="M 390 224.3 A 38 38 0 0 0 390 287.7" stroke-width="4.5"/>
+    </g>
+    <g>
+      <path d="M 145 312 C 205 188, 315 182, 366 210" fill="none" stroke="rgba(11,18,32,0.55)" stroke-width="25" stroke-linecap="round"/>
+      <polygon points="400,228 350,227 373,187" fill="rgba(11,18,32,0.55)"/>
+      <circle cx="145" cy="312" r="18" fill="rgba(11,18,32,0.55)"/>
+      <path d="M 145 312 C 205 188, 315 182, 366 210" fill="none" stroke="white" stroke-width="15" stroke-linecap="round"/>
+      <polygon points="396,226 356,225 373,193" fill="white"/>
+      <circle cx="145" cy="312" r="13" fill="white"/>
+    </g>
+  </g>
+  <text x="200" y="114" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="800" font-size="80" fill="white" letter-spacing="-1">TMC</text>
+  <text x="202" y="160" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="400" font-size="34" fill="white" letter-spacing="10" opacity="0.72">STUDIO</text>
+</svg>

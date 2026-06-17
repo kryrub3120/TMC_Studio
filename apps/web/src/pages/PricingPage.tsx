@@ -12,7 +12,7 @@ import { useTranslation, LanguageSwitcher } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
 import { ENTITLEMENTS_BY_PLAN, type Plan } from '../lib/entitlements';
-import { usePublicLightTheme } from './PublicPageShell';
+import { usePublicDarkTheme } from './PublicPageShell';
 
 type Cycle = 'monthly' | 'yearly';
 
@@ -27,7 +27,7 @@ const PLANS: Plan[] = ['guest', 'free', 'pro', 'team'];
 
 export function PricingPage() {
   const { t } = useTranslation();
-  usePublicLightTheme();
+  usePublicDarkTheme();
   useDocumentMeta({ title: t('seo.pricing.title'), description: t('seo.pricing.description'), path: '/pricing' });
   useEffect(() => { track(EVENTS.PRICING_VIEW); }, []);
 

@@ -110,7 +110,7 @@ export interface BoardCanvasSectionProps {
 
 // ─── Constants ──────────────────────────────────────────────────────────
 const MIN_CONTAINER_SIZE = 200;
-const MAX_FIT_UPSCALE = 1.5;
+const MAX_FIT_UPSCALE = 2.4; // pitch is the hero — let it fill ~75-80% of the work area on laptops/Macs
 const PAN_CLAMP_MARGIN = 200;
 const WHEEL_ZOOM_FACTOR = 0.001; // sensitivity for Ctrl+wheel zoom
 
@@ -189,7 +189,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
         // pitch would bleed outside, force zoom to fit + center.
         // Bypasses viewportLocked — even locked, the board must never
         // be cut off by browser window changes.
-        const pad = cw < 768 ? 16 : 24;
+        const pad = cw < 768 ? 12 : 16;
         const newFitZoom = Math.min(
           (cw - pad) / canvasWidth,
           (ch - pad) / canvasHeight,
@@ -216,7 +216,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   // ─── Responsive container padding ────────────────────────────────────
   const containerPadding = useMemo(() => {
-    return containerSize.width < 768 ? 16 : 24;
+    return containerSize.width < 768 ? 12 : 16;
   }, [containerSize.width]);
 
   // ─── Fit-zoom computation ────────────────────────────────────────────
