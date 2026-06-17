@@ -1,14 +1,23 @@
 # TMC Studio — kolejny etap przed launch
 
-_Stan na 2026-06-16. Produkcyjny projekt Supabase potwierdzony: `pgacjczecyfnwsaadyvj`._
+_Stan na 2026-06-17. Wszystkie 15 migracji na produkcji, Local = Remote._
 
 ---
 
-## 1. Supabase (P0) — do odpalenia u Ciebie
+## 1. Supabase (P0) — ✅ ZROBIONE
 
-Z sandboxa nie ma sieci do `*.supabase.co` ani CLI, więc poniższe komendy
-odpalasz lokalnie. **Nie ma `db push` w ciemno** — najpierw `migration list`,
-potem `diff`, dopiero na końcu push.
+**6 migracji z 2026-06-15 zastosowanych na produkcji** (`20260615000000`–`20260615000005`).
+Wszystkie 15 migracji: Local = Remote.
+
+Proces:
+1. `supabase migration list --linked` — 6 migracji bez Remote znacznika
+2. Fix idempotencji w `20260615000003_tighten_storage_policies.sql` — dodano `DROP POLICY IF EXISTS`
+3. `supabase migration repair` — 6 MCP-wprowadzonych timestampów → `reverted`, 6 lokalnych → `applied`
+4. `supabase migration list --linked` — 15/15 zgodnych
+
+### Historyczna instrukcja (do odpalenia u siebie, gdyby trzeba było powtórzyć)
+
+Poniższe komendy byłyby potrzebne przy kolejnej partii migracji.
 
 ### Najpierw popraw konfigurację (inaczej wskażesz zły projekt!)
 

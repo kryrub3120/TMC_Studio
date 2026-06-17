@@ -28,11 +28,11 @@ Jesli inne dokumenty planistyczne mowia cos sprzecznego o kolejnych sprintach, t
 
 ## Stan obecny
 
-**Wszystkie sprinty A-G domknięte.** Kolejny krok to decyzja o betcie:
+**Wszystkie sprinty A-G domknięte. Migracje DB na produkcji (6/6).** Kolejny krok to decyzja o betcie:
 
 1. **Release-readiness assessment** — uruchomić `@Delivery` ze skillem `release-readiness`
 2. **Stripe QA** — uruchomić `@StripeTester`
-3. **Produkcyjne migracje DB** — `supabase db push`
+3. ~~Produkcyjne migracje DB~~ — `supabase db push` ✅ **ZROBIONE (2026-06-17)**
 4. **Netlify deploy** — wdrożenie
 5. **Beta launch**
 
@@ -47,9 +47,10 @@ Jesli inne dokumenty planistyczne mowia cos sprzecznego o kolejnych sprintach, t
 | 3 | Sprint G | ✅ DONE | Save Panel, ProjectsDrawer polish, pinned, rename, color chip, thumbnail |
 | 4 | Sprint E | ✅ DONE | Help Sidebar + Floating Help Button |
 | 5 | Sprint F | ✅ DONE | Coach Tour onboarding |
-| 6 | Release-readiness | NEXT | Pełna ocena gotowości do bety |
-| 7 | Stripe QA | NEXT | Weryfikacja checkout/webhook/subscription |
-| 8 | Sprint I/J/K/L | LATER | Post-beta / premium / team features |
+| 6 | **Produkcyjne migracje DB** | ✅ **DONE (2026-06-17)** | 6 migracji 20260615000000-05 na prod, Local=Remote |
+| 7 | Release-readiness | NEXT | Pełna ocena gotowości do bety |
+| 8 | Stripe QA | NEXT | Weryfikacja checkout/webhook/subscription |
+| 9 | Sprint I/J/K/L | LATER | Post-beta / premium / team features |
 
 ---
 - restart z Help Sidebar,

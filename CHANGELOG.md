@@ -5,6 +5,22 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-06-17
+
+### Security
+- **Supabase DB migracje na produkcję (6 migracji)** (2026-06-17)
+  - `20260615000000_add_organizations` — tabele organizacji i członkostwa
+  - `20260615000001_org_ownership_transfer` — transfer własności organizacji
+  - `20260615000002_simplify_org_roles` — uproszczenie ról (admin/coach → member)
+  - `20260615000003_tighten_storage_policies` — uszczelnienie polityk storage (avatars, thumbnails); dodano `DROP POLICY IF EXISTS` dla idempotencji
+  - `20260615000004_add_team_tables` — tabele teams/team_members
+  - `20260615000005_fix_accept_invitation_ambiguous_column` — fix kolumny w accept_invitation
+
+### Fixed
+- **Idempotencja storage policies** (2026-06-17)
+  - Dodano `DROP POLICY IF EXISTS` przed `CREATE POLICY` w `20260615000003_tighten_storage_policies.sql` — bezpieczne ponowne uruchomienie migracji.
+  - Plik: `supabase/migrations/20260615000003_tighten_storage_policies.sql`
+
 ## [0.6.0] - 2026-06-13
 
 ### Added

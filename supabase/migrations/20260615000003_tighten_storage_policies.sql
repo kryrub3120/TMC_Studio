@@ -1,5 +1,5 @@
 -- TMC Studio — Tighten Storage Bucket Policies
--- Migration: 20260615000000_tighten_storage_policies.sql
+-- Migration: 20260615000003_tighten_storage_policies.sql
 -- Description: Tighten RLS policies on storage buckets for security
 -- Changes:
 --   1. avatars: only user can upload/update to their own folder (already correct)
@@ -9,6 +9,10 @@
 
 DO LANGUAGE plpgsql $$
 BEGIN
+  -- Drop first to make this idempotent (safe to re-run or re-apply)
+  DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
+  DROP POLICY IF EXISTS "Users can delete own thumbnails" ON storage.objects;
+
   -- Only the owner can delete their own avatar
   EXECUTE 'CREATE POLICY "Users can delete own avatar"
     ON storage.objects FOR DELETE
