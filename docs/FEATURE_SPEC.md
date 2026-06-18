@@ -6,8 +6,8 @@
 
 ## Meta
 
-- **Version:** 0.6.0 (patrz `docs/VERSIONING.md`)
-- **Last Updated:** 2026-06-13 (v0.6.0 — Squad + redesign + i18n)
+- **Version:** 0.7.0 (patrz `docs/VERSIONING.md`)
+- **Last Updated:** 2026-06-18 (section 15: pricing & monetization)
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -56,7 +56,8 @@
 12. [Export](#12-export)
 13. [Save & Persistence](#13-save--persistence)
 14. [Onboarding & Help](#14-onboarding--help)
-15. [Appendices](#appendices)
+15. [Pricing & Plans](#15-pricing--plans)
+16. [Appendices](#appendices)
 
 ---
 
@@ -961,18 +962,25 @@ Available pitch themes (Inspector → Pitch tab):
 
 → See §1.2.7 for player orientation transform details
 
-### 4.3 Pitch Views
+### 4.3 Board Presets
 
-Pitch view modes (Inspector → Pitch → View):
+Pitch board presets (Top Bar → Boiska / Settings → Pitch):
 
-| View | Visible Area | Use Case |
-|------|--------------|----------|
-| `full` | Entire pitch | Default full field view |
-| `half-left` | Left half only | Attacking drills (home team) |
-| `half-right` | Right half only | Attacking drills (away team) |
-| `center` | Center third | Midfield focus |
+| Preset | `view` | Projection | Visible Area | Use Case |
+|------|------|------|------|------|
+| Full pitch | `full` | `flat` | 105 m × 68 m | Default whole-pitch tactics |
+| Half | `half` | `flat` | 64 m from goal line, full 68 m width | Build-up vs low block, high build-up, half-pitch coaching |
+| Penalty area | `penalty-area` | `flat` | 43 m from goal line, full 68 m width | Final-third / box-entry work without midfield clutter |
 
-**Implementation:** Visual crop only (elements outside view still selectable)
+**Binding product decisions:**
+
+- 3D / perspective board presets are removed from the product.
+- Region boards are not decorative rectangles. They are real tactical crops of the full pitch.
+- Half board extends beyond the halfway line so the centre circle is fully visible, as if the next part of the pitch continued naturally.
+- Penalty-area board extends toward midfield but does not draw the centre circle.
+- Region touchlines, goal line, penalty markings, goal-area markings, penalty spot, penalty arc and corner arcs are drawn in real pitch proportions.
+- There is no fake closing line at the end of the cropped region. The only horizontal/vertical line around midfield is the real halfway line.
+- Changing board preset resets the current drawing after confirmation.
 
 ### 4.4 Line Visibility
 
@@ -1705,6 +1713,77 @@ Dla Pro/Team — wszystkie opcje dostępne.
 ### 14.2 Help Sidebar Tutorial Restart
 
 The Help Sidebar exposes a tutorial restart action. Restarting clears the completed flag, sets `showTutorial`, and enables a force-visible state so the Coach Tour appears immediately on the current board.
+
+---
+
+## 15. Pricing & Plans
+
+### 15.1 Plan Overview
+
+TMC Studio has four plan types:
+
+| Plan | Auth required | Subscription tier | Description |
+|------|:---:|:---:|-------------|
+| **Guest** | ❌ | — | Anonymous, local-only, limited |
+| **Free** | ✅ | `free` | Default after sign-in, cloud sync |
+| **Pro** | ✅ | `pro` | Paid individual ($9/mo or $90/yr) |
+| **Team** | ✅ | `team` | Paid multi-seat ($29/mo or $290/yr) |
+
+### 15.2 Pricing Flow
+
+**Public page (`/pricing`):**
+- Accessible without auth, shows all 4 plans with comparison matrix.
+- Billing cycle toggle: Monthly (default) / Yearly ("Save 17%" badge).
+- CTA for Pro/Team opens `/app?upgrade=<plan>&cycle=<cycle>`.
+- Guest/Free CTA opens the board directly.
+
+**In-app modal (PricingModal):**
+- Triggered from: TopBar user menu, limit modals, keyboard shortcut, export gating, or `/app?upgrade=` param.
+- Shows 3 plans (Free/Pro/Team) with pricing from shared config.
+- Auth required for checkout: guest → sign-in first.
+- Checkout via `create-checkout` Netlify Function (CORS + auth enforced server-side).
+
+**Cycle propagation:**
+- `/pricing?upgrade=pro&cycle=yearly` → modal opens on yearly → yearly priceId sent to Stripe.
+- Default cycle: monthly.
+
+### 15.3 Prices (TEST mode)
+
+Prices defined in `packages/ui/src/pricingConfig.ts` (single source of truth):
+
+| Plan | Monthly | Yearly |
+|------|:---:|:---:|
+| **Pro** | $9 | $90 (Save 17%) |
+| **Team** | $29 | $290 (Save 17%) |
+
+Stripe Price IDs must stay in sync between:
+- `packages/ui/src/pricingConfig.ts` (frontend display + pricing modal)
+- `apps/web/src/config/stripe.ts` (frontend config)
+- `netlify/functions/_stripeConfig.ts` (backend allowlist)
+
+### 15.4 Team Value Proposition
+
+Section on `/pricing` page — "Perfect for clubs & staff":
+
+| Scenario | Cost |
+|:---------|:----:|
+| 5 separate Pro subscriptions | $45/mo ($450/yr) |
+| Team plan | $29/mo ($290/yr) |
+| **Savings** | **$16/mo ($160/yr)** |
+
+Team plan does **not** include shared library/shared projects before launch (only shared billing and seats).
+
+### 15.5 Price Display
+
+- All prices in USD. EU consumers see VAT-inclusive amounts at checkout (Stripe Tax).
+- No fake urgency, no countdown timers, no "limited time" badges.
+- Yearly badge: "Save 17%" (rounded from 16.7%).
+- Yearly hint: "2 months free".
+
+### 15.6 Trial
+
+- **Not implemented.** Free plan has enough premium-adjacent features to demonstrate value.
+- Re-evaluate post-launch with activation analytics.
 
 ---
 

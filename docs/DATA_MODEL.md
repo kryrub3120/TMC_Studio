@@ -348,9 +348,22 @@ interface PitchSettings {
   lineColor: string;          // Pitch markings color
   showStripes: boolean;
   orientation: PitchOrientation;  // 'landscape' | 'portrait'
-  view: PitchView;            // Always 'full' (legacy field for backward compat)
+  view: PitchView;            // Active presets: 'full' | 'half' | 'penalty-area'
+  projection?: PitchProjection; // Active board presets use 'flat'; legacy 'perspective' is normalized to flat rendering
   lines: PitchLineSettings;   // Line visibility (toggled via "Without Lines" in UI)
 }
+
+type PitchBoardId = 'full' | 'half-2d' | 'penalty-2d';
+
+// Board geometry constants in packages/core/src/types.ts:
+// HALF_BOARD_DEPTH_M = 64
+// PENALTY_BOARD_DEPTH_M = 43
+//
+// These are real pitch crops:
+// - Full: full 105m x 68m.
+// - Half: full width, 64m from goal line, including the full centre circle.
+// - Penalty: full width, 43m from goal line, no centre circle.
+// 3D/perspective board presets are not active product scope.
 
 interface PitchLineSettings {
   showOutline: boolean;       // Pitch boundary
@@ -362,7 +375,7 @@ interface PitchLineSettings {
   showPenaltySpots: boolean;  // Penalty spots
 }
 
-// Note: PitchPanel UI simplified to single "Without Lines" toggle
+// Note: PitchPanel UI simplified to three board presets and one "Without Lines" toggle
 // - OFF (default): All lines visible (DEFAULT_LINE_SETTINGS)
 // - ON: All lines hidden (PLAIN_PITCH_LINES)
 ```
@@ -750,6 +763,7 @@ The `document` column stores the complete `BoardDocument`:
     "showStripes": true,
     "orientation": "landscape",
     "view": "full",
+    "projection": "flat",
     "lines": {
       "showOutline": true,
       "showCenterLine": true,

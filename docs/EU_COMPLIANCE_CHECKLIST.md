@@ -28,4 +28,4 @@ Status implementacji warstwy prawnej po sprincie S4. ✅ = wdrożone w kodzie ·
 ## Powiązania
 - VAT / faktury / checkbox odstąpienia: `STRIPE_TAX_SETUP.md`
 - Pełny kontekst wymogów: `SITE_ARCHITECTURE.md` §4
-- Plan sprintów: `tasks/WEBSITE_LAUNCH_SPRINT_PLAN.md`
+- Plan sprintów: `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`

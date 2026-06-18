@@ -1,10 +1,37 @@
 # 🎯 Plan przebudowy systemu pomocy i tutoriala
 
-**Data:** 2026-06-15
-**Status:** H1 ✅ DONE, H2 ✅ DONE, Epik H (Team Setup) ✅ DONE, H3 ✅ DONE
-**Wersja doc:** 1.1.0
-**Wersja implementacji:** Tutorial role-aware z 8 krokami + storytelling trenerski
-**Bazowany na:** `docs/PLAN_BRAKUJACYCH_FUNKCJI.md`, `docs/FEATURE_SPEC.md`, `docs/ENTITLEMENTS.md`, `docs/CURRENT_SPRINT_PLAN.md`, kodzie źródłowym
+**Data:** 2026-06-15 (zaktualizowano 2026-06-18)
+**Status:** H1 ✅ DONE, H2 ✅ DONE, Epik H (Team Setup) ✅ DONE, H3 ✅ DONE, **Coach Tour v2 ✅ DONE**
+**Wersja doc:** 1.2.0
+**Wersja implementacji:** Coach Tour v2 — jeden tutorial (9 kroków) dla wszystkich planów, ujawnianie realnych paneli
+**Bazowany na:** `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`, `docs/FEATURE_SPEC.md`, `docs/ENTITLEMENTS.md`, `docs/CURRENT_SPRINT_PLAN.md`, kodzie źródłowym. Historyczny plan bazowy: `docs/archive/planning/PLAN_BRAKUJACYCH_FUNKCJI_2026-06-10_SUPERSEDED.md`.
+
+---
+
+## 🔄 Aktualizacja 2026-06-18 — Coach Tour v2 (reveal-based)
+
+Tutorial przeszedł przebudowę z modelu „etykieta na elemencie" na **ujawnianie realnego UI**. Kluczowe różnice względem v1:
+
+- **Jeden tutorial dla wszystkich planów.** `getStepsForPlan()` zwraca te same 9 kroków niezależnie od planu (guest/free/pro/team). Wcześniejszy wariant „krok 9 tylko dla team" został usunięty.
+- **Każdy krok otwiera prawdziwy element**, a `TutorialOverlay` mierzy go po otwarciu (callback `onStepShow` → `BoardPage.handleTutorialStepShow`):
+  | Krok | Element ujawniany | Mechanizm |
+  |------|-------------------|-----------|
+  | 1 Zawodnicy | rozwijane menu „Zawodnicy" | prop `tutorialMenu='players'` → `PlayersMenu` |
+  | 2 Strzałki | menu „Strzałki" | `tutorialMenu='arrows'` |
+  | 3 Kierunek | Inspektor + zaznaczony zawodnik, sekcja „Zaawansowane" (orientacja/ramiona/stożek) | `selectElement` + `setInspectorOpen` |
+  | 4 Sprzęt | menu „Sprzęt" | `tutorialMenu='equipment'` |
+  | 5 Kadra | rozwinięta Ławka składu | `setSquadVisible(true)` |
+  | 6 Animacja | dolny pasek animacji / oś kroków | `setBottomBarHeight` + flaga animacji |
+  | 7 Zapis | szuflada Projektów | `onOpenProjectsDrawer` |
+  | 8 Eksport | menu „Eksport" | `tutorialMenu='export'` |
+  | 9 Ustawienia | pływający modal Ustawień | `onOpenSettingsModal` |
+- **Spotlight celuje w panele**, nie w przyciski — panele menu/szuflada/modal mają własne `data-tour` (`players-menu`, `arrows-menu`, `equipment-menu`, `export-menu`, `projects-panel`, `settings-modal`). `--z-tutorial` podniesiony do 55, by karta i podświetlenie były nad pełnoekranowymi overlayami (z-50).
+- **Krok 9 = „Zarządzaj swoimi ustawieniami"** (zamiast „Zarządzaj klubem"). `TEAM_STEP` → `SETTINGS_STEP`.
+- **Finalny przycisk:** „Stwórz swoją pierwszą grafikę" (`tutorial.finish`).
+- **Nawigacja ręczna** (←/→/Enter/Esc), bez auto-przewijania. Atrapy-demo w karcie tylko jako fallback bez realnego celu.
+- **`ClubWelcomeModal` wyłączony** (auto-open) — był nieprzetłumaczony (`club.welcome.*`) i dublował tutorial; club/team przechodzą to samo jedno onboarding.
+
+Pliki: `packages/ui/src/{TutorialOverlay,tutorialSteps,TopBar,ProjectsDrawer,SettingsModal,RightInspector}.tsx`, `theme/tokens.css`, `locales/*`; `apps/web/src/app/board/{BoardPage,BoardTopBarSection}.tsx`, `routes/useBoardPageState.ts`, `AppShell.tsx`.
 
 ---
 

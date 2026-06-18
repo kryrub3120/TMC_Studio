@@ -5,6 +5,76 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Edytor: groty strzałek, grubość linii, obrys stref + domyślne style użytkownika** (2026-06-18)
+  - Strzałki: wybór grota początkowego/końcowego (strzałka / brak / kreska / punkt), skróty „Podwójny grot" / „Ukryj groty", suwak grubości linii (1–12 px), żywy podgląd. Model: `ArrowElement.startHead?/endHead?`; render w `ArrowNode` — groty jako osobne kształty zorientowane wg stycznej, działają też na krzywych.
+  - Strefy: sekcja w inspektorze — styl linii granicznej (ciągła/przerywana/brak), grubość (1–8 px), kolor obrysu (próbki + własny), markery narożne. Model: `ZoneElement.borderWidth?/showCorners?`.
+  - Domyślne style użytkownika: `ArrowDefaults` (grubość per typ pass/run/shoot/dribble + groty) i `ZoneDefaults` (obrys/wypełnienie/krycie) w `@tmc/core`; trzymane i persystowane w `useUIStore`. Nowe strzałki/strefy startują z tymi wartościami.
+  - „Ustaw jako domyślne" w inspektorze (strzałka i strefa) zapisuje bieżący wygląd jako domyślny; pełny edytor + „Przywróć domyślne" w Ustawienia → Preferencje.
+  - i18n: pl/en/es.
+  - Pliki: `packages/core/src/types.ts`, `packages/board/src/{ArrowNode,ZoneNode}.tsx`, `packages/ui/src/{RightInspector,SettingsModal,primitives}.tsx`, `apps/web/src/store/{useUIStore,slices/elementsSlice}.ts`, `apps/web/src/app/board/{BoardPage,useBoardPageHandlers}.tsx`, `routes/useBoardPageState.ts`, `orchestrators/ModalOrchestrator.tsx`, `AppShell.tsx`, `locales/{en,pl,es}.ts`.
+
+### Changed
+- **Inspektor + dolny pasek + ławka składu — układ i kondensacja** (2026-06-18)
+  - Sekcja strzałki skondensowana: grubość + groty start/koniec obok siebie (2 kolumny) + akcje w jednym rzędzie (set-default jako ikona).
+  - Domyślna szerokość inspektora 280 → 340 px (`DEFAULT_INSPECTOR_WIDTH` w `RightInspector` i `useUIStore`).
+  - Ławka składu: jeden poziomy pasek — przełącznik składu po lewej (większy/wyraźniejszy), zawodnicy w poziomym scrollu, ikony po prawej; ~2× niższa.
+  - Ławka i pasek animacji przeniesione do normalnego flow (pełna szerokość); obszar roboczy sam się dokleja, bez rezerwowanej pustej przestrzeni. Pasek animacji można ukryć (zwijanie podpięte do `bottomBarCollapsed` + `onToggleCollapsed`).
+  - Pliki: `packages/ui/src/{RightInspector,SquadBench,SmartBottomBar}.tsx`, `apps/web/src/app/board/BoardPage.tsx`, `apps/web/src/store/useUIStore.ts`.
+
+### Fixed
+- **i18n: brakujące klucze (surowe „topbar.pitch" itd.)** (2026-06-18)
+  - Dodano 14 brakujących kluczy w pl/en/es: `topbar.pitch/pitchTitle`, `pitchPanel.boardView/boardResetTitle/boardResetDesc/boardResetConfirm`, `commands.toast.{groupUngrouped,selectionLockToggled,selectionLocked,selectionUnlocked}`, `common.close/saving`, `tutorial.finish`, `appToast.clubCreated`.
+- **PR-4/PR-5: opcje widoczne w inspektorze, ale bez efektu** (2026-06-18)
+  - Dowiązano logikę: nowe akcje `updateArrowStyle`/`updateZoneStyle` w store, routing w `handleUpdateElement`, mapowanie `startHead/endHead/border*` w `inspectorElement`.
+- **Strefy: niewidoczny obrys / „nie działa" grubość** (2026-06-18)
+  - `ZoneNode`: obrys renderowany jako osobny, w pełni kryjący kształt (wcześniej dziedziczył niskie krycie wypełnienia → był niewidoczny, a zmiana grubości pozornie nic nie robiła); domyślny kolor obrysu = przyciemnione wypełnienie. Dynamiczny `strokeWidth`/dash + markery narożne.
+- **Inspektor: brak przewijania do końca (ucięty dół, „dziura")** (2026-06-18)
+  - `PropsTab`: sztywne `max-h-[calc(100vh-180px)]` → `h-full overflow-y-auto pb-6` — dół sekcji (m.in. przycisk „Ustaw jako domyślne") jest teraz dostępny.
+- **Zdublowany / przelewający się widok planszy** (2026-06-18)
+  - Po przeniesieniu dolnego paska do normalnego flow wiersz główny dostał `min-h-0`, dzięki czemu kolumna `h-screen` znów mieści się w jednym ekranie (boisko poprawnie się kurczy).
+
+### Added
+- **Pricing: shared config + cycle propagation + Team calculator** (2026-06-18)
+  - Utworzono `packages/ui/src/pricingConfig.ts` — jedno źródło prawdy dla display prices i Stripe Price IDs (DISPLAY_PRICES, STRIPE_PRICES, SAVE_PERCENT).
+  - PricingModal przyjmuje `initialCycle` prop — cykl wybrany na `/pricing` (monthly/yearly) zachowuje się w checkout.
+  - `/pricing` → `/app?upgrade=pro&cycle=yearly` → PricingModal otwiera się na yearly, używa yearly priceId.
+  - "Save 17%" badge przy yearly toggle w PricingPage i PricingModal.
+  - Team kalkulator na `/pricing`: 5×Pro ($45/mo) vs Team ($29/mo) — oszczędność $16/mo ($160/yr).
+  - i18n: teamCalc sekcja w en/pl/es.
+  - Trial: nie implementowany (decyzja: Free ma dość funkcji by pokazać wartość).
+
+### Changed
+- **Tutorial (Coach Tour) — przebudowa: ujawnianie realnych elementów** (2026-06-18)
+  - Każdy krok teraz *otwiera i podświetla prawdziwy element UI* zamiast pokazywać atrapę w karcie:
+    - Kroki 1/2/4/8 otwierają realne rozwijane menu paska (Zawodnicy / Strzałki / Sprzęt / Eksport) — przez nowy sterowany prop `tutorialMenu` przekazany do `PlayersMenu/ArrowsMenu/EquipmentMenu/ExportMenu`; spotlight celuje w panel menu (`data-tour` na panelach, nie na przyciskach).
+    - Krok 3 (Kierunek) zaznacza zawodnika i otwiera Inspektor z sekcją „Zaawansowane" (orientacja / ramiona / stożek widzenia) — sekcja domyślnie rozwinięta.
+    - Krok 5 rozwija Ławkę składu, krok 6 podnosi pasek animacji, krok 7 otwiera szufladę Projektów, krok 9 otwiera pływający modal Ustawień.
+  - Mechanizm: nowy callback `onStepShow` w `TutorialOverlay` + reveal-actions w `BoardPage.handleTutorialStepShow`; pomiar celu po animacji otwarcia panelu (seria prób repozycjonowania 0–520 ms). Pełnoekranowe panele (szuflada Projektów, modal Ustawień) otwierane tylko na swoim kroku i zamykane przy przejściu/zamknięciu.
+  - Usunięto auto-przewijanie kroków → nawigacja ręczna + klawiatura (←/→/Enter/Esc). Atrapa-demo w karcie pokazywana tylko jako fallback, gdy nie ma realnego celu. Dodano pulsujący spotlight; `--z-tutorial` podniesiony 38 → 55 (nad overlayami z-50).
+  - Pliki: `packages/ui/src/TutorialOverlay.tsx`, `tutorialSteps.ts`, `TopBar.tsx`, `ProjectsDrawer.tsx`, `SettingsModal.tsx`, `RightInspector.tsx`, `theme/tokens.css`; `apps/web/src/app/board/BoardPage.tsx`, `BoardTopBarSection.tsx`, `routes/useBoardPageState.ts`, `AppShell.tsx`.
+- **Jeden tutorial dla wszystkich planów; krok 9 = Ustawienia** (2026-06-18)
+  - `getStepsForPlan` dołącza krok 9 dla *każdego* planu (wcześniej tylko `team`). Krok 9: „Zarządzaj swoimi ustawieniami" → otwiera modal Ustawień. `TEAM_STEP` przemianowany na `SETTINGS_STEP` (alias zachowany dla zgodności).
+  - Finalny przycisk tutoriala zawsze „Stwórz swoją pierwszą grafikę" (nowy klucz i18n `tutorial.finish`, PL/EN/ES) zamiast „Zacznij trenować".
+  - Wyłączono auto-otwieranie osobnego `ClubWelcomeModal` — eliminuje nieprzetłumaczony ekran `club.welcome.*`; club/team dostają to samo jedno przejście tutoriala.
+  - Pliki: `packages/ui/src/tutorialSteps.ts`, `locales/{en,pl,es}.ts`, `apps/web/src/app/AppShell.tsx`.
+
+### Added
+- **Moduł animacji włączony (dev)** (2026-06-18)
+  - `VITE_ANIMATION_ENABLED=true` w `.env.local` — widoczny dolny pasek animacji / oś kroków + skróty (N / L / X, ←/→, Space). Produkcja/Netlify: ustawić tę zmienną w dashboardzie hostingu.
+  - Plik: `.env.local`.
+
+### Fixed
+- **Dark mode — kontrast „czarnych" napisów** (2026-06-18)
+  - Ławka składu: chipy zawodników `bg-surface` → `bg-surface2` (kontrast względem tła ławki); etykiety / liczniki / podpowiedź „Przeciągnij…" `text-muted/60–80` → pełny `text-muted`.
+  - Paleta poleceń: niezaznaczone pozycje `text-text/80` → `text-text`.
+  - Pliki: `packages/ui/src/SquadBench.tsx`, `CommandPaletteModal.tsx`.
+- **Tutorial — pętla aktualizacji Reacta** (2026-06-18)
+  - Efekt „reveal" zależny wyłącznie od indeksu kroku (callbacki trzymane w refach) + zabezpieczone settery paneli — usuwa „Maximum update depth exceeded".
+  - Plik: `packages/ui/src/TutorialOverlay.tsx`.
+
 ## [0.6.1] - 2026-06-17
 
 ### Security

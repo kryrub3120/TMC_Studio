@@ -30,6 +30,8 @@ Open http://localhost:5173
 | **Elements** |  |
 | Add Home Player | `P` |
 | Add Away Player | `Shift+P` |
+| Add Team 3 Player | `Alt+P` |
+| Add Team 4 Player | `Alt+Shift+P` |
 | Add Ball | `B` |
 | Add Pass Arrow | `A` (then drag) |
 | Add Run Arrow | `R` (then drag) |
@@ -50,11 +52,12 @@ Open http://localhost:5173
 | Delete | `Delete` / `Backspace` |
 | Undo | `Cmd/Ctrl+Z` |
 | Redo | `Shift+Cmd/Ctrl+Z` |
-| Cycle Player Shape | `S` |
+| Cycle Player Shape | `Shift+S` |
 | Cycle Zone Shape | `E` |
+| Lock / Unlock Selection | `Shift+L` |
 | **Groups** |  |
 | Create Group | `Cmd/Ctrl+G` |
-| Ungroup | `Cmd/Ctrl+Shift+G` |
+| Ungroup | `Alt+G` |
 | **View & Pitch** |  |
 | Toggle Inspector | `I` |
 | Focus Mode | `F` |

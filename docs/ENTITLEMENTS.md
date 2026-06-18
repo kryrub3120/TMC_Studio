@@ -22,8 +22,8 @@ type Plan = 'guest' | 'free' | 'pro' | 'team';
 |------|---------------|-------------------|-------------|
 | **Guest** | ❌ No account | N/A | Anonymous user, local-only storage |
 | **Free** | ✅ Authenticated | `free` | Default plan after account creation |
-| **Pro** | ✅ Authenticated | `pro` | Paid individual plan |
-| **Team** | ✅ Authenticated | `team` | Paid team plan (future) |
+| **Pro** | ✅ Authenticated | `pro` | Paid individual plan ($9/mo or $90/yr) |
+| **Team** | ✅ Authenticated | `team` | Paid multi-seat plan ($29/mo or $290/yr) |
 
 **Plan Derivation Logic:**
 ```typescript
