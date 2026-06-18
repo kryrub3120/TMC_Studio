@@ -5,7 +5,25 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-06-18
+
+### Fixed
+- **Triage produkcyjny PROBLEMY 0–14 — 16 poprawek przed release** (2026-06-18)
+  - **#0**: Netlify production env wskazuje `pgacjczecyfnwsaadyvj`, Supabase CLI zlinkowany, OAuth authorize działa.
+  - **#1/#3**: Ustawienia strefy/strzałki jako domyślne — `addZoneAtCursor`/`addArrowAtCursor` aplikują `zoneDefaults`/`arrowDefaults`.
+  - **#2a/2b**: Nazwa drużyny z `teamSettings.name`, kolor z `teamSettings.primaryColor`, auto-GK dla #1.
+  - **#4**: Kontrolka koloru strzałki w inspektorze + `ArrowDefaults.color`.
+  - **#5**: Usunięto animowany podgląd formacji z `EmptyStateOverlay`.
+  - **#6**: Brakujące klucze i18n `pitchPanel.*` w pl/en/es.
+  - **#7**: Grupowanie skrótów w Ustawieniach, edycja dla Pro/Club Pro, reset do fabrycznych, runtime override.
+  - **#8**: Wersja z `package.json` przez `appVersion`, social CTA, feedback, kontakt, linki prawne w "O aplikacji".
+  - **#9**: Zakładka FAQ w Ustawieniach z wyszukiwarką i kategoriami.
+  - **#10**: CTA "Zgłoś błąd" i "Wyślij feedback" jako linki mailto.
+  - **#11**: Placeholder "Zawodnik" w szybkim dodawaniu + dark mode fix.
+  - **#12a/12b**: Checkbox GK w szybkim dodawaniu + Ustawienia → Skład; `V` tylko dla zaznaczonych, `Shift+V` = orientacja.
+  - **#13**: Czułość rotacji wizji zwiększona (`ORIENTATION_DRAG_SENSITIVITY = 1.35`).
+  - **#14**: Watermark "TMC STUDIO" na canvasie dla free/guest, ukryty w trybie print.
+  - Pliki: 23 pliki zmodyfikowane (apps/web, packages/ui, packages/board, packages/core).
 
 ### Added
 - **Edytor: groty strzałek, grubość linii, obrys stref + domyślne style użytkownika** (2026-06-18)
@@ -450,7 +468,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Free and Pro tiers with Stripe integration
 - Dark/light theme support
 
-[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.5.0
 [0.2.2]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.2.2

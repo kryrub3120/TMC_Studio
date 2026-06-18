@@ -11,7 +11,7 @@
  */
 
 import React, { useState } from 'react';
-import type { Team, SquadPlayer } from '@tmc/core';
+import type { Team, SquadPlayer, TeamSettings } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { useTranslation } from './i18n.js';
 
@@ -28,19 +28,12 @@ export interface SquadBenchProps {
   onToggle: () => void;
   onOpenSettings: () => void;
   onDragStart: (player: SquadPlayer) => void;
+  teamSettings?: TeamSettings;
   /** Quick-add a player to squad without opening Settings */
-  onQuickAddPlayer?: (name: string, number: number, team: Team) => void;
+  onQuickAddPlayer?: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
   /** Remove a player from squad */
   onRemovePlayer?: (id: string) => void;
 }
-
-/** Colors from DEFAULT_TEAM_SETTINGS — single source of truth with canvas */
-const TEAM_COLORS: Record<Team, string> = {
-  home: DEFAULT_TEAM_SETTINGS.home.primaryColor,
-  away: DEFAULT_TEAM_SETTINGS.away.primaryColor,
-  team3: DEFAULT_TEAM_SETTINGS.team3!.primaryColor,
-  team4: DEFAULT_TEAM_SETTINGS.team4!.primaryColor,
-};
 
 const TEAM_LABEL_KEYS: Record<Team, string> = {
   home: 'squadBench.home',
@@ -132,6 +125,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   onToggle,
   onOpenSettings,
   onDragStart,
+  teamSettings,
   onQuickAddPlayer,
   onRemovePlayer,
 }) => {
@@ -141,6 +135,18 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [addName, setAddName] = useState('');
   const [addNum, setAddNum] = useState('');
+  const [addIsGoalkeeper, setAddIsGoalkeeper] = useState(false);
+  const getTeamSetting = (team: Team) =>
+    teamSettings?.[team] ?? DEFAULT_TEAM_SETTINGS[team] ?? DEFAULT_TEAM_SETTINGS.home;
+  const getTeamLabel = (team: Team) => {
+    const name = getTeamSetting(team).name?.trim();
+    return name || t(TEAM_LABEL_KEYS[team]);
+  };
+  const getTeamColor = (team: Team) => getTeamSetting(team).primaryColor;
+  const getPlayerColor = (player: SquadPlayer) =>
+    player.isGoalkeeper
+      ? getTeamSetting(player.team).goalkeeperColor ?? DEFAULT_TEAM_SETTINGS[player.team]?.goalkeeperColor ?? getTeamColor(player.team)
+      : getTeamColor(player.team);
   
   const teamPlayers = squad.filter((p) => p.team === activeTeam);
   const isEmpty = squad.length === 0;
@@ -158,9 +164,10 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
     const name = addName.trim();
     const num = parseInt(addNum, 10);
     if (name && num > 0 && onQuickAddPlayer) {
-      onQuickAddPlayer(name, num, activeTeam);
+      onQuickAddPlayer(name, num, activeTeam, addIsGoalkeeper || num === 1);
       setAddName('');
       setAddNum('');
+      setAddIsGoalkeeper(false);
       setShowAddForm(false);
     }
   };
@@ -174,8 +181,8 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   };
 
   const renderPlayer = (player: SquadPlayer, isLocked: boolean, delay: number) => {
-    const color = TEAM_COLORS[player.team];
-    const teamLabel = t(TEAM_LABEL_KEYS[player.team]);
+    const color = getPlayerColor(player);
+    const teamLabel = getTeamLabel(player.team);
     return (
       <div
         key={player.id}
@@ -201,6 +208,11 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
         >
           <div className="relative">
             <PlayerCircleGlyph team={player.team} number={player.number} color={color} locked={isLocked} />
+            {player.isGoalkeeper && !isLocked && (
+              <span className="absolute -bottom-0.5 -right-1 rounded bg-surface px-1 text-[7px] font-bold text-text border border-border">
+                GK
+              </span>
+            )}
             {isLocked && (
               <svg className="absolute -top-0.5 -right-0.5 w-3 h-3 text-yellow-500" viewBox="0 0 24 24" fill="currentColor">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -241,11 +253,11 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
             <button
               onClick={cycleTeam}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface2 hover:bg-border text-text font-semibold transition-colors"
-              title={t('squadBench.switchCurrent', { team: t(TEAM_LABEL_KEYS[activeTeam]) })}
-              aria-label={t('squadBench.currentTeam', { team: t(TEAM_LABEL_KEYS[activeTeam]) })}
+              title={t('squadBench.switchCurrent', { team: getTeamLabel(activeTeam) })}
+              aria-label={t('squadBench.currentTeam', { team: getTeamLabel(activeTeam) })}
             >
-              <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: TEAM_COLORS[activeTeam] }} />
-              <span className="text-sm">{t(TEAM_LABEL_KEYS[activeTeam])}</span>
+              <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: getTeamColor(activeTeam) }} />
+              <span className="text-sm">{getTeamLabel(activeTeam)}</span>
               <span className="text-[11px] text-muted font-mono">{visibleCount}/{teamLimit}{!canAccess ? ' ⭐' : ''}</span>
               <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="6 9 12 15 18 9" />
@@ -262,9 +274,9 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
                     className={`w-2.5 h-2.5 rounded-full transition-all ${
                       team === activeTeam ? 'ring-1 ring-accent scale-110' : 'opacity-40 hover:opacity-70'
                     }`}
-                    style={{ backgroundColor: TEAM_COLORS[team] }}
-                    title={t('squadBench.teamCount', { team: t(TEAM_LABEL_KEYS[team]), count })}
-                    aria-label={t('squadBench.switchToTeam', { team: t(TEAM_LABEL_KEYS[team]), count })}
+                    style={{ backgroundColor: getTeamColor(team) }}
+                    title={t('squadBench.teamCount', { team: getTeamLabel(team), count })}
+                    aria-label={t('squadBench.switchToTeam', { team: getTeamLabel(team), count })}
                   />
                 );
               })}
@@ -424,6 +436,15 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
               className="w-14 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
             />
+            <label className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-border bg-surface2 text-xs text-text cursor-pointer">
+              <input
+                type="checkbox"
+                checked={addIsGoalkeeper}
+                onChange={(e) => setAddIsGoalkeeper(e.target.checked)}
+                className="accent-current"
+              />
+              GK
+            </label>
             <button
               onClick={handleQuickAdd}
               disabled={!addName.trim() || !addNum}

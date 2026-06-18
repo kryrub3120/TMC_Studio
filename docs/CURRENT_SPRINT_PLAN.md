@@ -8,6 +8,27 @@
 
 ## Zakonczone sprinty
 
+### Sprint 0.5 — Release & Deploy Verification (triage produkcyjny)
+
+**Status:** ✅ DONE (2026-06-18)
+
+Cel: zamknięcie deploy gap przed dalszymi sprintami.
+
+Zrealizowane punkty:
+
+1. **Wszystkie PROBLEMY 0–14** z `tasks/TRIAGE_PRODUKCJA_2026-06-18.md` naprawione w kodzie:
+   - #0: Netlify/Supabase/OAuth config zweryfikowany.
+   - #1–14: 16 poprawek (style domyślne strzałek/stref, skład/GK/GKcolor, i18n, skróty, FAQ, watermark, wizja/orientacja, dark mode, feedback) — wszystkie jako ✅ FIXED-UNDEPLOYED.
+2. Warningi builda usunięte (Supabase dynamic/static import, Browserslist).
+3. Instrukcja przeklikania (sekcje A–G) w pliku triage.
+4. Weryfikacja: typecheck (core/ui/web), testy (core 6, web 113), build (ui, web) — wszystkie zielone.
+
+Evidence:
+- Plik: `tasks/TRIAGE_PRODUKCJA_2026-06-18.md`
+- 23 pliki zmodyfikowane w `apps/web`, `packages/ui`, `packages/board`, `packages/core`
+
+---
+
 ### Sprint 1 - Security & Billing Hardening
 
 **Status:** ✅ DONE (2026-06-18)

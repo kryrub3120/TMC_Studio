@@ -13,7 +13,7 @@
 import { logger } from '../lib/logger';
 import { useCallback } from 'react';
 import { useTranslation } from '@tmc/ui';
-import { updateProfile, changePassword, deleteAccount } from '../lib/supabase';
+import { updateProfile, changePassword, deleteAccount, uploadAvatar } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 
 interface UseSettingsControllerOptions {
@@ -62,7 +62,6 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
   const handleUploadAvatar = useCallback(async (file: File): Promise<string | null> => {
     if (!authUser) return null;
     try {
-      const { uploadAvatar } = await import('../lib/supabase');
       const avatarUrl = await uploadAvatar(authUser.id, file);
       return avatarUrl;
     } catch (error) {

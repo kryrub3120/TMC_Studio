@@ -27,6 +27,7 @@ export interface InspectorElement {
   showNumber?: boolean;
   arrowNumber?: number;
   arrowType?: 'pass' | 'run' | 'shoot' | 'dribble';
+  color?: string;
   strokeWidth?: number;
   startHead?: 'arrow' | 'none' | 'bar' | 'dot';
   endHead?: 'arrow' | 'none' | 'bar' | 'dot';
@@ -73,7 +74,7 @@ export interface RightInspectorProps {
   elements: ElementInList[];
   layerVisibility: LayerVisibility;
   groups?: GroupData[];
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number; strokeWidth?: number; borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot' }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number; color?: string; strokeWidth?: number; borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot' }) => void;
   /** Save the selected arrow's current style as the user default. */
   onSetArrowDefault?: () => void;
   /** Save the selected zone's current style as the user default. */
@@ -279,7 +280,7 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
 const PropsTab: React.FC<{
   selectedCount: number;
   selectedElement?: InspectorElement;
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number; strokeWidth?: number; borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot' }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number; color?: string; strokeWidth?: number; borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot' }) => void;
   /** Save the selected arrow's current style as the user default. */
   onSetArrowDefault?: () => void;
   /** Save the selected zone's current style as the user default. */
@@ -542,6 +543,30 @@ const PropsTab: React.FC<{
                 format={(v) => `${v}px`}
                 onChange={(v) => onUpdateElement?.({ strokeWidth: v })}
               />
+
+              <Field label={t('inspector.arrow.color')} className="mt-3">
+                <div className="flex items-center gap-2">
+                  <ColorSwatchRow
+                    colors={['#1a1a1a', '#f97316', '#ef4444', '#1d4ed8', '#22c55e', '#a855f7']}
+                    value={el.color || '#1a1a1a'}
+                    onChange={(c) => onUpdateElement?.({ color: c })}
+                    size={22}
+                  />
+                  <label
+                    className="relative w-[22px] h-[22px] rounded-md border border-border overflow-hidden cursor-pointer shrink-0"
+                    title={t('inspector.arrow.color')}
+                    style={{ background: el.color || '#1a1a1a' }}
+                  >
+                    <input
+                      type="color"
+                      value={el.color || '#1a1a1a'}
+                      onChange={(e) => onUpdateElement?.({ color: e.target.value })}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      aria-label={t('inspector.arrow.color')}
+                    />
+                  </label>
+                </div>
+              </Field>
 
               {/* Heads — start & end side by side */}
               <div className="grid grid-cols-2 gap-2 mt-3">

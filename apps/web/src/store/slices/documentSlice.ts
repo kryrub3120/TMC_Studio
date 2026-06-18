@@ -105,9 +105,9 @@ export interface DocumentSlice {
   
   // Squad bench actions
   getSquad: () => SquadPlayer[];
-  addSquadPlayer: (name: string, number: number, team: Team) => void;
+  addSquadPlayer: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
   removeSquadPlayer: (id: string) => void;
-  updateSquadPlayer: (id: string, updates: Partial<{ name: string; number: number; team: Team }>) => void;
+  updateSquadPlayer: (id: string, updates: Partial<{ name: string; number: number; team: Team; isGoalkeeper: boolean }>) => void;
   setSquad: (squad: SquadPlayer[]) => void;
   setSquadVisible: (visible: boolean) => void;
   toggleSquadVisible: () => void;
@@ -837,10 +837,10 @@ export const createDocumentSlice: StateCreator<
       return get().document.squad ?? DEFAULT_SQUAD;
     },
 
-    addSquadPlayer: (name, number, team) => {
+    addSquadPlayer: (name, number, team, isGoalkeeper) => {
       const { document } = get();
       const currentSquad = document.squad ?? DEFAULT_SQUAD;
-      const newPlayer = createSquadPlayer(name, number, team);
+      const newPlayer = createSquadPlayer(name, number, team, isGoalkeeper);
       set({
         document: {
           ...document,

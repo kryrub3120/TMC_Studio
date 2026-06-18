@@ -481,6 +481,8 @@ export interface PlayerDefaults {
 export interface ArrowDefaults {
   /** Default line thickness per arrow type. */
   strokeWidth: { pass: number; run: number; shoot: number; dribble: number };
+  /** Optional default line color per arrow type. Missing values use createArrow defaults. */
+  color?: Partial<Record<ArrowType, string>>;
   /** Default start-cap for new arrows. */
   startHead: ArrowHead;
   /** Default end-cap for new arrows. */
@@ -490,6 +492,7 @@ export interface ArrowDefaults {
 /** Built-in arrow defaults (match createArrow per-type strokes). */
 export const DEFAULT_ARROW_DEFAULTS: ArrowDefaults = {
   strokeWidth: { pass: 4, run: 3, shoot: 5, dribble: 4 },
+  color: { pass: '#1a1a1a', run: '#f97316', shoot: '#ef4444', dribble: '#1d4ed8' },
   startHead: 'none',
   endHead: 'arrow',
 };
@@ -520,6 +523,8 @@ export interface SquadPlayer {
   name: string;
   number: number;
   team: Team;
+  /** If true, dragging this squad player creates a goalkeeper using the team's goalkeeper color. */
+  isGoalkeeper?: boolean;
 }
 
 /** Default squad bench — empty (user defines their own) */

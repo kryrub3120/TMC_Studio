@@ -95,8 +95,9 @@ export const SHORTCUT_MAP: ShortcutEntry[] = [
 
   // Orientation / Vision
   { id: 'orientation-mode', key: 'Shift+O', description: 'Toggle Player Orientation Mode', category: 'view', context: 'global' },
-  { id: 'toggle-vision', key: 'V', description: 'Toggle Vision (selected)', category: 'edit', context: 'selection' },
-  { id: 'toggle-vision-all', key: 'Shift+V', description: 'Toggle Vision (all players)', category: 'edit', context: 'global' },
+  { id: 'toggle-vision', key: 'V', description: 'Enable Vision (selected)', category: 'edit', context: 'selection' },
+  { id: 'orientation-handles', key: 'Shift+V', description: 'Toggle Player Orientation Handles', category: 'edit', context: 'global' },
+  { id: 'reset-orientation', key: 'Alt+0', description: 'Reset Player Orientation', category: 'edit', context: 'selection' },
   { id: 'cycle-pitch-view', key: 'W', description: 'Cycle Pitch View', category: 'view', context: 'global' },
 
   // ===== EDIT =====

@@ -20,6 +20,7 @@ import {
   signOut as supabaseSignOut,
   signInWithGoogle as supabaseSignInWithGoogle,
   onAuthStateChange,
+  getPreferences,
   supabase,
   type User,
 } from '../lib/supabase';
@@ -215,7 +216,6 @@ export const useAuthStore = create<AuthState>()(
             if (user) {
               logger.debug('[Auth] Loading preferences from cloud...');
               try {
-                const { getPreferences } = await import('../lib/supabase');
                 const cloudPrefs = await getPreferences();
                 if (cloudPrefs) {
                   const { useUIStore } = await import('./useUIStore');
@@ -335,7 +335,6 @@ export const useAuthStore = create<AuthState>()(
 
                   // Load preferences for existing session
                   try {
-                    const { getPreferences } = await import('../lib/supabase');
                     const cloudPrefs = await getPreferences();
                     if (cloudPrefs) {
                       const { useUIStore } = await import('./useUIStore');

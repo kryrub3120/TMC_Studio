@@ -101,12 +101,13 @@ export function generateSquadId(): string {
 }
 
 /** Create a new squad player entry */
-export function createSquadPlayer(name: string, number: number, team: Team): SquadPlayer {
+export function createSquadPlayer(name: string, number: number, team: Team, isGoalkeeper?: boolean): SquadPlayer {
   return {
     id: generateSquadId(),
     name,
     number,
     team,
+    isGoalkeeper: isGoalkeeper ?? number === 1,
   };
 }
 

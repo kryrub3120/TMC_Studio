@@ -1,6 +1,6 @@
 /**
  * EmptyStateOverlay - Shows when board has no elements
- * Provides quick CTAs to get started with animated formation preview
+ * Provides quick CTAs to get started
  */
 
 import React, { useEffect, useState } from 'react';
@@ -58,68 +58,6 @@ const CelebrationConfetti: React.FC<{ isVisible: boolean }> = ({ isVisible }) =>
   );
 };
 
-/** Animated formation preview — subtle 4-3-3 that fades in/out */
-const AnimatedFormationPreview: React.FC = () => {
-  const [phase, setPhase] = useState(0);
-  const players = [
-    // GK
-    { cx: 50, cy: 85, label: '1', team: 'home' },
-    // Defenders (4)
-    { cx: 20, cy: 62, label: '2', team: 'home' },
-    { cx: 37, cy: 65, label: '4', team: 'home' },
-    { cx: 63, cy: 65, label: '5', team: 'home' },
-    { cx: 80, cy: 62, label: '3', team: 'home' },
-    // Midfielders (3)
-    { cx: 30, cy: 42, label: '6', team: 'home' },
-    { cx: 50, cy: 38, label: '8', team: 'home' },
-    { cx: 70, cy: 42, label: '7', team: 'home' },
-    // Forwards (3)
-    { cx: 30, cy: 18, label: '11', team: 'home' },
-    { cx: 50, cy: 12, label: '9', team: 'home' },
-    { cx: 70, cy: 18, label: '10', team: 'home' },
-    // Away players
-    { cx: 45, cy: 22, label: '9', team: 'away' },
-    { cx: 30, cy: 58, label: '4', team: 'away' },
-    { cx: 60, cy: 58, label: '5', team: 'away' },
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPhase((p) => (p + 1) % 3);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.06] dark:opacity-[0.08]">
-      <svg viewBox="0 0 100 100" className="w-full h-full">
-        {/* Pitch outline */}
-        <rect x="5" y="5" width="90" height="90" rx="3" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" strokeWidth="0.3" />
-        <circle cx="50" cy="50" r="8" fill="none" stroke="currentColor" strokeWidth="0.3" />
-        {/* Goal areas */}
-        <rect x="30" y="5" width="40" height="15" fill="none" stroke="currentColor" strokeWidth="0.3" />
-        <rect x="30" y="80" width="40" height="15" fill="none" stroke="currentColor" strokeWidth="0.3" />
-
-        {/* Players with fade animation */}
-        {players.map((p, i) => {
-          const opacity = phase === 0 ? 1 : phase === 1 ? 0.4 + (i % 3) * 0.3 : 0.7 - (i % 2) * 0.3;
-          const isHome = p.team === 'home';
-          const r = phase === 2 ? 3.2 : 2.8;
-          return (
-            <g key={i} style={{ transition: 'all 0.8s ease-in-out', opacity }}>
-              <circle cx={p.cx} cy={p.cy} r={r} fill={isHome ? '#e63946' : '#457b9d'} />
-              <text x={p.cx} y={p.cy + 0.8} textAnchor="middle" fill="#fff" fontSize="2.5" fontWeight="bold">
-                {p.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-};
-
 /**
  * Empty state card with quick actions
  * Shows when elements.length === 0
@@ -140,9 +78,6 @@ export const EmptyStateOverlay: React.FC<EmptyStateOverlayProps> = ({
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
       {/* Celebration confetti on first element */}
       <CelebrationConfetti isVisible={!!showCelebration && !isVisible} />
-
-      {/* Animated formation preview (only when empty) */}
-      {isVisible && <AnimatedFormationPreview />}
 
       {isVisible && (
       <div className="bg-surface/90 backdrop-blur-sm border border-border/50 rounded-2xl shadow-2xl p-8 max-w-md pointer-events-auto animate-slide-up">

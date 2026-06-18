@@ -45,6 +45,7 @@ function measureTextWidth(text: string, fontSize: number, fontStyle: string, fon
 }
 
 const MAX_LABEL_PILL_WIDTH = 160;
+const ORIENTATION_DRAG_SENSITIVITY = 1.35;
 const norm360 = (a: number) => ((a % 360) + 360) % 360;
 
 /** Compute shortest angular delta (wrap-safe) - CORRECTION #1 */
@@ -341,7 +342,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     const currentAngleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
     
     // CORRECTION #1: Use wrap-safe delta
-    const delta = deltaDeg(startPointerAngleRef.current, currentAngleDeg);
+    const delta = deltaDeg(startPointerAngleRef.current, currentAngleDeg) * ORIENTATION_DRAG_SENSITIVITY;
     const rawOrientation = startOrientationRef.current + delta;
     
     // Smooth by default (1°); hold Shift for coarse 15° tactical snapping.

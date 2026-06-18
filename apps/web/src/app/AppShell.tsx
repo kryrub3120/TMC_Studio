@@ -122,6 +122,9 @@ export function AppShell() {
   const setArrowDefaults = useUIStore((s) => s.setArrowDefaults);
   const setZoneDefaults = useUIStore((s) => s.setZoneDefaults);
   const resetElementDefaults = useUIStore((s) => s.resetElementDefaults);
+  const shortcutOverrides = useUIStore((s) => s.shortcutOverrides);
+  const setShortcutOverride = useUIStore((s) => s.setShortcutOverride);
+  const resetShortcutOverrides = useUIStore((s) => s.resetShortcutOverrides);
   const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
 
   // Controllers
@@ -430,6 +433,7 @@ export function AppShell() {
         // Settings Modal
         settingsModalOpen={settingsModalOpen}
         settingsInitialTab={settingsInitialTab}
+        appVersion={appPkg.version}
         onCloseSettingsModal={() => setSettingsModalOpen(false)}
         onUpdateProfile={settingsController.updateProfile}
         onUploadAvatar={settingsController.uploadAvatar}
@@ -466,12 +470,15 @@ export function AppShell() {
         onSetArrowDefaults={setArrowDefaults}
         onSetZoneDefaults={setZoneDefaults}
         onResetElementDefaults={resetElementDefaults}
+        shortcutOverrides={shortcutOverrides}
+        onSetShortcutOverride={setShortcutOverride}
+        onResetShortcutOverrides={resetShortcutOverrides}
 
         // Squad Bench
-        squad={(document.squad ?? []).map(p => ({ id: p.id, name: p.name, number: p.number, team: p.team as 'home' | 'away' }))}
+        squad={document.squad ?? []}
         squadVisible={document.squadVisible ?? true}
         isPro={authIsPro}
-        onAddSquadPlayer={(name, number, team) => addSquadPlayer(name, number, team as any)}
+        onAddSquadPlayer={(name, number, team, isGoalkeeper) => addSquadPlayer(name, number, team as any, isGoalkeeper)}
         onRemoveSquadPlayer={(id) => removeSquadPlayer(id)}
         onSetSquadVisible={(visible) => setSquadVisible(visible)}
         // Board settings (Teams / Pitch — moved from inspector)

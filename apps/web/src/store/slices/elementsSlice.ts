@@ -147,7 +147,7 @@ export interface ElementsSlice {
   
   // Convenience creators
   addPlayerAtCursor: (team: Team) => void;
-  addPlayerFromSquad: (team: Team, name: string, number: number, position?: Position) => void;
+  addPlayerFromSquad: (team: Team, name: string, number: number, position?: Position, isGoalkeeper?: boolean) => void;
   addBallAtCursor: () => void;
   addBallGroupAtCursor: () => void;
   addArrowAtCursor: (arrowType: ArrowType) => void;
@@ -280,7 +280,7 @@ export const createElementsSlice: StateCreator<
     get().addElement(player);
   },
   
-  addPlayerFromSquad: (team, name, number, dropPosition) => {
+  addPlayerFromSquad: (team, name, number, dropPosition, isGoalkeeper) => {
     const { cursorPosition, document } = get();
     const position = dropPosition ?? cursorPosition ?? getBoardCenter(document);
     const player = createPlayer({
@@ -289,6 +289,7 @@ export const createElementsSlice: StateCreator<
       number,
       label: name,
       showLabel: true,
+      isGoalkeeper: isGoalkeeper ?? number === 1,
       gridSize: getGridSize(),
     });
     get().addElement(player);
@@ -316,6 +317,7 @@ export const createElementsSlice: StateCreator<
     const aDefaults = useUIStore.getState().arrowDefaults;
     if (aDefaults) {
       arrow.strokeWidth = aDefaults.strokeWidth[arrowType] ?? arrow.strokeWidth;
+      arrow.color = aDefaults.color?.[arrowType] ?? arrow.color;
       arrow.startHead = aDefaults.startHead;
       arrow.endHead = aDefaults.endHead;
     }

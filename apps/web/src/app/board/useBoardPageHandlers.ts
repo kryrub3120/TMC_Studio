@@ -209,6 +209,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       textColor?: string; opacity?: number; isGoalkeeper?: boolean;
       showNumber?: boolean; arrowNumber?: number;
       // Arrow head style (PR-5) + thickness
+      color?: string;
       startHead?: 'arrow' | 'none' | 'bar' | 'dot';
       endHead?: 'arrow' | 'none' | 'bar' | 'dot';
       strokeWidth?: number;
@@ -223,11 +224,12 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
 
       if (isArrowElement(el as any)) {
         // Arrow style props (heads + thickness) — route to dedicated store action.
-        if ('startHead' in updates || 'endHead' in updates || 'strokeWidth' in updates) {
-          const patch: { startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot'; strokeWidth?: number } = {};
+        if ('startHead' in updates || 'endHead' in updates || 'strokeWidth' in updates || 'color' in updates) {
+          const patch: { startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot'; strokeWidth?: number; color?: string } = {};
           if ('startHead' in updates) patch.startHead = updates.startHead;
           if ('endHead' in updates) patch.endHead = updates.endHead;
           if ('strokeWidth' in updates) patch.strokeWidth = updates.strokeWidth;
+          if ('color' in updates) patch.color = updates.color;
           store.updateArrowStyle(el.id, patch);
           return;
         }
@@ -267,6 +269,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     const a = el as any;
     useUIStore.getState().setArrowDefaults({
       strokeWidth: { [a.arrowType]: a.strokeWidth ?? 4 } as any,
+      color: { [a.arrowType]: a.color },
       startHead: a.startHead ?? 'none',
       endHead: a.endHead ?? 'arrow',
     });

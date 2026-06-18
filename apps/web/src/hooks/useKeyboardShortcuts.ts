@@ -124,7 +124,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const setPlayerOrientation = useBoardStore((s) => s.setPlayerOrientation); // PR3
   const resetPlayerOrientation = useBoardStore((s) => s.resetPlayerOrientation); // PR3
   const updatePlayerOrientationSettings = useBoardStore((s) => s.updatePlayerOrientationSettings);
-  const togglePlayerVision = useBoardStore((s) => s.togglePlayerVision); // Per-player vision toggle
+  const setPlayerVision = useBoardStore((s) => s.setPlayerVision);
   const toggleArrowNumber = useBoardStore((s) => s.toggleArrowNumber); // PR-ARROW-NUMBER
   const toggleAutoNumbering = useBoardStore((s) => s.toggleAutoNumbering); // PR-ARROW-NUMBER
   const setNextArrowShouldBeNumbered = useBoardStore((s) => s.setNextArrowShouldBeNumbered); // PR-ARROW-NUMBER
@@ -221,6 +221,97 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       const browserShortcuts = ['d', 's', 'e', 'g', 'k', 'a', 'c', 'v', 'z', '+', '=', '-'];
       if (browserShortcuts.includes(key)) {
         e.preventDefault();
+      }
+    }
+
+    const formatEventShortcut = (event: KeyboardEvent) => {
+      const parts: string[] = [];
+      if (event.metaKey || event.ctrlKey) parts.push('Cmd');
+      if (event.altKey) parts.push('Alt');
+      if (event.shiftKey) parts.push('Shift');
+      const rawKey = event.key === ' ' ? 'Space' : event.key;
+      if (['Control', 'Meta', 'Alt', 'Shift'].includes(rawKey)) return null;
+      const shortcutKey = rawKey.length === 1 ? rawKey.toUpperCase() : rawKey;
+      parts.push(shortcutKey);
+      return parts.join('+');
+    };
+
+    const configurableShortcuts: Array<{ id: string; key: string; run: () => void }> = [
+      { id: 'add-home-player', key: 'P', run: () => { addPlayerAtCursor('home'); showTranslatedToast('team1Player'); } },
+      { id: 'add-away-player', key: 'Shift+P', run: () => { addPlayerAtCursor('away'); showTranslatedToast('team2Player'); } },
+      { id: 'add-ball', key: 'B', run: () => { addBallAtCursor(); showTranslatedToast('ball'); } },
+      { id: 'add-pass-arrow', key: 'A', run: () => { setActiveTool('arrow-pass'); } },
+      { id: 'add-run-arrow', key: 'R', run: () => { setActiveTool('arrow-run'); } },
+      { id: 'add-shoot-arrow', key: 'S', run: () => { setActiveTool('arrow-shoot'); } },
+      { id: 'add-dribble-arrow', key: 'D', run: () => { setActiveTool('arrow-dribble'); } },
+      { id: 'add-zone', key: 'Z', run: () => { setActiveTool('zone'); } },
+      { id: 'add-ellipse-zone', key: 'Shift+Z', run: () => { setActiveTool('zone-ellipse'); } },
+      { id: 'add-text', key: 'T', run: () => { addTextAtCursor(); showTranslatedToast('text'); } },
+      { id: 'add-cone', key: 'K', run: () => { addEquipmentAtCursor('cone'); showTranslatedToast('cone'); } },
+      { id: 'add-hoop', key: 'Q', run: () => { addEquipmentAtCursor('hoop'); showTranslatedToast('hoop'); } },
+      { id: 'goalkeeper', key: 'Shift+G', run: () => { cycleGoalkeeperColor(); } },
+      {
+        id: 'toggle-vision',
+        key: 'V',
+        run: () => {
+          const selectedPlayerIds = elements
+            .filter((el) => selectedIds.includes(el.id) && isPlayerElement(el))
+            .map((el) => el.id);
+          if (selectedPlayerIds.length > 0) {
+            updatePlayerOrientationSettings({ enabled: true, showVision: true });
+            setPlayerVision(selectedPlayerIds, true);
+            showTranslatedToast('visionSelectedOn', { count: selectedPlayerIds.length });
+          } else {
+            showTranslatedToast('selectPlayersForVision');
+          }
+        },
+      },
+      {
+        id: 'orientation-handles',
+        key: 'Shift+V',
+        run: () => {
+          const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
+          const nextEnabled = !(orientationSettings.enabled && orientationSettings.showArms);
+          updatePlayerOrientationSettings({ enabled: nextEnabled, showArms: nextEnabled });
+          showTranslatedToast(nextEnabled ? 'orientationModeOn' : 'orientationModeOff');
+        },
+      },
+      {
+        id: 'reset-orientation',
+        key: 'Alt+0',
+        run: () => {
+          if (!hasSelectedPlayer()) {
+            showTranslatedToast('selectPlayersForVision');
+            return;
+          }
+          const playerIds = elements.filter(el => selectedIds.includes(el.id) && isPlayerElement(el)).map(el => el.id);
+          resetPlayerOrientation(playerIds);
+          state.pushHistory();
+          showTranslatedToast('orientationReset');
+        },
+      },
+      { id: 'focus-mode', key: 'F', run: () => { toggleFocusMode(); } },
+      { id: 'toggle-shortcuts', key: '?', run: () => { toggleCheatSheet(); } },
+    ];
+    const currentShortcut = formatEventShortcut(e);
+    const effectiveShortcut = (id: string, fallback: string) => uiState.shortcutOverrides?.[id] ?? fallback;
+    if (currentShortcut) {
+      const overrideMatch = configurableShortcuts.find((shortcut) =>
+        effectiveShortcut(shortcut.id, shortcut.key) === currentShortcut &&
+        effectiveShortcut(shortcut.id, shortcut.key) !== shortcut.key
+      );
+      if (overrideMatch) {
+        e.preventDefault();
+        overrideMatch.run();
+        return;
+      }
+      const overriddenDefault = configurableShortcuts.find((shortcut) =>
+        shortcut.key === currentShortcut &&
+        effectiveShortcut(shortcut.id, shortcut.key) !== shortcut.key
+      );
+      if (overriddenDefault) {
+        e.preventDefault();
+        return;
       }
     }
     
@@ -416,39 +507,23 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           showTranslatedToast('pasted');
           break;
         }
-        // V / Shift+V = Vision / orientation toggle (requires orientation feature enabled).
+        // V = enable vision for selected players. Shift+V = orientation handles/arms mode.
         // Handled ONLY here — no duplicate e.code block below.
         e.preventDefault();
         {
           const orientationSettings = useBoardStore.getState().getPlayerOrientationSettings();
-          if (!orientationSettings.enabled) {
-            showTranslatedToast('enableOrientation');
-            break;
-          }
           if (e.shiftKey) {
-            // Shift+V = Toggle vision for ALL players on board
-            const allPlayerIds = elements
-              .filter((el) => isPlayerElement(el))
-              .map((el) => el.id);
-            if (allPlayerIds.length > 0) {
-              // Mirror togglePlayerVision logic: any explicitly-off → turns all ON; else all OFF
-              const anyExplicitlyOff = elements.some(
-                (el) => allPlayerIds.includes(el.id) && isPlayerElement(el) && el.showVision === false
-              );
-              const willTurnOn = anyExplicitlyOff;
-              togglePlayerVision(allPlayerIds);
-              showTranslatedToast(willTurnOn ? 'visionAllOn' : 'visionAllOff', { count: allPlayerIds.length });
-            } else {
-              showTranslatedToast('noPlayersOnBoard');
-            }
+            const nextEnabled = !(orientationSettings.enabled && orientationSettings.showArms);
+            updatePlayerOrientationSettings({ enabled: nextEnabled, showArms: nextEnabled });
+            showTranslatedToast(nextEnabled ? 'orientationModeOn' : 'orientationModeOff');
           } else {
-            // V = Toggle vision for SELECTED players only
             const selectedPlayerIds = elements
               .filter((el) => selectedIds.includes(el.id) && isPlayerElement(el))
               .map((el) => el.id);
             if (selectedPlayerIds.length > 0) {
-              togglePlayerVision(selectedPlayerIds);
-              showTranslatedToast('visionSelected', { count: selectedPlayerIds.length });
+              updatePlayerOrientationSettings({ enabled: true, showVision: true });
+              setPlayerVision(selectedPlayerIds, true);
+              showTranslatedToast('visionSelectedOn', { count: selectedPlayerIds.length });
             } else {
               showTranslatedToast('selectPlayersForVision');
             }
@@ -972,7 +1047,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     zoomIn, zoomOut, isPlaying, play, pause, toggleLoop, togglePrintMode, isPrintMode,
     removeStep, prevStep, nextStep, addStep,
     authIsAuthenticated, authIsPro, // PR3
-    setPlayerOrientation, resetPlayerOrientation, updatePlayerOrientationSettings, togglePlayerVision, // Vision/orientation
+    setPlayerOrientation, resetPlayerOrientation, updatePlayerOrientationSettings, setPlayerVision, // Vision/orientation
     handleExportPNG, handleExportAllSteps, handleExportPDF, handleExportGIF,
     showToast, onStartEditingText, onStartEditingPlayerNumber, onOpenPricingModal, // PR3
     onOpenProjectsDrawer,

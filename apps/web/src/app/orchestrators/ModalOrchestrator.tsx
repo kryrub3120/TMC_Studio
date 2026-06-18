@@ -19,7 +19,7 @@ import {
   type SettingsTab,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -89,6 +89,7 @@ interface ModalOrchestratorProps {
   // Settings Modal
   settingsModalOpen: boolean;
   settingsInitialTab?: SettingsTab;
+  appVersion?: string;
   onCloseSettingsModal: () => void;
   onUpdateProfile: (data: { full_name?: string; avatar_url?: string }) => Promise<void>;
   onUploadAvatar: (file: File) => Promise<string | null>;
@@ -116,12 +117,15 @@ interface ModalOrchestratorProps {
   onSetArrowDefaults?: (patch: Partial<ArrowDefaults>) => void;
   onSetZoneDefaults?: (patch: Partial<ZoneDefaults>) => void;
   onResetElementDefaults?: () => void;
+  shortcutOverrides?: Record<string, string>;
+  onSetShortcutOverride?: (id: string, shortcut: string) => void;
+  onResetShortcutOverrides?: () => void;
   
   // Squad Bench (from board store)
-  squad?: Array<{ id: string; name: string; number: number; team: 'home' | 'away' }>;
+  squad?: SquadPlayer[];
   squadVisible?: boolean;
   isPro?: boolean;
-  onAddSquadPlayer?: (name: string, number: number, team: Team) => void;
+  onAddSquadPlayer?: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
   onRemoveSquadPlayer?: (id: string) => void;
   onSetSquadVisible?: (visible: boolean) => void;
   // Board settings (Teams / Pitch — moved from the inspector)
@@ -248,6 +252,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
       <SettingsModal
         isOpen={props.settingsModalOpen}
         initialTab={props.settingsInitialTab}
+        appVersion={props.appVersion}
         onClose={props.onCloseSettingsModal}
         user={props.authUser ?? null}
         onUpdateProfile={props.onUpdateProfile}
@@ -275,6 +280,9 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onSetArrowDefaults={props.onSetArrowDefaults}
         onSetZoneDefaults={props.onSetZoneDefaults}
         onResetElementDefaults={props.onResetElementDefaults}
+        shortcutOverrides={props.shortcutOverrides}
+        onSetShortcutOverride={props.onSetShortcutOverride}
+        onResetShortcutOverrides={props.onResetShortcutOverrides}
         squad={props.squad}
         squadVisible={props.squadVisible}
         isPro={props.isPro}

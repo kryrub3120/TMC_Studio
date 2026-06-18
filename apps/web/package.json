@@ -1,12 +1,12 @@
 {
   "name": "@tmc/web",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --mode development",
     "dev:local": "vite --mode development",
-    "build": "tsc && vite build",
+    "build": "tsc && BROWSERSLIST_IGNORE_OLD_DATA=true vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext ts,tsx",

@@ -9,9 +9,14 @@ import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
 import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset } from '@tmc/core';
+import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { OrganizationPanel, type OrganizationPanelProps } from './OrganizationPanel.js';
+import { FaqSearch } from './FaqSearch.js';
+import { FaqCategory } from './FaqCategory.js';
+import { getFaqForPlan, searchFaq, type FaqCta } from './helpFaqData.js';
+import type { Plan } from './tutorialSteps.js';
 
-export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'about' | 'data';
+export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'faq' | 'about' | 'data';
 
 interface User {
   id: string;
@@ -38,6 +43,7 @@ function NavIcon({ id }: { id: SettingsTab }) {
     case 'club': return (<svg {...c}><path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M10 21v-6h4v6" /></svg>);
     case 'language': return (<svg {...c}><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" /></svg>);
     case 'shortcuts': return (<svg {...c}><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></svg>);
+    case 'faq': return (<svg {...c}><circle cx="12" cy="12" r="9" /><path d="M9.2 9a3 3 0 1 1 5.1 2.1c-.9.7-1.3 1.1-1.3 2.4" /><line x1="12" y1="17" x2="12" y2="17" /></svg>);
     case 'about': return (<svg {...c}><circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="8" x2="12" y2="8" /></svg>);
     case 'data': return (<svg {...c}><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" /><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" /></svg>);
     default: return null;
@@ -49,6 +55,7 @@ interface SettingsModalProps {
   onClose: () => void;
   /** Tab to show when the modal opens (defaults to 'profile'). */
   initialTab?: SettingsTab;
+  appVersion?: string;
   user: User | null;
   onUpdateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
   onUploadAvatar?: (file: File) => Promise<string | null>;
@@ -78,11 +85,14 @@ interface SettingsModalProps {
   onResetElementDefaults?: () => void;
   themeMode?: 'light' | 'dark' | 'system';
   onSetThemeMode?: (mode: 'light' | 'dark' | 'system') => void;
+  shortcutOverrides?: Record<string, string>;
+  onSetShortcutOverride?: (id: string, shortcut: string) => void;
+  onResetShortcutOverrides?: () => void;
   // Squad bench (Pro feature)
   squad?: SquadPlayer[];
   squadVisible?: boolean;
   isPro?: boolean;
-  onAddSquadPlayer?: (name: string, number: number, team: Team) => void;
+  onAddSquadPlayer?: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
   onRemoveSquadPlayer?: (id: string) => void;
   /** For future use: inline editing of squad players */
   onUpdateSquadPlayer?: (id: string, updates: Partial<{ name: string; number: number; team: Team }>) => void;
@@ -106,6 +116,7 @@ export function SettingsModal({
   isOpen,
   onClose,
   initialTab,
+  appVersion,
   user,
   onUpdateProfile,
   onUploadAvatar,
@@ -132,6 +143,9 @@ export function SettingsModal({
   onResetElementDefaults,
   themeMode,
   onSetThemeMode,
+  shortcutOverrides = {},
+  onSetShortcutOverride,
+  onResetShortcutOverrides,
   squad = [],
   squadVisible = false,
   isPro = false,
@@ -178,8 +192,114 @@ export function SettingsModal({
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [faqSearch, setFaqSearch] = useState('');
+  const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const currentPlan: Plan = !user
+    ? 'guest'
+    : user.subscription_tier === 'team'
+      ? 'team'
+      : isPro
+        ? 'pro'
+        : 'free';
+  const faqCategories = searchFaq(getFaqForPlan(currentPlan), faqSearch);
+  const formatShortcutEvent = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const parts: string[] = [];
+    if (event.metaKey || event.ctrlKey) parts.push('Cmd');
+    if (event.altKey) parts.push('Alt');
+    if (event.shiftKey) parts.push('Shift');
+    const rawKey = event.key === ' ' ? 'Space' : event.key;
+    if (['Control', 'Meta', 'Alt', 'Shift'].includes(rawKey)) return null;
+    const key = rawKey.length === 1 ? rawKey.toUpperCase() : rawKey;
+    parts.push(key);
+    return parts.join('+');
+  };
+  const shortcutGroups = [
+    {
+      title: t('settings.shortcutGroups.create'),
+      items: [
+        { id: 'add-home-player', key: 'P', label: t('settings.shortcutItems.playersHome') },
+        { id: 'add-away-player', key: 'Shift+P', label: t('settings.shortcutItems.playersAway') },
+        { id: 'add-ball', key: 'B', label: t('settings.shortcutItems.ball') },
+        { id: 'add-pass-arrow', key: 'A', label: t('settings.shortcutItems.passArrow') },
+        { id: 'add-run-arrow', key: 'R', label: t('settings.shortcutItems.runArrow') },
+        { id: 'add-shoot-arrow', key: 'S', label: t('settings.shortcutItems.shootArrow') },
+        { id: 'add-dribble-arrow', key: 'D', label: t('settings.shortcutItems.dribbleArrow') },
+        { id: 'add-zone', key: 'Z', label: t('settings.shortcutItems.zoneRect') },
+        { id: 'add-ellipse-zone', key: 'Shift+Z', label: t('settings.shortcutItems.zoneEllipse') },
+        { id: 'add-text', key: 'T', label: t('settings.shortcutItems.text') },
+        { id: 'add-cone', key: 'K', label: t('settings.shortcutItems.cone') },
+        { id: 'add-hoop', key: 'Q', label: t('settings.shortcutItems.hoop') },
+      ],
+    },
+    {
+      title: t('settings.shortcutGroups.players'),
+      items: [
+        { id: 'goalkeeper', key: 'Shift+G', label: t('settings.shortcutItems.goalkeeper') },
+        { id: 'toggle-vision', key: 'V', label: t('settings.shortcutItems.vision') },
+        { id: 'orientation-handles', key: 'Shift+V', label: t('settings.shortcutItems.orientationHandles') },
+        { id: 'reset-orientation', key: 'Alt+0', label: t('settings.shortcutItems.resetOrientation') },
+      ],
+    },
+    {
+      title: t('settings.shortcutGroups.workflow'),
+      items: [
+        { id: 'focus-mode', key: 'F', label: t('settings.shortcutItems.focus') },
+        { id: 'toggle-shortcuts', key: '?', label: t('settings.shortcutItems.fullShortcuts') },
+      ],
+    },
+  ];
+  const allShortcutItems = shortcutGroups.flatMap((group) => group.items);
+  const getEffectiveShortcut = (id: string, fallback: string) => shortcutOverrides[id] ?? fallback;
+  const handleShortcutCapture = (id: string, fallback: string, event: React.KeyboardEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isPro || !onSetShortcutOverride) return;
+    if (event.key === 'Escape') {
+      setEditingShortcutId(null);
+      return;
+    }
+    const nextShortcut = formatShortcutEvent(event);
+    if (!nextShortcut) return;
+    const duplicate = allShortcutItems.find((item) =>
+      item.id !== id && getEffectiveShortcut(item.id, item.key) === nextShortcut
+    );
+    if (duplicate) {
+      setError(t('settings.shortcutDuplicate', { shortcut: nextShortcut, action: duplicate.label }));
+      return;
+    }
+    setError(null);
+    onSetShortcutOverride(id, nextShortcut === fallback ? fallback : nextShortcut);
+    setEditingShortcutId(null);
+    setSuccess(t('settings.shortcutSaved', { shortcut: nextShortcut }));
+  };
+  const handleResetShortcuts = () => {
+    setError(null);
+    onResetShortcutOverrides?.();
+    setSuccess(t('settings.shortcutResetSuccess'));
+  };
+  const handleFaqCta = (cta: FaqCta) => {
+    switch (cta.action) {
+      case 'pricing':
+      case 'signup':
+        onUpgrade();
+        break;
+      case 'teamPanel':
+        if (organizationPanelProps) setActiveTab('club');
+        break;
+      case 'settings':
+        setActiveTab('billing');
+        break;
+      case 'export':
+        setActiveTab('data');
+        break;
+      case 'save':
+      default:
+        break;
+    }
+  };
 
   const navGroups: { group: string; items: { id: SettingsTab; label: string }[] }[] = [
     { group: 'account', items: [
@@ -203,6 +323,7 @@ export function SettingsModal({
     { group: 'general', items: [
       { id: 'language' as SettingsTab, label: t('common.language') },
       { id: 'shortcuts' as SettingsTab, label: t('settings.shortcuts') },
+      { id: 'faq' as SettingsTab, label: t('faq.title') },
       ...(onExportBoard || onImportBoard ? [{ id: 'data' as SettingsTab, label: t('settings.dataPrivacy') }] : []),
       { id: 'about' as SettingsTab, label: t('settings.about') },
     ] },
@@ -787,15 +908,26 @@ export function SettingsModal({
                       <label className="block text-xs font-medium text-muted mb-2">{t('settings.arrowDefaults')}</label>
                       <div className="space-y-3">
                         {(['pass', 'run', 'shoot', 'dribble'] as const).map((tp) => (
-                          <Slider
-                            key={tp}
-                            label={t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)}
-                            value={arrowDefaults.strokeWidth[tp]}
-                            min={1}
-                            max={12}
-                            format={(v) => `${v}px`}
-                            onChange={(v) => onSetArrowDefaults({ strokeWidth: { ...arrowDefaults.strokeWidth, [tp]: v } })}
-                          />
+                          <div key={tp} className="space-y-2">
+                            <Slider
+                              label={t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)}
+                              value={arrowDefaults.strokeWidth[tp]}
+                              min={1}
+                              max={12}
+                              format={(v) => `${v}px`}
+                              onChange={(v) => onSetArrowDefaults({ strokeWidth: { ...arrowDefaults.strokeWidth, [tp]: v } })}
+                            />
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs font-medium text-muted">{t('inspector.arrow.color')}</label>
+                              <input
+                                type="color"
+                                value={arrowDefaults.color?.[tp] ?? '#1a1a1a'}
+                                onChange={(e) => onSetArrowDefaults({ color: { ...(arrowDefaults.color ?? {}), [tp]: e.target.value } })}
+                                className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
+                                aria-label={`${t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)} ${t('inspector.arrow.color')}`}
+                              />
+                            </div>
+                          </div>
                         ))}
                         <div>
                           <label className="block text-xs font-medium text-muted mb-1.5">{t('inspector.arrow.startHead')}</label>
@@ -968,24 +1100,34 @@ export function SettingsModal({
                         className="w-full px-2 py-2 bg-surface2 border border-border rounded-lg text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                         id="squad-team-select"
                       >
-                        <option value="home">{t('teamsPanel.team1')}</option>
-                        <option value="away">{t('teamsPanel.team2')}</option>
-                        <option value="team3">{t('teamsPanel.team3')}</option>
-                        <option value="team4">{t('teamsPanel.team4')}</option>
+                        {(['home', 'away', 'team3', 'team4'] as Team[]).map((team) => {
+                          const settings = teamSettings?.[team] ?? DEFAULT_TEAM_SETTINGS[team] ?? DEFAULT_TEAM_SETTINGS.home;
+                          return (
+                            <option key={team} value={team}>
+                              {settings.name || t(`teamsPanel.${team === 'home' ? 'team1' : team === 'away' ? 'team2' : team}`)}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
+                    <label className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-surface2 text-sm text-text cursor-pointer shrink-0">
+                      <input id="squad-gk-input" type="checkbox" className="accent-current" />
+                      GK
+                    </label>
                     <button
                       onClick={() => {
                         const nameInput = document.getElementById('squad-name-input') as HTMLInputElement;
                         const numInput = document.getElementById('squad-number-input') as HTMLInputElement;
                         const teamSelect = document.getElementById('squad-team-select') as HTMLSelectElement;
+                        const gkInput = document.getElementById('squad-gk-input') as HTMLInputElement;
                         const name = nameInput?.value?.trim();
                         const num = parseInt(numInput?.value || '0', 10);
                         const team = (teamSelect?.value || 'home') as Team;
                         if (name && num > 0 && onAddSquadPlayer) {
-                          onAddSquadPlayer(name, num, team);
+                          onAddSquadPlayer(name, num, team, (gkInput?.checked ?? false) || num === 1);
                           nameInput.value = '';
                           numInput.value = '';
+                          if (gkInput) gkInput.checked = false;
                         }
                       }}
                       className="px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors shrink-0"
@@ -1002,23 +1144,21 @@ export function SettingsModal({
                       </p>
                     ) : (
                       squad.map((player) => {
-                        const teamColor = player.team === 'home' ? 'bg-team-home'
-                          : player.team === 'away' ? 'bg-team-away'
-                          : player.team === 'team3' ? 'bg-emerald-500'
-                          : 'bg-orange-500';
-                        const teamLabel = player.team === 'home' ? t('teamsPanel.team1')
-                          : player.team === 'away' ? t('teamsPanel.team2')
-                          : player.team === 'team3' ? t('teamsPanel.team3')
-                          : t('teamsPanel.team4');
+                        const settings = teamSettings?.[player.team] ?? DEFAULT_TEAM_SETTINGS[player.team] ?? DEFAULT_TEAM_SETTINGS.home;
+                        const teamLabel = settings.name || t(`teamsPanel.${player.team === 'home' ? 'team1' : player.team === 'away' ? 'team2' : player.team}`);
+                        const playerColor = player.isGoalkeeper
+                          ? settings.goalkeeperColor ?? DEFAULT_TEAM_SETTINGS[player.team]?.goalkeeperColor ?? settings.primaryColor
+                          : settings.primaryColor;
                         return (
                           <div
                             key={player.id}
                             className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-surface2 hover:bg-border transition-colors group"
                           >
-                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 ${teamColor} text-white`}>
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 text-white" style={{ backgroundColor: playerColor }}>
                               {player.number}
                             </span>
                             <span className="text-sm text-text flex-1 truncate">{player.name}</span>
+                            {player.isGoalkeeper && <span className="text-[10px] font-semibold text-accent">GK</span>}
                             <span className="text-[10px] text-muted uppercase">{teamLabel}</span>
                           {/* Delete */}
                           {onRemoveSquadPlayer && (
@@ -1085,26 +1225,86 @@ export function SettingsModal({
           {/* Shortcuts Tab */}
           {activeTab === 'shortcuts' && (
             <div>
-              <h3 className="text-lg font-semibold text-text mb-4">{t('settings.keyboardShortcuts')}</h3>
-              <div>
-                {[
-                  ['P / Shift+P / Alt+P / Alt+Shift+P', t('settings.shortcutItems.players')],
-                  ['B', t('settings.shortcutItems.ball')],
-                  ['A / R / S / D', t('settings.shortcutItems.arrows')],
-                  ['Z / Shift+Z', t('settings.shortcutItems.zones')],
-                  ['T', t('settings.shortcutItems.text')],
-                  ['K / Q', t('settings.shortcutItems.equipment')],
-                  ['Shift+G', t('settings.shortcutItems.goalkeeper')],
-                  ['1–6 / Shift+1–6', t('settings.shortcutItems.formations')],
-                  ['F', t('settings.shortcutItems.focus')],
-                  ['?', t('settings.shortcutItems.fullShortcuts')],
-                ].map(([k, d]) => (
-                  <div key={k} className="flex items-center justify-between py-2 border-b border-border last:border-b-0">
-                    <span className="text-sm text-text">{d}</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-surface2 border border-border text-xs text-muted font-mono">{k}</kbd>
-                  </div>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-text">{t('settings.keyboardShortcuts')}</h3>
+                  <p className="text-xs text-muted mt-1">{t('settings.shortcutCustomizationHint')}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResetShortcuts}
+                  disabled={!isPro || !onResetShortcutOverrides}
+                  className="px-3 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors"
+                >
+                  {t('settings.resetShortcuts')}
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                {shortcutGroups.map((group) => (
+                  <section key={group.title}>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">{group.title}</h4>
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      {group.items.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-4 px-3 py-2 border-b border-border last:border-b-0">
+                          <span className="text-sm text-text">{item.label}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isPro || !onSetShortcutOverride) {
+                                setError(t('settings.shortcutProOnly'));
+                                return;
+                              }
+                              setError(null);
+                              setEditingShortcutId(item.id);
+                            }}
+                            onKeyDown={(event) => editingShortcutId === item.id && handleShortcutCapture(item.id, item.key, event)}
+                            className={`px-1.5 py-0.5 rounded border text-xs font-mono whitespace-nowrap transition-colors ${
+                              editingShortcutId === item.id
+                                ? 'bg-accent/10 border-accent text-accent'
+                                : 'bg-surface2 border-border text-muted hover:border-accent hover:text-accent'
+                            }`}
+                            aria-label={t('settings.editShortcutAria', { action: item.label })}
+                          >
+                            {editingShortcutId === item.id ? t('settings.shortcutPressKeys') : getEffectiveShortcut(item.id, item.key)}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* FAQ Tab */}
+          {activeTab === 'faq' && (
+            <div>
+              <h3 className="text-lg font-semibold text-text mb-1">{t('faq.title')}</h3>
+              <p className="text-xs text-muted mb-4">{t('faq.subtitle')}</p>
+              <div className="mb-4">
+                <FaqSearch
+                  value={faqSearch}
+                  onChange={setFaqSearch}
+                  placeholder={t('faq.search')}
+                />
+              </div>
+              {faqCategories.length > 0 ? (
+                <div className="space-y-3">
+                  {faqCategories.map((category, index) => (
+                    <FaqCategory
+                      key={category.id}
+                      category={category}
+                      onCtaClick={handleFaqCta}
+                      defaultOpen={index === 0 || faqSearch.length > 0}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-border bg-surface2 p-4 text-sm text-muted">
+                  {t('faq.noResults')}
+                </div>
+              )}
             </div>
           )}
 
@@ -1112,13 +1312,16 @@ export function SettingsModal({
           {activeTab === 'about' && (
             <div>
               <h3 className="text-lg font-semibold text-text mb-1">TMC Studio</h3>
-              <p className="text-xs text-muted mb-5">{t('settings.aboutVersion')}</p>
+              <p className="text-xs text-muted">{t('settings.aboutVersion', { version: appVersion ?? 'dev' })}</p>
+              <p className="text-xs text-muted mb-5">{t('settings.aboutBy')}</p>
               <div className="flex flex-wrap gap-2 mb-5">
                 {[
-                  { label: 'X', href: 'https://x.com/tmcstudio' },
-                  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/tmcstudio' },
-                  { label: 'GitHub', href: 'https://github.com/tmcstudio' },
-                  { label: t('settings.contact'), href: 'mailto:support@tacticsmadeclear.store' },
+                  { label: 'Instagram', href: 'https://www.instagram.com/tacticsmadeclear' },
+                  { label: 'X', href: 'https://x.com/tacticsmadeclear' },
+                  { label: 'TikTok', href: 'https://www.tiktok.com/@tacticsmadeclear' },
+                  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/tactics-made-clear' },
+                  { label: t('settings.reportBug'), href: 'mailto:support@tacticsmadeclear.store?subject=TMC%20Studio%20bug%20report' },
+                  { label: t('settings.sendFeedback'), href: 'mailto:support@tacticsmadeclear.store?subject=TMC%20Studio%20feedback' },
                 ].map((link) => (
                   <a
                     key={link.label}
@@ -1127,6 +1330,30 @@ export function SettingsModal({
                     rel="noopener noreferrer"
                     className="px-3 py-1.5 rounded-md bg-surface2 border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors"
                   >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+              <div className="rounded-lg border border-border bg-surface2 p-4 mb-5">
+                <p className="text-sm font-medium text-text mb-1">{t('settings.contactFounder')}</p>
+                <p className="text-xs text-muted mb-3">{t('settings.contactFounderHint')}</p>
+                <div className="flex flex-wrap gap-2">
+                  <a href="mailto:support@tacticsmadeclear.store" className="px-3 py-1.5 rounded-md bg-surface border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors">
+                    {t('settings.contact')}
+                  </a>
+                  <a href="https://x.com/krystianrub" target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-md bg-surface border border-border text-sm text-text hover:border-accent hover:text-accent transition-colors">
+                    X: Krystian Rubajczyk
+                  </a>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 mb-5 text-xs">
+                {[
+                  { label: t('settings.legalPrivacy'), href: '/privacy' },
+                  { label: t('settings.legalTerms'), href: '/terms' },
+                  { label: t('settings.legalCookies'), href: '/cookies' },
+                  { label: t('settings.legalInfo'), href: '/legal' },
+                ].map((link) => (
+                  <a key={link.href} href={link.href} className="text-muted hover:text-accent transition-colors">
                     {link.label}
                   </a>
                 ))}

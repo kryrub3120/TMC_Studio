@@ -336,6 +336,7 @@ export function useBoardPageState(props: BoardPageProps) {
         locked: selectedElement.locked === true,
         showNumber: selectedElement.showNumber,
         arrowNumber: selectedElement.number,
+        color: selectedElement.color,
         startHead: selectedElement.startHead,
         endHead: selectedElement.endHead,
         strokeWidth: selectedElement.strokeWidth,

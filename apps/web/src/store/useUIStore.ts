@@ -9,6 +9,7 @@ import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
 import type { ArrowType, ArrowDefaults, ZoneDefaults } from '@tmc/core';
 import { DEFAULT_ARROW_DEFAULTS, DEFAULT_ZONE_DEFAULTS } from '@tmc/core';
+import { updatePreferences, isSupabaseEnabled } from '../lib/supabase';
 
 /** Active tool types */
 export type ActiveTool =
@@ -40,6 +41,8 @@ export interface ToastMessage {
   message: string;
   duration?: number;
 }
+
+export type ShortcutOverrides = Record<string, string>;
 
 /** Confirm modal configuration */
 export interface ConfirmModalConfig {
@@ -170,6 +173,9 @@ interface UIState {
   
   // Club Premium Welcome (Sprint H3)
   clubWelcomeSeen: boolean;
+
+  // User-customized keyboard shortcuts (stable shortcut id -> combo label).
+  shortcutOverrides: ShortcutOverrides;
   
   // Actions - Theme
   toggleTheme: () => void;
@@ -201,6 +207,8 @@ interface UIState {
   setZoneDefaults: (patch: Partial<ZoneDefaults>) => void;
   /** Reset element defaults to built-in values. */
   resetElementDefaults: () => void;
+  setShortcutOverride: (id: string, shortcut: string) => void;
+  resetShortcutOverrides: () => void;
   toggleFooter: () => void;
   setFooterVisible: (visible: boolean) => void;
 
@@ -327,7 +335,6 @@ const syncPreferencesToCloud = async (prefs: {
   inspector?: { width: number };
 }) => {
   try {
-    const { updatePreferences, isSupabaseEnabled } = await import('../lib/supabase');
     if (isSupabaseEnabled()) {
       await updatePreferences(prefs);
     }
@@ -386,6 +393,7 @@ export const useUIStore = create<UIState>()(
       showTutorial: false,
       tutorialForceVisible: false,
       clubWelcomeSeen: false,
+      shortcutOverrides: {},
       breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
@@ -476,12 +484,21 @@ export const useUIStore = create<UIState>()(
             ...state.arrowDefaults,
             ...patch,
             strokeWidth: { ...state.arrowDefaults.strokeWidth, ...(patch.strokeWidth ?? {}) },
+            color: { ...(state.arrowDefaults.color ?? {}), ...(patch.color ?? {}) },
           },
         })),
       setZoneDefaults: (patch) =>
         set((state) => ({ zoneDefaults: { ...state.zoneDefaults, ...patch } })),
       resetElementDefaults: () =>
         set({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS }),
+      setShortcutOverride: (id, shortcut) =>
+        set((state) => ({
+          shortcutOverrides: {
+            ...state.shortcutOverrides,
+            [id]: shortcut,
+          },
+        })),
+      resetShortcutOverrides: () => set({ shortcutOverrides: {} }),
       
       toggleFooter: () => set((s) => ({ footerVisible: !s.footerVisible })),
       setFooterVisible: (visible) => set({ footerVisible: visible }),
@@ -672,6 +689,7 @@ export const useUIStore = create<UIState>()(
         viewportLocked: state.viewportLocked, // PR-UX-3 ETAP 4
         tutorialCompleted: state.tutorialCompleted, // Sprint F
         clubWelcomeSeen: state.clubWelcomeSeen, // Sprint H3
+        shortcutOverrides: state.shortcutOverrides,
         bottomBarHeight: state.bottomBarHeight,
         bottomBarCollapsed: state.bottomBarCollapsed,
         inspectorWidth: state.inspectorWidth,

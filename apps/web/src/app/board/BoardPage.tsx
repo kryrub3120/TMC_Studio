@@ -334,7 +334,7 @@ export function BoardPage(props: BoardPageProps) {
                     y: (e.clientY - rect.top - panY) / zoom,
                   }
                 : undefined;
-              state.addPlayerFromSquad(data.team, data.name, data.number, dropPosition);
+              state.addPlayerFromSquad(data.team, data.name, data.number, dropPosition, data.isGoalkeeper === true || data.number === 1);
             }
           } catch { /* not a squad player drop */ }
         }}
@@ -403,6 +403,15 @@ export function BoardPage(props: BoardPageProps) {
             activeCanvasInteraction={state.activeCanvasInteraction}
             viewportTransformRef={viewportTransformRef}
           />
+
+          {!state.authIsPro && !state.isPrintMode && (
+            <div
+              className="pointer-events-none absolute bottom-5 right-6 z-[2] select-none rounded-md border border-border/60 bg-surface/70 px-3 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted/70 shadow-sm backdrop-blur"
+              aria-hidden="true"
+            >
+              TMC STUDIO
+            </div>
+          )}
 
           {/* Shortcuts Hint (one-time) */}
           {!state.focusMode && (
@@ -579,7 +588,8 @@ export function BoardPage(props: BoardPageProps) {
           onToggle={state.toggleSquadVisible}
           onOpenSettings={() => onOpenSettingsModal('squad')}
           onDragStart={() => {}}
-          onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
+          teamSettings={state.teamSettings}
+          onQuickAddPlayer={(name, number, team, isGoalkeeper) => state.addSquadPlayer(name, number, team, isGoalkeeper)}
           onRemovePlayer={(id) => state.removeSquadPlayer(id)}
         />
       </div>
