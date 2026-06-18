@@ -11,6 +11,7 @@ import { setDevCloudUser, clearDevCloudData, clearAllDevCloudData, isDevCloudAct
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
+import { track, EVENTS } from '../lib/analytics';
 import {
   isSupabaseEnabled,
   getCurrentUser,
@@ -418,6 +419,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: null,
           });
+          track(EVENTS.SIGNUP, { method: 'email' });
           // Note: User needs to verify email, so don't set authenticated yet
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign up failed';

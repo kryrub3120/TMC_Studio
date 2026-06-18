@@ -12,6 +12,8 @@ export interface CreateCommandActionsDeps {
   // Elements
   addHomePlayer: () => void;
   addAwayPlayer: () => void;
+  addTeam3Player: () => void;
+  addTeam4Player: () => void;
   addBall: () => void;
   addPassArrow: () => void;
   addRunArrow: () => void;
@@ -33,7 +35,6 @@ export interface CreateCommandActionsDeps {
   toggleInspector: () => void;
   toggleCheatSheet: () => void;
   toggleGrid: () => void;
-  toggleSnap: () => void;
   toggleFocusMode: () => void;
   showToast: (msg: string) => void;
 
@@ -82,6 +83,8 @@ export function createCommandActions(deps: CreateCommandActionsDeps): CommandAct
     // Elements
     { id: 'add-home-player', label: label('add-home-player', 'Add Home Player'), shortcut: 'P', category: 'elements', onExecute: deps.addHomePlayer },
     { id: 'add-away-player', label: label('add-away-player', 'Add Away Player'), shortcut: 'Shift+P', category: 'elements', onExecute: deps.addAwayPlayer },
+    { id: 'add-team3-player', label: label('add-team3-player', 'Add Team 3 Player'), shortcut: 'Alt+P', category: 'elements', onExecute: deps.addTeam3Player },
+    { id: 'add-team4-player', label: label('add-team4-player', 'Add Team 4 Player'), shortcut: 'Alt+Shift+P', category: 'elements', onExecute: deps.addTeam4Player },
     { id: 'add-ball', label: label('add-ball', 'Add Ball'), shortcut: 'B', category: 'elements', onExecute: deps.addBall },
     { id: 'add-pass-arrow', label: label('add-pass-arrow', 'Add Pass Arrow'), shortcut: 'A', category: 'elements', onExecute: deps.addPassArrow },
     { id: 'add-run-arrow', label: label('add-run-arrow', 'Add Run Arrow'), shortcut: 'R', category: 'elements', onExecute: deps.addRunArrow },
@@ -103,7 +106,6 @@ export function createCommandActions(deps: CreateCommandActionsDeps): CommandAct
     { id: 'toggle-inspector', label: label('toggle-inspector', 'Toggle Inspector'), shortcut: 'I', category: 'view', onExecute: deps.toggleInspector },
     { id: 'toggle-cheatsheet', label: label('toggle-cheatsheet', 'Toggle Shortcuts'), shortcut: '?', category: 'view', onExecute: deps.toggleCheatSheet },
     { id: 'toggle-grid', label: label('toggle-grid', 'Toggle Grid'), shortcut: 'G', category: 'view', onExecute: deps.toggleGrid },
-    { id: 'toggle-snap', label: label('toggle-snap', 'Toggle Snap'), shortcut: 'S', category: 'view', onExecute: deps.toggleSnap },
     { id: 'focus-mode', label: label('focus-mode', 'Focus Mode'), shortcut: 'F', category: 'view', onExecute: deps.toggleFocusMode },
 
     // Steps & Playback (animation module — excluded when feature flag is off)

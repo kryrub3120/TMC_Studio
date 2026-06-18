@@ -96,7 +96,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const pasteClipboard = useBoardStore((s) => s.pasteClipboard);
   const clearAllDrawings = useBoardStore((s) => s.clearAllDrawings);
   const setElements = useBoardStore((s) => s.setElements);
-  const createGroup = useBoardStore((s) => s.createGroup);
+  const toggleSelectedLock = useBoardStore((s) => s.toggleSelectedLock);
   const undo = useBoardStore((s) => s.undo);
   const redo = useBoardStore((s) => s.redo);
   // ✅ selectAll, clearSelection now via cmdRegistry (PR1)
@@ -462,8 +462,12 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           handleExportGIF();
         } else if (isCmd) {
           e.preventDefault();
-          createGroup();
+          cmdRegistry.board.selection.groupSelected();
           showTranslatedToast('groupCreated');
+        } else if (e.altKey) {
+          e.preventDefault();
+          cmdRegistry.board.selection.ungroupSelected();
+          showTranslatedToast('groupUngrouped');
         } else if (e.shiftKey) {
           // Shift+G = goalkeeper: promote a single selected player to GK,
           // otherwise cycle the relevant team's goalkeeper jersey color.
@@ -686,7 +690,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         
       // Animation shortcut (L = toggle loop) - gated behind feature flag for MVP
       case 'l':
-        if (ANIMATION_ENABLED && !isCmd) {
+        if (!isCmd && e.shiftKey) {
+          e.preventDefault();
+          toggleSelectedLock();
+          showTranslatedToast('selectionLockToggled');
+        } else if (ANIMATION_ENABLED && !isCmd) {
           e.preventDefault();
           toggleLoop();
           showTranslatedToast(uiState.isLooping ? 'loopOff' : 'loopOn');
@@ -953,7 +961,8 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     cmdRegistry,
     commandPaletteOpen, closeCommandPalette, openCommandPalette, contextMenuVisible,
     addPlayerAtCursor, addBallAtCursor, addBallGroupAtCursor, addTextAtCursor, addEquipmentAtCursor,
-    duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements, createGroup,
+    duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements,
+    toggleSelectedLock,
     undo, redo, deleteSelected,
     cycleZoneShape, cyclePlayerShape, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,

@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team } from '@tmc/core';
-import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
+import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team, PitchBoardPreset } from '@tmc/core';
+import { DEFAULT_TEAM_SETTINGS, PITCH_BOARDS } from '@tmc/core';
 import { useTranslation } from './i18n.js';
 import { LanguageSwitcher } from './LanguageSwitcher.js';
 
@@ -25,6 +25,8 @@ export interface TopBarProps {
   isSyncing?: boolean;
   /** Step info badge (e.g., "Step 2/5") */
   stepInfo?: string;
+  /** Tutorial-driven: id of the toolbar dropdown to force open ('players'|'arrows'|'equipment'|'export'), or null. */
+  tutorialMenu?: string | null;
   /** Online/offline status (PR-L5-MINI) */
   isOnline?: boolean;
   /** Export with format selection — replaces single onExport */
@@ -41,6 +43,10 @@ export interface TopBarProps {
   onAddEquipment?: (type: EquipmentType, variant?: EquipmentVariant) => void;
   /** Add a ball (single) or ball cluster from top bar dropdown */
   onAddBall?: (variant: 'single' | 'cluster') => void;
+  /** Select a board preset from the TopBar 'Boiska' dropdown. */
+  onSelectBoard?: (board: PitchBoardPreset) => void;
+  /** Currently active board id (for highlighting in the dropdown). */
+  activeBoardId?: string;
   /** Add a player of the given team from top bar dropdown */
   onAddPlayer?: (team: Team) => void;
   /** Open squad settings (Squad Bench management) */
@@ -297,6 +303,14 @@ const ZONE_ITEMS: Array<{ shape: ZoneShape; labelKey: string; shortcut: string }
   { shape: 'polygon', labelKey: 'topbar.polygonZone', shortcut: 'Alt+Z' },
 ];
 
+const PitchBoardIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="5" width="18" height="14" rx="1" />
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <circle cx="12" cy="12" r="2.5" />
+  </svg>
+);
+
 const ToolMenuButton: React.FC<{
   dataTour?: string;
   title: string;
@@ -323,8 +337,8 @@ const MenuBackdrop: React.FC<{ onClose: () => void }> = ({ onClose }) => (
   <div className="fixed inset-0 z-40" onClick={onClose} />
 );
 
-const ToolMenuPanel: React.FC<{ widthClass?: string; children: React.ReactNode }> = ({ widthClass = 'w-[320px]', children }) => (
-  <div className={`absolute right-0 top-full z-50 mt-2 rounded-lg border border-border bg-surface p-2 shadow-lg ${widthClass}`}>
+const ToolMenuPanel: React.FC<{ widthClass?: string; dataTour?: string; children: React.ReactNode }> = ({ widthClass = 'w-[320px]', dataTour, children }) => (
+  <div data-tour={dataTour} className={`absolute right-0 top-full z-50 mt-2 rounded-lg border border-border bg-surface p-2 shadow-lg ${widthClass}`}>
     {children}
   </div>
 );
@@ -376,8 +390,11 @@ const PLAYER_ITEMS: Array<{ team: Team; labelKey: string; shortcut: string }> = 
 const PlayersMenu: React.FC<{
   onAddPlayer?: (team: Team) => void;
   onOpenSquadSettings?: () => void;
-}> = ({ onAddPlayer, onOpenSquadSettings }) => {
+  /** When set by the tutorial, force this dropdown open ('players') or closed. */
+  tutorialMenu?: string | null;
+}> = ({ onAddPlayer, onOpenSquadSettings, tutorialMenu }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  React.useEffect(() => { setIsOpen(tutorialMenu === 'players'); }, [tutorialMenu]);
   const { t } = useTranslation();
 
   if (!onAddPlayer) return null;
@@ -395,7 +412,7 @@ const PlayersMenu: React.FC<{
       {isOpen && (
         <>
           <MenuBackdrop onClose={() => setIsOpen(false)} />
-          <ToolMenuPanel widthClass="w-[300px]">
+          <ToolMenuPanel widthClass="w-[300px]" dataTour="players-menu">
             <div className="grid grid-cols-2 gap-1.5">
               {PLAYER_ITEMS.map((item) => (
                 <button
@@ -447,10 +464,98 @@ const PlayersMenu: React.FC<{
   );
 };
 
+const BoardGlyph: React.FC<{ id: string; className?: string }> = ({ id, className }) => {
+  const c = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const };
+  switch (id) {
+    case 'half-2d':
+      return (
+        <svg viewBox="0 0 36 28" className={className}>
+          <rect x="3" y="2" width="30" height="24" rx="2" {...c} />
+          <rect x="12" y="2" width="12" height="6" {...c} />
+          <path d="M3 26 h30" {...c} />
+          <path d="M12 26 a6 6 0 0 1 12 0" {...c} />
+        </svg>
+      );
+    case 'penalty-2d':
+      return (
+        <svg viewBox="0 0 36 28" className={className}>
+          <rect x="3" y="2" width="30" height="24" rx="2" {...c} />
+          <rect x="7" y="2" width="22" height="14" {...c} />
+          <rect x="13" y="2" width="10" height="6" {...c} />
+          <path d="M15 16 a4 4 0 0 0 6 0" {...c} />
+        </svg>
+      );
+    case 'full':
+    default:
+      return (
+        <svg viewBox="0 0 36 28" className={className}>
+          <rect x="2" y="3" width="32" height="22" rx="2" {...c} />
+          <path d="M18 3 V25" {...c} />
+          <circle cx="18" cy="14" r="4" {...c} />
+          <rect x="2" y="8" width="5" height="12" {...c} />
+          <rect x="29" y="8" width="5" height="12" {...c} />
+        </svg>
+      );
+  }
+};
+
+const PitchMenu: React.FC<{
+  onSelectBoard?: (board: PitchBoardPreset) => void;
+  activeBoardId?: string;
+  tutorialMenu?: string | null;
+}> = ({ onSelectBoard, activeBoardId, tutorialMenu }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  React.useEffect(() => { setIsOpen(tutorialMenu === 'pitch'); }, [tutorialMenu]);
+  const { t } = useTranslation();
+
+  if (!onSelectBoard) return null;
+
+  return (
+    <div className="relative">
+      <ToolMenuButton
+        dataTour="pitch"
+        title={t('topbar.pitchTitle')}
+        icon={<PitchBoardIcon className="h-4 w-4" />}
+        label={t('topbar.pitch')}
+        isOpen={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      />
+      {isOpen && (
+        <>
+          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <ToolMenuPanel widthClass="w-[320px]" dataTour="pitch-menu">
+            <div className="grid grid-cols-3 gap-1.5">
+              {PITCH_BOARDS.map((board) => {
+                const active = activeBoardId === board.id;
+                return (
+                  <button
+                    key={board.id}
+                    onClick={() => { onSelectBoard(board); setIsOpen(false); }}
+                    className={`group relative flex flex-col items-center gap-1 rounded-md px-1.5 py-2 transition-colors ${
+                      active ? 'bg-accent/15 ring-1 ring-accent text-text' : 'hover:bg-surface2 text-muted'
+                    }`}
+                  >
+                    <span className="flex h-10 w-full items-center justify-center text-text/80">
+                      <BoardGlyph id={board.id} className="h-7 w-9" />
+                    </span>
+                    <span className="block w-full truncate text-center text-[10px] font-medium text-text">{t(board.labelKey)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </ToolMenuPanel>
+        </>
+      )}
+    </div>
+  );
+};
+
 const ArrowsMenu: React.FC<{
   onSelectArrowTool?: (type: ArrowType) => void;
-}> = ({ onSelectArrowTool }) => {
+  tutorialMenu?: string | null;
+}> = ({ onSelectArrowTool, tutorialMenu }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  React.useEffect(() => { setIsOpen(tutorialMenu === 'arrows'); }, [tutorialMenu]);
   const { t } = useTranslation();
 
   if (!onSelectArrowTool) return null;
@@ -468,7 +573,7 @@ const ArrowsMenu: React.FC<{
       {isOpen && (
         <>
           <MenuBackdrop onClose={() => setIsOpen(false)} />
-          <ToolMenuPanel widthClass="w-[300px]">
+          <ToolMenuPanel widthClass="w-[300px]" dataTour="arrows-menu">
             <div className="grid grid-cols-1 gap-1.5">
               {ARROW_ITEMS.map((item) => (
                 <button
@@ -548,8 +653,10 @@ const ZonesMenu: React.FC<{
 const EquipmentMenu: React.FC<{
   onAddEquipment?: (type: EquipmentType, variant?: EquipmentVariant) => void;
   onAddBall?: (variant: 'single' | 'cluster') => void;
-}> = ({ onAddEquipment, onAddBall }) => {
+  tutorialMenu?: string | null;
+}> = ({ onAddEquipment, onAddBall, tutorialMenu }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  React.useEffect(() => { setIsOpen(tutorialMenu === 'equipment'); }, [tutorialMenu]);
   const { t } = useTranslation();
 
   if (!onAddEquipment) return null;
@@ -568,7 +675,7 @@ const EquipmentMenu: React.FC<{
       {isOpen && (
         <>
           <MenuBackdrop onClose={() => setIsOpen(false)} />
-          <ToolMenuPanel widthClass="w-[320px]">
+          <ToolMenuPanel widthClass="w-[320px]" dataTour="equipment-menu">
             <div className="grid grid-cols-2 gap-1.5">
               {onAddBall && (
                 <>
@@ -643,8 +750,10 @@ const ProStarIcon: React.FC<{ className?: string }> = ({ className }) => (
 const ExportMenu: React.FC<{
   onExport?: (format: ExportFormat) => void;
   plan?: PlanType;
-}> = ({ onExport, plan = 'free' }) => {
+  tutorialMenu?: string | null;
+}> = ({ onExport, plan = 'free', tutorialMenu }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  React.useEffect(() => { setIsOpen(tutorialMenu === 'export'); }, [tutorialMenu]);
   const { t } = useTranslation();
 
   if (!onExport) return null;
@@ -677,7 +786,7 @@ const ExportMenu: React.FC<{
       {isOpen && (
         <>
           <MenuBackdrop onClose={() => setIsOpen(false)} />
-          <ToolMenuPanel widthClass="w-[280px]">
+          <ToolMenuPanel widthClass="w-[280px]" dataTour="export-menu">
             <div className="grid grid-cols-1 gap-1.5">
               {EXPPORT_ITEMS.map((item) => {
                 const isLocked = item.pro && !isPro;
@@ -934,6 +1043,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   userInitials = 'U',
   isSyncing = false,
   stepInfo,
+  tutorialMenu = null,
   isOnline = true,
   onExport,
   onToggleFocus,
@@ -945,6 +1055,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onAddEquipment,
   onAddBall,
   onAddPlayer,
+  onSelectBoard,
+  activeBoardId,
   onOpenSquadSettings,
   onOpenProjects,
   onRename,
@@ -1009,7 +1121,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="w-px h-5 bg-border hidden sm:block" />
 
         {/* Project name + saved status */}
-        <div className="flex items-center gap-2 px-2 py-1 -mx-2">
+        <div data-tour="projects" className="flex items-center gap-2 px-2 py-1 -mx-2">
           {/* Folder icon - click opens Projects drawer */}
           <button
             onClick={onOpenProjects}
@@ -1100,13 +1212,14 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        <PlayersMenu onAddPlayer={onAddPlayer} onOpenSquadSettings={onOpenSquadSettings} />
-        <ArrowsMenu onSelectArrowTool={onSelectArrowTool} />
+        <PlayersMenu onAddPlayer={onAddPlayer} onOpenSquadSettings={onOpenSquadSettings} tutorialMenu={tutorialMenu} />
+        <ArrowsMenu onSelectArrowTool={onSelectArrowTool} tutorialMenu={tutorialMenu} />
         <ZonesMenu onSelectZoneTool={onSelectZoneTool} />
-        <EquipmentMenu onAddEquipment={onAddEquipment} onAddBall={onAddBall} />
+        <EquipmentMenu onAddEquipment={onAddEquipment} onAddBall={onAddBall} tutorialMenu={tutorialMenu} />
+        <PitchMenu onSelectBoard={onSelectBoard} activeBoardId={activeBoardId} tutorialMenu={tutorialMenu} />
 
         {/* Export dropdown */}
-        <ExportMenu onExport={onExport} plan={plan} />
+        <ExportMenu onExport={onExport} plan={plan} tutorialMenu={tutorialMenu} />
 
         {/* Focus Mode */}
         <IconButton onClick={onToggleFocus} title={`${t('topbar.focusMode')} (F)`} active={focusMode}>

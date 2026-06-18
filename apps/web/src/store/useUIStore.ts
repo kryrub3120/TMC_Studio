@@ -7,7 +7,8 @@ import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
-import type { ArrowType } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults } from '@tmc/core';
+import { DEFAULT_ARROW_DEFAULTS, DEFAULT_ZONE_DEFAULTS } from '@tmc/core';
 
 /** Active tool types */
 export type ActiveTool =
@@ -78,7 +79,7 @@ export const BOTTOM_BAR_MAX_HEIGHT = 240;
 export const BOTTOM_BAR_COLLAPSED_HEIGHT = 8;
 
 /** RightInspector resizable width constraints (px) */
-export const DEFAULT_INSPECTOR_WIDTH = 280;
+export const DEFAULT_INSPECTOR_WIDTH = 340;
 export const INSPECTOR_MIN_WIDTH = 220;
 export const INSPECTOR_MAX_WIDTH = 480;
 
@@ -114,6 +115,10 @@ interface UIState {
   snapEnabled: boolean;
   gridSize: number;
   defaultArrowType: ArrowType;
+  /** User-level default style for new arrows (persisted). */
+  arrowDefaults: ArrowDefaults;
+  /** User-level default style for new zones (persisted). */
+  zoneDefaults: ZoneDefaults;
   footerVisible: boolean;
   hasSeenShortcutsHint: boolean;
 
@@ -190,6 +195,12 @@ interface UIState {
   toggleSnap: () => void;
   setGridSize: (size: number) => void;
   setDefaultArrowType: (type: ArrowType) => void;
+  /** Patch arrow defaults (e.g. set per-type stroke or heads). */
+  setArrowDefaults: (patch: Partial<ArrowDefaults>) => void;
+  /** Patch zone defaults. */
+  setZoneDefaults: (patch: Partial<ZoneDefaults>) => void;
+  /** Reset element defaults to built-in values. */
+  resetElementDefaults: () => void;
   toggleFooter: () => void;
   setFooterVisible: (visible: boolean) => void;
 
@@ -341,6 +352,8 @@ export const useUIStore = create<UIState>()(
       snapEnabled: true,
       gridSize: 10,
       defaultArrowType: 'pass',
+      arrowDefaults: DEFAULT_ARROW_DEFAULTS,
+      zoneDefaults: DEFAULT_ZONE_DEFAULTS,
       footerVisible: true,
       hasSeenShortcutsHint: false, // One-time hint tracking
       bottomBarHeight: DEFAULT_BOTTOM_BAR_HEIGHT,
@@ -457,6 +470,18 @@ export const useUIStore = create<UIState>()(
         set({ gridSize: next });
       },
       setDefaultArrowType: (type) => set({ defaultArrowType: type }),
+      setArrowDefaults: (patch) =>
+        set((state) => ({
+          arrowDefaults: {
+            ...state.arrowDefaults,
+            ...patch,
+            strokeWidth: { ...state.arrowDefaults.strokeWidth, ...(patch.strokeWidth ?? {}) },
+          },
+        })),
+      setZoneDefaults: (patch) =>
+        set((state) => ({ zoneDefaults: { ...state.zoneDefaults, ...patch } })),
+      resetElementDefaults: () =>
+        set({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS }),
       
       toggleFooter: () => set((s) => ({ footerVisible: !s.footerVisible })),
       setFooterVisible: (visible) => set({ footerVisible: visible }),
@@ -639,6 +664,8 @@ export const useUIStore = create<UIState>()(
         snapEnabled: state.snapEnabled,
         gridSize: state.gridSize,
         defaultArrowType: state.defaultArrowType,
+        arrowDefaults: state.arrowDefaults,
+        zoneDefaults: state.zoneDefaults,
         stepDuration: state.stepDuration,
         footerVisible: state.footerVisible,
         inspectorOpen: state.inspectorOpen,

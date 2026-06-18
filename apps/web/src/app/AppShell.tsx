@@ -8,7 +8,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, type ProjectItem, type SettingsTab, ClubWelcomeModal } from '@tmc/ui';
 import { DEFAULT_TEAM_SETTINGS, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
+import type { PitchBoardPreset } from '@tmc/core';
 import { type ProjectFolder } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import appPkg from '../../package.json';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -53,6 +55,21 @@ export function AppShell() {
   const devLogin = useAuthStore((s) => s.devLogin);
   const teamId = useAuthStore((s) => s.teamId);
 
+  // Track Supabase access token for billing API calls
+  const [authAccessToken, setAuthAccessToken] = useState<string | null>(null);
+
+  // Subscribe to auth state changes to keep access token in sync
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthAccessToken(session?.access_token ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthAccessToken(session?.access_token ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   // UI store actions
   const showToast = useUIStore((s) => s.showToast);
   const clubWelcomeSeen = useUIStore((s) => s.clubWelcomeSeen);
@@ -67,6 +84,27 @@ export function AppShell() {
   const setSquadVisible = useBoardStore((s) => s.setSquadVisible);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
+  const applyPitchBoard = useBoardStore((s) => s.applyPitchBoard);
+  const showConfirmModal = useUIStore((s) => s.showConfirmModal);
+
+  // Switch board preset. If the drawing has elements, confirm a reset first.
+  const handleSelectBoard = useCallback((board: PitchBoardPreset) => {
+    const hasElements = useBoardStore.getState().elements.length > 0;
+    if (hasElements) {
+      showConfirmModal({
+        title: t('pitchPanel.boardResetTitle'),
+        description: t('pitchPanel.boardResetDesc'),
+        confirmLabel: t('pitchPanel.boardResetConfirm'),
+        danger: true,
+        onConfirm: () => {
+          applyPitchBoard({ view: board.view, projection: board.projection });
+          useUIStore.getState().closeConfirmModal();
+        },
+      });
+    } else {
+      applyPitchBoard({ view: board.view, projection: board.projection });
+    }
+  }, [showConfirmModal, applyPitchBoard, t]);
   const isPrintMode = useUIStore((s) => s.isPrintMode);
   const togglePrintMode = useUIStore((s) => s.togglePrintMode);
   const exportBoardToFile = useBoardStore((s) => s.exportBoardToFile);
@@ -79,6 +117,11 @@ export function AppShell() {
   const setDefaultArrowType = useUIStore((s) => s.setDefaultArrowType);
   const stepDuration = useUIStore((s) => s.stepDuration);
   const setStepDuration = useUIStore((s) => s.setStepDuration);
+  const arrowDefaults = useUIStore((s) => s.arrowDefaults);
+  const zoneDefaults = useUIStore((s) => s.zoneDefaults);
+  const setArrowDefaults = useUIStore((s) => s.setArrowDefaults);
+  const setZoneDefaults = useUIStore((s) => s.setZoneDefaults);
+  const resetElementDefaults = useUIStore((s) => s.resetElementDefaults);
   const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
 
   // Controllers
@@ -144,15 +187,19 @@ export function AppShell() {
     },
   });
 
-  // Purchase intent from the public /pricing page. `/app?upgrade=pro|team`
+  // Purchase intent from the public /pricing page. `/app?upgrade=pro|team&cycle=yearly`
   // opens the pricing modal directly so visitors land on checkout, not a
   // blank board. Runs once on mount, then strips the param from the URL.
+  const [pricingUpgradeCycle, setPricingUpgradeCycle] = useState<'monthly' | 'yearly'>('monthly');
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const upgrade = params.get('upgrade');
+    const cycle = params.get('cycle');
     if (upgrade === 'pro' || upgrade === 'team') {
+      setPricingUpgradeCycle(cycle === 'yearly' ? 'yearly' : 'monthly');
       billingController.openPricingModal();
       params.delete('upgrade');
+      params.delete('cycle');
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
@@ -233,9 +280,10 @@ export function AppShell() {
   // Club Welcome Modal trigger: show once for first-time Club Premium admins
   // that haven't seen the welcome flow yet AND have a team
   useEffect(() => {
-    if (teamId && !clubWelcomeSeen) {
-      setClubWelcomeModalOpen(true);
-    }
+    // Club Premium welcome is disabled — every plan now gets the same unified
+    // in-app tutorial (its final step covers Settings/club management).
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void teamId; void clubWelcomeSeen;
   }, [teamId, clubWelcomeSeen]);
 
   const handleClubWelcomeComplete = useCallback(() => {
@@ -263,11 +311,13 @@ export function AppShell() {
       {/* Main board page */}
       <BoardPage
         onOpenProjectsDrawer={handleOpenProjectsDrawer}
+        onCloseProjectsDrawer={() => setProjectsDrawerOpen(false)}
         onOpenAuthModal={() => setAuthModalOpen(true)}
         onOpenSettingsModal={(tab) => {
           setSettingsInitialTab(tab);
           setSettingsModalOpen(true);
         }}
+        onCloseSettingsModal={() => setSettingsModalOpen(false)}
         onOpenPricingModal={() => billingController.openPricingModal()}
         onOpenLimitModal={(type, current, max) => {
           track(EVENTS.LIMIT_HIT, { type, current, max });
@@ -315,6 +365,8 @@ export function AppShell() {
         authIsPro={authIsPro}
         authIsAuthenticated={authIsAuthenticated}
         authUser={authUser}
+        authAccessToken={authAccessToken}
+        pricingInitialCycle={pricingUpgradeCycle}
 
         // Limit Reached Modal
         limitReachedModalOpen={limitReachedModalOpen}
@@ -409,6 +461,11 @@ export function AppShell() {
         onSetGridSize={setGridSize}
         onSetDefaultArrowType={setDefaultArrowType}
         onSetStepDuration={setStepDuration}
+        arrowDefaults={arrowDefaults}
+        zoneDefaults={zoneDefaults}
+        onSetArrowDefaults={setArrowDefaults}
+        onSetZoneDefaults={setZoneDefaults}
+        onResetElementDefaults={resetElementDefaults}
 
         // Squad Bench
         squad={(document.squad ?? []).map(p => ({ id: p.id, name: p.name, number: p.number, team: p.team as 'home' | 'away' }))}
@@ -422,6 +479,7 @@ export function AppShell() {
         onUpdateTeam={updateTeamSettings}
         pitchSettings={document.pitchSettings ?? DEFAULT_PITCH_SETTINGS}
         onUpdatePitch={updatePitchSettings}
+        onSelectBoard={handleSelectBoard}
         isPrintMode={isPrintMode}
         onTogglePrintMode={togglePrintMode}
         onExportBoard={exportBoardToFile}
