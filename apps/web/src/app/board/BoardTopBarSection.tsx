@@ -3,7 +3,7 @@
  */
 
 import { TopBar, type ExportFormat } from '@tmc/ui';
-import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team } from '@tmc/core';
+import type { ArrowType, EquipmentType, EquipmentVariant, ZoneShape, Team, PitchBoardPreset } from '@tmc/core';
 
 export interface BoardTopBarSectionProps {
   // Document
@@ -11,6 +11,7 @@ export interface BoardTopBarSectionProps {
   isSaved: boolean;
   isSyncing: boolean;
   stepInfo?: string;
+  tutorialMenu?: string | null;
   
   // Auth
   authIsPro: boolean;
@@ -34,6 +35,8 @@ export interface BoardTopBarSectionProps {
   onAddBall?: (variant: 'single' | 'cluster') => void;
   onAddPlayer?: (team: Team) => void;
   onOpenSquadSettings?: () => void;
+  onSelectBoard?: (board: PitchBoardPreset) => void;
+  activeBoardId?: string;
   onOpenProjects: () => void;
   onRenameProject: (newName: string) => void;
   onToggleInspector: () => void;
@@ -52,6 +55,7 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
     isSaved,
     isSyncing,
     stepInfo,
+    tutorialMenu,
     authIsPro,
     authIsAuthenticated,
     userInitials,
@@ -70,6 +74,8 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
     onAddPlayer,
     onOpenSquadSettings,
     onOpenProjects,
+    onSelectBoard,
+    activeBoardId,
     onRenameProject,
     onToggleInspector,
     onOpenAccount,
@@ -91,6 +97,7 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
       userInitials={userInitials}
       isSyncing={isSyncing}
       stepInfo={stepInfo}
+      tutorialMenu={tutorialMenu}
       isOnline={isOnline}
       onExport={onExport}
       onToggleFocus={onToggleFocus}
@@ -104,6 +111,8 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
       onAddPlayer={onAddPlayer}
       onOpenSquadSettings={onOpenSquadSettings}
       onOpenProjects={onOpenProjects}
+      onSelectBoard={onSelectBoard}
+      activeBoardId={activeBoardId}
       onRename={onRenameProject}
       onToggleInspector={onToggleInspector}
       onOpenAccount={onOpenAccount}

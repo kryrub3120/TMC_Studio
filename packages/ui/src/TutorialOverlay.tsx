@@ -14,6 +14,13 @@ export interface TutorialOverlayProps {
   onComplete: () => void;
   /** User's plan for role-aware content. Defaults to 'guest'. */
   plan?: Plan;
+  /**
+   * Called whenever the active step changes (and on first show), so the host
+   * app can REVEAL the real element the step describes — e.g. open the
+   * Inspector, expand the Squad Bench, or grow the bottom animation bar.
+   * The overlay then re-measures the target once the panel has opened.
+   */
+  onStepShow?: (step: TutorialStep, index: number) => void;
 }
 
 interface TourRect {
@@ -376,24 +383,23 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   onDismiss,
   onComplete,
   plan = 'guest',
+  onStepShow,
 }) => {
   const { t } = useTranslation();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [tooltipSize, setTooltipSize] = useState({ width: 360, height: 300 });
   const [targetRect, setTargetRect] = useState<TourRect | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const steps = React.useMemo(() => getStepsForPlan(plan), [plan]);
   const currentStep: TutorialStep | undefined = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
 
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+  const clearSettle = useCallback(() => {
+    settleTimers.current.forEach(clearTimeout);
+    settleTimers.current = [];
   }, []);
 
   const repositionTooltip = useCallback(() => {
@@ -483,28 +489,37 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
     };
   }, [isVisible, repositionTooltip]);
 
+  // Keep latest callbacks in refs so the reveal effect can depend ONLY on the
+  // step index — otherwise a parent re-render (new onStepShow identity) would
+  // re-run it, re-fire the panel setters and spin a render loop.
+  const onStepShowRef = useRef(onStepShow);
+  onStepShowRef.current = onStepShow;
+  const repositionRef = useRef(repositionTooltip);
+  repositionRef.current = repositionTooltip;
+
+  // Reveal the real element this step describes (open Inspector, expand Squad
+  // Bench, grow the animation bar…) then re-measure as the panel animates open.
+  // No auto-advance: the coach drives the tour at their own pace (Next / →).
   useEffect(() => {
-    if (!isVisible || !currentStep) return;
-
-    clearTimer();
-    timerRef.current = setTimeout(() => {
-      if (isLastStep) {
-        onComplete();
-      } else {
-        setCurrentStepIndex((prev) => prev + 1);
-      }
-    }, currentStep.durationMs);
-
-    return clearTimer;
-  }, [clearTimer, currentStep, isLastStep, isVisible, onComplete]);
+    if (!isVisible) return;
+    const step = steps[currentStepIndex];
+    if (!step) return;
+    onStepShowRef.current?.(step, currentStepIndex);
+    clearSettle();
+    [0, 80, 200, 360, 520].forEach((delay) => {
+      settleTimers.current.push(setTimeout(() => repositionRef.current(), delay));
+    });
+    return clearSettle;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, currentStepIndex, steps]);
 
   useEffect(() => {
     if (isVisible) {
       setCurrentStepIndex(0);
     } else {
-      clearTimer();
+      clearSettle();
     }
-  }, [clearTimer, isVisible]);
+  }, [clearSettle, isVisible]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -513,23 +528,35 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   }, [currentStepIndex, isVisible, repositionTooltip]);
 
   const handleSkip = useCallback(() => {
-    clearTimer();
+    clearSettle();
     onDismiss();
-  }, [clearTimer, onDismiss]);
+  }, [clearSettle, onDismiss]);
 
   const handleNext = useCallback(() => {
-    clearTimer();
+    clearSettle();
     if (isLastStep) {
       onComplete();
     } else {
       setCurrentStepIndex((prev) => prev + 1);
     }
-  }, [clearTimer, isLastStep, onComplete]);
+  }, [clearSettle, isLastStep, onComplete]);
 
   const handlePrev = useCallback(() => {
-    clearTimer();
+    clearSettle();
     setCurrentStepIndex((prev) => Math.max(0, prev - 1));
-  }, [clearTimer]);
+  }, [clearSettle]);
+
+  // Keyboard navigation: →/Enter advance, ← back, Esc skip.
+  useEffect(() => {
+    if (!isVisible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); handleNext(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrev(); }
+      else if (e.key === 'Escape') { e.preventDefault(); handleSkip(); }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [isVisible, handleNext, handlePrev, handleSkip]);
 
   if (!isVisible || !currentStep) return null;
 
@@ -554,19 +581,20 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   return (
     <div className="fixed inset-0 z-tutorial pointer-events-none">
       {targetRect ? (
-        <div
-          className="absolute rounded-xl border border-accent/80 bg-transparent shadow-[0_0_0_9999px_rgba(5,10,22,0.68),0_0_28px_rgba(46,230,166,0.45)] transition-all duration-300"
-          style={spotlightStyle}
-        />
+        <>
+          {/* Scrim with a punched-out highlight + glowing accent ring */}
+          <div
+            className="tour-spotlight absolute rounded-xl border-2 border-accent bg-transparent shadow-[0_0_0_9999px_rgba(5,10,22,0.72),0_0_30px_rgba(46,230,166,0.5)] transition-all duration-300 ease-out"
+            style={spotlightStyle}
+          />
+          {/* Animated pulse ring drawing the eye to the revealed element */}
+          <div
+            className="tour-spotlight-pulse pointer-events-none absolute rounded-xl border-2 border-accent/60 transition-all duration-300 ease-out"
+            style={spotlightStyle}
+          />
+        </>
       ) : (
-        <div className="absolute inset-0 bg-[#050A16]/70 backdrop-blur-[1px]" />
-      )}
-
-      {targetRect && (
-        <div
-          className="absolute rounded-xl border border-white/20 bg-accent/10 transition-all duration-300"
-          style={spotlightStyle}
-        />
+        <div className="absolute inset-0 bg-[#050A16]/72 backdrop-blur-[1px]" />
       )}
 
       {targetRect && currentStep.targetLabel && (
@@ -654,7 +682,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
             </div>
 
             <KeycapRail keycaps={currentStep.keycaps} />
-            <StepDemo step={currentStep} />
+            {/* Only show the mock demo as a fallback when no real element is
+                spotlighted — otherwise the revealed UI itself is the visual. */}
+            {!targetRect && <StepDemo step={currentStep} />}
 
             <div className="flex items-center justify-between gap-3 pt-1">
               <button
@@ -668,7 +698,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                 onClick={handleNext}
                 className="rounded-md bg-accent px-4 py-2 text-xs font-semibold text-[#062016] shadow-lg shadow-accent/20 transition-transform hover:scale-[1.02] hover:bg-accent-hover"
               >
-                {isLastStep ? t(`${stepKey}.cta`) || t('tutorial.startBuilding') : t(`${stepKey}.cta`) || t('tutorial.next')}
+                {isLastStep ? t('tutorial.finish') : (t(`${stepKey}.cta`) || t('tutorial.next'))}
               </button>
             </div>
           </div>
@@ -678,6 +708,16 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
       <style>{`
         .tour-card {
           animation: tour-card-enter 220ms ease-out;
+        }
+
+        .tour-spotlight-pulse {
+          animation: tour-spotlight-pulse 1800ms ease-out infinite;
+        }
+
+        @keyframes tour-spotlight-pulse {
+          0% { opacity: 0.7; transform: scale(1); }
+          70% { opacity: 0; transform: scale(1.06); }
+          100% { opacity: 0; transform: scale(1.06); }
         }
 
         .tour-keycap {
@@ -752,7 +792,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .tour-hand-tap, .tour-hand-drag, .tour-hand-ripple, .tour-arrow, .tour-float, .tour-orient { animation: none !important; }
+          .tour-hand-tap, .tour-hand-drag, .tour-hand-ripple, .tour-arrow, .tour-float, .tour-orient, .tour-spotlight-pulse { animation: none !important; }
         }
       `}</style>
     </div>

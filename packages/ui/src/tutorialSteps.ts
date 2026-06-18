@@ -63,9 +63,8 @@ export function getStepForPlan(step: TutorialStep, plan: Plan): TutorialStep {
  */
 export function getStepsForPlan(plan: Plan): TutorialStep[] {
   const base = TUTORIAL_STEPS.map((s) => getStepForPlan(s, plan));
-  if (plan === 'team') {
-    base.push(getStepForPlan(TEAM_STEP, plan));
-  }
+  // One unified tutorial for every plan — step 9 (Settings) is shown to all.
+  base.push(getStepForPlan(SETTINGS_STEP, plan));
   return base;
 }
 
@@ -76,7 +75,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     eyebrow: '🏋️ Warm-up',
     title: 'Set up your players',
     description: 'Press P to add home players, Shift+P for away. Use number keys 1-6 for instant formations. Your tactical board starts here.',
-    targetSelector: '[data-tour="players"]',
+    targetSelector: '[data-tour="players-menu"]',
     position: 'bottom',
     durationMs: 7000,
     keycaps: ['P', 'Shift+P', '1-6'],
@@ -91,7 +90,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     eyebrow: '🏃 Movement',
     title: 'Draw your tactics',
     description: 'Press A for pass arrows, R for runs, S for shots. Click-drag on the pitch to show exactly how your team should move.',
-    targetSelector: '[data-tour="arrows"]',
+    targetSelector: '[data-tour="arrows-menu"]',
     position: 'bottom',
     durationMs: 7000,
     keycaps: ['A', 'R', 'S', 'Shift+N'],
@@ -121,7 +120,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     eyebrow: '🏋️ Equipment',
     title: 'Build your drill',
     description: 'Add goals (J), cones (K), ladders (Y) and hurdles (U). Use Z for zones, T for text labels. Everything a coach needs for a session.',
-    targetSelector: '[data-tour="equipment"]',
+    targetSelector: '[data-tour="equipment-menu"]',
     position: 'bottom',
     durationMs: 7000,
     keycaps: ['J', 'K', 'Y', 'U', 'Z', 'T'],
@@ -174,8 +173,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     eyebrow: '💾 Save',
     title: 'Never lose your work',
     description: 'Press ⌘S to save. Your projects are auto-saved to the cloud. Open the Projects panel to rename, organize, or pick up where you left off.',
-    targetSelector: '[data-tour="shortcuts"]',
-    position: 'left',
+    targetSelector: '[data-tour="projects-panel"]',
+    position: 'right',
     durationMs: 7000,
     keycaps: ['⌘S', '⌘O'],
     targetLabel: 'Save & projects',
@@ -199,7 +198,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     eyebrow: '📤 Share',
     title: 'Export and share with your team',
     description: 'Export your drill as PNG, GIF animation, or PDF. Press ? for the full shortcut sheet. Your tactical library is ready for matchday.',
-    targetSelector: '[data-tour="export"]',
+    targetSelector: '[data-tour="export-menu"]',
     position: 'bottom',
     durationMs: 8000,
     keycaps: ['⌘E', '⇧⌘G', '⇧⌘P', '?'],
@@ -231,17 +230,19 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
-// ─── Step 9 (Club Admin only): Team Management ─────────────────────
-export const TEAM_STEP: TutorialStep = {
+// ─── Step 9 (all plans): Settings ──────────────────────────────────
+export const SETTINGS_STEP: TutorialStep = {
   id: 9,
-  eyebrow: '👥 Club',
-  title: 'Manage your team',
-  description: 'Open the Team panel in Inspector to invite coaches and staff. You control who has Club Premium access. Add members, manage billing, and grow your club.',
-  targetSelector: '[data-tour="inspector"]',
+  eyebrow: '⚙️ Settings',
+  title: 'Manage your settings',
+  description: 'Open Settings to customise your profile, editor preferences, teams and pitch — and manage your account and subscription.',
+  targetSelector: '[data-tour="settings-modal"]',
   position: 'left',
   durationMs: 8000,
-  keycaps: ['Team panel', 'Invite', 'Manage'],
-  targetLabel: 'Club management',
+  targetLabel: 'Settings',
   demo: 'team',
   cta: 'Start coaching',
 };
+
+/** @deprecated kept as alias for backwards-compat */
+export const TEAM_STEP = SETTINGS_STEP;
