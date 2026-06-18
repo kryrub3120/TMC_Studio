@@ -6,7 +6,7 @@
 /// <reference types="vite/client" />
 
 import { logger } from './logger';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, type User as SupabaseAuthUser } from '@supabase/supabase-js';
 import type { BoardDocument } from '@tmc/core';
 // DEV-ONLY: see ./devCloud.ts for details. Safe to remove together with
 // devCloud.ts and the isDevCloudActive() guards below.
@@ -74,10 +74,18 @@ export type UserPreferences = {
 };
 
 /** Get current authenticated user */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promise<User | null> {
   if (!supabase) return null;
-  
-  const { data: { user } } = await supabase.auth.getUser();
+
+  // When the caller already has the authenticated user (e.g. from an
+  // onAuthStateChange session), use it directly. This avoids a second
+  // /auth/v1/user round trip that supabase-js can abort mid OAuth exchange,
+  // which previously left the UI logged-out until a manual refresh.
+  let user: SupabaseAuthUser | null = authUser ?? null;
+  if (!user) {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  }
   if (!user) return null;
   
   // ALWAYS fetch fresh profile from database (not from JWT cache)
@@ -843,11 +851,33 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
   
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
     async (_event, session) => {
-      if (session?.user) {
-        const user = await getCurrentUser();
-        callback(user);
-      } else {
+      if (!session?.user) {
         callback(null);
+        return;
+      }
+      try {
+        // Pass the session user so we don't make a redundant getUser() call.
+        const user = await getCurrentUser(session.user);
+        callback(user);
+      } catch (err) {
+        // Never leave the UI logged-out just because the profile fetch failed
+        // (network blip / AbortError during PKCE exchange). Fall back to the
+        // basic identity from the session so the app reflects the login now;
+        // the real subscription tier is refreshed on the next auth event/load.
+        logger.error('[Auth] onAuthStateChange handler failed - using session fallback:', err);
+        callback({
+          id: session.user.id,
+          email: session.user.email ?? '',
+          full_name:
+            session.user.user_metadata?.full_name ??
+            session.user.user_metadata?.name ??
+            undefined,
+          avatar_url:
+            session.user.user_metadata?.avatar_url ??
+            session.user.user_metadata?.picture ??
+            undefined,
+          subscription_tier: 'free',
+        });
       }
     }
   );
