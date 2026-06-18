@@ -1,25 +1,27 @@
 /**
  * Shared Stripe Configuration for Netlify Functions
- * 
- * This is the source of truth for backend Stripe configuration.
+ * TMC Studio - Backend source of truth for Stripe price IDs
+ *
+ * STATUS: All prices are in TEST mode.
+ * Before going LIVE, replace these with live price IDs from Stripe Dashboard.
+ *
  * Keep in sync with apps/web/src/config/stripe.ts (frontend).
- * 
- * Note: Functions should NOT import from apps/web (bundling issues).
- * This file is specifically for backend use.
+ * Functions should NOT import from apps/web (bundling issues).
  */
 
 /**
  * Stripe Price IDs for subscriptions
  * Retrieved from Stripe Dashboard on 2026-01-11
+ * Mode: TEST (update for LIVE before production launch)
  */
 export const STRIPE_PRICES = {
   pro: {
-    monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV', // $9.00 USD/month (TEST)
-    yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',  // $90.00 USD/year (TEST)
+    monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV', // $9.00 USD/month
+    yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',  // $90.00 USD/year
   },
   team: {
-    monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8', // $29.00 USD/month (TEST)
-    yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',  // $290.00 USD/year (TEST)
+    monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8', // $29.00 USD/month
+    yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',  // $290.00 USD/year
   },
 } as const;
 

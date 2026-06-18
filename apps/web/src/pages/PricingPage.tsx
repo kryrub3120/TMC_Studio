@@ -8,20 +8,12 @@
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation, LanguageSwitcher } from '@tmc/ui';
+import { useTranslation, LanguageSwitcher, DISPLAY_PRICES, SAVE_PERCENT } from '@tmc/ui';
+import type { Cycle } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
 import { ENTITLEMENTS_BY_PLAN, type Plan } from '../lib/entitlements';
 import { usePublicDarkTheme } from './PublicPageShell';
-
-type Cycle = 'monthly' | 'yearly';
-
-// Display prices mirror apps/web/src/config/stripe.ts (USD). EU consumers see
-// VAT-inclusive amounts via Stripe at checkout (see docs/STRIPE_TAX_SETUP.md).
-const PRICE: Record<'pro' | 'team', Record<Cycle, string>> = {
-  pro: { monthly: '$9', yearly: '$90' },
-  team: { monthly: '$29', yearly: '$290' },
-};
 
 const PLANS: Plan[] = ['guest', 'free', 'pro', 'team'];
 
@@ -72,8 +64,8 @@ export function PricingPage() {
   const planMeta: Record<Plan, { name: string; tagline: string; price: string; period: string; cta: string }> = {
     guest: { name: t('pricingPage.plans.guestName'), tagline: t('pricingPage.plans.guestTagline'), price: t('pricingPage.plans.free'), period: '', cta: t('pricingPage.plans.guestCta') },
     free: { name: t('pricingPage.plans.freeName'), tagline: t('pricingPage.plans.freeTagline'), price: t('pricingPage.plans.free'), period: '', cta: t('pricingPage.plans.freeCta') },
-    pro: { name: t('pricingPage.plans.proName'), tagline: t('pricingPage.plans.proTagline'), price: PRICE.pro[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.proCta') },
-    team: { name: t('pricingPage.plans.teamName'), tagline: t('pricingPage.plans.teamTagline'), price: PRICE.team[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.teamCta') },
+    pro: { name: t('pricingPage.plans.proName'), tagline: t('pricingPage.plans.proTagline'), price: DISPLAY_PRICES.pro[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.proCta') },
+    team: { name: t('pricingPage.plans.teamName'), tagline: t('pricingPage.plans.teamTagline'), price: DISPLAY_PRICES.team[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.teamCta') },
   };
 
   return (
@@ -104,9 +96,14 @@ export function PricingPage() {
                 type="button"
                 onClick={() => setCycle(c)}
                 aria-current={cycle === c ? 'true' : undefined}
-                className={`rounded-md px-4 py-1.5 text-base font-medium transition-colors ${cycle === c ? 'bg-accent text-white' : 'text-muted hover:text-text'}`}
+                className={`rounded-md px-4 py-1.5 text-base font-medium transition-colors relative ${cycle === c ? 'bg-accent text-white' : 'text-muted hover:text-text'}`}
               >
                 {t(`pricingPage.billing.${c}`)}
+                {c === 'yearly' && (
+                  <span className="absolute -top-2.5 -right-2.5 rounded-full bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-tight">
+                    Save {SAVE_PERCENT}%
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -120,7 +117,7 @@ export function PricingPage() {
           {PLANS.map((p) => {
             const m = planMeta[p];
             const highlight = p === 'pro';
-            const upgradeHref = p === 'pro' || p === 'team' ? `/app?upgrade=${p}` : '/app';
+            const upgradeHref = p === 'pro' || p === 'team' ? `/app?upgrade=${p}&cycle=${cycle}` : '/app';
             return (
               <div key={p} className={`relative flex flex-col rounded-xl border p-6 ${highlight ? 'border-accent bg-surface ring-1 ring-accent' : 'border-border bg-surface'}`}>
                 {highlight && (
@@ -182,6 +179,47 @@ export function PricingPage() {
               </div>
             ))}
           </dl>
+        </section>
+
+        {/* Team value calculator */}
+        <section className="mx-auto mt-16 max-w-3xl rounded-xl border border-border bg-surface p-8">
+          <h2 className="text-center text-2xl font-bold tracking-tight">{t('pricingPage.teamCalc.title')}</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-base text-muted">{t('pricingPage.teamCalc.subtitle')}</p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <div className="rounded-lg border border-border bg-surface2 p-5 text-center">
+              <p className="text-sm text-muted">{t('pricingPage.teamCalc.fivePro')}</p>
+              <p className="mt-1 text-2xl font-bold text-text">
+                {cycle === 'yearly' ? '$450' : '$45'}
+                <span className="text-base font-normal text-muted">{cycle === 'yearly' ? '/yr' : '/mo'}</span>
+              </p>
+              <p className="mt-1 text-xs text-muted">5 × {t(`pricingPage.plans.${cycle === 'yearly' ? 'perYear' : 'perMonth'}`)}</p>
+            </div>
+            <div className="flex items-center justify-center">
+              <svg className="h-8 w-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+            <div className="rounded-lg border-2 border-accent bg-accent/5 p-5 text-center">
+              <p className="text-sm font-semibold text-accent">{t('pricingPage.teamCalc.teamPlan')}</p>
+              <p className="mt-1 text-2xl font-bold text-text">
+                {cycle === 'yearly' ? '$290' : '$29'}
+                <span className="text-base font-normal text-muted">{cycle === 'yearly' ? '/yr' : '/mo'}</span>
+              </p>
+              <p className="mt-1 text-xs font-medium text-accent">
+                {t('pricingPage.teamCalc.savings', {
+                  amount: cycle === 'yearly' ? '$160' : '$16',
+                })}
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 text-center">
+            <Link
+              to={`/app?upgrade=team&cycle=${cycle}`}
+              className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-base font-medium text-white transition-colors hover:bg-accent-hover"
+            >
+              {t('pricingPage.teamCalc.cta')}
+            </Link>
+          </div>
         </section>
 
         <p className="mt-12 text-center text-base text-muted">

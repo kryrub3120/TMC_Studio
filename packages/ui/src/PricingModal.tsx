@@ -4,21 +4,8 @@
 
 import { useState } from 'react';
 import { useTranslation } from './i18n.js';
-
-type Cycle = 'monthly' | 'yearly';
-
-// Stripe Price IDs — single source of truth for PricingModal
-// Keep in sync with apps/web/src/config/stripe.ts and netlify/functions/_stripeConfig.ts
-const STRIPE_PRICES = {
-  pro: {
-    monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV', // $9/mo (TEST)
-    yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',  // $90/yr (TEST)
-  },
-  team: {
-    monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8', // $29/mo (TEST)
-    yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',  // $290/yr (TEST)
-  },
-} as const;
+import { STRIPE_PRICES, SAVE_PERCENT } from './pricingConfig.js';
+import type { Cycle } from './pricingConfig.js';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -26,11 +13,10 @@ interface PricingModalProps {
   currentPlan: 'guest' | 'free' | 'pro' | 'team';
   isAuthenticated: boolean;
   onSignUp: () => void;
-  user?: {
-    id: string;
-    email: string;
-    stripe_customer_id?: string | null;
-  } | null;
+  /** Supabase access token for Authorization header in checkout requests */
+  accessToken?: string | null;
+  /** Initial billing cycle (from /pricing page link). Defaults to 'monthly'. */
+  initialCycle?: Cycle;
 }
 
 interface Plan {
@@ -88,10 +74,11 @@ export function PricingModal({
   currentPlan,
   isAuthenticated,
   onSignUp,
-  user,
+  accessToken,
+  initialCycle,
 }: PricingModalProps) {
   const { t } = useTranslation();
-  const [cycle, setCycle] = useState<Cycle>('monthly');
+  const [cycle, setCycle] = useState<Cycle>(initialCycle ?? 'monthly');
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,25 +105,26 @@ export function PricingModal({
     setError(null);
 
     try {
-      // Build checkout request with user context
+      // Build checkout request with ONLY trusted fields.
+      // userId, email, customerId are NOT sent — the server reads them from auth.
       const checkoutBody: any = {
         priceId: plan.priceId,
         successUrl: `${window.location.origin}/app?checkout=success`,
         cancelUrl: `${window.location.origin}/app?checkout=cancelled`,
       };
 
-      // Pass user data for webhook correlation
-      if (user) {
-        checkoutBody.userId = user.id; // For client_reference_id
-        checkoutBody.email = user.email; // For customer creation
-        if (user.stripe_customer_id) {
-          checkoutBody.customerId = user.stripe_customer_id; // Reuse existing customer
-        }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Send Authorization header if we have an access token
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
       const response = await fetch('/.netlify/functions/create-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(checkoutBody),
       });
 
@@ -213,9 +201,14 @@ export function PricingModal({
                 type="button"
                 onClick={() => setCycle(c)}
                 aria-current={cycle === c ? 'true' : undefined}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${cycle === c ? 'bg-accent text-white' : 'text-muted hover:text-text'}`}
+                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors relative ${cycle === c ? 'bg-accent text-white' : 'text-muted hover:text-text'}`}
               >
                 {t(`pricing.billing.${c}`)}
+                {c === 'yearly' && (
+                  <span className="absolute -top-2.5 -right-2.5 rounded-full bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-tight">
+                    Save {SAVE_PERCENT}%
+                  </span>
+                )}
               </button>
             ))}
           </div>
