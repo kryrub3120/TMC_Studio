@@ -310,62 +310,73 @@ export const useAuthStore = create<AuthState>()(
           // processes the token, but in some cases (slow network, race conditions)
           // the listener may fire after the UI has already rendered as logged-out.
           if (hasAuthCallback) {
-            window.setTimeout(async () => {
-              // First clean stale params
-              if (hasAuthCallbackInUrl()) {
-                logger.debug('[Auth] Cleaning stale OAuth callback from URL');
-                cleanAuthCallbackUrl();
-              }
-              // Then check if session was already picked up by the listener
-              const currentState = _get();
-              if (!currentState.isAuthenticated) {
-                logger.debug('[Auth] OAuth callback: checking session as fallback...');
+            // Try to apply the session that Supabase establishes from the OAuth
+            // code exchange. The onAuthStateChange listener should fire SIGNED_IN
+            // automatically, but on slow/production networks the exchange can
+            // finish after the UI has rendered as logged-out (and the listener
+            // event can be missed). We poll a few times with backoff so the UI
+            // updates on its own, instead of depending on a single 1.5s timeout
+            // or a manual page refresh.
+            const applyOAuthSession = async (): Promise<boolean> => {
+              if (_get().isAuthenticated) return true;
+              try {
+                const { data: { session } } = await supabase!.auth.getSession();
+                if (!session?.user) return false;
+
+                const user = await getCurrentUser(session.user);
+                if (!user) return false;
+
+                set({
+                  user,
+                  isAuthenticated: true,
+                  isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
+                  isTeam: user.subscription_tier === 'team',
+                  teamId: user.team_id ?? null,
+                  isLoading: false,
+                });
+                logger.debug('[Auth] OAuth fallback: session applied for', user.email);
+
+                // Load preferences
                 try {
-                  const { data: { session } } = await supabase!.auth.getSession();
-                  if (session?.user) {
-                    logger.debug('[Auth] OAuth fallback: session found - updating state');
-                    const user = await getCurrentUser();
-                    if (user) {
-                      set({
-                        user,
-                        isAuthenticated: true,
-                        isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-                        isTeam: user.subscription_tier === 'team',
-                        teamId: user.team_id ?? null,
-                        isLoading: false,
+                  const cloudPrefs = await getPreferences();
+                  if (cloudPrefs) {
+                    const { useUIStore } = await import('./useUIStore');
+                    if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                    if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                    if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                    if (cloudPrefs.bottomBar) {
+                      useUIStore.setState({
+                        bottomBarHeight: cloudPrefs.bottomBar.height,
+                        bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
                       });
-                      // Load preferences
-                      try {
-                        const cloudPrefs = await getPreferences();
-                        if (cloudPrefs) {
-                          const { useUIStore } = await import('./useUIStore');
-                          if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                          if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                          if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                          if (cloudPrefs.bottomBar) {
-                            useUIStore.setState({
-                              bottomBarHeight: cloudPrefs.bottomBar.height,
-                              bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
-                            });
-                          }
-                          logger.debug('[Auth] Preferences loaded from cloud (fallback)');
-                        }
-                      } catch (error) {
-                        logger.error('[Auth] Failed to load preferences (fallback):', error);
-                      }
                     }
-                  } else {
-                    logger.debug('[Auth] OAuth fallback: no session yet');
+                    logger.debug('[Auth] Preferences loaded from cloud (fallback)');
                   }
                 } catch (error) {
-                  if (error instanceof Error && error.name === 'AbortError') {
-                    logger.debug('[Auth] AbortError in fallback (expected) - ignored');
-                  } else {
-                    logger.error('[Auth] Fallback session check error:', error);
-                  }
+                  logger.error('[Auth] Failed to load preferences (fallback):', error);
                 }
+                return true;
+              } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                  logger.debug('[Auth] AbortError in fallback (expected) - ignored');
+                } else {
+                  logger.error('[Auth] Fallback session check error:', error);
+                }
+                return false;
               }
-            }, 1500);
+            };
+
+            // Backoff schedule (ms from now) covering slow production exchanges.
+            const retryDelays = [400, 1000, 2000, 3500, 5000];
+            retryDelays.forEach((delay) => {
+              window.setTimeout(async () => {
+                // Clean stale OAuth params from the URL on each pass.
+                if (hasAuthCallbackInUrl()) {
+                  cleanAuthCallbackUrl();
+                }
+                await applyOAuthSession();
+              }, delay);
+            });
           }
 
           // ✅ Check for existing session ONLY if NOT OAuth callback
