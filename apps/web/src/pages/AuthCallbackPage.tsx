@@ -1,47 +1,47 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
 
-/**
- * Dedicated OAuth callback handler — Supabase PKCE recommended pattern.
- *
- * Google OAuth redirects here (/auth/callback?code=xxx&state=xxx).
- * supabase.auth.getSession() internally awaits the PKCE code exchange
- * (via initializePromise), so a single await is all we need — no polling,
- * no race conditions, no missed events.
- */
 export function AuthCallbackPage() {
-  const navigate = useNavigate();
-
   useEffect(() => {
-    let cancelled = false;
+    let done = false;
+
+    const redirect = () => {
+      if (!done) {
+        done = true;
+        window.location.replace('/app');
+      }
+    };
+
+    // Safety net: if getSession hangs or anything goes wrong, redirect after 8s
+    const safety = setTimeout(redirect, 8000);
 
     async function handleCallback() {
       if (!supabase) {
-        navigate('/app', { replace: true });
+        clearTimeout(safety);
+        redirect();
         return;
       }
 
       try {
+        // getSession() awaits initializePromise which includes PKCE code exchange
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (cancelled) return;
+        if (done) return;
 
         if (error || !session?.user) {
-          logger.error('[Auth] OAuth callback: no session after exchange', error);
-          navigate('/app', { replace: true });
+          logger.error('[Auth] OAuth callback: no session', error);
+          clearTimeout(safety);
+          redirect();
           return;
         }
-
-        logger.debug('[Auth] OAuth callback: session obtained for', session.user.email);
 
         let user = null;
         try {
           user = await getCurrentUser(session.user);
         } catch (err) {
-          logger.error('[Auth] OAuth callback: getCurrentUser failed, using session fallback', err);
+          logger.error('[Auth] OAuth callback: getCurrentUser failed, using fallback', err);
           user = {
             id: session.user.id,
             email: session.user.email ?? '',
@@ -57,7 +57,7 @@ export function AuthCallbackPage() {
           };
         }
 
-        if (cancelled) return;
+        if (done) return;
 
         if (user) {
           useAuthStore.setState({
@@ -68,20 +68,35 @@ export function AuthCallbackPage() {
             teamId: (user as any).team_id ?? null,
             isLoading: false,
           });
-          logger.debug('[Auth] OAuth callback: store updated, navigating to /app');
         }
       } catch (err) {
         logger.error('[Auth] OAuth callback: unexpected error', err);
       }
 
-      if (!cancelled) {
-        navigate('/app', { replace: true });
-      }
+      clearTimeout(safety);
+      redirect();
     }
 
     handleCallback();
-    return () => { cancelled = true; };
-  }, [navigate]);
 
-  return null;
+    return () => {
+      done = true;
+      clearTimeout(safety);
+    };
+  }, []);
+
+  return (
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#0f0f0f',
+      color: '#ffffff',
+      fontFamily: 'sans-serif',
+      fontSize: '16px',
+    }}>
+      Logowanie...
+    </div>
+  );
 }
