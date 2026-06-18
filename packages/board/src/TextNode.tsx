@@ -14,6 +14,7 @@ export interface TextNodeProps {
   text: TextElement;
   pitchConfig: PitchConfig;
   isSelected: boolean;
+  isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
@@ -50,6 +51,7 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   text,
   pitchConfig,
   isSelected,
+  isLocked = false,
   onSelect,
   onDragEnd,
   onDragStart,
@@ -87,6 +89,10 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isLocked) {
+      setMultiDragActive(false);
+      return;
+    }
     // Check if multi-drag should handle this
     if (onDragStart) {
       const stage = e.target.getStage();
@@ -146,13 +152,13 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
       ref={groupRef}
       x={text.position.x}
       y={text.position.y}
-      draggable={!multiDragActive}
+      draggable={!multiDragActive && !isLocked}
       onClick={handleClick}
       onTap={handleClick}
       onDblClick={handleDblClick}
       onDblTap={handleDblClick}
       onMouseDown={handleMouseDown}
-      onMouseEnter={cursorGrab}
+      onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}

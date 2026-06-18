@@ -18,6 +18,7 @@ export interface BallNodeProps {
   ball: BallElement;
   pitchConfig: PitchConfig;
   isSelected: boolean;
+  isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
@@ -145,6 +146,7 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   ball,
   pitchConfig,
   isSelected,
+  isLocked = false,
   onSelect,
   onDragEnd,
   onDragStart,
@@ -160,6 +162,10 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isLocked) {
+      setMultiDragActive(false);
+      return;
+    }
     if (onDragStart) {
       const stage = e.target.getStage();
       const rect = stage?.container().getBoundingClientRect();
@@ -227,9 +233,9 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
       id={ball.id}
       x={ball.position.x}
       y={ball.position.y}
-      draggable={!multiDragActive}
+      draggable={!multiDragActive && !isLocked}
       onClick={handleClick}
-      onMouseEnter={cursorGrab}
+      onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
       onTap={handleClick}
       onMouseDown={handleMouseDown}

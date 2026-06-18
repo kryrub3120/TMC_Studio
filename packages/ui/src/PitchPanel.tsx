@@ -2,8 +2,8 @@
  * PitchPanel - Pitch appearance customization
  */
 
-import type { PitchSettings, PitchTheme } from '@tmc/core';
-import { PITCH_THEMES, DEFAULT_LINE_SETTINGS, PLAIN_PITCH_LINES } from '@tmc/core';
+import type { PitchSettings, PitchTheme, PitchBoardPreset } from '@tmc/core';
+import { PITCH_THEMES, DEFAULT_LINE_SETTINGS, PLAIN_PITCH_LINES, PITCH_BOARDS, getPitchBoardId } from '@tmc/core';
 import { useTranslation } from './i18n.js';
 
 export interface PitchPanelProps {
@@ -11,6 +11,83 @@ export interface PitchPanelProps {
   onUpdatePitch: (settings: Partial<PitchSettings>) => void;
   isPrintMode?: boolean;
   onTogglePrintMode?: () => void;
+  /**
+   * Called when the user picks a board preset. Lets the host show a
+   * confirm-reset dialog before applying. If omitted, the board is applied
+   * directly via onUpdatePitch.
+   */
+  onSelectBoard?: (board: PitchBoardPreset) => void;
+}
+
+/** Mini SVG preview for a board preset */
+function BoardThumb({ id }: { id: string }) {
+  const common = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.2,
+    strokeLinejoin: 'round' as const,
+    strokeLinecap: 'round' as const,
+  };
+  switch (id) {
+    case 'half-2d':
+      return (
+        <svg viewBox="0 0 48 32" className="w-full h-full">
+          <rect x="4" y="3" width="40" height="26" rx="2" {...common} />
+          <rect x="16" y="3" width="16" height="7" {...common} />
+          <path d="M19 10 a5 5 0 0 0 10 0" {...common} />
+          <path d="M4 29 h40" {...common} />
+          <path d="M16 29 a8 8 0 0 1 16 0" {...common} />
+        </svg>
+      );
+    case 'penalty-2d':
+      return (
+        <svg viewBox="0 0 48 32" className="w-full h-full">
+          <rect x="4" y="3" width="40" height="26" rx="2" {...common} />
+          <rect x="9" y="3" width="30" height="16" {...common} />
+          <rect x="18" y="3" width="12" height="7" {...common} />
+          <path d="M21 19 a5 5 0 0 0 6 0" {...common} />
+        </svg>
+      );
+    case 'full':
+    default:
+      return (
+        <svg viewBox="0 0 48 32" className="w-full h-full">
+          <rect x="3" y="4" width="42" height="24" rx="2" {...common} />
+          <path d="M24 4 V28" {...common} />
+          <circle cx="24" cy="16" r="5" {...common} />
+          <rect x="3" y="9" width="6" height="14" {...common} />
+          <rect x="39" y="9" width="6" height="14" {...common} />
+        </svg>
+      );
+  }
+}
+
+/** Board preset button with mini preview */
+function BoardButton({
+  id,
+  label,
+  isActive,
+  onClick,
+}: {
+  id: string;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+        isActive ? 'bg-accent/20 ring-2 ring-accent text-text' : 'bg-surface2 hover:bg-surface2/80 text-muted'
+      }`}
+    >
+      <div className="w-full aspect-[3/2] rounded-sm bg-pitch/30 flex items-center justify-center text-text/80">
+        <BoardThumb id={id} />
+      </div>
+      <span className="text-[11px] leading-tight text-center text-text">{label}</span>
+    </button>
+  );
 }
 
 /** Theme button with preview */
@@ -77,8 +154,17 @@ export function PitchPanel({
   onUpdatePitch, 
   isPrintMode = false, 
   onTogglePrintMode,
+  onSelectBoard,
 }: PitchPanelProps) {
   const { t } = useTranslation();
+  const activeBoardId = getPitchBoardId(pitchSettings);
+  const handleSelectBoard = (board: PitchBoardPreset) => {
+    if (onSelectBoard) {
+      onSelectBoard(board);
+    } else {
+      onUpdatePitch({ view: board.view, projection: board.projection });
+    }
+  };
   const handleThemeSelect = (theme: PitchTheme) => {
     const themeColors = PITCH_THEMES[theme];
     onUpdatePitch({
@@ -105,6 +191,22 @@ export function PitchPanel({
     <div className="p-4 space-y-6">
       <div className="text-xs text-muted uppercase tracking-wider">
         {t('pitchPanel.title')}
+      </div>
+
+      {/* Board view selector */}
+      <div className="space-y-2">
+        <label className="block text-xs text-muted">{t('pitchPanel.boardView')}</label>
+        <div className="grid grid-cols-3 gap-2">
+          {PITCH_BOARDS.map((board) => (
+            <BoardButton
+              key={board.id}
+              id={board.id}
+              label={t(board.labelKey)}
+              isActive={activeBoardId === board.id}
+              onClick={() => handleSelectBoard(board)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Theme presets */}

@@ -45,6 +45,7 @@ export const createGroupsSlice: StateCreator<
     set((state) => ({
       groups: [...state.groups, newGroup],
     }));
+    get().pushHistory();
   },
   
   ungroupSelection: () => {
@@ -60,6 +61,7 @@ export const createGroupsSlice: StateCreator<
     set((state) => ({
       groups: state.groups.filter((g) => !groupsToRemove.includes(g)),
     }));
+    get().pushHistory();
   },
   
   selectGroup: (groupId) => {
@@ -76,6 +78,7 @@ export const createGroupsSlice: StateCreator<
         g.id === groupId ? { ...g, locked: !g.locked } : g
       ),
     }));
+    get().pushHistory();
   },
   
   toggleGroupVisibility: (groupId) => {
@@ -84,6 +87,7 @@ export const createGroupsSlice: StateCreator<
         g.id === groupId ? { ...g, visible: !g.visible } : g
       ),
     }));
+    get().pushHistory();
   },
   
   renameGroup: (groupId, name) => {
@@ -92,6 +96,7 @@ export const createGroupsSlice: StateCreator<
         g.id === groupId ? { ...g, name } : g
       ),
     }));
+    get().pushHistory();
   },
   
   getGroups: () => get().groups,

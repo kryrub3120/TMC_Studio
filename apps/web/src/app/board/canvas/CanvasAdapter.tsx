@@ -59,6 +59,7 @@ export interface CanvasAdapterProps {
   // Board state
   elements: BoardElement[];
   selectedIds: string[];
+  isElementLocked?: (id: string) => boolean;
   isPlaying: boolean;
   activeTool: string | null;
   isPrintMode: boolean;
@@ -123,6 +124,7 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     hiddenByGroup,
     elements,
     selectedIds,
+    isElementLocked,
     isPlaying,
     activeTool,
     isPrintMode,
@@ -193,6 +195,7 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
         canvasHeight={canvasHeight}
         elements={elements}
         selectedIds={selectedIds}
+        isElementLocked={isElementLocked}
         hiddenByGroup={hiddenByGroup}
         layerVisibility={layerVisibility}
         pitchConfig={pitchConfig}

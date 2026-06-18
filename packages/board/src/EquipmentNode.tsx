@@ -13,6 +13,7 @@ import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUti
 export interface EquipmentNodeProps {
   element: EquipmentElement;
   isSelected: boolean;
+  isLocked?: boolean;
   isPrintMode?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, x: number, y: number) => void;
@@ -38,6 +39,7 @@ type Corner = 'nw' | 'ne' | 'se' | 'sw';
 export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   element,
   isSelected,
+  isLocked = false,
   isPrintMode,
   onSelect,
   onDragEnd,
@@ -81,11 +83,13 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   };
 
   const handleDragStart = () => {
+    if (isLocked) return;
     applyGrabbing(groupRef);
   };
 
   const handleDragEnd = (e: any) => {
     applyGrab(groupRef);
+    if (isLocked) return;
     onDragEnd(id, e.target.x(), e.target.y());
   };
 
@@ -106,6 +110,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
 
   const handleResizeStart = (corner: Corner) => (e: any) => {
     e.cancelBubble = true;
+    if (isLocked) return;
     const group = groupRef.current;
     const stage = group?.getStage?.();
     if (stage) stage.setPointersPositions(e.evt);
@@ -178,7 +183,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
       x={position.x}
       y={position.y}
       rotation={rotation}
-      draggable={!activeCorner}
+      draggable={!activeCorner && !isLocked}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -195,7 +200,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
         onContextMenu={handleContextMenu}
         onMouseDown={handleMouseDown}
         onPointerDown={handleMouseDown}
-        onMouseEnter={cursorGrab}
+        onMouseEnter={isLocked ? cursorDefault : cursorGrab}
         onMouseLeave={cursorDefault}
       />
 
@@ -221,7 +226,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
       </Group>
 
       {/* Resize handles (corner, uniform scale) */}
-      {isSelected && onResize &&
+      {isSelected && !isLocked && onResize &&
         corners.map(({ pos, x, y, cursor }) => (
           <Rect
             key={pos}

@@ -1,6 +1,6 @@
 /**
  * Canvas Context Menu Helpers
- * PR-UX-5: Generate context menu items based on element type
+ * Generates context-aware menu items for the tactical board.
  */
 
 import type { BoardElement } from '@tmc/core';
@@ -17,6 +17,12 @@ interface ContextMenuHandlers {
   onCopy: () => void;
   onPaste: () => void;
   onSelectAll: () => void;
+  onGroupSelected?: () => void;
+  onUngroupSelected?: () => void;
+  onLockSelected?: () => void;
+  onUnlockSelected?: () => void;
+  onToggleLock?: () => void;
+  isSelectedLocked?: boolean;
   // Element-specific
   onChangeNumber?: () => void;
   onSwitchTeam?: () => void;
@@ -25,26 +31,25 @@ interface ContextMenuHandlers {
   onCycleColor?: () => void;
   onChangePlayerColor?: () => void;
   onChangeTextColor?: () => void;
-  onResize?: () => void; // B5: PPM Resize Slider
-  onEditArrowNumber?: () => void; // PR-ARROW-NUMBER — toggles auto-numbering mode
+  onResize?: () => void;
+  onEditArrowNumber?: () => void;
   // Empty space actions
   onAddPlayer?: () => void;
+  onAddPlayerTeam1?: () => void;
+  onAddPlayerTeam2?: () => void;
+  onAddPlayerTeam3?: () => void;
+  onAddPlayerTeam4?: () => void;
   onAddBall?: () => void;
   onAddArrow?: () => void;
   onAddZone?: () => void;
-  // PR-ARROW-NUMBER: Auto-numbering mode toggle for empty space
   onToggleAutoNumbering?: () => void;
   isAutoNumbering?: boolean;
 }
 
-// Detect platform for correct shortcuts
 const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
 const cmd = isMac ? '⌘' : 'Ctrl+';
+const opt = isMac ? 'Opt' : 'Alt';
 
-/**
- * Generate contextual header for menu
- * PR-UX-5: Shows what element was clicked
- */
 const translate = (t: TFunction | undefined, key: string, fallback: string, vars?: Record<string, string | number>) =>
   t?.(key, vars) ?? fallback;
 
@@ -53,13 +58,13 @@ export function getContextMenuHeader(element: BoardElement | null, t?: TFunction
 
   if (isPlayerElement(element)) {
     const team = element.team === 'home'
-      ? translate(t, 'teamsPanel.team1', 'Home')
+      ? translate(t, 'teamsPanel.team1', 'Team 1')
       : element.team === 'away'
-        ? translate(t, 'teamsPanel.team2', 'Away')
+        ? translate(t, 'teamsPanel.team2', 'Team 2')
         : element.team === 'team3'
           ? translate(t, 'teamsPanel.team3', 'Team 3')
           : translate(t, 'teamsPanel.team4', 'Team 4');
-    return translate(t, 'contextMenu.header.player', `🎽 Player #${element.number} (${team})`, {
+    return translate(t, 'contextMenu.header.player', 'Player #{{number}} ({{team}})', {
       number: element.number ?? '-',
       team,
     });
@@ -71,12 +76,12 @@ export function getContextMenuHeader(element: BoardElement | null, t?: TFunction
       : element.shape === 'ellipse'
         ? translate(t, 'contextMenu.shape.ellipse', 'Ellipse')
         : translate(t, 'contextMenu.shape.polygon', 'Polygon');
-    return translate(t, 'contextMenu.header.zone', `🟦 Zone (${shape})`, { shape });
+    return translate(t, 'contextMenu.header.zone', 'Zone ({{shape}})', { shape });
   }
 
   if (isTextElement(element)) {
     const preview = element.content.slice(0, 20) + (element.content.length > 20 ? '...' : '');
-    return translate(t, 'contextMenu.header.text', `📝 Text: "${preview}"`, { preview });
+    return translate(t, 'contextMenu.header.text', 'Text: "{{preview}}"', { preview });
   }
 
   if (isArrowElement(element)) {
@@ -86,16 +91,16 @@ export function getContextMenuHeader(element: BoardElement | null, t?: TFunction
       shoot: translate(t, 'contextMenu.arrow.shoot', 'Shot'),
       dribble: translate(t, 'contextMenu.arrow.dribble', 'Dribble'),
     }[element.arrowType];
-    return translate(t, 'contextMenu.header.arrow', `➡️ ${type} Arrow`, { type });
+    return translate(t, 'contextMenu.header.arrow', '{{type}} Arrow', { type });
   }
 
   if (isBallElement(element)) {
-    return translate(t, 'contextMenu.header.ball', '⚽ Ball');
+    return translate(t, 'contextMenu.header.ball', 'Ball');
   }
 
   if (isEquipmentElement(element)) {
     const typeLabel = element.equipmentType.charAt(0).toUpperCase() + element.equipmentType.slice(1);
-    return translate(t, 'contextMenu.header.equipment', `🏋️ ${typeLabel}`, { type: typeLabel });
+    return translate(t, 'contextMenu.header.equipment', '{{type}}', { type: typeLabel });
   }
 
   return undefined;
@@ -109,120 +114,117 @@ export function getCanvasContextMenuItems(
 ): ContextMenuItem[] {
   const label = (key: string, fallback: string, vars?: Record<string, string | number>) =>
     translate(t, `contextMenu.${key}`, fallback, vars);
+  const divider = (): ContextMenuItem => ({ label: '', icon: '', onClick: () => {}, divider: true });
   const autoNumLabel = handlers.isAutoNumbering
-    ? label('autoNumberingOn', '🔢 Auto-numbering: ON')
-    : label('autoNumberingOff', '🔢 Auto-numbering: OFF');
+    ? label('autoNumberingOn', 'Auto-numbering: ON')
+    : label('autoNumberingOff', 'Auto-numbering: OFF');
+  const lockLabel = handlers.isSelectedLocked
+    ? label('unlockElement', 'Unlock element')
+    : label('lockElement', 'Lock element');
+  const lockIcon = handlers.isSelectedLocked ? 'unlock' : 'lock';
 
-  // Multi-selection menu (when multiple elements are selected)
   if (selectedCount && selectedCount > 1) {
     return [
-      { label: label('selectedCount', `${selectedCount} elements selected`, { count: selectedCount }), icon: '☑️', onClick: () => {} },
-      { label: '', icon: '', onClick: () => {}, divider: true },
-      { label: label('copy', 'Copy'), icon: '📄', onClick: handlers.onCopy, shortcut: `${cmd}C` },
-      { label: label('duplicate', 'Duplicate'), icon: '📋', onClick: handlers.onDuplicate, shortcut: `${cmd}D` },
-      ...(handlers.onResize ? [{ label: label('resize', 'Resize…'), icon: '🔍', onClick: handlers.onResize, shortcut: 'Opt+Cmd +/-' }] : []),
-      { label: label('delete', 'Delete'), icon: '🗑️', onClick: handlers.onDelete, variant: 'danger', shortcut: 'Del' },
-      { label: '', icon: '', onClick: () => {}, divider: true },
-      { label: label('bringToFront', 'Bring to Front'), icon: '⬆️', onClick: handlers.onBringToFront },
-      { label: label('sendToBack', 'Send to Back'), icon: '⬇️', onClick: handlers.onSendToBack },
+      { label: label('selectedCount', '{{count}} elements selected', { count: selectedCount }), icon: 'check', onClick: () => {} },
+      divider(),
+      { label: label('groupSelected', 'Group selected'), icon: 'group', onClick: handlers.onGroupSelected ?? (() => {}), shortcut: `${cmd}G` },
+      { label: label('ungroup', 'Ungroup'), icon: 'ungroup', onClick: handlers.onUngroupSelected ?? (() => {}), shortcut: `${opt}+G` },
+      handlers.isSelectedLocked
+        ? { label: label('unlockSelected', 'Unlock selected'), icon: 'unlock', onClick: handlers.onUnlockSelected ?? handlers.onToggleLock ?? (() => {}), shortcut: 'Shift+L' }
+        : { label: label('lockSelected', 'Lock selected'), icon: 'lock', onClick: handlers.onLockSelected ?? handlers.onToggleLock ?? (() => {}), shortcut: 'Shift+L' },
+      divider(),
+      { label: label('copy', 'Copy'), icon: 'copy', onClick: handlers.onCopy, shortcut: `${cmd}C` },
+      { label: label('duplicate', 'Duplicate'), icon: 'duplicate', onClick: handlers.onDuplicate, shortcut: `${cmd}D` },
+      ...(handlers.onResize ? [{ label: label('resize', 'Resize...'), icon: 'resize', onClick: handlers.onResize, shortcut: `${opt}+${cmd}+/-` }] : []),
+      divider(),
+      { label: label('delete', 'Delete'), icon: 'trash', onClick: handlers.onDelete, variant: 'danger', shortcut: 'Del' },
     ];
   }
-  
-  // Empty space menu (no element selected)
+
   if (!element) {
     return [
-      { label: label('paste', 'Paste'), icon: '📋', onClick: handlers.onPaste, shortcut: `${cmd}V` },
-      { label: label('selectAll', 'Select All'), icon: '☑️', onClick: handlers.onSelectAll, shortcut: `${cmd}A` },
-      { label: '', icon: '', onClick: () => {}, divider: true },
-      { label: label('addPlayer', 'Add Player'), icon: '🎽', onClick: handlers.onAddPlayer ?? (() => {}), shortcut: 'P' },
-      { label: label('addBall', 'Add Ball'), icon: '⚽', onClick: handlers.onAddBall ?? (() => {}), shortcut: 'B' },
-      { label: label('addArrow', 'Add Arrow'), icon: '➡️', onClick: handlers.onAddArrow ?? (() => {}), shortcut: 'A' },
-      { label: label('addZone', 'Add Zone'), icon: '🟦', onClick: handlers.onAddZone ?? (() => {}), shortcut: 'Z' },
-      { label: '', icon: '', onClick: () => {}, divider: true },
-      { label: autoNumLabel, icon: '🔄', onClick: handlers.onToggleAutoNumbering ?? (() => {}), shortcut: 'Shift+N' },
+      { label: label('paste', 'Paste'), icon: 'paste', onClick: handlers.onPaste, shortcut: `${cmd}V` },
+      { label: label('selectAll', 'Select all'), icon: 'check', onClick: handlers.onSelectAll, shortcut: `${cmd}A` },
+      divider(),
+      { label: label('addPlayerTeam1', 'Add Team 1 player'), icon: 'player', onClick: handlers.onAddPlayerTeam1 ?? handlers.onAddPlayer ?? (() => {}), shortcut: 'P' },
+      { label: label('addPlayerTeam2', 'Add Team 2 player'), icon: 'player', onClick: handlers.onAddPlayerTeam2 ?? (() => {}), shortcut: 'Shift+P' },
+      { label: label('addPlayerTeam3', 'Add Team 3 player'), icon: 'player', onClick: handlers.onAddPlayerTeam3 ?? (() => {}), shortcut: `${opt}+P` },
+      { label: label('addPlayerTeam4', 'Add Team 4 player'), icon: 'player', onClick: handlers.onAddPlayerTeam4 ?? (() => {}), shortcut: `${opt}+Shift+P` },
+      divider(),
+      { label: label('addBall', 'Add ball'), icon: 'ball', onClick: handlers.onAddBall ?? (() => {}), shortcut: 'B' },
+      { label: label('addArrow', 'Add arrow'), icon: 'arrow', onClick: handlers.onAddArrow ?? (() => {}), shortcut: 'A' },
+      { label: label('addZone', 'Add zone'), icon: 'zone', onClick: handlers.onAddZone ?? (() => {}), shortcut: 'Z' },
+      divider(),
+      { label: autoNumLabel, icon: 'number', onClick: handlers.onToggleAutoNumbering ?? (() => {}), shortcut: 'Shift+N' },
     ];
   }
 
-  // Common layer control items for all elements
   const layerItems: ContextMenuItem[] = [
-    { label: '', icon: '', onClick: () => {}, divider: true },
-    { label: label('bringToFront', 'Bring to Front'), icon: '⬆️', onClick: handlers.onBringToFront },
-    { label: label('bringForward', 'Bring Forward'), icon: '↗️', onClick: handlers.onBringForward },
-    { label: label('sendBackward', 'Send Backward'), icon: '↘️', onClick: handlers.onSendBackward },
-    { label: label('sendToBack', 'Send to Back'), icon: '⬇️', onClick: handlers.onSendToBack },
+    divider(),
+    { label: label('bringToFront', 'Bring to front'), icon: 'front', onClick: handlers.onBringToFront },
+    { label: label('bringForward', 'Bring forward'), icon: 'up', onClick: handlers.onBringForward },
+    { label: label('sendBackward', 'Send backward'), icon: 'down', onClick: handlers.onSendBackward },
+    { label: label('sendToBack', 'Send to back'), icon: 'back', onClick: handlers.onSendToBack },
   ];
 
-  // Common edit items for all elements
   const commonItems: ContextMenuItem[] = [
-    { label: '', icon: '', onClick: () => {}, divider: true },
-    { label: label('copy', 'Copy'), icon: '📄', onClick: handlers.onCopy, shortcut: `${cmd}C` },
-    { label: label('duplicate', 'Duplicate'), icon: '📋', onClick: handlers.onDuplicate, shortcut: `${cmd}D` },
-    { label: label('delete', 'Delete'), icon: '🗑️', onClick: handlers.onDelete, variant: 'danger', shortcut: 'Del' },
+    divider(),
+    { label: lockLabel, icon: lockIcon, onClick: handlers.onToggleLock ?? (() => {}), shortcut: 'Shift+L' },
+    { label: label('copy', 'Copy'), icon: 'copy', onClick: handlers.onCopy, shortcut: `${cmd}C` },
+    { label: label('duplicate', 'Duplicate'), icon: 'duplicate', onClick: handlers.onDuplicate, shortcut: `${cmd}D` },
+    divider(),
+    { label: label('delete', 'Delete'), icon: 'trash', onClick: handlers.onDelete, variant: 'danger', shortcut: 'Del' },
   ];
 
-  // Player-specific menu
   if (isPlayerElement(element)) {
     return [
-      { label: label('changeNumber', 'Change Number'), icon: '🔢', onClick: handlers.onChangeNumber!, shortcut: 'double-tap' },
-      { label: label('switchTeam', 'Switch Team'), icon: '🔄', onClick: handlers.onSwitchTeam!, shortcut: 'Shift+P' },
-      { label: label('cycleShape', 'Cycle Shape'), icon: '◼️', onClick: handlers.onCycleShape!, shortcut: 'S' },
-      ...(handlers.onChangePlayerColor ? [{ label: label('changeColor', 'Change Color…'), icon: '🎨', onClick: handlers.onChangePlayerColor }] : []),
-      ...(handlers.onResize ? [{ label: label('resize', 'Resize…'), icon: '🔍', onClick: handlers.onResize, shortcut: 'Opt+Cmd +/-' }] : []),
+      { label: label('changeNumber', 'Change number'), icon: 'number', onClick: handlers.onChangeNumber ?? (() => {}), shortcut: 'double-click' },
+      { label: label('switchTeam', 'Switch team'), icon: 'switch', onClick: handlers.onSwitchTeam ?? (() => {}), shortcut: 'Shift+P' },
+      { label: label('cycleShape', 'Cycle shape'), icon: 'shape', onClick: handlers.onCycleShape ?? (() => {}), shortcut: 'Shift+S' },
+      ...(handlers.onChangePlayerColor ? [{ label: label('changeColor', 'Change color...'), icon: 'palette', onClick: handlers.onChangePlayerColor }] : []),
+      ...(handlers.onResize ? [{ label: label('resize', 'Resize...'), icon: 'resize', onClick: handlers.onResize, shortcut: `${opt}+${cmd}+/-` }] : []),
       ...layerItems,
       ...commonItems,
     ];
   }
 
-  // Zone-specific menu
   if (isZoneElement(element)) {
     return [
-      { label: label('cycleShape', 'Cycle Shape'), icon: '◼️', onClick: handlers.onCycleShape!, shortcut: 'E' },
-      { label: label('changeColor', 'Change Color'), icon: '🎨', onClick: handlers.onCycleColor!, shortcut: 'Alt+↓' },
+      { label: label('cycleShape', 'Cycle shape'), icon: 'shape', onClick: handlers.onCycleShape ?? (() => {}), shortcut: 'E' },
+      { label: label('changeColor', 'Change color'), icon: 'palette', onClick: handlers.onCycleColor ?? (() => {}), shortcut: `${opt}+↓` },
       ...layerItems,
       ...commonItems,
     ];
   }
 
-  // Text-specific menu
   if (isTextElement(element)) {
     return [
-      { label: label('editText', 'Edit Text'), icon: '✏️', onClick: handlers.onEdit!, shortcut: 'Enter' },
-      ...(handlers.onChangeTextColor ? [{ label: label('changeColor', 'Change Color…'), icon: '🎨', onClick: handlers.onChangeTextColor }] : []),
+      { label: label('editText', 'Edit text'), icon: 'edit', onClick: handlers.onEdit ?? (() => {}), shortcut: 'Enter' },
+      ...(handlers.onChangeTextColor ? [{ label: label('changeColor', 'Change color...'), icon: 'palette', onClick: handlers.onChangeTextColor }] : []),
       ...layerItems,
       ...commonItems,
     ];
   }
 
-  // Arrow-specific menu
   if (isArrowElement(element)) {
     return [
-      { label: label('editArrowNumber', 'Add/Edit Number'), icon: '🔢', onClick: handlers.onEditArrowNumber!, shortcut: '→' },
-      { label: autoNumLabel, icon: '🔄', onClick: handlers.onToggleAutoNumbering!, shortcut: 'Shift+N' },
-      { label: label('changeColor', 'Change Color'), icon: '🎨', onClick: handlers.onCycleColor!, shortcut: 'Alt+↓' },
+      { label: label('editArrowNumber', 'Add/edit number'), icon: 'number', onClick: handlers.onEditArrowNumber ?? (() => {}), shortcut: '→' },
+      { label: autoNumLabel, icon: 'number', onClick: handlers.onToggleAutoNumbering ?? (() => {}), shortcut: 'Shift+N' },
+      { label: label('changeColor', 'Change color'), icon: 'palette', onClick: handlers.onCycleColor ?? (() => {}), shortcut: `${opt}+↓` },
       ...layerItems,
       ...commonItems,
     ];
   }
 
-  // Ball-specific menu
-  if (isBallElement(element)) {
-    return [
-      ...layerItems,
-      ...commonItems,
-    ];
-  }
-
-  // Equipment-specific menu
   if (isEquipmentElement(element)) {
     return [
-      { label: label('changeColor', 'Change Color'), icon: '🎨', onClick: handlers.onCycleColor!, shortcut: 'Alt+↓' },
-      { label: label('rotate', 'Rotate'), icon: '🔄', onClick: () => {}, shortcut: '[  ]' },
+      { label: label('changeColor', 'Change color'), icon: 'palette', onClick: handlers.onCycleColor ?? (() => {}), shortcut: `${opt}+↓` },
+      { label: label('rotate', 'Rotate'), icon: 'rotate', onClick: () => {}, shortcut: '[ ]' },
       ...layerItems,
       ...commonItems,
     ];
   }
 
-  // Default menu for other element types
   return [
     ...layerItems,
     ...commonItems,

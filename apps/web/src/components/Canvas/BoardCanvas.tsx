@@ -24,6 +24,7 @@ export interface BoardCanvasProps {
   // View models (no store access in layers)
   elements: BoardElement[];
   selectedIds: string[];
+  isElementLocked?: (id: string) => boolean;
   pitchConfig: PitchConfig;
   pitchSettings: PitchSettings;
   teamSettings: TeamSettings;
@@ -73,6 +74,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
     height,
     elements,
     selectedIds,
+    isElementLocked = (id: string) => elements.find((el) => el.id === id)?.locked === true,
     pitchConfig,
     pitchSettings,
     teamSettings,
@@ -128,6 +130,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         onSelect={onElementSelect}
         onDragEnd={onElementDragEnd}
         onResize={onResizeZone}
+        isElementLocked={isElementLocked}
       />
       
       {/* Layer 3: Arrows */}
@@ -140,6 +143,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         onSelect={onElementSelect}
         onDragEnd={onElementDragEnd}
         onEndpointDrag={onUpdateArrowEndpoint}
+        isElementLocked={isElementLocked}
       />
       
       {/* Layer 4: Players + Ball */}
@@ -156,6 +160,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         onDragStart={onElementDragStart}
         onPlayerQuickEdit={onPlayerQuickEdit}
         onResizeEquipment={onResizeEquipment}
+        isElementLocked={isElementLocked}
       />
       
       {/* Layer 5: Freehand drawings */}

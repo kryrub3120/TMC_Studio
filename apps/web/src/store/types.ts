@@ -11,6 +11,7 @@ import type {
 export interface HistoryEntry {
   elements: BoardElement[];
   selectedIds: ElementId[];
+  groups?: Group[];
 }
 
 /** Group of elements that move together */

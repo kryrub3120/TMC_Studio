@@ -27,6 +27,7 @@ interface UseCanvasEventsOptions {
   selectedIds: string[];
   activeTool: ActiveTool;
   isPlaying: boolean;
+  isElementLocked?: (id: string) => boolean;
   
   // Store actions (non-selection, non-move, non-history)
   // ✅ PR1: selectElement, selectElementsInRect via cmdRegistry
@@ -73,6 +74,7 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
     elements,
     selectedIds,
     activeTool,
+    isElementLocked = () => false,
     updateArrowEndpoint,
     stageRef,
   } = options;
@@ -103,6 +105,7 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
     const offsets = new Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position }>();
 
     for (const id of selectedIds) {
+      if (isElementLocked(id)) continue;
       const el = elements.find((e) => e.id === id);
       if (!el) continue;
 
@@ -122,6 +125,8 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
       }
     }
 
+    if (offsets.size === 0) return false;
+
     multiDragRef.current = {
       startMouseX: mouseX,
       startMouseY: mouseY,
@@ -129,7 +134,7 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
     };
     setIsMultiDragging(true);
     return true;
-  }, [selectedIds, elements]);
+  }, [selectedIds, elements, isElementLocked]);
 
   /**
    * Multi-drag window event handlers

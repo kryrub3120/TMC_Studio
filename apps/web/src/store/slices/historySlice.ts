@@ -63,6 +63,7 @@ export const createHistorySlice: StateCreator<
       newHistory.push({
         elements: structuredClone(state.elements),
         selectedIds: [...state.selectedIds],
+        groups: structuredClone(state.groups),
       });
       
       // Limit size
@@ -103,6 +104,7 @@ export const createHistorySlice: StateCreator<
     set({
       elements: structuredClone(entry.elements),
       selectedIds: [...entry.selectedIds],
+      groups: structuredClone(entry.groups ?? []),
       historyIndex: newIndex,
     });
   },
@@ -117,6 +119,7 @@ export const createHistorySlice: StateCreator<
     set({
       elements: structuredClone(entry.elements),
       selectedIds: [...entry.selectedIds],
+      groups: structuredClone(entry.groups ?? []),
       historyIndex: newIndex,
     });
   },

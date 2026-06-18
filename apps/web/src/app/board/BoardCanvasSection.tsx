@@ -48,6 +48,7 @@ export interface BoardCanvasSectionProps {
   // Board state
   elements: BoardElement[];
   selectedIds: string[];
+  isElementLocked?: (id: string) => boolean;
   isPlaying: boolean;
   activeTool: string | null;
   isPrintMode: boolean;
@@ -129,6 +130,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     hiddenByGroup,
     elements,
     selectedIds,
+    isElementLocked,
     isPlaying,
     activeTool,
     isPrintMode,
@@ -482,6 +484,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             height={canvasHeight}
             elements={elements}
             selectedIds={selectedIds}
+            isElementLocked={isElementLocked}
             pitchConfig={pitchConfig}
             pitchSettings={pitchSettings ?? DEFAULT_PITCH_SETTINGS}
             teamSettings={teamSettings ?? { home: { primaryColor: '#3b82f6', secondaryColor: '#1e40af', name: 'Home' }, away: { primaryColor: '#ef4444', secondaryColor: '#b91c1c', name: 'Away' } }}
@@ -542,6 +545,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             hiddenByGroup={hiddenByGroup}
             elements={elements}
             selectedIds={selectedIds}
+            isElementLocked={isElementLocked}
             isPlaying={isPlaying}
             activeTool={activeTool}
             isPrintMode={isPrintMode}

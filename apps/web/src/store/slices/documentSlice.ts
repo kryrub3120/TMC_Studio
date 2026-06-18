@@ -11,6 +11,8 @@ import type {
   TeamSettings,
   TeamSetting,
   PitchSettings,
+  PitchView,
+  PitchProjection,
   PlayerOrientationSettings,
   PlayerDefaults,
   SquadPlayer,
@@ -86,6 +88,8 @@ export interface DocumentSlice {
   
   // Pitch settings
   updatePitchSettings: (settings: Partial<PitchSettings>) => void;
+  /** Switch the active board preset, RESETTING the drawing (all steps). */
+  applyPitchBoard: (board: { view: PitchView; projection: PitchProjection }) => void;
   getPitchSettings: () => PitchSettings | undefined;
   
   // Player orientation settings
@@ -455,6 +459,30 @@ export const createDocumentSlice: StateCreator<
       if (transformedElements !== elements) {
         get().pushHistory();
       }
+    },
+    
+    applyPitchBoard: (board) => {
+      const { document } = get();
+      const currentSettings = document.pitchSettings ?? DEFAULT_PITCH_SETTINGS;
+      const updatedPitchSettings: PitchSettings = {
+        ...currentSettings,
+        view: board.view,
+        projection: board.projection,
+        // orientation is intentionally preserved — boards react to pion/poziom.
+      };
+      // Reset the drawing on every step — switching board clears the canvas.
+      const newSteps = document.steps.map((step) => ({ ...step, elements: [] }));
+      set({
+        elements: [],
+        selectedIds: [],
+        document: {
+          ...document,
+          steps: newSteps,
+          pitchSettings: updatedPitchSettings,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().pushHistory();
     },
     
     getPitchSettings: () => get().document.pitchSettings,
