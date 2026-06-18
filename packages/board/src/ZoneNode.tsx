@@ -17,6 +17,7 @@ export interface ZoneNodeProps {
   zone: ZoneElement;
   pitchConfig: PitchConfig;
   isSelected: boolean;
+  isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   onResize?: (id: string, position: Position, width: number, height: number) => void;
@@ -37,11 +38,24 @@ export const ZONE_COLOR_PRESETS = [
 /** Handle positions for 8-point resize */
 type HandlePosition = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
+/** Darken a hex color by percent (for a visible default border over same-hue fill). */
+function darkenHex(hex: string, percent = 25): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const num = parseInt(m[1], 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.max(0, (num >> 16) - amt);
+  const g = Math.max(0, ((num >> 8) & 0xff) - amt);
+  const b = Math.max(0, (num & 0xff) - amt);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}
+
 /** ZoneNode component */
 export const ZoneNode: React.FC<ZoneNodeProps> = ({
   zone,
   pitchConfig: _pitchConfig,
   isSelected,
+  isLocked = false,
   onSelect,
   onDragEnd,
   onResize,
@@ -80,8 +94,9 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   const displayWidth = previewBounds?.width ?? zone.width;
   const displayHeight = previewBounds?.height ?? zone.height;
 
-  const borderDash = zone.borderStyle === 'dashed' ? [6, 3] : undefined;
-  const borderStroke = zone.borderStyle !== 'none' ? (zone.borderColor || zone.fillColor) : undefined;
+  const borderWidth = zone.borderWidth ?? 3;
+  const borderDash = zone.borderStyle === 'dashed' ? [borderWidth * 2, borderWidth] : undefined;
+  const borderStroke = zone.borderStyle !== 'none' ? (zone.borderColor || darkenHex(zone.fillColor, 30)) : undefined;
 
   // Current polygon points (preview while dragging a vertex, else committed)
   const points = previewPoints ?? zone.points ?? [];
@@ -196,6 +211,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   const handleResizeStart = useCallback(
     (handle: HandlePosition, e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
+      if (isLocked) return;
 
       const stage = e.target.getStage();
       if (!stage) return;
@@ -215,7 +231,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
 
       setActiveHandle(handle);
     },
-    [zone.position.x, zone.position.y, zone.width, zone.height]
+    [isLocked, zone.position.x, zone.position.y, zone.width, zone.height]
   );
 
   // ===== Polygon vertex editing =====
@@ -302,13 +318,26 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
     [zone.points, zone.id, onUpdatePoints]
   );
 
-  // Shape props
-  const shapeProps = {
+  // Fill props — translucent fill only. The border is rendered as a SEPARATE
+  // full-opacity overlay shape so the zone's low fill-opacity doesn't dim the
+  // border (otherwise the line is barely visible and width changes look like
+  // they do nothing).
+  const fillProps = {
     fill: zone.fillColor,
     opacity: zone.opacity,
+    strokeEnabled: false,
+    strokeWidth: 0,
+  };
+  // Border overlay props — opaque, on top of the fill, non-interactive.
+  const hasBorder = !!borderStroke;
+  const borderProps = {
+    fillEnabled: false,
     stroke: borderStroke,
-    strokeWidth: borderStroke ? 3 : 0,
+    strokeWidth: borderWidth,
     dash: borderDash,
+    opacity: 1,
+    listening: false as const,
+    perfectDrawEnabled: false,
   };
 
   // Resize handle positions (rect/ellipse)
@@ -328,20 +357,20 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       ref={groupRef}
       x={displayX}
       y={displayY}
-      draggable={!activeHandle && !draggingVertex}
+      draggable={!activeHandle && !draggingVertex && !isLocked}
       onClick={handleClick}
       onTap={handleClick}
-      onMouseEnter={cursorGrab}
+      onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
-      onDragStart={() => applyGrabbing(groupRef)}
+      onDragStart={() => { if (!isLocked) applyGrabbing(groupRef); }}
       onDragEnd={handleGroupDragEnd}
     >
-      {/* Zone shape */}
+      {/* Zone fill (translucent, interactive) */}
       {isPolygon ? (
         <Line
           points={points}
           closed
-          {...shapeProps}
+          {...fillProps}
           onDblClick={isSelected ? handlePolygonDblClick : undefined}
           onDblTap={isSelected ? handlePolygonDblClick : undefined}
         />
@@ -350,7 +379,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
           width={displayWidth}
           height={displayHeight}
           cornerRadius={6}
-          {...shapeProps}
+          {...fillProps}
         />
       ) : (
         <Ellipse
@@ -358,9 +387,24 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
           y={displayHeight / 2}
           radiusX={displayWidth / 2}
           radiusY={displayHeight / 2}
-          {...shapeProps}
+          {...fillProps}
         />
       )}
+
+      {/* Zone border (opaque overlay — independent of fill opacity) */}
+      {hasBorder && (isPolygon ? (
+        <Line points={points} closed {...borderProps} />
+      ) : zone.shape === 'rect' ? (
+        <Rect width={displayWidth} height={displayHeight} cornerRadius={6} {...borderProps} />
+      ) : (
+        <Ellipse
+          x={displayWidth / 2}
+          y={displayHeight / 2}
+          radiusX={displayWidth / 2}
+          radiusY={displayHeight / 2}
+          {...borderProps}
+        />
+      ))}
 
       {/* Selection border and handles */}
       {isSelected && (
@@ -377,7 +421,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
                 listening={false}
               />
               {/* Vertex handles */}
-              {Array.from({ length: points.length / 2 }).map((_, i) => (
+              {!isLocked && Array.from({ length: points.length / 2 }).map((_, i) => (
                 <Circle
                   key={i}
                   x={points[i * 2]}
@@ -426,7 +470,7 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
           )}
 
           {/* Resize handles - only for rect/ellipse */}
-          {!isPolygon && handles.map(({ pos, x, y, cursor }) => (
+          {!isLocked && !isPolygon && handles.map(({ pos, x, y, cursor }) => (
             <Rect
               key={pos}
               x={x - 6}
@@ -446,6 +490,31 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
                 const container = e.target.getStage()?.container();
                 if (container) container.style.cursor = 'default';
               }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Corner markers — visible when showCorners === true, independent of selection */}
+      {zone.showCorners === true && !isPolygon && (
+        <>
+          <Rect x={-3} y={-3} width={6} height={6} fill={borderStroke || zone.fillColor} listening={false} perfectDrawEnabled={false} />
+          <Rect x={displayWidth - 3} y={-3} width={6} height={6} fill={borderStroke || zone.fillColor} listening={false} perfectDrawEnabled={false} />
+          <Rect x={-3} y={displayHeight - 3} width={6} height={6} fill={borderStroke || zone.fillColor} listening={false} perfectDrawEnabled={false} />
+          <Rect x={displayWidth - 3} y={displayHeight - 3} width={6} height={6} fill={borderStroke || zone.fillColor} listening={false} perfectDrawEnabled={false} />
+        </>
+      )}
+      {zone.showCorners === true && isPolygon && (
+        <>
+          {Array.from({ length: points.length / 2 }).map((_, i) => (
+            <Circle
+              key={`corner-${i}`}
+              x={points[i * 2]}
+              y={points[i * 2 + 1]}
+              radius={4}
+              fill={borderStroke || zone.fillColor}
+              listening={false}
+              perfectDrawEnabled={false}
             />
           ))}
         </>

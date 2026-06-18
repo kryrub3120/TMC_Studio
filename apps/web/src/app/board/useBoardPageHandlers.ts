@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import type { ArrowType, Position, PlayerElement as PlayerElementType, ZoneShape } from '@tmc/core';
+import type { ArrowType, Position, PlayerElement as PlayerElementType, Team, ZoneShape } from '@tmc/core';
 import { isPlayerElement, isTextElement, isZoneElement, isArrowElement } from '@tmc/core';
 import { useTranslation, type CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
@@ -34,7 +34,7 @@ const q = (x: number) => Math.round(x * 1000); // float-safe quantize
 
 export interface BoardPageHandlersInput {
   // Board store actions
-  addPlayerAtCursor: (team: 'home' | 'away') => void;
+  addPlayerAtCursor: (team: Team) => void;
   addBallAtCursor: () => void;
   addArrowAtCursor: (type: ArrowType) => void;
   addZoneAtCursor: (shape?: ZoneShape) => void;
@@ -55,6 +55,12 @@ export interface BoardPageHandlersInput {
   cycleSelectedColor: (direction: 1 | -1) => void;
   cyclePlayerShape: () => void;
   cycleZoneShape: () => void;
+  toggleSelectedLock: () => void;
+  lockSelected: () => void;
+  unlockSelected: () => void;
+  isElementLocked: (id: string) => boolean;
+  createGroup: () => void;
+  ungroupSelection: () => void;
   
   // Steps
   addStep: () => void;
@@ -122,6 +128,12 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     cycleSelectedColor,
     cyclePlayerShape,
     cycleZoneShape,
+    toggleSelectedLock,
+    lockSelected,
+    unlockSelected,
+    isElementLocked,
+    createGroup,
+    ungroupSelection,
     addStep,
     prevStep,
     nextStep,
@@ -192,28 +204,92 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
 
   // Update element handler
   const handleUpdateElement = useCallback(
-    (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number }) => {
+    (updates: {
+      number?: number; label?: string; showLabel?: boolean; fontSize?: number;
+      textColor?: string; opacity?: number; isGoalkeeper?: boolean;
+      showNumber?: boolean; arrowNumber?: number;
+      // Arrow head style (PR-5) + thickness
+      startHead?: 'arrow' | 'none' | 'bar' | 'dot';
+      endHead?: 'arrow' | 'none' | 'bar' | 'dot';
+      strokeWidth?: number;
+      // Zone border style (PR-4)
+      borderStyle?: 'solid' | 'dashed' | 'none';
+      borderColor?: string; borderWidth?: number; showCorners?: boolean;
+    }) => {
       const store = useBoardStore.getState();
       if (store.selectedIds.length !== 1) return;
       const el = store.elements.find(e => e.id === store.selectedIds[0]);
-      
-      if (el && isArrowElement(el as any)) {
-        // Arrow-specific updates
-        // Kolejność ma znaczenie: arrowNumber ma priorytet przed showNumber.
-        // setArrowNumber wewnętrznie ustawia showNumber, unikamy podwójnego pushHistory.
+      if (!el) return;
+
+      if (isArrowElement(el as any)) {
+        // Arrow style props (heads + thickness) — route to dedicated store action.
+        if ('startHead' in updates || 'endHead' in updates || 'strokeWidth' in updates) {
+          const patch: { startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot'; strokeWidth?: number } = {};
+          if ('startHead' in updates) patch.startHead = updates.startHead;
+          if ('endHead' in updates) patch.endHead = updates.endHead;
+          if ('strokeWidth' in updates) patch.strokeWidth = updates.strokeWidth;
+          store.updateArrowStyle(el.id, patch);
+          return;
+        }
+        // Numbering. arrowNumber ma priorytet przed showNumber.
         if ('arrowNumber' in updates) {
-          // setArrowNumber ustawia number i showNumber w jednej operacji + pushHistory
           store.setArrowNumber(el.id, updates.arrowNumber);
         } else if ('showNumber' in updates) {
-          // toggleArrowNumber toggles smart-sequencing + pushHistory
           store.toggleArrowNumber(el.id);
         }
-      } else {
-        updateSelectedElement(updates as Partial<PlayerElementType>);
+        return;
       }
+
+      if (isZoneElement(el as any)) {
+        // Zone border / corner style — route to dedicated store action.
+        const patch: { borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; opacity?: number } = {};
+        if ('borderStyle' in updates) patch.borderStyle = updates.borderStyle;
+        if ('borderColor' in updates) patch.borderColor = updates.borderColor;
+        if ('borderWidth' in updates) patch.borderWidth = updates.borderWidth;
+        if ('showCorners' in updates) patch.showCorners = updates.showCorners;
+        if ('opacity' in updates) patch.opacity = updates.opacity;
+        if (Object.keys(patch).length > 0) store.updateZoneStyle(el.id, patch);
+        return;
+      }
+
+      // Player (and other player-like) elements.
+      updateSelectedElement(updates as Partial<PlayerElementType>);
     },
     [updateSelectedElement]
   );
+
+  // Save the currently-selected arrow's style as the user-level default.
+  const handleSetArrowDefault = useCallback(() => {
+    const store = useBoardStore.getState();
+    if (store.selectedIds.length !== 1) return;
+    const el = store.elements.find((e) => e.id === store.selectedIds[0]);
+    if (!el || !isArrowElement(el as any)) return;
+    const a = el as any;
+    useUIStore.getState().setArrowDefaults({
+      strokeWidth: { [a.arrowType]: a.strokeWidth ?? 4 } as any,
+      startHead: a.startHead ?? 'none',
+      endHead: a.endHead ?? 'arrow',
+    });
+    showToast(t('inspector.setAsDefaultDone'));
+  }, [showToast, t]);
+
+  // Save the currently-selected zone's style as the user-level default.
+  const handleSetZoneDefault = useCallback(() => {
+    const store = useBoardStore.getState();
+    if (store.selectedIds.length !== 1) return;
+    const el = store.elements.find((e) => e.id === store.selectedIds[0]);
+    if (!el || !isZoneElement(el as any)) return;
+    const z = el as any;
+    useUIStore.getState().setZoneDefaults({
+      borderStyle: z.borderStyle ?? 'none',
+      borderWidth: z.borderWidth ?? 3,
+      borderColor: z.borderColor,
+      showCorners: z.showCorners ?? false,
+      fillColor: z.fillColor,
+      opacity: z.opacity,
+    });
+    showToast(t('inspector.setAsDefaultDone'));
+  }, [showToast, t]);
 
   // Text editing handlers
   const handleTextDoubleClick = useCallback((id: string) => {
@@ -447,6 +523,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     // B5: Check if selection is players-only for resize gating
     const selected = selectedIds.map(id => elements.find(e => e.id === id)).filter(Boolean);
     const onlyPlayers = selected.length > 0 && selected.every(el => isPlayerElement(el as any));
+    const selectedLocked = selected.length > 0 && selected.every((el) => isElementLocked(el!.id));
     
     return {
       onDelete: () => { deleteSelected(); hideMenu(); showToast(t('commands.toast.deleted')); },
@@ -459,9 +536,19 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       onPaste: () => { pasteClipboard(); hideMenu(); showToast(t('commands.toast.pasted')); },
       onSelectAll: () => { selectAll(); hideMenu(); },
       onAddPlayer: () => { addPlayerAtCursor('home'); hideMenu(); showToast(t('commands.toast.playerAdded')); },
+      onAddPlayerTeam1: () => { addPlayerAtCursor('home'); hideMenu(); showToast(t('commands.toast.team1Player')); },
+      onAddPlayerTeam2: () => { addPlayerAtCursor('away'); hideMenu(); showToast(t('commands.toast.team2Player')); },
+      onAddPlayerTeam3: () => { addPlayerAtCursor('team3'); hideMenu(); showToast(t('commands.toast.team3Player')); },
+      onAddPlayerTeam4: () => { addPlayerAtCursor('team4'); hideMenu(); showToast(t('commands.toast.team4Player')); },
       onAddBall: () => { addBallAtCursor(); hideMenu(); showToast(t('commands.toast.ballAdded')); },
       onAddArrow: () => { addArrowAtCursor(defaultArrowType); hideMenu(); showToast(t('commands.toast.arrowAdded')); },
       onAddZone: () => { addZoneAtCursor(); hideMenu(); showToast(t('commands.toast.zoneAdded')); },
+      onGroupSelected: () => { createGroup(); hideMenu(); showToast(t('commands.toast.groupCreated')); },
+      onUngroupSelected: () => { ungroupSelection(); hideMenu(); showToast(t('commands.toast.groupUngrouped')); },
+      onToggleLock: () => { toggleSelectedLock(); hideMenu(); showToast(t('commands.toast.selectionLockToggled')); },
+      onLockSelected: () => { lockSelected(); hideMenu(); showToast(t('commands.toast.selectionLocked')); },
+      onUnlockSelected: () => { unlockSelected(); hideMenu(); showToast(t('commands.toast.selectionUnlocked')); },
+      isSelectedLocked: selectedLocked,
       // B5: Resize handler - only provided when players-only selected
       ...(onlyPlayers && {
         onResize: (e?: React.MouseEvent) => {
@@ -533,6 +620,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
   }, [
     deleteSelected, duplicateSelected, copySelection, pasteClipboard, selectAll,
     addPlayerAtCursor, addBallAtCursor, addArrowAtCursor, addZoneAtCursor,
+    createGroup, ungroupSelection, pushHistory, toggleSelectedLock, lockSelected, unlockSelected, isElementLocked,
     cyclePlayerShape, cycleZoneShape, cycleSelectedColor,
     elements, menuElementId, hideMenu, showToast, selectElement, updateSelectedElement,
     setEditingTextId, setEditingTextValue, handlePlayerQuickEdit, selectedIds, openResizePopover, defaultArrowType, t
@@ -545,15 +633,12 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       useUIStore.getState().toggleGrid();
       showToast(useUIStore.getState().gridVisible ? t('commands.toast.gridVisible') : t('commands.toast.gridHidden'));
     };
-    const toggleSnapWithToast = () => {
-      useUIStore.getState().toggleSnap();
-      showToast(useUIStore.getState().snapEnabled ? t('commands.toast.snapEnabled') : t('commands.toast.snapDisabled'));
-    };
-    
     return createCommandActions({
       isMac,
       addHomePlayer: () => addPlayerAtCursor('home'),
       addAwayPlayer: () => addPlayerAtCursor('away'),
+      addTeam3Player: () => addPlayerAtCursor('team3'),
+      addTeam4Player: () => addPlayerAtCursor('team4'),
       addBall: addBallAtCursor,
       addPassArrow: () => addArrowAtCursor('pass'),
       addRunArrow: () => addArrowAtCursor('run'),
@@ -571,7 +656,6 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       toggleInspector,
       toggleCheatSheet,
       toggleGrid: toggleGridWithToast,
-      toggleSnap: toggleSnapWithToast,
       toggleFocusMode,
       showToast,
       addStepWithGating: addStep,
@@ -653,5 +737,7 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     // ALT+Drag rotation exports
     handleOrientationPreview,
     handleOrientationCommit,
+    handleSetArrowDefault,
+    handleSetZoneDefault,
   };
 }

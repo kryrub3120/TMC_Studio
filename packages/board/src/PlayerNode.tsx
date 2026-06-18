@@ -16,7 +16,35 @@ import {
   resolveReadableTextColor,
 } from '@tmc/core';
 
-/** Normalize angle to 0..360 */
+/** Memoized text measurement using offscreen canvas */
+const textMeasureCache = new Map<string, number>();
+function measureTextWidth(text: string, fontSize: number, fontStyle: string, fontFamily: string): number {
+  const key = `${text}|${fontSize}|${fontStyle}|${fontFamily}`;
+  const cached = textMeasureCache.get(key);
+  if (cached !== undefined) return cached;
+
+  if (typeof document === 'undefined') {
+    // SSR fallback: rough estimate
+    const w = text.length * fontSize * 0.62;
+    textMeasureCache.set(key, w);
+    return w;
+  }
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    const w = text.length * fontSize * 0.62;
+    textMeasureCache.set(key, w);
+    return w;
+  }
+  ctx.font = `${fontStyle} ${fontSize}px ${fontFamily}`;
+  const metrics = ctx.measureText(text);
+  const w = metrics.width;
+  textMeasureCache.set(key, w);
+  return w;
+}
+
+const MAX_LABEL_PILL_WIDTH = 160;
 const norm360 = (a: number) => ((a % 360) + 360) % 360;
 
 /** Compute shortest angular delta (wrap-safe) - CORRECTION #1 */
@@ -38,6 +66,7 @@ export interface PlayerNodeProps {
   player: PlayerElement;
   pitchConfig: PitchConfig;
   isSelected: boolean;
+  isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
@@ -119,6 +148,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   player,
   pitchConfig,
   isSelected,
+  isLocked = false,
   onSelect,
   onDragEnd,
   onDragStart,
@@ -185,6 +215,10 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isLocked) {
+      setMultiDragActive(false);
+      return;
+    }
     // ALT+drag anywhere on the player rotates it.
     if (e.evt.altKey && onOrientationPreview) {
       startRotationDrag(e);
@@ -553,11 +587,11 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       x={player.position.x}
       y={player.position.y}
       opacity={player.opacity ?? 1}
-      draggable={!multiDragActive}
+      draggable={!multiDragActive && !isLocked}
       onClick={handleClick}
       onTap={handleClick}
       onDblClick={handleDblClick}
-      onMouseEnter={cursorGrab}
+      onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
       onDblTap={handleDblClick}
       onMouseDown={handleMouseDown}
@@ -612,16 +646,23 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
       )}
 
       {/* Label below (showLabel === true) — podpis pod zawodnikiem z tłem/pill */}
-      {/* Dynamiczna szerokość: krótkie i długie nazwiska bez ucinania */}
+      {/* Rzeczywisty pomiar szerokości tekstu — brak ucinania */}
       {player.label && player.showLabel === true && (() => {
         const LBL_FONT_SIZE = 11;
         const LBL_PAD_X = 14;
         const LBL_PILL_H = 20;
-        const approxCharW = LBL_FONT_SIZE * 0.62; // Inter bold ~0.62× fontSize
-        const textW = Math.ceil(player.label.length * approxCharW);
-        const pillW = Math.max(30, textW + LBL_PAD_X * 2);
+
+        // Real text width via offscreen canvas measurement
+        const textW = Math.ceil(
+          measureTextWidth(player.label, LBL_FONT_SIZE, 'bold', 'Inter, system-ui, sans-serif')
+        );
+        // Clamp pill width to MAX_LABEL_PILL_WIDTH with ellipsis for very long names
+        const textInnerW = Math.min(textW, MAX_LABEL_PILL_WIDTH - LBL_PAD_X * 2);
+        const pillW = Math.min(
+          Math.max(30, textInnerW + LBL_PAD_X * 2),
+          MAX_LABEL_PILL_WIDTH
+        );
         const textX = -pillW / 2 + LBL_PAD_X;
-        const textInnerW = pillW - LBL_PAD_X * 2;
 
         return (
           <Group y={r + 6} listening={false}>
@@ -643,7 +684,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
               x={textX}
               y={3}
               width={textInnerW}
-              height={14}
+              height={LBL_PILL_H}
               text={player.label}
               fontSize={LBL_FONT_SIZE}
               fontFamily="Inter, system-ui, sans-serif"
@@ -651,6 +692,8 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
               fill="#ffffff"
               align="center"
               verticalAlign="middle"
+              wrap="none"
+              ellipsis={textW > MAX_LABEL_PILL_WIDTH - LBL_PAD_X * 2}
               listening={false}
               perfectDrawEnabled={false}
             />

@@ -15,11 +15,14 @@ import type {
   EquipmentVariant,
   PlayerDefaults,
   PlayerShape,
+  ArrowElement,
+  ZoneElement,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
   DEFAULT_PLAYER_DEFAULTS,
   DEFAULT_TEAM_SETTINGS,
+  getPitchDimensions,
   createPlayer,
   createBall,
   createArrow,
@@ -40,8 +43,21 @@ import type { AppState } from '../types';
 import { getFormationById, getAbsolutePositions } from '@tmc/presets';
 import { SHARED_COLORS } from '@tmc/ui';
 import { useUIStore } from '../useUIStore';
+import { track, EVENTS } from '../../lib/analytics';
 
 const getGridSize = () => useUIStore.getState().gridSize ?? DEFAULT_PITCH_CONFIG.gridSize;
+
+const getBoardCenter = (
+  document: AppState['document'],
+  offset: Position = { x: 0, y: 0 },
+): Position => {
+  const settings = document.pitchSettings;
+  const pitch = getPitchDimensions(settings?.orientation ?? 'landscape', settings?.view ?? 'full');
+  return {
+    x: pitch.padding + pitch.width / 2 + offset.x,
+    y: pitch.padding + pitch.height / 2 + offset.y,
+  };
+};
 
 /**
  * Goalkeeper jersey palette used by the cycleGoalkeeperColor shortcut (Shift+G).
@@ -138,6 +154,13 @@ export interface ElementsSlice {
   addZoneAtCursor: (shape?: ZoneShape) => void;
   addTextAtCursor: () => void;
   addEquipmentAtCursor: (equipmentType: EquipmentType, variant?: EquipmentVariant) => void;
+
+  // Locking
+  toggleSelectedLock: () => void;
+  lockSelected: () => void;
+  unlockSelected: () => void;
+  isElementLocked: (id: ElementId) => boolean;
+  isElementBlockedByLockedGroup: (id: ElementId) => boolean;
   
   // Element updates
   updateTextContent: (id: ElementId, content: string) => void;
@@ -163,6 +186,10 @@ export interface ElementsSlice {
   toggleArrowNumber: (id: ElementId) => void;
   setArrowNumber: (id: ElementId, number: number | undefined) => void;
   renumberAllArrows: () => void;
+  /** Patch arrow style props (heads / color / strokeWidth) for a single arrow + push history. */
+  updateArrowStyle: (id: ElementId, patch: Partial<Pick<ArrowElement, 'startHead' | 'endHead' | 'color' | 'strokeWidth'>>) => void;
+  /** Patch zone style props (border / corners / fill) for a single zone + push history. */
+  updateZoneStyle: (id: ElementId, patch: Partial<Pick<ZoneElement, 'borderStyle' | 'borderColor' | 'borderWidth' | 'showCorners' | 'fillColor' | 'opacity'>>) => void;
   
   // Batch operations on selected
   deleteSelected: () => void;
@@ -222,19 +249,21 @@ export const createElementsSlice: StateCreator<
   },
   
   addElement: (element) => {
+    const prevLength = get().elements.length;
     set((state) => ({
       elements: [...state.elements, element],
       selectedIds: [element.id],
     }));
     get().pushHistory();
+    // Track first element added (once per session)
+    if (prevLength === 0) {
+      track(EVENTS.FIRST_ELEMENT_ADDED, { type: element.type });
+    }
   },
   
   addPlayerAtCursor: (team) => {
     const { cursorPosition, elements, document } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const position = cursorPosition ?? getBoardCenter(document);
     const defaults = document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
     const prefs = resolvePlayerDefaults(team, defaults);
     const number = prefs.number === undefined
@@ -252,11 +281,8 @@ export const createElementsSlice: StateCreator<
   },
   
   addPlayerFromSquad: (team, name, number, dropPosition) => {
-    const { cursorPosition } = get();
-    const position = dropPosition ?? cursorPosition ?? {
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const { cursorPosition, document } = get();
+    const position = dropPosition ?? cursorPosition ?? getBoardCenter(document);
     const player = createPlayer({
       position,
       team,
@@ -269,32 +295,30 @@ export const createElementsSlice: StateCreator<
   },
   
   addBallAtCursor: () => {
-    const { cursorPosition } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const { cursorPosition, document } = get();
+    const position = cursorPosition ?? getBoardCenter(document);
     const ball = createBall(position, getGridSize());
     get().addElement(ball);
   },
   
   addBallGroupAtCursor: () => {
-    const { cursorPosition } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const { cursorPosition, document } = get();
+    const position = cursorPosition ?? getBoardCenter(document);
     const ball = createBall(position, getGridSize(), 'cluster');
     get().addElement(ball);
   },
   
   addArrowAtCursor: (arrowType) => {
-    const { cursorPosition, elements, isAutoNumbering } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const { cursorPosition, elements, isAutoNumbering, document } = get();
+    const position = cursorPosition ?? getBoardCenter(document);
     const arrow = createArrow(position, arrowType, getGridSize());
+    // Apply user-level arrow defaults (thickness per type + heads).
+    const aDefaults = useUIStore.getState().arrowDefaults;
+    if (aDefaults) {
+      arrow.strokeWidth = aDefaults.strokeWidth[arrowType] ?? arrow.strokeWidth;
+      arrow.startHead = aDefaults.startHead;
+      arrow.endHead = aDefaults.endHead;
+    }
     if (isAutoNumbering) {
       const nextNum = getHighestArrowNumber(elements) + 1;
       arrow.number = nextNum;
@@ -304,33 +328,84 @@ export const createElementsSlice: StateCreator<
   },
   
   addZoneAtCursor: (shape = 'rect') => {
-    const { cursorPosition } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2 - 60,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2 - 40,
-    };
+    const { cursorPosition, document } = get();
+    const position = cursorPosition ?? getBoardCenter(document, { x: -60, y: -40 });
     const zone = createZone(position, shape, getGridSize());
+    // Apply user-level zone defaults (border + fill + opacity).
+    const zDefaults = useUIStore.getState().zoneDefaults;
+    if (zDefaults) {
+      zone.borderStyle = zDefaults.borderStyle;
+      zone.borderWidth = zDefaults.borderWidth;
+      if (zDefaults.borderColor) zone.borderColor = zDefaults.borderColor;
+      zone.showCorners = zDefaults.showCorners;
+      zone.fillColor = zDefaults.fillColor;
+      zone.opacity = zDefaults.opacity;
+    }
     get().addElement(zone);
   },
   
   addTextAtCursor: () => {
-    const { cursorPosition } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const { cursorPosition, document } = get();
+    const position = cursorPosition ?? getBoardCenter(document);
     const text = createText(snapToGrid(position, getGridSize()), 'Text');
     get().addElement(text);
   },
   
   addEquipmentAtCursor: (equipmentType, variant = 'standard') => {
-    const { cursorPosition } = get();
-    const position = cursorPosition ?? { 
-      x: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.width / 2,
-      y: DEFAULT_PITCH_CONFIG.padding + DEFAULT_PITCH_CONFIG.height / 2,
-    };
+    const { cursorPosition, document } = get();
+    const position = cursorPosition ?? getBoardCenter(document);
     const equipment = createEquipment(position, equipmentType, variant, getGridSize());
     get().addElement(equipment);
+  },
+
+  isElementBlockedByLockedGroup: (id) => {
+    const { groups } = get();
+    return groups.some((group) => group.locked && group.memberIds.includes(id));
+  },
+
+  isElementLocked: (id) => {
+    const { elements } = get();
+    const element = elements.find((el) => el.id === id);
+    return element?.locked === true || get().isElementBlockedByLockedGroup(id);
+  },
+
+  lockSelected: () => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    const selected = new Set(selectedIds);
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        selected.has(el.id) ? { ...el, locked: true } : el
+      ),
+    }));
+    get().pushHistory();
+  },
+
+  unlockSelected: () => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    const selected = new Set(selectedIds);
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        selected.has(el.id) ? { ...el, locked: false } : el
+      ),
+    }));
+    get().pushHistory();
+  },
+
+  toggleSelectedLock: () => {
+    const { selectedIds, elements } = get();
+    if (selectedIds.length === 0) return;
+    const selected = new Set(selectedIds);
+    const anyUnlocked = elements.some((el) =>
+      selected.has(el.id) && el.locked !== true
+    );
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        selected.has(el.id) ? { ...el, locked: anyUnlocked } : el
+      ),
+    }));
+    get().pushHistory();
   },
   
   updateTextContent: (id, content) => {
@@ -382,6 +457,7 @@ export const createElementsSlice: StateCreator<
   },
   
   moveElementById: (id, position) => {
+    if (get().isElementLocked(id)) return;
     set((state) => ({
       elements: state.elements.map((el) =>
         el.id === id ? moveElement(el, position, getGridSize()) : el
@@ -391,6 +467,7 @@ export const createElementsSlice: StateCreator<
   },
   
   resizeZone: (id, position, width, height) => {
+    if (get().isElementLocked(id)) return;
     set((state) => ({
       elements: state.elements.map((el) => {
         if (el.id === id && el.type === 'zone') {
@@ -403,6 +480,7 @@ export const createElementsSlice: StateCreator<
   },
 
   updateZonePoints: (id, points) => {
+    if (get().isElementLocked(id)) return;
     set((state) => ({
       elements: state.elements.map((el) => {
         if (el.id === id && el.type === 'zone') {
@@ -422,6 +500,7 @@ export const createElementsSlice: StateCreator<
   },
 
   setEquipmentScale: (id, scale) => {
+    if (get().isElementLocked(id)) return;
     const clamped = Math.max(0.25, Math.min(3, scale));
     set((state) => ({
       elements: state.elements.map((el) =>
@@ -432,6 +511,7 @@ export const createElementsSlice: StateCreator<
   },
   
   updateArrowEndpoint: (id, endpoint, position) => {
+    if (get().isElementLocked(id)) return;
     set((state) => ({
       elements: state.elements.map((el) => {
         if (el.id === id && isArrowElement(el)) {
@@ -565,6 +645,26 @@ export const createElementsSlice: StateCreator<
     }));
     get().pushHistory();
   },
+
+  updateArrowStyle: (id, patch) => {
+    if (get().isElementLocked(id)) return;
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        el.id === id && isArrowElement(el) ? { ...el, ...patch } : el
+      ),
+    }));
+    get().pushHistory();
+  },
+
+  updateZoneStyle: (id, patch) => {
+    if (get().isElementLocked(id)) return;
+    set((state) => ({
+      elements: state.elements.map((el) =>
+        el.id === id && el.type === 'zone' ? { ...el, ...patch } : el
+      ),
+    }));
+    get().pushHistory();
+  },
   
   renumberAllArrows: () => {
     const { elements } = get();
@@ -659,10 +759,13 @@ export const createElementsSlice: StateCreator<
   nudgeSelected: (dx, dy) => {
     const { selectedIds } = get();
     if (selectedIds.length === 0) return;
+    const movableIds = selectedIds.filter((id) => !get().isElementLocked(id));
+    if (movableIds.length === 0) return;
+    const movable = new Set(movableIds);
     
     set((state) => ({
       elements: state.elements.map((el) => {
-        if (selectedIds.includes(el.id)) {
+        if (movable.has(el.id)) {
           if ('position' in el) {
             return {
               ...el,
@@ -833,10 +936,12 @@ export const createElementsSlice: StateCreator<
   rotateSelected: (degrees) => {
     const { selectedIds } = get();
     if (selectedIds.length === 0) return;
+    const movable = new Set(selectedIds.filter((id) => !get().isElementLocked(id)));
+    if (movable.size === 0) return;
     
     set((state) => ({
       elements: state.elements.map((el) => {
-        if (selectedIds.includes(el.id) && el.type === 'equipment') {
+        if (movable.has(el.id) && el.type === 'equipment') {
           const equipment = el as { rotation?: number };
           const currentRotation = equipment.rotation ?? 0;
           const newRotation = ((currentRotation + degrees) % 360 + 360) % 360;
@@ -851,13 +956,15 @@ export const createElementsSlice: StateCreator<
   resizeSelected: (scaleFactor) => {
     const { selectedIds } = get();
     if (selectedIds.length === 0) return;
+    const resizable = new Set(selectedIds.filter((id) => !get().isElementLocked(id)));
+    if (resizable.size === 0) return;
     
     // Clamp scale between 0.4 and 2.5 (40% to 250%)
     const clampedScale = Math.max(0.4, Math.min(2.5, scaleFactor));
     
     set((state) => ({
       elements: state.elements.map((el) => {
-        if (selectedIds.includes(el.id)) {
+        if (resizable.has(el.id)) {
           // Players and Ball - scale radius
           if (isPlayerElement(el) || el.type === 'ball') {
             const element = el as { radius?: number };
@@ -894,10 +1001,12 @@ export const createElementsSlice: StateCreator<
   scaleSelectedEquipmentBy: (factor) => {
     const { selectedIds } = get();
     if (selectedIds.length === 0) return;
+    const resizable = new Set(selectedIds.filter((id) => !get().isElementLocked(id)));
+    if (resizable.size === 0) return;
     
     set((state) => ({
       elements: state.elements.map((el) => {
-        if (selectedIds.includes(el.id) && el.type === 'equipment') {
+        if (resizable.has(el.id) && el.type === 'equipment') {
           const equipment = el as { scale?: number };
           const currentScale = equipment.scale ?? 1;
           const newScale = Math.max(0.25, Math.min(3, currentScale * factor));
@@ -949,16 +1058,9 @@ export const createElementsSlice: StateCreator<
     
     // Get current pitch orientation from document settings
     const orientation = document.pitchSettings?.orientation ?? 'landscape';
-    
-    // Get pitch dimensions based on orientation
-    // DEFAULT_PITCH_CONFIG.width/height are landscape dimensions
-    // For portrait, we swap them
-    const pitchWidth = orientation === 'portrait' 
-      ? DEFAULT_PITCH_CONFIG.height 
-      : DEFAULT_PITCH_CONFIG.width;
-    const pitchHeight = orientation === 'portrait' 
-      ? DEFAULT_PITCH_CONFIG.width 
-      : DEFAULT_PITCH_CONFIG.height;
+    const pitch = getPitchDimensions(orientation, document.pitchSettings?.view ?? 'full');
+    const pitchWidth = pitch.width;
+    const pitchHeight = pitch.height;
     
     const positions = getAbsolutePositions(
       formation,

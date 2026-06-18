@@ -14,6 +14,7 @@ export interface ArrowsLayerProps {
   pitchConfig: PitchConfig;
   isPlaying: boolean;
   visible: boolean;
+  isElementLocked?: (id: string) => boolean;
   isPrintMode?: boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
@@ -26,6 +27,7 @@ export const ArrowsLayer = memo<ArrowsLayerProps>(({
   pitchConfig,
   isPlaying,
   visible,
+  isElementLocked = (id: string) => elements.find((el) => el.id === id)?.locked === true,
   isPrintMode,
   onSelect,
   onDragEnd,
@@ -43,6 +45,7 @@ export const ArrowsLayer = memo<ArrowsLayerProps>(({
           arrow={arrow}
           pitchConfig={pitchConfig}
           isSelected={!isPlaying && selectedIds.includes(arrow.id)}
+          isLocked={isElementLocked(arrow.id)}
           onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
           onDragEnd={isPlaying ? () => {} : (onDragEnd || (() => {}))}
           isPrintMode={isPrintMode}

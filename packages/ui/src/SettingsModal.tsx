@@ -8,7 +8,7 @@ import { Toggle, SettingRow, SegmentedControl, Slider } from './primitives.js';
 import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
-import type { ArrowType, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset } from '@tmc/core';
 import { OrganizationPanel, type OrganizationPanelProps } from './OrganizationPanel.js';
 
 export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'about' | 'data';
@@ -70,6 +70,12 @@ interface SettingsModalProps {
   onSetGridSize?: (size: number) => void;
   onSetDefaultArrowType?: (type: ArrowType) => void;
   onSetStepDuration?: (duration: number) => void;
+  // Element style defaults (arrows / zones)
+  arrowDefaults?: ArrowDefaults;
+  zoneDefaults?: ZoneDefaults;
+  onSetArrowDefaults?: (patch: Partial<ArrowDefaults>) => void;
+  onSetZoneDefaults?: (patch: Partial<ZoneDefaults>) => void;
+  onResetElementDefaults?: () => void;
   themeMode?: 'light' | 'dark' | 'system';
   onSetThemeMode?: (mode: 'light' | 'dark' | 'system') => void;
   // Squad bench (Pro feature)
@@ -86,6 +92,7 @@ interface SettingsModalProps {
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
   pitchSettings?: PitchSettings;
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
+  onSelectBoard?: (board: PitchBoardPreset) => void;
   isPrintMode?: boolean;
   onTogglePrintMode?: () => void;
   /** Data & privacy */
@@ -118,6 +125,11 @@ export function SettingsModal({
   onSetGridSize,
   onSetDefaultArrowType,
   onSetStepDuration,
+  arrowDefaults,
+  zoneDefaults,
+  onSetArrowDefaults,
+  onSetZoneDefaults,
+  onResetElementDefaults,
   themeMode,
   onSetThemeMode,
   squad = [],
@@ -130,6 +142,7 @@ export function SettingsModal({
   onUpdateTeam,
   pitchSettings,
   onUpdatePitch,
+  onSelectBoard,
   isPrintMode,
   onTogglePrintMode,
   onExportBoard,
@@ -333,7 +346,7 @@ export function SettingsModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-surface rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[88vh] overflow-hidden border border-border flex flex-col">
+      <div data-tour="settings-modal" className="relative bg-surface rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[88vh] overflow-hidden border border-border flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-text">{t('common.settings')}</h2>
@@ -754,6 +767,133 @@ export function SettingsModal({
                 </div>
               </div>
 
+              {/* Arrow & Zone style defaults */}
+              {(arrowDefaults && onSetArrowDefaults) || (zoneDefaults && onSetZoneDefaults) ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-text">{t('settings.styleDefaults')}</h3>
+                    {onResetElementDefaults && (
+                      <button
+                        onClick={onResetElementDefaults}
+                        className="text-xs font-medium text-muted hover:text-accent transition-colors"
+                      >
+                        {t('settings.resetDefaults')}
+                      </button>
+                    )}
+                  </div>
+
+                  {arrowDefaults && onSetArrowDefaults && (
+                    <div className="mb-5">
+                      <label className="block text-xs font-medium text-muted mb-2">{t('settings.arrowDefaults')}</label>
+                      <div className="space-y-3">
+                        {(['pass', 'run', 'shoot', 'dribble'] as const).map((tp) => (
+                          <Slider
+                            key={tp}
+                            label={t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)}
+                            value={arrowDefaults.strokeWidth[tp]}
+                            min={1}
+                            max={12}
+                            format={(v) => `${v}px`}
+                            onChange={(v) => onSetArrowDefaults({ strokeWidth: { ...arrowDefaults.strokeWidth, [tp]: v } })}
+                          />
+                        ))}
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1.5">{t('inspector.arrow.startHead')}</label>
+                          <SegmentedControl
+                            ariaLabel={t('inspector.arrow.startHead')}
+                            value={arrowDefaults.startHead}
+                            onChange={(v) => onSetArrowDefaults({ startHead: v as ArrowHead })}
+                            options={[
+                              { value: 'none', label: t('inspector.arrow.headNone') },
+                              { value: 'arrow', label: t('inspector.arrow.headArrow') },
+                              { value: 'bar', label: t('inspector.arrow.headBar') },
+                              { value: 'dot', label: t('inspector.arrow.headDot') },
+                            ]}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1.5">{t('inspector.arrow.endHead')}</label>
+                          <SegmentedControl
+                            ariaLabel={t('inspector.arrow.endHead')}
+                            value={arrowDefaults.endHead}
+                            onChange={(v) => onSetArrowDefaults({ endHead: v as ArrowHead })}
+                            options={[
+                              { value: 'none', label: t('inspector.arrow.headNone') },
+                              { value: 'arrow', label: t('inspector.arrow.headArrow') },
+                              { value: 'bar', label: t('inspector.arrow.headBar') },
+                              { value: 'dot', label: t('inspector.arrow.headDot') },
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {zoneDefaults && onSetZoneDefaults && (
+                    <div>
+                      <label className="block text-xs font-medium text-muted mb-2">{t('settings.zoneDefaults')}</label>
+                      <div className="space-y-3">
+                        <SegmentedControl
+                          ariaLabel={t('inspector.zone.borderStyle')}
+                          value={zoneDefaults.borderStyle}
+                          onChange={(v) => onSetZoneDefaults({ borderStyle: v as 'solid' | 'dashed' | 'none' })}
+                          options={[
+                            { value: 'solid', label: t('inspector.zone.solid') },
+                            { value: 'dashed', label: t('inspector.zone.dashed') },
+                            { value: 'none', label: t('inspector.zone.none') },
+                          ]}
+                        />
+                        <div className={zoneDefaults.borderStyle === 'none' ? 'opacity-50 pointer-events-none' : ''}>
+                          <Slider
+                            label={t('inspector.zone.borderWidth')}
+                            value={zoneDefaults.borderWidth}
+                            min={1}
+                            max={8}
+                            disabled={zoneDefaults.borderStyle === 'none'}
+                            format={(v) => `${v}px`}
+                            onChange={(v) => onSetZoneDefaults({ borderWidth: v })}
+                          />
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-medium text-muted">{t('inspector.zone.borderColor')}</label>
+                            <input
+                              type="color"
+                              value={zoneDefaults.borderColor || '#ef4444'}
+                              onChange={(e) => onSetZoneDefaults({ borderColor: e.target.value })}
+                              className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
+                              aria-label={t('inspector.zone.borderColor')}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-medium text-muted">{t('settings.zoneFill')}</label>
+                            <input
+                              type="color"
+                              value={zoneDefaults.fillColor}
+                              onChange={(e) => onSetZoneDefaults({ fillColor: e.target.value })}
+                              className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
+                              aria-label={t('settings.zoneFill')}
+                            />
+                          </div>
+                        </div>
+                        <Slider
+                          label={t('settings.zoneOpacity')}
+                          value={Math.round(zoneDefaults.opacity * 100)}
+                          min={10}
+                          max={100}
+                          format={(v) => `${v}%`}
+                          onChange={(v) => onSetZoneDefaults({ opacity: v / 100 })}
+                        />
+                        <SettingRow
+                          label={t('inspector.zone.corners')}
+                          control={<Toggle checked={zoneDefaults.showCorners} onChange={() => onSetZoneDefaults({ showCorners: !zoneDefaults.showCorners })} ariaLabel={t('inspector.zone.corners')} />}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               {/* Info footer */}
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted">
@@ -919,7 +1059,7 @@ export function SettingsModal({
           {activeTab === 'pitch' && pitchSettings && onUpdatePitch && (
             <div>
               <h3 className="text-lg font-semibold text-text mb-4">{t('settings.pitch')}</h3>
-              <PitchPanel pitchSettings={pitchSettings} onUpdatePitch={onUpdatePitch} isPrintMode={isPrintMode} onTogglePrintMode={onTogglePrintMode} />
+              <PitchPanel pitchSettings={pitchSettings} onUpdatePitch={onUpdatePitch} onSelectBoard={onSelectBoard} isPrintMode={isPrintMode} onTogglePrintMode={onTogglePrintMode} />
             </div>
           )}
 
@@ -948,7 +1088,7 @@ export function SettingsModal({
               <h3 className="text-lg font-semibold text-text mb-4">{t('settings.keyboardShortcuts')}</h3>
               <div>
                 {[
-                  ['P / Shift+P', t('settings.shortcutItems.players')],
+                  ['P / Shift+P / Alt+P / Alt+Shift+P', t('settings.shortcutItems.players')],
                   ['B', t('settings.shortcutItems.ball')],
                   ['A / R / S / D', t('settings.shortcutItems.arrows')],
                   ['Z / Shift+Z', t('settings.shortcutItems.zones')],

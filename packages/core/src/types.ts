@@ -22,6 +22,8 @@ export interface BoardElementBase {
   id: ElementId;
   position: Position;
   zIndex?: number; // Optional for backward compatibility - PR-UX-2
+  /** Optional element lock. Missing/false means the element is editable/movable. */
+  locked?: boolean;
 }
 
 /** Player element on the board */
@@ -69,10 +71,14 @@ export interface BallElement extends BoardElementBase {
 /** Arrow types for tactical movements */
 export type ArrowType = 'pass' | 'run' | 'shoot' | 'dribble';
 
+/** Arrow head types */
+export type ArrowHead = 'arrow' | 'none' | 'bar' | 'dot';
+
 /** Arrow element (pass/run lines) */
 export interface ArrowElement {
   id: ElementId;
   type: 'arrow';
+  locked?: boolean;
   arrowType: ArrowType;
   startPoint: Position;
   endPoint: Position;
@@ -84,6 +90,10 @@ export interface ArrowElement {
   number?: number;
   /** Whether to display the sequence number on the arrow */
   showNumber?: boolean;
+  /** Arrow head at the start end (default: 'none') */
+  startHead?: ArrowHead;
+  /** Arrow head at the end tip (default: 'arrow') */
+  endHead?: ArrowHead;
 }
 
 /** Zone shape types */
@@ -93,6 +103,7 @@ export type ZoneShape = 'rect' | 'ellipse' | 'polygon';
 export interface ZoneElement {
   id: ElementId;
   type: 'zone';
+  locked?: boolean;
   position: Position; // Top-left corner (bounding-box top-left)
   width: number;
   height: number;
@@ -101,6 +112,8 @@ export interface ZoneElement {
   opacity: number;
   borderStyle?: 'solid' | 'dashed' | 'none';
   borderColor?: string;
+  borderWidth?: number; // Default: 3
+  showCorners?: boolean; // Corner markers on/off, default: false
   zIndex?: number; // PR-UX-2
   /**
    * Polygon vertices as a flat array [x1, y1, x2, y2, ...] in coordinates
@@ -134,6 +147,7 @@ export type EquipmentVariant = 'standard' | 'mini' | 'tall' | 'flat' | 'wall_3';
 export interface DrawingElement {
   id: ElementId;
   type: 'drawing';
+  locked?: boolean;
   drawingType: DrawingType;
   points: number[]; // Flat array [x1, y1, x2, y2, ...]
   color: string;
@@ -171,18 +185,8 @@ export const DEFAULT_PITCH_CONFIG: PitchConfig = {
   gridSize: 10,
 };
 
-/** Get pitch dimensions based on orientation */
-export function getPitchDimensions(orientation: PitchOrientation): PitchConfig {
-  if (orientation === 'portrait') {
-    return {
-      width: DEFAULT_PITCH_CONFIG.height, // Swap width and height
-      height: DEFAULT_PITCH_CONFIG.width,
-      padding: DEFAULT_PITCH_CONFIG.padding,
-      gridSize: DEFAULT_PITCH_CONFIG.gridSize,
-    };
-  }
-  return DEFAULT_PITCH_CONFIG;
-}
+export const HALF_BOARD_DEPTH_M = 64;
+export const PENALTY_BOARD_DEPTH_M = 43;
 
 /** Team settings for customization */
 export interface TeamSetting {
@@ -219,6 +223,7 @@ export type PitchOrientation = 'landscape' | 'portrait';
 /** Pitch view options (which part of the pitch to show) */
 export type PitchView = 
   | 'full'           // Całe boisko
+  | 'half'           // Połowa boiska (z bramką), orientacja decyduje pion/poziom
   | 'half-left'      // Lewa połowa (z bramką)
   | 'half-right'     // Prawa połowa (z bramką)
   | 'center'         // Środek boiska (bez pól karnych)
@@ -226,6 +231,64 @@ export type PitchView =
   | 'defensive-third' // Tercja obrony
   | 'penalty-area'   // Tylko pole karne
   | 'plain';         // Bez linii - czysta trawa
+
+/** Get pitch dimensions based on orientation and cropped board view. */
+export function getPitchDimensions(
+  orientation: PitchOrientation,
+  view: PitchView = 'full',
+): PitchConfig {
+  const metresToPx = DEFAULT_PITCH_CONFIG.width / 105;
+  const fullWidthPx = DEFAULT_PITCH_CONFIG.height;
+  const halfLengthPx = HALF_BOARD_DEPTH_M * metresToPx;
+  const penaltyDepthPx = PENALTY_BOARD_DEPTH_M * metresToPx;
+
+  if (view === 'half') {
+    return orientation === 'portrait'
+      ? {
+          width: fullWidthPx,
+          height: halfLengthPx,
+          padding: DEFAULT_PITCH_CONFIG.padding,
+          gridSize: DEFAULT_PITCH_CONFIG.gridSize,
+        }
+      : {
+          width: halfLengthPx,
+          height: fullWidthPx,
+          padding: DEFAULT_PITCH_CONFIG.padding,
+          gridSize: DEFAULT_PITCH_CONFIG.gridSize,
+        };
+  }
+
+  if (view === 'penalty-area') {
+    return orientation === 'portrait'
+      ? {
+          width: fullWidthPx,
+          height: penaltyDepthPx,
+          padding: DEFAULT_PITCH_CONFIG.padding,
+          gridSize: DEFAULT_PITCH_CONFIG.gridSize,
+        }
+      : {
+          width: penaltyDepthPx,
+          height: fullWidthPx,
+          padding: DEFAULT_PITCH_CONFIG.padding,
+          gridSize: DEFAULT_PITCH_CONFIG.gridSize,
+        };
+  }
+
+  if (orientation === 'portrait') {
+    return {
+      width: DEFAULT_PITCH_CONFIG.height, // Swap width and height
+      height: DEFAULT_PITCH_CONFIG.width,
+      padding: DEFAULT_PITCH_CONFIG.padding,
+      gridSize: DEFAULT_PITCH_CONFIG.gridSize,
+    };
+  }
+  return DEFAULT_PITCH_CONFIG;
+}
+
+/** Pitch projection / rendering style */
+export type PitchProjection =
+  | 'flat'          // Klasyczny widok 2D z góry
+  | 'perspective';  // Widok 3D / skos
 
 /** Line visibility settings */
 export interface PitchLineSettings {
@@ -259,6 +322,8 @@ export interface PitchSettings {
   showStripes: boolean;
   orientation: PitchOrientation;
   view: PitchView;
+  /** Rendering style of the board (default 'flat' for back-compat). */
+  projection?: PitchProjection;
   lines: PitchLineSettings;
 }
 
@@ -329,6 +394,42 @@ export const PLAIN_PITCH_LINES: PitchLineSettings = {
   showGoals: false,
 };
 
+/** Identifier for a selectable board preset (pitch + view + projection). */
+export type PitchBoardId = 'full' | 'half-2d' | 'penalty-2d';
+
+/** A selectable board preset shown in the pitch view picker. */
+export interface PitchBoardPreset {
+  id: PitchBoardId;
+  /** i18n label key. */
+  labelKey: string;
+  view: PitchView;
+  orientation: PitchOrientation;
+  projection: PitchProjection;
+}
+
+/**
+ * The 3 selectable boards.
+ * 'full' is the default. Region boards are flat tactical crops; 3D/skos
+ * variants were removed because they distorted the coaching view.
+ */
+export const PITCH_BOARDS: readonly PitchBoardPreset[] = [
+  { id: 'full',       labelKey: 'pitchPanel.boardFull',      view: 'full',         orientation: 'landscape', projection: 'flat' },
+  { id: 'half-2d',    labelKey: 'pitchPanel.boardHalf2d',    view: 'half',         orientation: 'portrait',  projection: 'flat' },
+  { id: 'penalty-2d', labelKey: 'pitchPanel.boardPenalty2d', view: 'penalty-area', orientation: 'portrait',  projection: 'flat' },
+] as const;
+
+/** The default board id. */
+export const DEFAULT_PITCH_BOARD_ID: PitchBoardId = 'full';
+
+/** Resolve the active board id from pitch settings (falls back to 'full'). */
+export function getPitchBoardId(
+  settings: Pick<PitchSettings, 'view' | 'projection'>,
+): PitchBoardId {
+  if (settings.view === 'half') return 'half-2d';
+  if (settings.view === 'penalty-area') return 'penalty-2d';
+  return 'full';
+}
+
 /** Player orientation feature settings (Pro feature) */
 export interface PlayerOrientationSettings {
   enabled: boolean;        // Master toggle for whole document
@@ -376,6 +477,43 @@ export interface PlayerDefaults {
   awayColor?: string;
 }
 
+/** User-level default style for newly created arrows. */
+export interface ArrowDefaults {
+  /** Default line thickness per arrow type. */
+  strokeWidth: { pass: number; run: number; shoot: number; dribble: number };
+  /** Default start-cap for new arrows. */
+  startHead: ArrowHead;
+  /** Default end-cap for new arrows. */
+  endHead: ArrowHead;
+}
+
+/** Built-in arrow defaults (match createArrow per-type strokes). */
+export const DEFAULT_ARROW_DEFAULTS: ArrowDefaults = {
+  strokeWidth: { pass: 4, run: 3, shoot: 5, dribble: 4 },
+  startHead: 'none',
+  endHead: 'arrow',
+};
+
+/** User-level default style for newly created zones. */
+export interface ZoneDefaults {
+  borderStyle: 'solid' | 'dashed' | 'none';
+  borderWidth: number;
+  /** undefined = derive a darker shade of the fill color at render time. */
+  borderColor?: string;
+  showCorners: boolean;
+  fillColor: string;
+  opacity: number;
+}
+
+/** Built-in zone defaults (match createZone). */
+export const DEFAULT_ZONE_DEFAULTS: ZoneDefaults = {
+  borderStyle: 'none',
+  borderWidth: 3,
+  showCorners: false,
+  fillColor: '#ef4444',
+  opacity: 0.25,
+};
+
 /** A predefined player in the squad bench (Pro feature) */
 export interface SquadPlayer {
   id: string;
@@ -416,6 +554,13 @@ export interface BoardDocument {
 export interface HistoryEntry {
   elements: BoardElement[];
   selectedIds: ElementId[];
+  groups?: {
+    id: string;
+    name: string;
+    memberIds: ElementId[];
+    locked: boolean;
+    visible: boolean;
+  }[];
   timestamp: number;
 }
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { Layer, Line, Rect, Transformer } from 'react-konva';
+import { Group, Layer, Line, Rect, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import type { BoardElement, Position, PitchSettings, TeamSettings, PlayerOrientationSettings, EquipmentElement } from '@tmc/core';
 import { isPlayerElement, isBallElement, isArrowElement, isZoneElement, isTextElement, isDrawingElement, isEquipmentElement } from '@tmc/core';
@@ -16,6 +16,7 @@ export interface CanvasElementsProps {
   canvasHeight: number;
   elements: BoardElement[];
   selectedIds: string[];
+  isElementLocked?: (id: string) => boolean;
   hiddenByGroup: Set<string>;
   layerVisibility: {
     zones: boolean;
@@ -85,6 +86,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     canvasWidth,
     canvasHeight,
     selectedIds,
+    isElementLocked = (id: string) => elements.find((el) => el.id === id)?.locked === true,
     hiddenByGroup,
     layerVisibility,
     pitchConfig,
@@ -124,6 +126,20 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
   const { getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints } = interpolators;
 
   const transformerRef = useRef<Konva.Transformer>(null);
+  const lockedSelectedElements = elements.filter((el) => selectedIds.includes(el.id) && isElementLocked(el.id));
+
+  const getLockBadgePosition = (el: BoardElement): Position | null => {
+    if (isArrowElement(el)) {
+      return {
+        x: (el.startPoint.x + el.endPoint.x) / 2,
+        y: (el.startPoint.y + el.endPoint.y) / 2,
+      };
+    }
+    if ('position' in el) {
+      return el.position;
+    }
+    return null;
+  };
 
   // Attach Konva Transformer to the selected TextNode only (Sprint B POC)
   useEffect(() => {
@@ -184,6 +200,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               zone={animatedZone}
               pitchConfig={pitchConfig}
               isSelected={!isPlaying && selectedIds.includes(zone.id)}
+              isLocked={isElementLocked(zone.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onResize={onResizeZone}
@@ -204,6 +221,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               arrow={animatedArrow}
               pitchConfig={pitchConfig}
               isSelected={!isPlaying && selectedIds.includes(arrow.id)}
+              isLocked={isElementLocked(arrow.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               isPrintMode={isPrintMode}
@@ -237,6 +255,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               zoom={Math.round(zoom * 100)}
               isPrintMode={isPrintMode}
               isSelected={!isPlaying && selectedIds.includes(player.id)}
+              isLocked={isElementLocked(player.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
@@ -259,6 +278,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               ball={animatedBall}
               pitchConfig={pitchConfig}
               isSelected={!isPlaying && selectedIds.includes(ball.id)}
+              isLocked={isElementLocked(ball.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
@@ -276,6 +296,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               key={equipment.id}
               element={animatedEquipment as EquipmentElement}
               isSelected={!isPlaying && selectedIds.includes(equipment.id)}
+              isLocked={isElementLocked(equipment.id)}
               isPrintMode={isPrintMode}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : (id, x, y) => {
@@ -298,6 +319,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               pitchConfig={pitchConfig}
               isPrintMode={isPrintMode}
               isSelected={!isPlaying && selectedIds.includes(textEl.id)}
+              isLocked={isElementLocked(textEl.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
@@ -359,6 +381,33 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
           onSelect={onElementSelect}
         />
       ))}
+
+      {!isPlaying && lockedSelectedElements.map((el) => {
+        const pos = getLockBadgePosition(el);
+        if (!pos) return null;
+        return (
+          <Group key={`lock-${el.id}`} x={pos.x + 18} y={pos.y - 30} listening={false}>
+            <Rect
+              x={-8}
+              y={-5}
+              width={16}
+              height={14}
+              cornerRadius={3}
+              fill="rgba(15,23,42,0.88)"
+              stroke="#facc15"
+              strokeWidth={1.5}
+            />
+            <Line
+              points={[-4, -5, -4, -10, 4, -10, 4, -5]}
+              stroke="#facc15"
+              strokeWidth={1.8}
+              lineCap="round"
+              lineJoin="round"
+            />
+            <Rect x={-1.5} y={0} width={3} height={5} cornerRadius={1.5} fill="#facc15" />
+          </Group>
+        );
+      })}
 
       {/* Live freehand preview */}
       {freehandPoints && freehandPoints.length >= 4 && (

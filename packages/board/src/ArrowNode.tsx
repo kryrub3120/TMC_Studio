@@ -7,15 +7,16 @@
  */
 
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Group, Arrow, Circle, Line, Text } from 'react-konva';
+import { Group, Circle, Line, Text } from 'react-konva';
 import type Konva from 'konva';
 import { cursorGrab, cursorDefault, applyGrabbing, applyGrab } from './cursorUtils';
-import type { ArrowElement, Position, PitchConfig } from '@tmc/core';
+import type { ArrowElement, Position, PitchConfig, ArrowHead } from '@tmc/core';
 
 export interface ArrowNodeProps {
   arrow: ArrowElement;
   pitchConfig: PitchConfig;
   isSelected: boolean;
+  isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
   onEndpointDrag?: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
@@ -121,8 +122,107 @@ function getDribblePoints(centerline: number[]): number[] {
   return points;
 }
 
-/** Render the shoot arrow (two parallel lines + single head) along a centerline. */
-function renderShootArrow(centerline: number[], color: string, strokeWidth: number) {
+/** Render a single arrow head at a given point, oriented along the tangent. */
+function renderArrowHead(
+  px: number, py: number,
+  tx: number, ty: number,
+  headType: ArrowHead,
+  color: string,
+  strokeWidth: number
+): React.ReactNode {
+  const headLen = Math.max(8, strokeWidth * 4);
+  const headW = Math.max(6, strokeWidth * 3);
+
+  switch (headType) {
+    case 'none':
+      return null;
+    case 'bar': {
+      // Short perpendicular bar
+      const barLen = Math.max(4, strokeWidth * 2.5);
+      const perpX = -ty * barLen;
+      const perpY = tx * barLen;
+      return (
+        <Line
+          points={[px - perpX, py - perpY, px + perpX, py + perpY]}
+          stroke={color}
+          strokeWidth={Math.max(1.5, strokeWidth * 0.8)}
+          lineCap="round"
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      );
+    }
+    case 'dot': {
+      const dotR = Math.max(3, strokeWidth * 1.2);
+      return (
+        <Circle
+          x={px}
+          y={py}
+          radius={dotR}
+          fill={color}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      );
+    }
+    case 'arrow':
+    default: {
+      // Triangle arrowhead
+      const bx = px - tx * headLen;
+      const by = py - ty * headLen;
+      const perpX = -ty * headW;
+      const perpY = tx * headW;
+      return (
+        <Line
+          points={[px, py, bx + perpX, by + perpY, bx - perpX, by - perpY]}
+          fill={color}
+          closed
+          strokeEnabled={false}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      );
+    }
+  }
+}
+
+/** Render heads at both ends of a centerline (for pass/run/dribble lines without built-in arrows). */
+function renderBothHeads(
+  centerline: number[],
+  startHead: ArrowHead,
+  endHead: ArrowHead,
+  color: string,
+  strokeWidth: number
+): React.ReactNode[] {
+  const { cum, total } = polylineMetrics(centerline);
+  const nodes: React.ReactNode[] = [];
+
+  if (startHead !== 'none' && total > 0) {
+    const s = pointAt(centerline, cum, total, 0);
+    nodes.push(
+      <React.Fragment key="start-head">
+        {renderArrowHead(s.x, s.y, -s.tx, -s.ty, startHead, color, strokeWidth)}
+      </React.Fragment>
+    );
+  }
+  if (endHead !== 'none' && total > 0) {
+    const e = pointAt(centerline, cum, total, total);
+    nodes.push(
+      <React.Fragment key="end-head">
+        {renderArrowHead(e.x, e.y, e.tx, e.ty, endHead, color, strokeWidth)}
+      </React.Fragment>
+    );
+  }
+
+  return nodes;
+}
+function renderShootArrow(
+  centerline: number[],
+  color: string,
+  strokeWidth: number,
+  startHead: ArrowHead = 'none',
+  endHead: ArrowHead = 'arrow'
+) {
   const { cum, total } = polylineMetrics(centerline);
   const sx = centerline[0];
   const sy = centerline[1];
@@ -130,18 +230,19 @@ function renderShootArrow(centerline: number[], color: string, strokeWidth: numb
   const ey = centerline[centerline.length - 1];
 
   if (total < 10) {
+    const heads = renderBothHeads(centerline, startHead, endHead, color, strokeWidth);
     return (
-      <Arrow
-        points={[sx, sy, ex, ey]}
-        stroke={color}
-        strokeWidth={strokeWidth}
-        fill={color}
-        pointerLength={10}
-        pointerWidth={8}
-        lineCap="round"
-        lineJoin="round"
-        hitStrokeWidth={15}
-      />
+      <>
+        <Line
+          points={[sx, sy, ex, ey]}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          lineCap="round"
+          lineJoin="round"
+          hitStrokeWidth={15}
+        />
+        {heads}
+      </>
     );
   }
 
@@ -195,6 +296,11 @@ function renderShootArrow(centerline: number[], color: string, strokeWidth: numb
         closed
         listening={false}
       />
+      {/* Start head for shoot arrows */}
+      {startHead !== 'none' && (() => {
+        const startPt = pointAt(centerline, cum, total, 0);
+        return renderArrowHead(startPt.x, startPt.y, -startPt.tx, -startPt.ty, startHead, color, strokeWidth);
+      })()}
     </>
   );
 }
@@ -204,6 +310,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   arrow,
   pitchConfig: _pitchConfig,
   isSelected,
+  isLocked = false,
   onSelect,
   onDragEnd,
   onEndpointDrag,
@@ -228,6 +335,10 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   const color = arrow.color || ARROW_COLORS[arrow.arrowType];
   const strokeWidth = arrow.strokeWidth || (arrow.arrowType === 'pass' ? 3 : 2);
   const dash = arrow.arrowType === 'run' ? [8, 4] : undefined;
+
+  // Arrow head options
+  const startHead = arrow.startHead ?? 'none';
+  const endHead = arrow.endHead ?? 'arrow';
 
   // Print mode: all arrows black, shoot gets 1.5x stroke for visual distinction
   const effectiveColor = isPrintMode ? '#000000' : color;
@@ -366,6 +477,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   const handleEndpointMouseDown = useCallback(
     (endpoint: 'start' | 'end', e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
+      if (isLocked) return;
 
       const stage = e.target.getStage();
       if (!stage) return;
@@ -385,13 +497,14 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
 
       setDraggingEndpoint(endpoint);
     },
-    [arrow.startPoint, arrow.endPoint]
+    [arrow.startPoint, arrow.endPoint, isLocked]
   );
 
   // Start bend (control) drag. The handle represents the apex of the curve.
   const handleControlMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
+      if (isLocked) return;
 
       const stage = e.target.getStage();
       if (!stage) return;
@@ -415,7 +528,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
 
       setDraggingEndpoint('control');
     },
-    [arrow.startPoint, arrow.endPoint, arrow.curveControl]
+    [arrow.startPoint, arrow.endPoint, arrow.curveControl, isLocked]
   );
 
   // Double-click the bend handle to straighten the arrow.
@@ -436,46 +549,48 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       ref={groupRef}
       x={centerX}
       y={centerY}
-      draggable={!draggingEndpoint}
+      draggable={!draggingEndpoint && !isLocked}
       onClick={handleClick}
       onTap={handleClick}
-      onMouseEnter={cursorGrab}
+      onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
-      onDragStart={() => applyGrabbing(groupRef)}
+      onDragStart={() => { if (!isLocked) applyGrabbing(groupRef); }}
       onDragEnd={handleDragEnd}
     >
-      {/* Shoot arrow - double parallel lines + single arrowhead */}
+      {/* Shoot arrow - double parallel lines + custom heads */}
       {arrow.arrowType === 'shoot' ? renderShootArrow(
         centerline,
         effectiveColor,
-        effectiveStrokeWidth
+        effectiveStrokeWidth,
+        startHead,
+        endHead
       ) : arrow.arrowType === 'dribble' ? (
-        <Arrow
-          points={getDribblePoints(centerline)}
-          stroke={effectiveColor}
-          strokeWidth={effectiveStrokeWidth}
-          fill={effectiveColor}
-          pointerLength={12}
-          pointerWidth={10}
-          tension={hasCurve ? 0 : 0.35}
-          lineCap="round"
-          lineJoin="round"
-          hitStrokeWidth={16}
-        />
+        <>
+          <Line
+            points={getDribblePoints(centerline)}
+            stroke={effectiveColor}
+            strokeWidth={effectiveStrokeWidth}
+            tension={hasCurve ? 0 : 0.35}
+            lineCap="round"
+            lineJoin="round"
+            hitStrokeWidth={16}
+          />
+          {renderBothHeads(getDribblePoints(centerline), startHead, endHead, effectiveColor, effectiveStrokeWidth)}
+        </>
       ) : (
         /* Standard arrow (pass/run) - straight or curved */
-        <Arrow
-          points={centerline}
-          stroke={effectiveColor}
-          strokeWidth={effectiveStrokeWidth}
-          fill={effectiveColor}
-          pointerLength={10}
-          pointerWidth={8}
-          dash={dash}
-          lineCap="round"
-          lineJoin="round"
-          hitStrokeWidth={15}
-        />
+        <>
+          <Line
+            points={centerline}
+            stroke={effectiveColor}
+            strokeWidth={effectiveStrokeWidth}
+            dash={dash}
+            lineCap="round"
+            lineJoin="round"
+            hitStrokeWidth={15}
+          />
+          {renderBothHeads(centerline, startHead, endHead, effectiveColor, effectiveStrokeWidth)}
+        </>
       )}
 
       {/* Arrow number label (PR-ARROW-NUMBER) - sits at the curve apex */}
@@ -511,7 +626,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       })()}
 
       {/* Selection highlight, endpoint handles, and bend handle */}
-      {isSelected && (
+      {isSelected && !isLocked && (
         <>
           {/* Start endpoint handle */}
           <Circle

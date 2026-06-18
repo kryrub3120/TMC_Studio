@@ -5,7 +5,7 @@
 
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, hasPosition } from '@tmc/core';
 import { useTranslation, type InspectorElement, type ElementInList, type SettingsTab } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -19,6 +19,8 @@ const USE_NEW_CANVAS = false;
 
 export interface BoardPageProps {
   onOpenProjectsDrawer: () => void;
+  onCloseProjectsDrawer: () => void;
+  onCloseSettingsModal: () => void;
   onOpenAuthModal: () => void;
   onOpenSettingsModal: (tab?: SettingsTab) => void;
   onOpenPricingModal: () => void;
@@ -113,6 +115,12 @@ export function useBoardPageState(props: BoardPageProps) {
   const cycleSelectedColor = useBoardStore((s) => s.cycleSelectedColor);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
+  const toggleSelectedLock = useBoardStore((s) => s.toggleSelectedLock);
+  const lockSelected = useBoardStore((s) => s.lockSelected);
+  const unlockSelected = useBoardStore((s) => s.unlockSelected);
+  const isElementLocked = useBoardStore((s) => s.isElementLocked);
+  const createGroup = useBoardStore((s) => s.createGroup);
+  const ungroupSelection = useBoardStore((s) => s.ungroupSelection);
   const updateArrowEndpoint = useBoardStore((s) => s.updateArrowEndpoint);
   const groups = useBoardStore((s) => s.groups);
   const selectGroup = useBoardStore((s) => s.selectGroup);
@@ -232,9 +240,12 @@ export function useBoardPageState(props: BoardPageProps) {
 
   // Pitch config
   const pitchConfig = useMemo(() => ({
-    ...getPitchDimensions(pitchSettings?.orientation ?? 'landscape'),
+    ...getPitchDimensions(
+      pitchSettings?.orientation ?? 'landscape',
+      pitchSettings?.view ?? 'full',
+    ),
     gridSize,
-  }), [gridSize, pitchSettings?.orientation]);
+  }), [gridSize, pitchSettings?.orientation, pitchSettings?.view]);
 
   const canvasWidth = pitchConfig.width + pitchConfig.padding * 2;
   const canvasHeight = pitchConfig.height + pitchConfig.padding * 2;
@@ -282,6 +293,23 @@ export function useBoardPageState(props: BoardPageProps) {
   const inspectorElement: InspectorElement | undefined = useMemo(() => {
     if (!selectedElement) return undefined;
 
+    // Zone first — ZoneElement has `position`, so it would otherwise be
+    // captured by the hasPosition() branch and lose its border/corner props.
+    if (isZoneElement(selectedElement)) {
+      return {
+        id: selectedElement.id,
+        type: 'zone' as const,
+        x: selectedElement.position.x,
+        y: selectedElement.position.y,
+        locked: selectedElement.locked === true,
+        opacity: selectedElement.opacity,
+        borderStyle: selectedElement.borderStyle,
+        borderColor: selectedElement.borderColor,
+        borderWidth: selectedElement.borderWidth,
+        showCorners: selectedElement.showCorners,
+      } satisfies InspectorElement as InspectorElement;
+    }
+
     if (hasPosition(selectedElement)) {
       return {
         id: selectedElement.id,
@@ -293,6 +321,7 @@ export function useBoardPageState(props: BoardPageProps) {
         fontSize: isPlayerElement(selectedElement) ? selectedElement.fontSize : undefined,
         textColor: isPlayerElement(selectedElement) ? selectedElement.textColor : undefined,
         opacity: isPlayerElement(selectedElement) ? selectedElement.opacity : undefined,
+        locked: selectedElement.locked === true,
         x: selectedElement.position.x,
         y: selectedElement.position.y,
       };
@@ -304,8 +333,13 @@ export function useBoardPageState(props: BoardPageProps) {
         type: 'arrow' as const,
         x: selectedElement.startPoint.x,
         y: selectedElement.startPoint.y,
+        locked: selectedElement.locked === true,
         showNumber: selectedElement.showNumber,
         arrowNumber: selectedElement.number,
+        startHead: selectedElement.startHead,
+        endHead: selectedElement.endHead,
+        strokeWidth: selectedElement.strokeWidth,
+        arrowType: selectedElement.arrowType,
       } satisfies InspectorElement as InspectorElement;
     }
 
@@ -330,6 +364,7 @@ export function useBoardPageState(props: BoardPageProps) {
     selectedIds,
     activeTool,
     isPlaying,
+    isElementLocked,
     clearSelection,
     updateArrowEndpoint,
     stageRef,
@@ -435,6 +470,12 @@ export function useBoardPageState(props: BoardPageProps) {
     cycleSelectedColor,
     cyclePlayerShape,
     cycleZoneShape,
+    toggleSelectedLock,
+    lockSelected,
+    unlockSelected,
+    isElementLocked,
+    createGroup,
+    ungroupSelection,
     updateArrowEndpoint,
     resizeZone,
     updateZonePoints,

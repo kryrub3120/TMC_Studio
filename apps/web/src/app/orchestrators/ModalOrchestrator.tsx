@@ -19,7 +19,7 @@ import {
   type SettingsTab,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
-import type { ArrowType, TeamSettings, TeamSetting, PitchSettings, Team } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -41,6 +41,8 @@ interface ModalOrchestratorProps {
   authIsPro: boolean;
   authIsAuthenticated: boolean;
   authUser: User | null;
+  authAccessToken: string | null;
+  pricingInitialCycle?: 'monthly' | 'yearly';
   
   // Limit Reached Modal
   limitReachedModalOpen: boolean;
@@ -109,6 +111,11 @@ interface ModalOrchestratorProps {
   onSetGridSize: (size: number) => void;
   onSetDefaultArrowType: (type: ArrowType) => void;
   onSetStepDuration: (duration: number) => void;
+  arrowDefaults?: ArrowDefaults;
+  zoneDefaults?: ZoneDefaults;
+  onSetArrowDefaults?: (patch: Partial<ArrowDefaults>) => void;
+  onSetZoneDefaults?: (patch: Partial<ZoneDefaults>) => void;
+  onResetElementDefaults?: () => void;
   
   // Squad Bench (from board store)
   squad?: Array<{ id: string; name: string; number: number; team: 'home' | 'away' }>;
@@ -122,6 +129,7 @@ interface ModalOrchestratorProps {
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
   pitchSettings?: PitchSettings;
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
+  onSelectBoard?: (board: PitchBoardPreset) => void;
   isPrintMode?: boolean;
   onTogglePrintMode?: () => void;
   onExportBoard?: () => void;
@@ -163,11 +171,8 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
           props.onClosePricingModal();
           props.onOpenAuthModal();
         }}
-        user={props.authUser ? {
-          id: props.authUser.id,
-          email: props.authUser.email,
-          stripe_customer_id: props.authUser.stripe_customer_id,
-        } : null}
+        accessToken={props.authAccessToken}
+        initialCycle={props.pricingInitialCycle}
       />
       
       {/* Limit Reached Modal */}
@@ -265,6 +270,11 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onSetGridSize={props.onSetGridSize}
         onSetDefaultArrowType={props.onSetDefaultArrowType}
         onSetStepDuration={props.onSetStepDuration}
+        arrowDefaults={props.arrowDefaults}
+        zoneDefaults={props.zoneDefaults}
+        onSetArrowDefaults={props.onSetArrowDefaults}
+        onSetZoneDefaults={props.onSetZoneDefaults}
+        onResetElementDefaults={props.onResetElementDefaults}
         squad={props.squad}
         squadVisible={props.squadVisible}
         isPro={props.isPro}
@@ -275,6 +285,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onUpdateTeam={props.onUpdateTeam}
         pitchSettings={props.pitchSettings}
         onUpdatePitch={props.onUpdatePitch}
+        onSelectBoard={props.onSelectBoard}
         isPrintMode={props.isPrintMode}
         onTogglePrintMode={props.onTogglePrintMode}
         onExportBoard={props.onExportBoard}

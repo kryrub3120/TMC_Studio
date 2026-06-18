@@ -22,6 +22,7 @@ export interface PlayersLayerProps {
   };
   hiddenByGroup: Set<string>;
   isPlaying: boolean;
+  isElementLocked?: (id: string) => boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
   onDragStart?: (id: string) => boolean;
@@ -37,6 +38,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
   layerVisibility,
   hiddenByGroup,
   isPlaying,
+  isElementLocked = (id: string) => elements.find((el) => el.id === id)?.locked === true,
   onSelect,
   onDragEnd,
   onDragStart,
@@ -66,6 +68,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
           pitchConfig={pitchConfig}
           teamSettings={teamSettings}
           isSelected={!isPlaying && selectedIds.includes(player.id)}
+          isLocked={isElementLocked(player.id)}
           onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
           onDragEnd={isPlaying ? () => {} : (onDragEnd || (() => {}))}
           onDragStart={isPlaying ? () => false : (onDragStart || (() => false))}
@@ -82,6 +85,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             ball={ball}
             pitchConfig={pitchConfig}
             isSelected={!isPlaying && selectedIds.includes(ball.id)}
+            isLocked={isElementLocked(ball.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleBallDragEnd}
           />
@@ -96,6 +100,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             key={eq.id}
             element={eq}
             isSelected={!isPlaying && selectedIds.includes(eq.id)}
+            isLocked={isElementLocked(eq.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleDragEnd}
             onResize={isPlaying ? undefined : onResizeEquipment}
@@ -112,6 +117,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             text={text}
             pitchConfig={pitchConfig}
             isSelected={!isPlaying && selectedIds.includes(text.id)}
+            isLocked={isElementLocked(text.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleDragEnd}
           />

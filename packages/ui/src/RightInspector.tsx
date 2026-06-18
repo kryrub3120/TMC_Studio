@@ -6,7 +6,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { Team } from '@tmc/core';
 import { BottomSheet } from './BottomSheet.js';
-import { Toggle, Section, SettingRow, Slider, Field, inputClass } from './primitives.js';
+import { Toggle, Section, SettingRow, Slider, Field, SegmentedControl, ColorSwatchRow, inputClass } from './primitives.js';
 import { useTranslation } from './i18n.js';
 
 export interface InspectorElement {
@@ -19,12 +19,22 @@ export interface InspectorElement {
   fontSize?: number;
   textColor?: string;
   opacity?: number;
+  locked?: boolean;
   isGoalkeeper?: boolean;
   x: number;
   y: number;
   // Arrow-specific
   showNumber?: boolean;
   arrowNumber?: number;
+  arrowType?: 'pass' | 'run' | 'shoot' | 'dribble';
+  strokeWidth?: number;
+  startHead?: 'arrow' | 'none' | 'bar' | 'dot';
+  endHead?: 'arrow' | 'none' | 'bar' | 'dot';
+  // Zone-specific
+  borderStyle?: 'solid' | 'dashed' | 'none';
+  borderColor?: string;
+  borderWidth?: number;
+  showCorners?: boolean;
 }
 
 export interface ElementInList {
@@ -63,7 +73,12 @@ export interface RightInspectorProps {
   elements: ElementInList[];
   layerVisibility: LayerVisibility;
   groups?: GroupData[];
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number; strokeWidth?: number; borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot' }) => void;
+  /** Save the selected arrow's current style as the user default. */
+  onSetArrowDefault?: () => void;
+  /** Save the selected zone's current style as the user default. */
+  onSetZoneDefault?: () => void;
+  onToggleSelectedLock?: () => void;
   /** Ref forwarded to the player label input for Enter→focus from keyboard */
   labelInputRef?: React.RefObject<HTMLInputElement>;
   onSelectElement?: (id: string) => void;
@@ -93,7 +108,7 @@ export interface RightInspectorProps {
 
 type TabType = 'props' | 'layers';
 
-const DEFAULT_INSPECTOR_WIDTH = 280;
+const DEFAULT_INSPECTOR_WIDTH = 340;
 const MIN_INSPECTOR_WIDTH = 220;
 const MAX_INSPECTOR_WIDTH = 480;
 
@@ -122,6 +137,49 @@ const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+/* ── Arrow head glyphs (line + marker on the right) ──────────────────── */
+const HeadNoneIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="3" y1="12" x2="21" y2="12" />
+  </svg>
+);
+const HeadArrowIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="19" y2="12" />
+    <polyline points="14 7 20 12 14 17" />
+  </svg>
+);
+const HeadBarIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="3" y1="12" x2="19" y2="12" />
+    <line x1="19" y1="6" x2="19" y2="18" />
+  </svg>
+);
+const HeadDotIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="3" y1="12" x2="16" y2="12" />
+    <circle cx="19" cy="12" r="3" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+/* ── Border-style glyphs ─────────────────────────────────────────────── */
+const LineSolidIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="3" y1="12" x2="21" y2="12" />
+  </svg>
+);
+const LineDashedIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="5 4">
+    <line x1="3" y1="12" x2="21" y2="12" />
+  </svg>
+);
+const LineNoneIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="5" y1="19" x2="19" y2="5" />
+    <line x1="5" y1="5" x2="19" y2="19" opacity="0.35" />
   </svg>
 );
 
@@ -221,7 +279,12 @@ const QuickActionsPanel: React.FC<{ onAction?: (action: string) => void }> = ({ 
 const PropsTab: React.FC<{
   selectedCount: number;
   selectedElement?: InspectorElement;
-  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number }) => void;
+  onUpdateElement?: (updates: { number?: number; label?: string; showLabel?: boolean; fontSize?: number; textColor?: string; opacity?: number; isGoalkeeper?: boolean; showNumber?: boolean; arrowNumber?: number; strokeWidth?: number; borderStyle?: 'solid' | 'dashed' | 'none'; borderColor?: string; borderWidth?: number; showCorners?: boolean; startHead?: 'arrow' | 'none' | 'bar' | 'dot'; endHead?: 'arrow' | 'none' | 'bar' | 'dot' }) => void;
+  /** Save the selected arrow's current style as the user default. */
+  onSetArrowDefault?: () => void;
+  /** Save the selected zone's current style as the user default. */
+  onSetZoneDefault?: () => void;
+  onToggleSelectedLock?: () => void;
   onQuickAction?: (action: string) => void;
   playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
   onUpdatePlayerOrientation?: (settings: { enabled?: boolean; showArms?: boolean; showVision?: boolean; zoomThreshold?: number }) => void;
@@ -233,8 +296,11 @@ const PropsTab: React.FC<{
   onUpdateSelectedElements?: (updates: { opacity?: number; showLabel?: boolean }) => void;
   /** Ref for label input (Sprint A — Enter→focus) */
   labelInputRef?: React.RefObject<HTMLInputElement>;
-}> = ({ selectedCount, selectedElement, onUpdateElement, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, onUpdateSelectedElements, labelInputRef }) => {
+}> = ({ selectedCount, selectedElement, onUpdateElement, onToggleSelectedLock, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, onUpdateSelectedElements, labelInputRef, onSetArrowDefault, onSetZoneDefault }) => {
   const [multiOpacity, setMultiOpacity] = useState(100);
+  const [showCoordinates, setShowCoordinates] = useState(() => {
+    try { return localStorage.getItem('inspector_showCoordinates') !== 'false'; } catch { return true; }
+  });
   const { t } = useTranslation();
   if (selectedCount === 0) {
     return <QuickActionsPanel onAction={onQuickAction} />;
@@ -284,7 +350,7 @@ const PropsTab: React.FC<{
   const teamColor = el.team === 'home' ? '#e63946' : el.team === 'away' ? '#457b9d' : '#888888';
 
   return (
-    <div className="overflow-y-auto max-h-[calc(100vh-180px)]">
+    <div className="h-full overflow-y-auto pb-6">
       {/* Element header — type, team chip, live position (read-only) */}
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
         <span
@@ -293,15 +359,40 @@ const PropsTab: React.FC<{
         >
           {el.type === 'player' ? (el.number ?? '–') : el.type[0].toUpperCase()}
         </span>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-text capitalize leading-tight">
-            {el.type}{el.team ? ` · ${el.team}` : ''}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-text leading-tight">
+            {t(`inspector.elementType.${el.type}`)}{el.team ? ` · ${t(`inspector.team.${el.team}`)}` : ''}
           </p>
-          <p className="text-[11px] text-muted tabular-nums">x {Math.round(el.x)}, y {Math.round(el.y)}</p>
+          {showCoordinates && (
+            <p className="text-[11px] text-muted tabular-nums">x {Math.round(el.x)}, y {Math.round(el.y)}</p>
+          )}
         </div>
+        <button
+          onClick={() => {
+            const next = !showCoordinates;
+            setShowCoordinates(next);
+            try { localStorage.setItem('inspector_showCoordinates', String(next)); } catch {}
+          }}
+          className="p-1 rounded hover:bg-surface2 transition-colors text-muted hover:text-text"
+          title={t('inspector.showCoordinates')}
+          aria-label={t('inspector.showCoordinates')}
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
       </div>
 
       <div className="px-4">
+        <Section title={t('inspector.locked')} collapsible={false}>
+          <SettingRow
+            label={t('inspector.lockToggle')}
+            description={t('inspector.lockHint')}
+            control={<Toggle checked={!!el.locked} onChange={() => onToggleSelectedLock?.()} ariaLabel={t('inspector.lockToggle')} />}
+          />
+        </Section>
+
         {/* ── Player ── */}
         {el.type === 'player' && (
           <>
@@ -351,7 +442,7 @@ const PropsTab: React.FC<{
             </Section>
 
             {playerOrientationSettings && onUpdatePlayerOrientation && (
-              <Section title={t('inspector.advanced')} defaultOpen={false}>
+              <Section title={t('inspector.advanced')} defaultOpen={true}>
                 <div data-tour="orientation-panel">
                   <SettingRow
                     label={t('inspector.showOrientation')}
@@ -364,7 +455,7 @@ const PropsTab: React.FC<{
                   />
                   <SettingRow
                     label={t('inspector.visionCone')}
-                    description="V / Shift+V"
+                    description={t('inspector.visionConeHint')}
                     disabled={!playerOrientationSettings.enabled}
                     control={<Toggle checked={playerOrientationSettings.showVision === true} disabled={!playerOrientationSettings.enabled} onChange={() => onUpdatePlayerOrientation({ showVision: !(playerOrientationSettings.showVision === true) })} ariaLabel={t('inspector.visionConeAria')} />}
                   />
@@ -419,7 +510,164 @@ const PropsTab: React.FC<{
                 )}
               </Section>
             )}
+
+            {/* ── Arrow line & heads (condensed) ── */}
+            <Section title={t('inspector.arrow.line')} collapsible={false}>
+              {/* Preview of both ends */}
+              <div className="flex items-center justify-center h-8 mb-2 rounded-md bg-surface2 border border-border">
+                {(() => {
+                  const start = el.startHead ?? 'none';
+                  const end = el.endHead ?? 'arrow';
+                  const marker = (type: string, x: number, d: number, key: string) => {
+                    if (type === 'arrow') return <polyline key={key} points={`${x - 7 * d},6 ${x},11 ${x - 7 * d},16`} fill="none" />;
+                    if (type === 'bar') return <line key={key} x1={x} y1={5} x2={x} y2={17} />;
+                    if (type === 'dot') return <circle key={key} cx={x} cy={11} r={3} fill="currentColor" stroke="none" />;
+                    return null;
+                  };
+                  return (
+                    <svg width="120" height="22" viewBox="0 0 120 22" className="text-text" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="13" y1="11" x2="107" y2="11" />
+                      {marker(start, 13, -1, 's')}
+                      {marker(end, 107, 1, 'e')}
+                    </svg>
+                  );
+                })()}
+              </div>
+
+              <Slider
+                label={t('inspector.arrow.thickness')}
+                value={el.strokeWidth ?? 4}
+                min={1}
+                max={12}
+                format={(v) => `${v}px`}
+                onChange={(v) => onUpdateElement?.({ strokeWidth: v })}
+              />
+
+              {/* Heads — start & end side by side */}
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-muted mb-1">{t('inspector.arrow.startHead')}</label>
+                  <SegmentedControl
+                    ariaLabel={t('inspector.arrow.startHead')}
+                    value={el.startHead ?? 'none'}
+                    onChange={(v) => onUpdateElement?.({ startHead: v as 'arrow' | 'none' | 'bar' | 'dot' })}
+                    options={[
+                      { value: 'none', label: <span title={t('inspector.arrow.headNone')}><HeadNoneIcon className="w-3.5 h-3.5" /></span> },
+                      { value: 'arrow', label: <span title={t('inspector.arrow.headArrow')} className="inline-block scale-x-[-1]"><HeadArrowIcon className="w-3.5 h-3.5" /></span> },
+                      { value: 'bar', label: <span title={t('inspector.arrow.headBar')} className="inline-block scale-x-[-1]"><HeadBarIcon className="w-3.5 h-3.5" /></span> },
+                      { value: 'dot', label: <span title={t('inspector.arrow.headDot')} className="inline-block scale-x-[-1]"><HeadDotIcon className="w-3.5 h-3.5" /></span> },
+                    ]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-muted mb-1">{t('inspector.arrow.endHead')}</label>
+                  <SegmentedControl
+                    ariaLabel={t('inspector.arrow.endHead')}
+                    value={el.endHead ?? 'arrow'}
+                    onChange={(v) => onUpdateElement?.({ endHead: v as 'arrow' | 'none' | 'bar' | 'dot' })}
+                    options={[
+                      { value: 'none', label: <span title={t('inspector.arrow.headNone')}><HeadNoneIcon className="w-3.5 h-3.5" /></span> },
+                      { value: 'arrow', label: <span title={t('inspector.arrow.headArrow')}><HeadArrowIcon className="w-3.5 h-3.5" /></span> },
+                      { value: 'bar', label: <span title={t('inspector.arrow.headBar')}><HeadBarIcon className="w-3.5 h-3.5" /></span> },
+                      { value: 'dot', label: <span title={t('inspector.arrow.headDot')}><HeadDotIcon className="w-3.5 h-3.5" /></span> },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              {/* Quick actions */}
+              <div className="flex gap-1.5 mt-2.5">
+                <button
+                  onClick={() => onUpdateElement?.({ startHead: 'arrow', endHead: 'arrow' })}
+                  className="flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md bg-surface2 border border-border text-text hover:border-accent hover:text-accent transition-colors"
+                >
+                  {t('inspector.arrow.doubleHead')}
+                </button>
+                <button
+                  onClick={() => onUpdateElement?.({ startHead: 'none', endHead: 'none' })}
+                  className="flex-1 px-2 py-1.5 text-[11px] font-medium rounded-md bg-surface2 border border-border text-text hover:border-accent hover:text-accent transition-colors"
+                >
+                  {t('inspector.arrow.hideHeads')}
+                </button>
+                {onSetArrowDefault && (
+                  <button
+                    onClick={onSetArrowDefault}
+                    className="shrink-0 px-2 py-1.5 rounded-md border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-colors"
+                    title={t('inspector.setAsDefaultHint')}
+                    aria-label={t('inspector.setAsDefault')}
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                )}
+              </div>
+            </Section>
           </>
+        )}
+
+        {/* ── Zone ── */}
+        {el.type === 'zone' && (
+          <Section title={t('inspector.zone.border')} collapsible={false}>
+            <Field label={t('inspector.zone.borderStyle')} className="mb-3">
+              <SegmentedControl
+                ariaLabel={t('inspector.zone.borderStyle')}
+                value={el.borderStyle ?? 'solid'}
+                onChange={(v) => onUpdateElement?.({ borderStyle: v as 'solid' | 'dashed' | 'none' })}
+                options={[
+                  { value: 'solid', label: <span className="flex items-center gap-1.5"><LineSolidIcon className="w-4 h-4" />{t('inspector.zone.solid')}</span> },
+                  { value: 'dashed', label: <span className="flex items-center gap-1.5"><LineDashedIcon className="w-4 h-4" />{t('inspector.zone.dashed')}</span> },
+                  { value: 'none', label: <span className="flex items-center gap-1.5"><LineNoneIcon className="w-4 h-4" />{t('inspector.zone.none')}</span> },
+                ]}
+              />
+            </Field>
+
+            <div className={(el.borderStyle ?? 'solid') === 'none' ? 'opacity-50 pointer-events-none' : ''}>
+              <Slider
+                label={t('inspector.zone.borderWidth')}
+                value={el.borderWidth ?? 3}
+                min={1}
+                max={8}
+                disabled={(el.borderStyle ?? 'solid') === 'none'}
+                format={(v) => `${v}px`}
+                onChange={(v) => onUpdateElement?.({ borderWidth: v })}
+              />
+
+              <Field label={t('inspector.zone.borderColor')} className="mt-3">
+                <div className="flex items-center gap-2">
+                  <ColorSwatchRow
+                    colors={['#22c55e', '#ef4444', '#eab308', '#3b82f6', '#a855f7', '#f97316']}
+                    value={el.borderColor || '#22c55e'}
+                    onChange={(c) => onUpdateElement?.({ borderColor: c })}
+                    size={22}
+                  />
+                  <label className="relative w-[22px] h-[22px] rounded-md border border-border overflow-hidden cursor-pointer shrink-0" title={t('inspector.zone.borderColor')} style={{ background: el.borderColor || '#22c55e' }}>
+                    <input
+                      type="color"
+                      value={el.borderColor || '#22c55e'}
+                      onChange={(e) => onUpdateElement?.({ borderColor: e.target.value })}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      aria-label={t('inspector.zone.borderColor')}
+                    />
+                  </label>
+                </div>
+              </Field>
+            </div>
+
+            <SettingRow
+              className="mt-1"
+              label={t('inspector.zone.corners')}
+              control={<Toggle checked={!!el.showCorners} onChange={() => onUpdateElement?.({ showCorners: !el.showCorners })} ariaLabel={t('inspector.zone.corners')} />}
+            />
+            {onSetZoneDefault && (
+              <button
+                onClick={onSetZoneDefault}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-2 py-1.5 text-xs font-medium rounded-md border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-colors"
+                title={t('inspector.setAsDefaultHint')}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                {t('inspector.setAsDefault')}
+              </button>
+            )}
+          </Section>
         )}
       </div>
     </div>
@@ -440,15 +688,15 @@ const LayersTab: React.FC<{
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   
-  const layers: { key: LayerType; label: string; color: string }[] = [
-    { key: 'homePlayers', label: 'Home Players', color: '#e63946' },
-    { key: 'awayPlayers', label: 'Away Players', color: '#457b9d' },
-    { key: 'ball', label: 'Ball', color: '#ffffff' },
-    { key: 'arrows', label: 'Arrows', color: '#888888' },
-    { key: 'zones', label: 'Zones', color: '#888888' },
-    { key: 'labels', label: 'Text & Labels', color: '#888888' },
-    { key: 'equipment', label: 'Equipment', color: '#888888' },
-    { key: 'drawings', label: 'Drawings', color: '#888888' },
+  const layers: { key: LayerType; color: string }[] = [
+    { key: 'homePlayers', color: '#e63946' },
+    { key: 'awayPlayers', color: '#457b9d' },
+    { key: 'ball', color: '#ffffff' },
+    { key: 'arrows', color: '#888888' },
+    { key: 'zones', color: '#888888' },
+    { key: 'labels', color: '#888888' },
+    { key: 'equipment', color: '#888888' },
+    { key: 'drawings', color: '#888888' },
   ];
   
   const handleStartEdit = (group: GroupData, e: React.MouseEvent) => {
@@ -673,6 +921,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   layerVisibility,
   groups,
   onUpdateElement,
+  onToggleSelectedLock,
   onSelectElement,
   onToggleLayerVisibility,
   onSelectGroup,
@@ -688,6 +937,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   isAutoNumbering,
   onRenumberArrows,
   onUpdateSelectedElements,
+  onSetArrowDefault,
+  onSetZoneDefault,
   width = DEFAULT_INSPECTOR_WIDTH,
   minWidth = MIN_INSPECTOR_WIDTH,
   maxWidth = MAX_INSPECTOR_WIDTH,
@@ -761,6 +1012,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
         selectedCount={selectedCount}
         selectedElement={selectedElement}
         onUpdateElement={onUpdateElement}
+        onToggleSelectedLock={onToggleSelectedLock}
         onQuickAction={onQuickAction}
         playerOrientationSettings={playerOrientationSettings}
         onUpdatePlayerOrientation={onUpdatePlayerOrientation}
@@ -769,6 +1021,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
         isAutoNumbering={isAutoNumbering}
         onRenumberArrows={onRenumberArrows}
         onUpdateSelectedElements={onUpdateSelectedElements}
+        onSetArrowDefault={onSetArrowDefault}
+        onSetZoneDefault={onSetZoneDefault}
       />
     ) : activeTab === 'layers' ? (
       <div className="flex flex-col h-full">

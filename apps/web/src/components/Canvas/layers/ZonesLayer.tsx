@@ -17,6 +17,7 @@ export interface ZonesLayerProps {
   pitchConfig: PitchConfig;
   isPlaying: boolean;
   visible: boolean;
+  isElementLocked?: (id: string) => boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
   onResize?: (id: string, pos: { x: number; y: number }, width: number, height: number) => void;
@@ -28,6 +29,7 @@ export const ZonesLayer = memo<ZonesLayerProps>(({
   pitchConfig,
   isPlaying,
   visible,
+  isElementLocked = (id: string) => elements.find((el) => el.id === id)?.locked === true,
   onSelect,
   onDragEnd,
   onResize,
@@ -44,6 +46,7 @@ export const ZonesLayer = memo<ZonesLayerProps>(({
           zone={zone}
           pitchConfig={pitchConfig}
           isSelected={!isPlaying && selectedIds.includes(zone.id)}
+          isLocked={isElementLocked(zone.id)}
           onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
           onDragEnd={isPlaying ? () => {} : (onDragEnd || (() => {}))}
           onResize={onResize}
