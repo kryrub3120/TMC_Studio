@@ -316,7 +316,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
   return (
     <footer
       data-tour="timeline"
-      className="fixed bottom-0 left-0 right-0 flex flex-col relative bg-surface border-t border-border shadow-[0_-2px_12px_rgba(0,0,0,0.12)] z-bottombar overflow-hidden"
+      className="w-full shrink-0 flex flex-col relative bg-surface border-t border-border shadow-[0_-2px_12px_rgba(0,0,0,0.12)] z-bottombar overflow-hidden"
       style={{ height: barHeight, transition: dragStateRef.current ? 'none' : 'height 0.15s ease-out' }}
     >
       {/* DRAG HANDLE — top edge, drag to resize the bar's height */}

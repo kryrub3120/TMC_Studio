@@ -101,7 +101,7 @@ const EmptySlot: React.FC<{ onClick: () => void; delay?: number }> = ({ onClick,
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
-    <span className="text-[8px] text-muted/40">{t('squadBench.empty')}</span>
+    <span className="text-[8px] text-muted">{t('squadBench.empty')}</span>
   </button>
   );
 };
@@ -188,7 +188,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
             e.dataTransfer.setData('text/plain', JSON.stringify(player));
             onDragStart(player);
           }}
-          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-md bg-surface border border-border 
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-md bg-surface2 border border-border 
                      transition-all duration-fast 
                      text-xs text-text min-w-0 shrink-0 animate-fade-in
                      ${isLocked
@@ -234,19 +234,99 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
 
   return (
     <div className="px-3 py-1.5 bg-surface" data-testid="squad-bench" data-tour="squad">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">
-            {t('squadBench.title')} {!canAccess ? '⭐' : ''}
-          </span>
-          {!isEmpty && (
-            <span className="text-[10px] text-muted/60">
-              {squad.length}/{canAccess ? premiumPerTeamLimit * 4 : freeLimit}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
+      {visible ? (
+        <div className="flex items-stretch gap-3">
+          {/* Team switcher — prominent, on the left of the players */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={cycleTeam}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface2 hover:bg-border text-text font-semibold transition-colors"
+              title={t('squadBench.switchCurrent', { team: t(TEAM_LABEL_KEYS[activeTeam]) })}
+              aria-label={t('squadBench.currentTeam', { team: t(TEAM_LABEL_KEYS[activeTeam]) })}
+            >
+              <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: TEAM_COLORS[activeTeam] }} />
+              <span className="text-sm">{t(TEAM_LABEL_KEYS[activeTeam])}</span>
+              <span className="text-[11px] text-muted font-mono">{visibleCount}/{teamLimit}{!canAccess ? ' ⭐' : ''}</span>
+              <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {/* Team dots (vertical to keep the bar narrow) */}
+            <div className="flex flex-col gap-1">
+              {teams.map((team) => {
+                const count = getTeamTotal(team);
+                return (
+                  <button
+                    key={team}
+                    onClick={() => setActiveTeam(team)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      team === activeTeam ? 'ring-1 ring-accent scale-110' : 'opacity-40 hover:opacity-70'
+                    }`}
+                    style={{ backgroundColor: TEAM_COLORS[team] }}
+                    title={t('squadBench.teamCount', { team: t(TEAM_LABEL_KEYS[team]), count })}
+                    aria-label={t('squadBench.switchToTeam', { team: t(TEAM_LABEL_KEYS[team]), count })}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Players — single horizontal scrolling row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0 py-0.5">
+            {teamPlayers.map((player, idx) => {
+              const globalIdx = squad.indexOf(player);
+              const isLocked = isPlayerLocked(globalIdx);
+              return renderPlayer(player, isLocked, idx * 30);
+            })}
+
+            {isEmpty && teamPlayers.length === 0 && activeTeam === 'home' && (
+              <>
+                {onQuickAddPlayer ? (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-md border border-dashed border-accent/50 bg-accent/5 hover:bg-accent/10 hover:border-accent transition-all duration-fast min-w-0 shrink-0 animate-fade-in"
+                    title={t('squadBench.addFirstPlayer')}
+                    aria-label={t('squadBench.addFirstPlayer')}
+                  >
+                    <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span className="text-[8px] text-accent/80">{t('squadBench.add')}</span>
+                  </button>
+                ) : (
+                  <EmptySlot onClick={onOpenSettings} />
+                )}
+              </>
+            )}
+
+            {!isEmpty && remainingSlots > 0 && Array.from({ length: Math.min(remainingSlots, 3) }).map((_, i) => {
+              const absIdx = squad.length + i;
+              const locked = isPlayerLocked(absIdx);
+              if (locked) return <LockedSlot key={`locked-${i}`} delay={i * 30} />;
+              if (onQuickAddPlayer) {
+                return (
+                  <button
+                    key={`add-${i}`}
+                    onClick={() => setShowAddForm(true)}
+                    className="flex items-center justify-center w-8 h-8 rounded-md border border-dashed border-border hover:border-accent/50 hover:bg-surface2/50 transition-all duration-fast shrink-0 animate-fade-in"
+                    style={{ animationDelay: `${(teamPlayers.length + i) * 30}ms`, animationFillMode: 'backwards' }}
+                    title={t('squadBench.addPlayer')}
+                    aria-label={t('squadBench.addPlayer')}
+                  >
+                    <svg className="w-4 h-4 text-muted/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </button>
+                );
+              }
+              return <EmptySlot key={`empty-${i}`} onClick={onOpenSettings} delay={(teamPlayers.length + i) * 30} />;
+            })}
+          </div>
+
+          {/* Right cluster — title + actions */}
+          <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onOpenSettings}
             className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors"
@@ -277,172 +357,88 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
               </svg>
             )}
           </button>
+          </div>
         </div>
-      </div>
-
-      {/* Content */}
-      {visible && (
-        <>
-          {/* Team switcher */}
-          <div className="flex items-center gap-1 mb-2">
-            <button
-              onClick={cycleTeam}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface2 hover:bg-border text-text text-xs font-medium transition-colors"
-              title={t('squadBench.switchCurrent', { team: t(TEAM_LABEL_KEYS[activeTeam]) })}
-              aria-label={t('squadBench.currentTeam', { team: t(TEAM_LABEL_KEYS[activeTeam]) })}
-            >
-              <span
-                className="inline-block w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: TEAM_COLORS[activeTeam] }}
-              />
-              <span>{t(TEAM_LABEL_KEYS[activeTeam])}</span>
-              <span className="text-[10px] text-muted/60 font-mono">{visibleCount}/{teamLimit}</span>
-              <svg className="w-3 h-3 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
+      ) : (
+        /* Collapsed — thin hint row + actions */
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] text-muted italic flex items-center gap-1">
+            <span className="font-semibold not-italic uppercase tracking-wider text-[10px] text-muted">{t('squadBench.title')}</span>
+            {isEmpty ? t('squadBench.collapsedSetup') : t('squadBench.collapsedCount', { count: squad.length })}
+          </p>
+          <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onOpenSettings}
+            className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors"
+            title={t('squadBench.editor')}
+            aria-label={t('squadBench.editRoster')}
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+          <button
+            onClick={onToggle}
+            className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors"
+            title={visible ? t('squadBench.hide') : t('squadBench.show')}
+            aria-label={visible ? t('squadBench.hide') : t('squadBench.show')}
+          >
+            {visible ? (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
-            </button>
-
-            {/* Team dots */}
-            <div className="flex gap-1">
-              {teams.map((team) => {
-                const count = getTeamTotal(team);
-                return (
-                  <button
-                    key={team}
-                    onClick={() => setActiveTeam(team)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      team === activeTeam ? 'ring-1 ring-accent scale-125' : 'opacity-40 hover:opacity-70'
-                    }`}
-                    style={{ backgroundColor: TEAM_COLORS[team] }}
-                    title={t('squadBench.teamCount', { team: t(TEAM_LABEL_KEYS[team]), count })}
-                    aria-label={t('squadBench.switchToTeam', { team: t(TEAM_LABEL_KEYS[team]), count })}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {!canAccess && (
-            <p className="mb-1.5 flex items-center gap-1.5 text-[10px] leading-tight text-muted/70">
-              <span className="inline-block h-1 w-1 shrink-0 rounded-full bg-amber-400/70" />
-              {t('squadBench.freeLimitNotice', { freeLimit, premiumLimit: premiumPerTeamLimit })}
-            </p>
-          )}
-
-          {/* Players row */}
-          <div className="flex items-center gap-1.5 flex-wrap min-h-[40px]">
-            {teamPlayers.map((player, idx) => {
-              const globalIdx = squad.indexOf(player);
-              const isLocked = isPlayerLocked(globalIdx);
-              return renderPlayer(player, isLocked, idx * 30);
-            })}
-
-            {/* Empty / remaining slots */}
-            {isEmpty && teamPlayers.length === 0 && activeTeam === 'home' && (
-              <>
-                {onQuickAddPlayer ? (
-                  <button
-                    onClick={() => setShowAddForm(true)}
-                    className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-md border border-dashed border-accent/50 bg-accent/5 hover:bg-accent/10 hover:border-accent transition-all duration-fast min-w-0 shrink-0 animate-fade-in"
-                    title={t('squadBench.addFirstPlayer')}
-                    aria-label={t('squadBench.addFirstPlayer')}
-                  >
-                    <svg className="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span className="text-[8px] text-accent/70">{t('squadBench.add')}</span>
-                  </button>
-                ) : (
-                  <EmptySlot onClick={onOpenSettings} />
-                )}
-              </>
+            ) : (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
             )}
-
-            {/* Remaining slots */}
-            {!isEmpty && remainingSlots > 0 && Array.from({ length: Math.min(remainingSlots, 3) }).map((_, i) => {
-              const absIdx = squad.length + i;
-              const locked = isPlayerLocked(absIdx);
-              if (locked) return <LockedSlot key={`locked-${i}`} delay={i * 30} />;
-              if (onQuickAddPlayer) {
-                return (
-                  <button
-                    key={`add-${i}`}
-                    onClick={() => setShowAddForm(true)}
-                    className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-md border border-dashed border-border 
-                               hover:border-accent/50 hover:bg-surface2/50 transition-all duration-fast min-w-0 shrink-0 animate-fade-in"
-                    style={{ animationDelay: `${(teamPlayers.length + i) * 30}ms`, animationFillMode: 'backwards' }}
-                    title={t('squadBench.addPlayer')}
-                    aria-label={t('squadBench.addPlayer')}
-                  >
-                    <svg className="w-4 h-4 text-muted/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  </button>
-                );
-              }
-              return <EmptySlot key={`empty-${i}`} onClick={onOpenSettings} delay={(teamPlayers.length + i) * 30} />;
-            })}
+          </button>
           </div>
-
-          {/* Quick-add form */}
-          {showAddForm && onQuickAddPlayer && (
-            <div className="mt-2 p-2 rounded-lg border border-accent/30 bg-accent/5 animate-fade-in">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  placeholder={t('squadBench.namePlaceholder')}
-                  className="flex-1 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
-                />
-                <input
-                  type="number"
-                  value={addNum}
-                  onChange={(e) => setAddNum(e.target.value)}
-                  placeholder={t('squadBench.numberPlaceholder')}
-                  min={1}
-                  max={99}
-                  className="w-14 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
-                />
-                <button
-                  onClick={handleQuickAdd}
-                  disabled={!addName.trim() || !addNum}
-                  className="px-2.5 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-40 transition-colors"
-                >
-                  {t('squadBench.addPlayer')}
-                </button>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  className="px-2 py-1.5 text-xs text-muted hover:text-text transition-colors"
-                >
-                  {t('squadBench.cancel')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Drag hint for Pro */}
-          {canAccess && visibleCount > 0 && (
-            <p className="mt-1 text-[10px] text-muted/60 italic animate-fade-in">
-              {t('squadBench.dragHint')}
-            </p>
-          )}
-        </>
+        </div>
       )}
 
-      {/* Collapsed hint */}
-      {!visible && (
-        <p className="text-[11px] text-muted/60 italic flex items-center gap-1 animate-fade-in">
-          {isEmpty
-            ? t('squadBench.collapsedSetup')
-            : t('squadBench.collapsedCount', { count: squad.length })
-          }
-        </p>
+      {/* Quick-add form (shared) */}
+      {visible && showAddForm && onQuickAddPlayer && (
+        <div className="mt-2 p-2 rounded-lg border border-accent/30 bg-accent/5 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={addName}
+              onChange={(e) => setAddName(e.target.value)}
+              placeholder={t('squadBench.namePlaceholder')}
+              className="flex-1 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
+            />
+            <input
+              type="number"
+              value={addNum}
+              onChange={(e) => setAddNum(e.target.value)}
+              placeholder={t('squadBench.numberPlaceholder')}
+              min={1}
+              max={99}
+              className="w-14 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
+            />
+            <button
+              onClick={handleQuickAdd}
+              disabled={!addName.trim() || !addNum}
+              className="px-2.5 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-40 transition-colors"
+            >
+              {t('squadBench.addPlayer')}
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="px-2 py-1.5 text-xs text-muted hover:text-text transition-colors"
+            >
+              {t('squadBench.cancel')}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

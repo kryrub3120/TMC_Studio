@@ -18,10 +18,15 @@ import {
   HelpSidebar,
   TutorialOverlay,
   SquadBench,
+  useTranslation,
 } from '@tmc/ui';
+import type { TutorialStep } from '@tmc/ui';
+import type { PitchBoardPreset } from '@tmc/core';
+import { getPitchBoardId, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
 import { useBoardStore } from '../../store';
+import { useUIStore } from '../../store/useUIStore';
 import { setThumbnailGenerator } from '../../store/slices/documentSlice';
 
 import { BoardTopBarSection } from './BoardTopBarSection';
@@ -32,12 +37,18 @@ import { useBoardPageState, type BoardPageProps } from '../routes/useBoardPageSt
 import { useBoardPageHandlers } from './useBoardPageHandlers';
 import { useAnimationPlayback, useInterpolation, useStageEventHandlers, useContextMenuHandler } from './useBoardPageEffects';
 import { useViewportSync } from '../../hooks/useViewportSync';
+import { auditShortcutConflicts } from '../../shortcuts/shortcutMap';
 
 export { type BoardPageProps } from '../routes/useBoardPageState';
 
 export function BoardPage(props: BoardPageProps) {
+  const { t } = useTranslation();
+  // Dev-time shortcut audit
+  useEffect(() => { auditShortcutConflicts(); }, []);
   const {
     onOpenProjectsDrawer,
+    onCloseProjectsDrawer,
+    onCloseSettingsModal,
     onOpenAuthModal,
     onOpenSettingsModal,
     onOpenPricingModal,
@@ -54,8 +65,29 @@ export function BoardPage(props: BoardPageProps) {
   // State hook
   const state = useBoardPageState(props);
 
+  // Board (pitch) selection from the TopBar dropdown. Switching a board resets
+  // the drawing — confirm first, but only when there are elements to lose.
+  const activeBoardId = getPitchBoardId(state.pitchSettings ?? DEFAULT_PITCH_SETTINGS);
+  const handleSelectBoard = (board: PitchBoardPreset) => {
+    const store = useBoardStore.getState();
+    const apply = () => store.applyPitchBoard({ view: board.view, projection: board.projection });
+    if (store.elements.length > 0 && activeBoardId !== board.id) {
+      useUIStore.getState().showConfirmModal({
+        title: t('pitchPanel.boardResetTitle'),
+        description: t('pitchPanel.boardResetDesc'),
+        confirmLabel: t('pitchPanel.boardResetConfirm'),
+        danger: true,
+        onConfirm: () => { apply(); useUIStore.getState().closeConfirmModal(); },
+      });
+    } else {
+      apply();
+    }
+  };
+
   // ─── First element celebration ─────────────────────────────────────
   const [showCelebration, setShowCelebration] = useState(false);
+  // Tutorial-driven: which toolbar dropdown to force open for the active step.
+  const [tutorialMenu, setTutorialMenu] = useState<string | null>(null);
   const prevElementCount = useRef(0);
   useEffect(() => {
     if (prevElementCount.current === 0 && state.elements.length > 0) {
@@ -156,13 +188,59 @@ export function BoardPage(props: BoardPageProps) {
   ]);
 
   const handleTutorialDismiss = () => {
+    setTutorialMenu(null);
+    onCloseProjectsDrawer();
+    onCloseSettingsModal();
     state.setTutorialCompleted(true);
     state.setShowTutorial(false);
   };
 
   const handleTutorialComplete = () => {
+    setTutorialMenu(null);
+    onCloseProjectsDrawer();
+    onCloseSettingsModal();
     state.setTutorialCompleted(true);
     state.setShowTutorial(false);
+  };
+
+  // Reveal the real element each tutorial step describes, so the coach sees the
+  // actual panel open — not just a label floating over a collapsed strip.
+  const handleTutorialStepShow = (step: TutorialStep) => {
+    // Open the real toolbar dropdown for steps that describe one, so the coach
+    // sees the actual menu — not a mock. null closes any open tutorial menu.
+    const menuForDemo: Record<string, string> = {
+      shortcuts: 'players',
+      arrows: 'arrows',
+      equipment: 'equipment',
+      export: 'export',
+    };
+    setTutorialMenu(menuForDemo[step.demo] ?? null);
+
+    // Full-screen overlays (Projects drawer + Settings modal): open only on the
+    // step that describes them, and make sure they're closed on every other step.
+    if (step.demo === 'save') onOpenProjectsDrawer();
+    else onCloseProjectsDrawer();
+    if (step.demo === 'team') onOpenSettingsModal();
+    else onCloseSettingsModal();
+
+    switch (step.demo) {
+      case 'orientation': {
+        if (!state.inspectorOpen) state.setInspectorOpen(true);
+        // Select a player so the Inspector shows the real orientation/vision
+        // controls instead of the empty quick-actions panel.
+        const firstPlayer = state.elements.find((el: any) => el.type === 'player');
+        if (firstPlayer) state.selectElement(firstPlayer.id, false);
+        break;
+      }
+      case 'squad':
+        if (!state.squadVisible) state.setSquadVisible(true);
+        break;
+      case 'steps':
+        if (state.bottomBarHeight < 140) state.setBottomBarHeight(140);
+        break;
+      default:
+        break;
+    }
   };
 
   const handleRestartTutorial = () => {
@@ -174,6 +252,7 @@ export function BoardPage(props: BoardPageProps) {
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* Top Bar */}
       <BoardTopBarSection
+        tutorialMenu={tutorialMenu}
         projectName={state.boardDoc.name}
         isSaved={state.isSaved}
         isSyncing={state.isSaving}
@@ -223,6 +302,8 @@ export function BoardPage(props: BoardPageProps) {
         onAddPlayer={(team) => state.addPlayerAtCursor(team)}
         onOpenSquadSettings={() => onOpenSettingsModal('squad')}
         onOpenProjects={onOpenProjectsDrawer}
+        onSelectBoard={handleSelectBoard}
+        activeBoardId={activeBoardId}
         onRenameProject={onRenameProject}
         onToggleInspector={state.toggleInspector}
         onOpenAccount={state.authIsAuthenticated ? onOpenSettingsModal : onOpenAuthModal}
@@ -237,7 +318,7 @@ export function BoardPage(props: BoardPageProps) {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex overflow-hidden"
+      <div className="flex-1 flex min-h-0 overflow-hidden"
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
         onDrop={(e) => {
           e.preventDefault();
@@ -274,6 +355,7 @@ export function BoardPage(props: BoardPageProps) {
             hiddenByGroup={state.hiddenByGroup}
             elements={state.elements}
             selectedIds={state.selectedIds}
+            isElementLocked={state.isElementLocked}
             isPlaying={state.isPlaying}
             activeTool={state.activeTool}
             isPrintMode={state.isPrintMode}
@@ -374,6 +456,7 @@ export function BoardPage(props: BoardPageProps) {
               isVisible={true}
               onDismiss={handleTutorialDismiss}
               onComplete={handleTutorialComplete}
+              onStepShow={handleTutorialStepShow}
               plan={state.plan}
             />
           )}
@@ -418,14 +501,15 @@ export function BoardPage(props: BoardPageProps) {
             visible={state.contextMenu.menuState.visible}
             x={state.contextMenu.menuState.x}
             y={state.contextMenu.menuState.y}
-            header={getContextMenuHeader(state.elements.find(el => el.id === state.contextMenu.menuState.elementId) ?? null)}
+            header={getContextMenuHeader(state.elements.find(el => el.id === state.contextMenu.menuState.elementId) ?? null, t)}
             items={getCanvasContextMenuItems(
               state.elements.find(el => el.id === state.contextMenu.menuState.elementId) ?? null,
               {
                 ...handlers.contextMenuActions,
                 isAutoNumbering: state.isAutoNumbering,
               },
-              state.selectedIds.length
+              state.selectedIds.length,
+              t
             )}
             onClose={state.contextMenu.hideMenu}
           />
@@ -452,6 +536,9 @@ export function BoardPage(props: BoardPageProps) {
           layerVisibility={state.layerVisibility}
           groups={state.groups}
           onUpdateElement={handlers.handleUpdateElement}
+          onSetArrowDefault={handlers.handleSetArrowDefault}
+          onSetZoneDefault={handlers.handleSetZoneDefault}
+          onToggleSelectedLock={state.toggleSelectedLock}
           onSelectElement={(id) => state.selectElement(id, false)}
           onToggleLayerVisibility={state.toggleLayerVisibility}
           onSelectGroup={state.selectGroup}
@@ -478,30 +565,23 @@ export function BoardPage(props: BoardPageProps) {
         )}
       </div>
 
-      {/* Spacer — rezerwuje wysokość przyklejonego dolnego paska, by canvas nie chował się pod nim. */}
-      <div style={{ height: state.bottomBarHeight }} aria-hidden="true" />
-
-      {/* Squad Bench — pływający HUD nad dolnym paskiem.
-          NIE zabiera wysokości kolumny → boisko pozostaje dominującym obszarem roboczym.
-          Domyślnie zwinięty (squadVisible=false) = cienka belka. */}
-      <div
-        className="fixed left-0 right-0 z-floating flex justify-center px-3 pointer-events-none"
-        style={{ bottom: state.bottomBarHeight + 8 }}
-      >
-        <div className="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-surface/95 shadow-2xl backdrop-blur">
-          <SquadBench
-            squad={state.squad}
-            visible={state.squadVisible}
-            canAccess={state.authIsPro}
-            freeLimit={5}
-            premiumPerTeamLimit={25}
-            onToggle={state.toggleSquadVisible}
-            onOpenSettings={() => onOpenSettingsModal('squad')}
-            onDragStart={() => {}}
-            onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
-            onRemovePlayer={(id) => state.removeSquadPlayer(id)}
-          />
-        </div>
+      {/* Squad Bench — pełnowymiarowy pasek w normalnym flow, tuż nad animacją.
+          Bierze tylko tyle wysokości, ile ma treści (cienki gdy zwinięty), więc
+          obszar roboczy (wiersz flex-1) automatycznie się do niego dokleja —
+          brak rezerwowanej pustej przestrzeni. */}
+      <div className="w-full shrink-0 overflow-hidden border-t border-border bg-surface">
+        <SquadBench
+          squad={state.squad}
+          visible={state.squadVisible}
+          canAccess={state.authIsPro}
+          freeLimit={5}
+          premiumPerTeamLimit={25}
+          onToggle={state.toggleSquadVisible}
+          onOpenSettings={() => onOpenSettingsModal('squad')}
+          onDragStart={() => {}}
+          onQuickAddPlayer={(name, number, team) => state.addSquadPlayer(name, number, team)}
+          onRemovePlayer={(id) => state.removeSquadPlayer(id)}
+        />
       </div>
       <SmartBottomBar
         elementCount={state.elements.length}
@@ -533,7 +613,8 @@ export function BoardPage(props: BoardPageProps) {
         stepInfo={state.boardDoc.steps.length > 1 ? `Step ${state.currentStepIndex + 1}/${state.boardDoc.steps.length}` : undefined}
         height={state.bottomBarHeight}
         onHeightChange={state.setBottomBarHeight}
-        collapsed={false}
+        collapsed={state.bottomBarCollapsed}
+        onToggleCollapsed={state.toggleBottomBarCollapsed}
         version={appVersion}
         onNavigate={onNavigateFooter}
       />
