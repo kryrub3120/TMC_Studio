@@ -305,13 +305,67 @@ export const useAuthStore = create<AuthState>()(
           
           logger.debug('[Auth] Listener active');
 
+          // ✅ After OAuth callback, check session with a short delay as fallback.
+          // The onAuthStateChange listener should fire automatically when Supabase
+          // processes the token, but in some cases (slow network, race conditions)
+          // the listener may fire after the UI has already rendered as logged-out.
           if (hasAuthCallback) {
-            window.setTimeout(() => {
+            window.setTimeout(async () => {
+              // First clean stale params
               if (hasAuthCallbackInUrl()) {
                 logger.debug('[Auth] Cleaning stale OAuth callback from URL');
                 cleanAuthCallbackUrl();
               }
-            }, 3000);
+              // Then check if session was already picked up by the listener
+              const currentState = _get();
+              if (!currentState.isAuthenticated) {
+                logger.debug('[Auth] OAuth callback: checking session as fallback...');
+                try {
+                  const { data: { session } } = await supabase!.auth.getSession();
+                  if (session?.user) {
+                    logger.debug('[Auth] OAuth fallback: session found - updating state');
+                    const user = await getCurrentUser();
+                    if (user) {
+                      set({
+                        user,
+                        isAuthenticated: true,
+                        isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
+                        isTeam: user.subscription_tier === 'team',
+                        teamId: user.team_id ?? null,
+                        isLoading: false,
+                      });
+                      // Load preferences
+                      try {
+                        const cloudPrefs = await getPreferences();
+                        if (cloudPrefs) {
+                          const { useUIStore } = await import('./useUIStore');
+                          if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                          if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                          if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                          if (cloudPrefs.bottomBar) {
+                            useUIStore.setState({
+                              bottomBarHeight: cloudPrefs.bottomBar.height,
+                              bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
+                            });
+                          }
+                          logger.debug('[Auth] Preferences loaded from cloud (fallback)');
+                        }
+                      } catch (error) {
+                        logger.error('[Auth] Failed to load preferences (fallback):', error);
+                      }
+                    }
+                  } else {
+                    logger.debug('[Auth] OAuth fallback: no session yet');
+                  }
+                } catch (error) {
+                  if (error instanceof Error && error.name === 'AbortError') {
+                    logger.debug('[Auth] AbortError in fallback (expected) - ignored');
+                  } else {
+                    logger.error('[Auth] Fallback session check error:', error);
+                  }
+                }
+              }
+            }, 1500);
           }
 
           // ✅ Check for existing session ONLY if NOT OAuth callback

@@ -5,6 +5,14 @@ All notable changes to TMC Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Google OAuth: brak odświeżania po logowaniu + CSP dla custom domain** (2026-06-18)
+  - Dodano fallback sprawdzania sesji 1.5s po OAuth callbacku — UI aktualizuje się bez ręcznego odświeżania.
+  - Dodano `auth.tmcstudio.app` do CSP `connect-src` w `netlify.toml` (prepared for custom domain).
+  - Pliki: `apps/web/src/store/useAuthStore.ts`, `netlify.toml`, `.env.example`.
+
 ## [0.7.0] - 2026-06-18
 
 ### Fixed
