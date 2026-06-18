@@ -295,7 +295,7 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       // Redirect to home page - Supabase handles token extraction
-      redirectTo: `${window.location.origin}/app`,
+      redirectTo: `${window.location.origin}/auth/callback`,
     },
   });
   

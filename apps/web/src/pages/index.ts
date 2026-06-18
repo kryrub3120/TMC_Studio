@@ -12,3 +12,4 @@ export { PricingPage } from './PricingPage';
 export { RefundsPage } from './RefundsPage';
 export { LegalNoticePage } from './LegalNoticePage';
 export { AccessibilityPage } from './AccessibilityPage';
+export { AuthCallbackPage } from './AuthCallbackPage';
