@@ -237,7 +237,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
                     <div className="space-y-0.5">
                       {section.items.map((item) => (
                         <div key={item.key} className="flex items-center justify-between text-xs">
-                          <span className="text-text">{item.description}</span>
+                          <span className="text-text">{item.id ? t(`shortcuts.${item.id}`) : item.description}</span>
                           <kbd className="px-1.5 py-0.5 rounded bg-surface2 border border-border text-[10px] font-mono text-muted">
                             {item.key}
                           </kbd>

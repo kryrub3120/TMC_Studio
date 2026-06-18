@@ -279,7 +279,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                             w-full px-4 py-2 flex items-center justify-between
                             text-left text-sm
                             transition-colors duration-fast
-                            ${isSelected ? 'bg-accent/10 text-text' : 'text-text/80 hover:bg-surface2'}
+                            ${isSelected ? 'bg-accent/10 text-text' : 'text-text hover:bg-surface2'}
                           `}
                         >
                           <div className="flex items-center gap-3">
