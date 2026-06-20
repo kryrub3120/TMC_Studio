@@ -431,6 +431,8 @@ export const es: Dictionary = {
     proTier: 'Solo Premium',
     teamTier: 'Team Premium',
     continueGoogle: 'Continuar con Google',
+    googlePopupTitle: 'Iniciando sesión con Google',
+    googlePopupDescription: 'Termina el inicio de sesión en la ventana abierta. Puedes seguir trabajando en TMC Studio.',
     or: 'o',
     fullName: 'Nombre completo',
     fullNamePlaceholder: 'Juan Pérez',
@@ -1126,6 +1128,8 @@ export const es: Dictionary = {
     billingUpdated: 'Facturación actualizada.',
     checkoutCancelled: 'Checkout cancelado',
     welcomeBack: 'Bienvenido de nuevo.',
+    googleLoginStarted: 'Google se abrió en una ventana separada.',
+    googleLoginFailed: 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.',
     devLogin: 'Sesión iniciada como usuario de prueba {{tier}}',
   },
   storeToast: {

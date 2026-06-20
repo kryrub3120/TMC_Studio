@@ -584,6 +584,8 @@ export const en = {
     proTier: 'Solo Premium',
     teamTier: 'Team Premium',
     continueGoogle: 'Continue with Google',
+    googlePopupTitle: 'Signing in with Google',
+    googlePopupDescription: 'Finish sign-in in the opened window. You can keep working in TMC Studio.',
     or: 'or',
     fullName: 'Full Name',
     fullNamePlaceholder: 'John Doe',
@@ -1279,6 +1281,8 @@ export const en = {
     billingUpdated: 'Billing updated.',
     checkoutCancelled: 'Checkout cancelled',
     welcomeBack: 'Welcome back.',
+    googleLoginStarted: 'Google sign-in opened in a separate window.',
+    googleLoginFailed: 'Google sign-in failed. Please try again.',
     devLogin: 'Logged in as test {{tier}} user',
   },
   storeToast: {
