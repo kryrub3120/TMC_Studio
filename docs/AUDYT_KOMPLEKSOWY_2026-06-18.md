@@ -50,8 +50,9 @@ Poprzednia wersja audytu zawierala kilka trafnych punktow, ale tez kilka nieaktu
 3. `docs/SYSTEM_ARCHITECTURE.md` - architektura i zasady warstw.
 4. `docs/ENTITLEMENTS.md` + `apps/web/src/lib/entitlements.ts` - plany, limity, gating.
 5. `docs/SITE_ARCHITECTURE.md`, `docs/WEBSITE_LAUNCH_PLAN.md`, `docs/STRIPE_TAX_SETUP.md` - kontekst marketingowo-prawno-billingowy.
-6. `docs/DESIGN_SYSTEM.md`, `docs/UX_PATTERNS.md`, `docs/COMMANDS_MAP.md` - zasady UI/UX.
-7. `docs/FEATURE_SPEC.md` - zachowanie funkcji, w tym aktualne presety boiska.
+6. `docs/AUTH_FLOW.md` — mechanizm logowania Google OAuth (popup + PKCE).
+7. `docs/DESIGN_SYSTEM.md`, `docs/UX_PATTERNS.md`, `docs/COMMANDS_MAP.md` — zasady UI/UX.
+8. `docs/FEATURE_SPEC.md` — zachowanie funkcji, w tym aktualne presety boiska.
 
 ### Zarchiwizowane jako historyczne
 
@@ -289,6 +290,37 @@ Zakladana kolejnosc jest sekwencyjna. Nie przeskakujemy do landing polish przed 
 - Checkout nie ufa `userId/customerId/email` z body.
 - Price IDs sa zweryfikowane.
 - Testy billing functions przechodza lokalnie.
+
+---
+
+### Sprint Auth Flow (ad-hoc hotfix) — Google OAuth popup
+
+**Status:** ✅ DONE (2026-06-20)
+
+**Cel:** Google login w popupie, bez wywalania uzytkownika z aplikacji.
+
+**Szczegóły realizacji:** `docs/AUTH_FLOW.md` (pełny opis + diagramy + sekwencje)
+
+**Zakres:**
+
+1. **Popup flow** — `window.open('', 'tmc-google-auth')` z loading spinnerem, `postMessage` z callbacka do głównej karty, `waitForOAuthSession()` polling.
+2. **Non-blocking status UI** — `isOAuthInProgress` + `GoogleAuthStatus` toast w AppShell.
+3. **AuthCallbackPage** — wykrywa czy jest popupem (popup → postMessage + close, fallback → navigate /app).
+4. **AuthModal** — zamyka się od razu po starcie Google.
+5. **Singleton listenera** — `onAuthStateChange` zakładany raz, brak duplikatów i kaskadowych fetchy.
+6. **PKCE fix** — `cleanAuthCallbackUrl()` wywoływane **dopiero po potwierdzonej sesji**.
+7. **Dokumentacja** — `docs/AUTH_FLOW.md`, sekcja 15 w `docs/FEATURE_SPEC.md`.
+
+**Pliki:** `useAuthStore.ts`, `AuthCallbackPage.tsx`, `supabase.ts`, `AppShell.tsx`, `AuthModal.tsx`, locale (en/es/pl).
+
+**Definition of Done:**
+- ✅ Google OAuth otwiera popup, główna karta zostaje aktywna.
+- ✅ Popup wysyła postMessage i zamyka się sam.
+- ✅ UI pokazuje nieblokujący status "Logowanie przez Google...".
+- ✅ Modal zamyka się od razu po starcie Google.
+- ✅ Autologin po odświeżeniu działa.
+- ✅ `tsc --noEmit + vite build` — OK.
+- ✅ Dokumentacja w `docs/AUTH_FLOW.md` i `docs/FEATURE_SPEC.md` (sec 15).
 
 ---
 
@@ -658,32 +690,35 @@ Te rzeczy sa dobre, ale nie wolno nimi blokowac launchu:
 
 Najblizsze prace wykonujemy w tej kolejnosci:
 
-1. **Sprint 1.1-1.3:** CORS/auth/checkout.
-2. **Sprint 1.4-1.6:** portal, Stripe config, testy billing.
-3. **Sprint 2:** CI + root tests + core tests + E2E smoke.
-4. **Sprint 3:** pricing spojnosc, Team value, annual badge.
-5. **Sprint 4:** activation UX QA i poprawki.
-6. **Sprint 5:** landing/legal/SEO/analytics.
-7. **Sprint 6:** data/performance/observability.
-8. **Sprint 7:** beta gate.
-9. **Sprint 8:** public launch.
+1. **Sprint 1.1-1.3:** CORS/auth/checkout. ✅ DONE
+2. **Sprint 1.4-1.6:** portal, Stripe config, testy billing. ✅ DONE
+3. **Auth Flow hotfix:** Google OAuth popup zamiast redirectu. ✅ DONE (2026-06-20)
+4. **Sprint 2:** CI + root tests + core tests + E2E smoke.
+5. **Sprint 3:** pricing spojnosc, Team value, annual badge.
+6. **Sprint 4:** activation UX QA i poprawki.
+7. **Sprint 5:** landing/legal/SEO/analytics.
+8. **Sprint 6:** data/performance/observability.
+9. **Sprint 7:** beta gate.
+10. **Sprint 8:** public launch.
 
 ---
 
 ## 8. Immediate prompt dla kolejnego wykonania
 
 ```text
-Wykonaj Sprint 1 z docs/AUDYT_KOMPLEKSOWY_2026-06-18.md.
+Wykonaj Sprint 2 z docs/AUDYT_KOMPLEKSOWY_2026-06-18.md.
 
-Cel: security & billing hardening.
+Cel: quality gate i testy minimalne.
 
 Zakres:
-1. Dodaj wspolny helper CORS dla Netlify Functions.
-2. Dodaj wspolny helper auth dla funkcji wymagajacych sesji.
-3. Napraw create-checkout tak, aby nie ufal userId/customerId/email/successUrl/cancelUrl z body.
-4. Utwardz create-portal-session: CORS allowlist + returnUrl allowlist.
-5. Uporzadkuj Stripe price config i dodaj test spojnosc price IDs.
-6. Dodaj testy billing functions.
+1. Dodaj root test pipeline — pnpm test przez turbo.
+2. W CI odkomentuj lint i test job.
+3. Dodaj core smoke tests (createDefaultDocument, serializacja, step transitions).
+4. Opcjonalnie: E2E golden path z Playwright.
+
+Wcześniej zakończone:
+- Sprint 1 (Security & Billing Hardening) — ✅
+- Auth Flow hotfix (Google OAuth popup) — ✅
 
 Nie ruszaj desktopu, marketplace, realtime ani triala.
 Po implementacji uruchom lint/test/typecheck/build w zakresie, ktory istnieje.

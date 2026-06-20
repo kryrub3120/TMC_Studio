@@ -7,7 +7,7 @@
 ## Meta
 
 - **Version:** 0.7.0 (patrz `docs/VERSIONING.md`)
-- **Last Updated:** 2026-06-18 (section 15: pricing & monetization)
+- **Last Updated:** 2026-06-20 (sec 15: auth flow, sec 16: pricing & monetization)
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -56,8 +56,9 @@
 12. [Export](#12-export)
 13. [Save & Persistence](#13-save--persistence)
 14. [Onboarding & Help](#14-onboarding--help)
-15. [Pricing & Plans](#15-pricing--plans)
-16. [Appendices](#appendices)
+15. [Authentication & Auth Flow](#15-authentication--auth-flow)
+16. [Pricing & Plans](#16-pricing--plans)
+17. [Appendices](#appendices)
 
 ---
 
@@ -1716,9 +1717,128 @@ The Help Sidebar exposes a tutorial restart action. Restarting clears the comple
 
 ---
 
-## 15. Pricing & Plans
+## 15. Authentication & Auth Flow
 
-### 15.1 Plan Overview
+> Szczegółowy opis techniczny i sekwencje: `docs/AUTH_FLOW.md`
+
+### 15.1 Overview
+
+TMC Studio uses **Supabase Auth** with **PKCE OAuth 2.0** flow. Google login opens in a **popup window** so the main application stays interactive. Email/password login is also supported (Supabase GoTrue).
+
+| Method | Flow | UX |
+|--------|------|----|
+| **Google OAuth** | Popup → PKCE → postMessage → session polling | Modal zamyka się od razu, nieblokujący status "Logowanie przez Google..." |
+| **Email/Password** | Supabase signIn → session restore | Standard form |
+
+### 15.2 State Machine
+
+```
+                  ┌─────────────┐
+                  │  GUEST      │
+                  │ (user=null) │
+                  └──────┬──────┘
+                         │ signInWithGoogle() / signIn()
+                         ▼
+                  ┌─────────────┐
+                  │  LOADING    │  ← isLoading = true
+                  └──────┬──────┘
+                         │ success / OAuth popup
+                         ▼
+            ┌────────────────────────┐
+            │  OAUTH_IN_PROGRESS     │  ← isOAuthInProgress = true (tylko Google popup)
+            │  (popup otwarty)       │     AppShell pokazuje GoogleAuthStatus
+            └───────────┬────────────┘
+                        │ postMessage + session found
+                        ▼
+                  ┌─────────────┐
+                  │  LOGGED_IN  │  ← isAuthenticated = true, user != null
+                  │  (Free/Pro  │
+                  │   /Team)    │
+                  └──────┬──────┘
+                         │ signOut()
+                         ▼
+                  ┌─────────────┐
+                  │  GUEST      │
+                  └─────────────┘
+```
+
+### 15.3 Google OAuth Popup Flow
+
+**Trigger:** Kliknięcie "Zaloguj przez Google" w `AuthModal`.
+
+1. Modal zamyka się natychmiast.
+2. `isOAuthInProgress = true` → `AppShell` pokazuje `GoogleAuthStatus` (toast "Logowanie przez Google...").
+3. `window.open('', 'tmc-google-auth', ...)` otwiera popup 500×680px z loading spinnerem.
+4. Popup redirectuje do Google Consent Screen.
+5. Po zalogowaniu Google redirectuje popup na `/auth/callback?code=...&state=...`.
+6. `AuthCallbackPage` w popupie:
+   - Wykonuje PKCE (`supabase.auth.getSession()`).
+   - Loguje czas: `[Auth] OAuth callback completed in XXXms`.
+   - Wysyła `postMessage({ type: 'tmc:auth-popup-result', status: 'success' })` do głównej karty.
+   - Zamyka się po 150ms.
+7. Główna karta odbiera `postMessage` → `waitForOAuthPopup()` resolve.
+8. `waitForOAuthSession()` polluje `getSession()` (0-5000ms) → znajduje sesję.
+9. `getCurrentUser()` → pobiera profil z DB → `set({ user, isAuthenticated: true })`.
+10. Ładowanie preferencji + prefetch projektów/folderów.
+11. `isOAuthInProgress = false` → `GoogleAuthStatus` znika.
+
+**Timeout:** 120s. **Popup closed:** Natychmiastowy reject z błędem.
+
+### 15.4 Email/Password Login
+
+Standardowy formularz w `AuthModal` → `supabaseSignIn(email, password)` → `getCurrentUser()` → ustawienie stanu.
+
+### 15.5 Session Restore (Startup)
+
+`useAuthStore.initialize()` działa **non-blocking**:
+
+1. `isInitialized = true`, `isLoading = false` — UI startuje natychmiast.
+2. DEV: mock session → skip Supabase.
+3. Supabase disabled → offline mode.
+4. Setup `onAuthStateChange` listener (singleton).
+5. If OAuth callback params in URL → fallback polling (400/1000/2000/3500/5000ms).
+6. Else → `getSession()` → restore existing session or stay guest.
+
+### 15.6 AuthCallbackPage
+
+| Role | Opis |
+|------|------|
+| Path | `/auth/callback` |
+| Popup detect | `window.name === 'tmc-google-auth'` lub `sessionStorage.getItem('tmc-oauth-popup')` |
+| Popup action | PKCE → `postMessage` → `window.close()` |
+| Fallback action | PKCE → `navigate('/app', { replace: true })` |
+| Safety net | 10s timeout → redirect |
+| Preload | `void import('../App')` — jeśli nie popup, preloaduje bundle edytora |
+
+### 15.7 URL Cleanup Policy
+
+- AUTH_CALLBACK_PARAMS: `['code', 'state', 'error', 'error_code', 'error_description']`
+- `?code=...` jest **jednorazowy** → czyszczony DOPIERO po potwierdzonej sesji.
+- `?error=...` czyszczony od razu (nie czekamy na PKCE).
+- Hash z `access_token` lub `error` czyszczony po sesji.
+
+### 15.8 Key States & UI
+
+| Stan | UI |
+|------|----|
+| `isOAuthInProgress` | `GoogleAuthStatus` toast (prawy górny róg, nieblokujący) |
+| `isLoading` | Spinner w AuthModal podczas email/password |
+| `isAuthenticated = true` | TopBar pokazuje awatar/email, menu użytkownika |
+| `isAuthenticated = false` | TopBar pokazuje "Zaloguj się" |
+| `error` | Komunikat błędu w AuthModal |
+
+### 15.9 Dev Mock Sessions
+
+DEV-ONLY: `devLogin(tier)` — natychmiastowa sesja z dowolnym planem (guest/free/pro/team).
+- `isMockUser = true` → initialize() pomija Supabase.
+- Dane w `devCloud` (localStorage mock).
+- Guard: desync check → czyszczenie martwej sesji.
+
+---
+
+## 16. Pricing & Plans
+
+### 16.1 Plan Overview
 
 TMC Studio has four plan types:
 
@@ -1729,7 +1849,7 @@ TMC Studio has four plan types:
 | **Pro** | ✅ | `pro` | Paid individual ($9/mo or $90/yr) |
 | **Team** | ✅ | `team` | Paid multi-seat ($29/mo or $290/yr) |
 
-### 15.2 Pricing Flow
+### 16.2 Pricing Flow
 
 **Public page (`/pricing`):**
 - Accessible without auth, shows all 4 plans with comparison matrix.
@@ -1747,7 +1867,7 @@ TMC Studio has four plan types:
 - `/pricing?upgrade=pro&cycle=yearly` → modal opens on yearly → yearly priceId sent to Stripe.
 - Default cycle: monthly.
 
-### 15.3 Prices (TEST mode)
+### 16.3 Prices (TEST mode)
 
 Prices defined in `packages/ui/src/pricingConfig.ts` (single source of truth):
 
@@ -1761,7 +1881,7 @@ Stripe Price IDs must stay in sync between:
 - `apps/web/src/config/stripe.ts` (frontend config)
 - `netlify/functions/_stripeConfig.ts` (backend allowlist)
 
-### 15.4 Team Value Proposition
+### 16.4 Team Value Proposition
 
 Section on `/pricing` page — "Perfect for clubs & staff":
 
@@ -1773,14 +1893,14 @@ Section on `/pricing` page — "Perfect for clubs & staff":
 
 Team plan does **not** include shared library/shared projects before launch (only shared billing and seats).
 
-### 15.5 Price Display
+### 16.5 Price Display
 
 - All prices in USD. EU consumers see VAT-inclusive amounts at checkout (Stripe Tax).
 - No fake urgency, no countdown timers, no "limited time" badges.
 - Yearly badge: "Save 17%" (rounded from 16.7%).
 - Yearly hint: "2 months free".
 
-### 15.6 Trial
+### 16.6 Trial
 
 - **Not implemented.** Free plan has enough premium-adjacent features to demonstrate value.
 - Re-evaluate post-launch with activation analytics.

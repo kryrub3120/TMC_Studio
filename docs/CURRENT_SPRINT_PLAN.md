@@ -52,7 +52,7 @@ Evidence:
 
 ### Sprint 2 - Quality Gate i testy minimalne
 
-**Status:** 🟢 ACTIVE
+**Status:** � PAUSED (przerwany przez priorytetowy auth hotfix)
 **Priorytet:** P1
 
 Cel: kazda zmiana przed launchem ma przechodzic przez automatyczna bramke.
@@ -66,11 +66,34 @@ Pozostaje:
 
 ---
 
+## Hotfix — Auth Flow (Google OAuth popup)
+
+**Status:** ✅ DONE (2026-06-20)
+
+Cel: Google login nie wywala uzytkownika z aplikacji. Popup zamiast redirectu.
+
+Zrealizowane punkty:
+
+1. **Popup flow** — `window.open('', 'tmc-google-auth')` z loading spinnerem, postMessage z callbacka do głównej karty.
+2. **Non-blocking status** — `isOAuthInProgress` + `GoogleAuthStatus` toast w AppShell.
+3. **AuthCallbackPage** — wykrywa czy jest popupem (popup → postMessage + close, fallback → navigate).
+4. **AuthModal** — zamyka się od razu po starcie Google.
+5. **Singleton listenera** — `onAuthStateChange` zakładany raz, brak kaskadowych fetchy.
+6. **PKCE fix** — `cleanAuthCallbackUrl()` dopiero po potwierdzonej sesji (nie po 400ms).
+7. **Dokumentacja** — `docs/AUTH_FLOW.md` z pełnym opisem, diagramami i sekwencjami.
+8. **FEATURE_SPEC** — nowa sekcja 15 (Authentication & Auth Flow).
+
+Evidence:
+- Pliki: `useAuthStore.ts`, `AuthCallbackPage.tsx`, `supabase.ts`, `AppShell.tsx`, `AuthModal.tsx`, locale (en/es/pl)
+- Dokumentacja: `docs/AUTH_FLOW.md`, `docs/FEATURE_SPEC.md` (sec 15)
+- Weryfikacja: `tsc --noEmit + vite build` — OK
+
+---
+
 ## Kolejnosc sprintow do launchu
 
 | Kolejnosc | Sprint | Priorytet | Cel |
-|---|---|---:|---|
-| 1 | Security & Billing Hardening | P0 | Bezpieczny checkout, portal, Stripe config |
+|---|---|---:|---|| — | Auth Flow hotfix | P0 | Google OAuth popup zamiast redirectu || 1 | Security & Billing Hardening | P0 | Bezpieczny checkout, portal, Stripe config |
 | 2 | Quality Gate i testy minimalne | P1 | CI lint/test/typecheck/build + core/billing/E2E smoke |
 | 3 | Pricing i monetizacja | P1 | Spojnosc pricing -> modal -> checkout, Team value |
 | 4 | Activation UX | P1 | First tactic + first export bez pomocy |
