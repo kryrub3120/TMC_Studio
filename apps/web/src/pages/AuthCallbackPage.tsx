@@ -6,6 +6,7 @@ import { logger } from '../lib/logger';
 export function AuthCallbackPage() {
   useEffect(() => {
     let done = false;
+    void import('../App');
 
     const redirect = () => {
       if (!done) {
