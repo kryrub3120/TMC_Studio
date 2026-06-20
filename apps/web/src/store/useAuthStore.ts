@@ -28,6 +28,7 @@ interface AuthState {
   // State
   user: User | null;
   isLoading: boolean;
+  isOAuthInProgress: boolean;
   isInitialized: boolean;
   error: string | null;
   /** DEV-ONLY: true when the current session was created via devLogin()
@@ -103,12 +104,138 @@ function cleanAuthCallbackUrl() {
 
 let authUnsubscribe: (() => void) | null = null;
 
+const AUTH_POPUP_NAME = 'tmc-google-auth';
+const AUTH_POPUP_MESSAGE = 'tmc:auth-popup-result';
+
+type AuthPopupMessage = {
+  type: typeof AUTH_POPUP_MESSAGE;
+  status: 'success' | 'error';
+  error?: string;
+  elapsed?: number;
+};
+
+function writeOAuthPopupShell(popup: Window) {
+  try {
+    popup.document.title = 'TMC Studio - Google login';
+    popup.document.body.innerHTML = `
+      <main style="
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: #0f172a;
+        color: #f8fafc;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      ">
+        <section style="width: min(340px, calc(100vw - 32px)); text-align: center;">
+          <div style="
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 18px;
+            border-radius: 999px;
+            border: 4px solid rgba(255,255,255,.18);
+            border-top-color: #38bdf8;
+            animation: tmcSpin .8s linear infinite;
+          "></div>
+          <h1 style="margin: 0 0 8px; font-size: 20px;">TMC Studio</h1>
+          <p style="margin: 0; color: #cbd5e1; line-height: 1.5;">Opening Google login...</p>
+        </section>
+        <style>@keyframes tmcSpin { to { transform: rotate(360deg); } }</style>
+      </main>
+    `;
+    popup.sessionStorage.setItem('tmc-oauth-popup', '1');
+  } catch {
+    // Some browsers restrict writing to the popup. The OAuth flow can continue.
+  }
+}
+
+function openOAuthPopup(): Window {
+  const width = 500;
+  const height = 680;
+  const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
+  const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
+  const features = [
+    `width=${width}`,
+    `height=${height}`,
+    `left=${Math.round(left)}`,
+    `top=${Math.round(top)}`,
+    'popup=yes',
+    'resizable=yes',
+    'scrollbars=yes',
+  ].join(',');
+
+  const popup = window.open('', AUTH_POPUP_NAME, features);
+  if (!popup) {
+    throw new Error('Google login popup was blocked by the browser');
+  }
+  writeOAuthPopupShell(popup);
+  popup.focus();
+  return popup;
+}
+
+function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      try {
+        popup.close();
+      } catch {
+        // no-op
+      }
+      reject(new Error('Google login took too long. Please try again.'));
+    }, 120000);
+
+    const closedPoll = window.setInterval(() => {
+      if (popup.closed) {
+        cleanup();
+        reject(new Error('Google login window was closed before sign-in finished.'));
+      }
+    }, 500);
+
+    const onMessage = (event: MessageEvent<AuthPopupMessage>) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== AUTH_POPUP_MESSAGE) return;
+
+      cleanup();
+      if (event.data.status === 'success') {
+        resolve(event.data);
+      } else {
+        reject(new Error(event.data.error ?? 'Google login failed.'));
+      }
+    };
+
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      window.clearInterval(closedPoll);
+      window.removeEventListener('message', onMessage);
+    };
+
+    window.addEventListener('message', onMessage);
+  });
+}
+
+async function waitForOAuthSession() {
+  if (!supabase) return null;
+
+  const delays = [0, 150, 350, 700, 1200, 2000, 3000, 5000];
+  for (const delay of delays) {
+    if (delay > 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) return session;
+  }
+
+  return null;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, _get) => ({
       // Initial state
       user: null,
       isLoading: false,
+      isOAuthInProgress: false,
       isInitialized: false,
       error: null,
       isMockUser: false,
@@ -141,17 +268,18 @@ export const useAuthStore = create<AuthState>()(
               isMockUser: false,
               isInitialized: true,
               isLoading: false,
+              isOAuthInProgress: false,
             });
             return;
           }
           logger.debug('[Auth] Mock dev session active - skipping Supabase init');
-          set({ isInitialized: true, isLoading: false });
+          set({ isInitialized: true, isLoading: false, isOAuthInProgress: false });
           return;
         }
 
         if (!isSupabaseEnabled() || !supabase) {
           logger.debug('[Auth] Supabase disabled - using offline mode');
-          set({ isInitialized: true, isLoading: false });
+          set({ isInitialized: true, isLoading: false, isOAuthInProgress: false });
           return;
         }
 
@@ -425,10 +553,12 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
-        set({ isLoading: true, error: null });
+        let popup: Window | null = null;
+        set({ isLoading: false, isOAuthInProgress: true, error: null });
 
         try {
           logger.debug('[Auth] Starting Google sign in...');
+          popup = openOAuthPopup();
           
           // H4: Save current work to localStorage BEFORE OAuth redirect
           // This prevents loss of unsaved work during the redirect flow
@@ -440,12 +570,78 @@ export const useAuthStore = create<AuthState>()(
             logger.error('[Auth] Failed to save before redirect:', e);
           }
           
-          await supabaseSignInWithGoogle();
-          // Redirect will happen, state will be set after return
+          const result = await supabaseSignInWithGoogle({
+            redirectTo: `${window.location.origin}/auth/callback`,
+            skipBrowserRedirect: true,
+          });
+
+          if (!result?.url) {
+            throw new Error('Google login URL was not returned by Supabase');
+          }
+
+          const popupResult = waitForOAuthPopup(popup);
+          popup.location.href = result.url;
+          await popupResult;
+
+          const session = await waitForOAuthSession();
+          if (!session?.user) {
+            throw new Error('Google login finished, but no Supabase session was found');
+          }
+
+          const user = await getCurrentUser(session.user);
+          if (!user) {
+            throw new Error('Google login finished, but user profile could not be loaded');
+          }
+
+          set({
+            user,
+            isAuthenticated: true,
+            isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
+            isTeam: user.subscription_tier === 'team',
+            teamId: user.team_id ?? null,
+            isLoading: false,
+            isOAuthInProgress: false,
+            error: null,
+          });
+          logger.debug('[Auth] Google popup login applied for', user.email);
+
+          try {
+            const cloudPrefs = await getPreferences();
+            if (cloudPrefs) {
+              const { useUIStore } = await import('./useUIStore');
+              if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+              if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+              if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+              if (cloudPrefs.bottomBar) {
+                useUIStore.setState({
+                  bottomBarHeight: cloudPrefs.bottomBar.height,
+                  bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
+                });
+              }
+            }
+          } catch (error) {
+            logger.error('[Auth] Failed to load preferences after Google popup:', error);
+          }
+
+          try {
+            const { useBoardStore } = await import('./index');
+            const boardState = useBoardStore.getState();
+            await Promise.all([
+              boardState.fetchCloudProjects(),
+              boardState.fetchCloudFolders(),
+            ]);
+          } catch (error) {
+            logger.error('[Auth] Failed to prefetch after Google popup:', error);
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Google sign in failed';
           logger.error('[Auth] Google sign in error:', error);
-          set({ isLoading: false, error: message });
+          try {
+            popup?.close();
+          } catch {
+            // no-op
+          }
+          set({ isLoading: false, isOAuthInProgress: false, error: message });
           throw error;
         }
       },
@@ -469,6 +665,7 @@ export const useAuthStore = create<AuthState>()(
             isTeam: false,
             teamId: null,
             isLoading: false,
+            isOAuthInProgress: false,
           });
           logger.debug('[Auth] Successfully signed out');
 
@@ -512,7 +709,10 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             isPro: false,
-            isTeam: false,            teamId: null,            isMockUser: true,
+            isTeam: false,
+            teamId: null,
+            isMockUser: true,
+            isOAuthInProgress: false,
             error: null,
           });
           setDevCloudUser(null);
@@ -534,6 +734,7 @@ export const useAuthStore = create<AuthState>()(
           isTeam: tier === 'team',
           teamId: tier === 'team' ? 'dev-team-id' : null,
           isMockUser: true,
+          isOAuthInProgress: false,
           error: null,
         });
         setDevCloudUser(mockUser.id);
@@ -564,6 +765,7 @@ export const useAuthStore = create<AuthState>()(
           teamId: null,
           isMockUser: false,
           isLoading: false,
+          isOAuthInProgress: false,
           error: null,
         });
         setDevCloudUser(null);

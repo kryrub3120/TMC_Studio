@@ -288,14 +288,18 @@ export async function deleteAccount(password: string) {
 }
 
 /** Sign in with OAuth (Google) */
-export async function signInWithGoogle() {
+export async function signInWithGoogle(options?: {
+  redirectTo?: string;
+  skipBrowserRedirect?: boolean;
+}) {
   if (!supabase) throw new Error('Supabase not configured');
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       // Keep PKCE exchange on a lightweight callback route, then enter the app.
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: options?.redirectTo ?? `${window.location.origin}/auth/callback`,
+      skipBrowserRedirect: options?.skipBrowserRedirect,
     },
   });
   

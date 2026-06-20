@@ -431,6 +431,8 @@ export const pl: Dictionary = {
     proTier: 'Solo Premium',
     teamTier: 'Team Premium',
     continueGoogle: 'Kontynuuj z Google',
+    googlePopupTitle: 'Logowanie przez Google',
+    googlePopupDescription: 'Dokończ logowanie w otwartym oknie. Możesz dalej pracować w TMC Studio.',
     or: 'lub',
     fullName: 'Imię i nazwisko',
     fullNamePlaceholder: 'Jan Kowalski',
@@ -1126,6 +1128,8 @@ export const pl: Dictionary = {
     billingUpdated: 'Płatności zaktualizowane.',
     checkoutCancelled: 'Checkout anulowany',
     welcomeBack: 'Witaj z powrotem.',
+    googleLoginStarted: 'Otworzyliśmy logowanie Google w osobnym oknie.',
+    googleLoginFailed: 'Logowanie Google nie powiodło się. Spróbuj ponownie.',
     devLogin: 'Zalogowano jako testowy użytkownik {{tier}}',
   },
   storeToast: {

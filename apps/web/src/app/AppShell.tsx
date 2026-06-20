@@ -21,6 +21,20 @@ import { createOrganization as createOrganizationApi } from '../lib/organization
 import { BoardPage } from './board/BoardPage';
 import { ModalOrchestrator } from './orchestrators/ModalOrchestrator';
 
+function GoogleAuthStatus({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="fixed top-16 right-4 z-toast pointer-events-none max-w-[min(360px,calc(100vw-32px))]">
+      <div className="flex items-start gap-3 rounded-lg border border-border bg-surface/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+        <div className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-text">{title}</p>
+          <p className="mt-0.5 text-xs leading-5 text-muted">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Global app shell - orchestrates auth, billing, projects, settings */
 export function AppShell() {
   const navigate = useNavigate();
@@ -46,6 +60,7 @@ export function AppShell() {
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authIsPro = useAuthStore((s) => s.isPro);
   const authIsLoading = useAuthStore((s) => s.isLoading);
+  const authOAuthInProgress = useAuthStore((s) => s.isOAuthInProgress);
   const authError = useAuthStore((s) => s.error);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
@@ -69,6 +84,13 @@ export function AppShell() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!supabase || !authIsAuthenticated) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthAccessToken(session?.access_token ?? null);
+    });
+  }, [authIsAuthenticated]);
 
   // UI store actions
   const showToast = useUIStore((s) => s.showToast);
@@ -350,7 +372,16 @@ export function AppShell() {
           showToast(t('appToast.welcomeBack'));
         }}
         onSignUp={signUp}
-        onSignInWithGoogle={signInWithGoogle}
+        onSignInWithGoogle={async () => {
+          showToast(t('appToast.googleLoginStarted'), 3500);
+          try {
+            await signInWithGoogle();
+            showToast(t('appToast.welcomeBack'));
+          } catch (error) {
+            showToast(t('appToast.googleLoginFailed'), 3500);
+            throw error;
+          }
+        }}
         // DEV-ONLY: "Test login" buttons in the auth modal. Remove this
         // prop (and useAuthStore.devLogin) once done testing.
         onDevLogin={import.meta.env.DEV ? (tier) => {
@@ -359,7 +390,7 @@ export function AppShell() {
           showToast(t('appToast.devLogin', { tier }));
         } : undefined}
         authError={authError}
-        authIsLoading={authIsLoading}
+        authIsLoading={authIsLoading || authOAuthInProgress}
 
         // Pricing Modal
         pricingModalOpen={billingController.pricingModalOpen}
@@ -498,6 +529,13 @@ export function AppShell() {
         upgradedTier={billingController.upgradedTier}
         subscriptionActivating={billingController.subscriptionActivating}
       />
+
+      {authOAuthInProgress && (
+        <GoogleAuthStatus
+          title={t('auth.googlePopupTitle')}
+          description={t('auth.googlePopupDescription')}
+        />
+      )}
 
       {/* Club Premium Welcome Modal (Sprint H3) */}
       <ClubWelcomeModal

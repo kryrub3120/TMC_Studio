@@ -95,7 +95,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     if (onSignInWithGoogle) {
       try {
-        await onSignInWithGoogle();
+        const signIn = onSignInWithGoogle();
+        onClose();
+        await signIn;
       } catch (err) {
         // Error is handled by parent
       }

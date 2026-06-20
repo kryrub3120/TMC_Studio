@@ -4,28 +4,48 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
 
+const AUTH_POPUP_NAME = 'tmc-google-auth';
+const AUTH_POPUP_MESSAGE = 'tmc:auth-popup-result';
+
 export function AuthCallbackPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
     let done = false;
     const startedAt = performance.now();
-    void import('../App');
+    const isPopup =
+      window.name === AUTH_POPUP_NAME ||
+      window.sessionStorage.getItem('tmc-oauth-popup') === '1';
 
-    const redirect = () => {
-      if (!done) {
-        done = true;
-        navigate('/app', { replace: true });
+    if (!isPopup) {
+      void import('../App');
+    }
+
+    const finish = (status: 'success' | 'error', error?: string) => {
+      if (done) return;
+      done = true;
+
+      if (isPopup && window.opener && !window.opener.closed) {
+        window.opener.postMessage({
+          type: AUTH_POPUP_MESSAGE,
+          status,
+          error,
+          elapsed: Math.round(performance.now() - startedAt),
+        }, window.location.origin);
+        window.setTimeout(() => window.close(), 150);
+        return;
       }
+
+      navigate('/app', { replace: true });
     };
 
     // Safety net: if PKCE exchange hangs, redirect after 10s
-    const safety = setTimeout(redirect, 10000);
+    const safety = setTimeout(() => finish('error', 'OAuth callback timed out'), 10000);
 
     async function handleCallback() {
       if (!supabase) {
         clearTimeout(safety);
-        redirect();
+        finish('error', 'Supabase is not configured');
         return;
       }
 
@@ -39,7 +59,7 @@ export function AuthCallbackPage() {
         if (error || !session?.user) {
           logger.error(`[Auth] OAuth callback failed after ${elapsed}ms`, error);
           clearTimeout(safety);
-          redirect();
+          finish('error', error?.message ?? 'No Supabase session after Google login');
           return;
         }
 
@@ -63,10 +83,14 @@ export function AuthCallbackPage() {
         logger.debug(`[Auth] OAuth callback completed in ${elapsed}ms`);
       } catch (err) {
         logger.error('[Auth] OAuth callback: unexpected error', err);
+        const message = err instanceof Error ? err.message : 'Unexpected Google login error';
+        clearTimeout(safety);
+        finish('error', message);
+        return;
       }
 
       clearTimeout(safety);
-      redirect();
+      finish('success');
     }
 
     handleCallback();
