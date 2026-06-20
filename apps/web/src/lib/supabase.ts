@@ -294,9 +294,8 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      // Return straight to the editor so its bundle can load while Supabase
-      // completes the PKCE session exchange in the background.
-      redirectTo: `${window.location.origin}/app`,
+      // Keep PKCE exchange on a lightweight callback route, then enter the app.
+      redirectTo: `${window.location.origin}/auth/callback`,
     },
   });
   

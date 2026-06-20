@@ -71,6 +71,13 @@ function hasAuthCallbackInUrl(): boolean {
     window.location.hash.includes('error');
 }
 
+function hasAuthErrorInUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has('error') || params.has('error_code') || params.has('error_description') ||
+    window.location.hash.includes('error');
+}
+
 function cleanAuthCallbackUrl() {
   if (typeof window === 'undefined') return;
   const url = new URL(window.location.href);
@@ -94,8 +101,7 @@ function cleanAuthCallbackUrl() {
   }
 }
 
-
-
+let authUnsubscribe: (() => void) | null = null;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -156,68 +162,74 @@ export const useAuthStore = create<AuthState>()(
           const hasAuthCallback = hasAuthCallbackInUrl();
           
           if (hasAuthCallback) {
-            logger.debug('[Auth] OAuth callback detected - will clean URL after processing');
+            logger.debug('[Auth] OAuth callback detected - waiting for session before URL cleanup');
+            if (hasAuthErrorInUrl()) {
+              cleanAuthCallbackUrl();
+            }
           }
 
           // ✅ Setup listener for future auth changes
-          logger.debug('[Auth] Setting up auth listener...');
-          onAuthStateChange(async (user) => {
-            logger.debug('[Auth] State changed - user:', user?.email ?? 'none');
-            
-            set({
-              user,
-              isAuthenticated: !!user,
-              isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
-              isTeam: user?.subscription_tier === 'team',
-              teamId: user?.team_id ?? null,
-            });
+          if (!authUnsubscribe) {
+            logger.debug('[Auth] Setting up auth listener...');
+            authUnsubscribe = onAuthStateChange(async (user) => {
+              logger.debug('[Auth] State changed - user:', user?.email ?? 'none');
+              
+              set({
+                user,
+                isAuthenticated: !!user,
+                isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
+                isTeam: user?.subscription_tier === 'team',
+                teamId: user?.team_id ?? null,
+              });
 
-            // Load preferences from cloud if user is authenticated
-            if (user) {
-              logger.debug('[Auth] Loading preferences from cloud...');
-              try {
-                const cloudPrefs = await getPreferences();
-                if (cloudPrefs) {
-                  const { useUIStore } = await import('./useUIStore');
-                  // Merge cloud preferences with local (cloud takes precedence)
-                  if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                  if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                  if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                  if (cloudPrefs.bottomBar) {
-                    useUIStore.setState({
-                      bottomBarHeight: cloudPrefs.bottomBar.height,
-                      bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
-                    });
+              // Load preferences from cloud if user is authenticated
+              if (user) {
+                logger.debug('[Auth] Loading preferences from cloud...');
+                try {
+                  const cloudPrefs = await getPreferences();
+                  if (cloudPrefs) {
+                    const { useUIStore } = await import('./useUIStore');
+                    // Merge cloud preferences with local (cloud takes precedence)
+                    if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+                    if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+                    if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+                    if (cloudPrefs.bottomBar) {
+                      useUIStore.setState({
+                        bottomBarHeight: cloudPrefs.bottomBar.height,
+                        bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
+                      });
+                    }
+                    logger.debug('[Auth] Preferences loaded from cloud');
                   }
-                  logger.debug('[Auth] Preferences loaded from cloud');
+                } catch (error) {
+                  logger.error('[Auth] Failed to load preferences:', error);
                 }
-              } catch (error) {
-                logger.error('[Auth] Failed to load preferences:', error);
+
+                // Prefetch projects/folders so project-limit counts are correct
+                // immediately after sign-in (before the drawer is ever opened).
+                try {
+                  const { useBoardStore } = await import('./index');
+                  const boardState = useBoardStore.getState();
+                  await Promise.all([
+                    boardState.fetchCloudProjects(),
+                    boardState.fetchCloudFolders(),
+                  ]);
+                } catch (error) {
+                  logger.error('[Auth] Failed to prefetch projects/folders:', error);
+                }
+
               }
 
-              // Prefetch projects/folders so project-limit counts are correct
-              // immediately after sign-in (before the drawer is ever opened).
-              try {
-                const { useBoardStore } = await import('./index');
-                const boardState = useBoardStore.getState();
-                await Promise.all([
-                  boardState.fetchCloudProjects(),
-                  boardState.fetchCloudFolders(),
-                ]);
-              } catch (error) {
-                logger.error('[Auth] Failed to prefetch projects/folders:', error);
+              // Clean OAuth callback params/hash from URL after successful login
+              if (hasAuthCallback && user) {
+                logger.debug('[Auth] Cleaning OAuth callback from URL');
+                cleanAuthCallbackUrl();
               }
-
-            }
-
-            // Clean OAuth callback params/hash from URL after successful login
-            if (hasAuthCallback && user) {
-              logger.debug('[Auth] Cleaning OAuth callback from URL');
-              cleanAuthCallbackUrl();
-            }
-          });
-          
-          logger.debug('[Auth] Listener active');
+            });
+            logger.debug('[Auth] Listener active');
+          } else {
+            logger.debug('[Auth] Listener already active');
+          }
 
           // ✅ After OAuth callback, check session with a short delay as fallback.
           // The onAuthStateChange listener should fire automatically when Supabase
@@ -284,11 +296,12 @@ export const useAuthStore = create<AuthState>()(
             const retryDelays = [400, 1000, 2000, 3500, 5000];
             retryDelays.forEach((delay) => {
               window.setTimeout(async () => {
-                // Clean stale OAuth params from the URL on each pass.
-                if (hasAuthCallbackInUrl()) {
+                const applied = await applyOAuthSession();
+                // Never remove ?code=... before Supabase finishes PKCE exchange.
+                // The code is single-use; cleaning it early can break Google login.
+                if (applied && hasAuthCallbackInUrl()) {
                   cleanAuthCallbackUrl();
                 }
-                await applyOAuthSession();
               }, delay);
             });
           }

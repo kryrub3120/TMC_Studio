@@ -1,17 +1,21 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
 
 export function AuthCallbackPage() {
+  const navigate = useNavigate();
+
   useEffect(() => {
     let done = false;
+    const startedAt = performance.now();
     void import('../App');
 
     const redirect = () => {
       if (!done) {
         done = true;
-        window.location.replace('/app');
+        navigate('/app', { replace: true });
       }
     };
 
@@ -28,11 +32,12 @@ export function AuthCallbackPage() {
       try {
         // Awaits initializePromise which includes the PKCE code exchange
         const { data: { session }, error } = await supabase.auth.getSession();
+        const elapsed = Math.round(performance.now() - startedAt);
 
         if (done) return;
 
         if (error || !session?.user) {
-          logger.error('[Auth] OAuth callback: no session', error);
+          logger.error(`[Auth] OAuth callback failed after ${elapsed}ms`, error);
           clearTimeout(safety);
           redirect();
           return;
@@ -55,6 +60,7 @@ export function AuthCallbackPage() {
           teamId: null,
           isLoading: false,
         });
+        logger.debug(`[Auth] OAuth callback completed in ${elapsed}ms`);
       } catch (err) {
         logger.error('[Auth] OAuth callback: unexpected error', err);
       }
@@ -69,7 +75,7 @@ export function AuthCallbackPage() {
       done = true;
       clearTimeout(safety);
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <div style={{
