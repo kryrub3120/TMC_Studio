@@ -12,9 +12,10 @@ Czytaj w tej kolejnosci:
 2. `docs/CURRENT_SPRINT_PLAN.md` - krotki wskaznik aktualnego sprintu.
 3. `tasks/NEXT_TASK.md` - najblizsze zadanie wykonawcze.
 4. `docs/FEATURE_SPEC.md` - aktualne zachowanie funkcji, w tym presety boiska.
-5. `docs/SYSTEM_ARCHITECTURE.md` - architektura i granice warstw.
-6. `docs/ENTITLEMENTS.md` - plany, limity, gating.
-7. `docs/SITE_ARCHITECTURE.md`, `docs/WEBSITE_LAUNCH_PLAN.md`, `docs/STRIPE_TAX_SETUP.md` - marketing, legal, billing.
+5. `docs/AUTH_FLOW.md` - mechanizm logowania Google OAuth (popup + PKCE).
+6. `docs/SYSTEM_ARCHITECTURE.md` - architektura i granice warstw.
+7. `docs/ENTITLEMENTS.md` - plany, limity, gating.
+8. `docs/SITE_ARCHITECTURE.md`, `docs/WEBSITE_LAUNCH_PLAN.md`, `docs/STRIPE_TAX_SETUP.md` - marketing, legal, billing.
 
 Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa aktualny source of truth.
 
@@ -27,6 +28,7 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 | `AUDYT_KOMPLEKSOWY_2026-06-18.md` | Glowny plan launchu: audyt, priorytety, sprinty, DoD |
 | `CURRENT_SPRINT_PLAN.md` | Aktualny sprint i kolejnosc prac |
 | `tasks/NEXT_TASK.md` | Najblizsze zadanie operacyjne |
+| `AUTH_FLOW.md` | Mechanizm logowania Google OAuth (popup + PKCE, postMessage) |
 | `FEATURE_SPEC.md` | Kanoniczna specyfikacja zachowania produktu; aktywne boiska: full / half / penalty-area |
 | `ANALYTICS_AND_QA_GATE.md` | Pomocniczy gate analityki i QA |
 
