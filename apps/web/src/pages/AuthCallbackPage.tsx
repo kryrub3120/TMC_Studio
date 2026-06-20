@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase, getCurrentUser } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
 
@@ -14,8 +14,8 @@ export function AuthCallbackPage() {
       }
     };
 
-    // Safety net: if getSession hangs or anything goes wrong, redirect after 8s
-    const safety = setTimeout(redirect, 8000);
+    // Safety net: if PKCE exchange hangs, redirect after 10s
+    const safety = setTimeout(redirect, 10000);
 
     async function handleCallback() {
       if (!supabase) {
@@ -25,7 +25,7 @@ export function AuthCallbackPage() {
       }
 
       try {
-        // getSession() awaits initializePromise which includes PKCE code exchange
+        // Awaits initializePromise which includes the PKCE code exchange
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (done) return;
@@ -37,38 +37,23 @@ export function AuthCallbackPage() {
           return;
         }
 
-        let user = null;
-        try {
-          user = await getCurrentUser(session.user);
-        } catch (err) {
-          logger.error('[Auth] OAuth callback: getCurrentUser failed, using fallback', err);
-          user = {
-            id: session.user.id,
-            email: session.user.email ?? '',
-            full_name:
-              session.user.user_metadata?.full_name ??
-              session.user.user_metadata?.name ??
-              undefined,
-            avatar_url:
-              session.user.user_metadata?.avatar_url ??
-              session.user.user_metadata?.picture ??
-              undefined,
-            subscription_tier: 'free' as const,
-          };
-        }
-
-        if (done) return;
-
-        if (user) {
-          useAuthStore.setState({
-            user,
-            isAuthenticated: true,
-            isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-            isTeam: user.subscription_tier === 'team',
-            teamId: (user as any).team_id ?? null,
-            isLoading: false,
-          });
-        }
+        // Use session metadata directly — skip extra DB round-trip.
+        // onAuthStateChange in useAuthStore will fetch the real profile in background.
+        const u = session.user;
+        useAuthStore.setState({
+          user: {
+            id: u.id,
+            email: u.email ?? '',
+            full_name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? undefined,
+            avatar_url: u.user_metadata?.avatar_url ?? u.user_metadata?.picture ?? undefined,
+            subscription_tier: 'free',
+          },
+          isAuthenticated: true,
+          isPro: false,
+          isTeam: false,
+          teamId: null,
+          isLoading: false,
+        });
       } catch (err) {
         logger.error('[Auth] OAuth callback: unexpected error', err);
       }
