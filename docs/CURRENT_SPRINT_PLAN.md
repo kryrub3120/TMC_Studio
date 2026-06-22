@@ -50,14 +50,38 @@ Evidence:
 
 ## Aktualny sprint
 
-### Sprint 2 - Quality Gate i testy minimalne
+### Sprint 2 - Quality Gate i testy minimalne (S-QA)
 
-**Status:** � PAUSED (przerwany przez priorytetowy auth hotfix)
-**Priorytet:** P1
+**Status:** ✅ DONE (2026-06-22)
 
-Cel: kazda zmiana przed launchem ma przechodzic przez automatyczna bramke.
+Cel: bramka jakosci — lint/typecheck/test/build/e2e blokuja PR.
 
-1. Root test pipeline — `pnpm test` przez turbo, vitest w `@tmc/core` i `@tmc/web`.
+Zrealizowane punkty:
+
+1. **E2E golden path (Playwright)** — 11 testow w 3 specach:
+   - `tactical-board.spec.ts` (4): guest board, add players, **export PNG z `waitForEvent('download')` i asercja `.png` filename**, Shift+P.
+   - `auth.spec.ts` (3): guest state, dev login smoke, close modal.
+   - `checkout.spec.ts` (4): pricing page, CTA, **/app?upgrade=pro modal z yearly price**, feature comparison.
+2. **CI gate** — `.github/workflows/ci.yml`:
+   - E2E job (`pnpm e2e`) po buildzie.
+   - `--frozen-lockfile` zamiast `--no-frozen-lockfile` we wszystkich 4 jobach.
+3. **Konfiguracja**:
+   - `e2e/playwright.config.ts` z webServer auto-start, chromium.
+   - `.gitignore` — test-results, playwright-report.
+   - Wersja 0.8.0 → 0.9.0 (MINOR), CHANGELOG zaktualizowany.
+4. **Weryfikacja**: 113/113 unit tests + 11/11 e2e green. `--frozen-lockfile` OK.
+
+Evidence:
+- `e2e/*` (5 plikow) — Playwright config, fixtures, specs.
+- `.github/workflows/ci.yml` — E2E job.
+- `thoughts/2026-06-22/` — dokumentacja Master Autopilot.
+
+Swiadome ograniczenia:
+- Auth: devLogin smoke only (nie realny OAuth).
+- Checkout: pricing modal smoke only (nie realne Stripe checkout).
+- Cloud features (Supabase): nie testowane E2E (brak .env.local).
+
+---
 2. CI — lint job + test job odkomentowany w `.github/workflows/ci.yml`.
 3. Core smoke tests — `packages/core/src/core.test.ts` (6 testow).
 

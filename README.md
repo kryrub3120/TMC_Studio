@@ -13,6 +13,13 @@ pnpm install
 # Start development server
 pnpm dev
 
+# Run all checks (lint + typecheck + test)
+pnpm typecheck
+pnpm test
+
+# Run E2E tests (requires dev server running)
+pnpm e2e
+
 # Build for production
 pnpm build
 ```

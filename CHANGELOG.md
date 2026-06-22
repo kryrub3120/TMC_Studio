@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-22
+
+### Added
+- **S-QA: Bramka jakości** — E2E golden path (Playwright) + CI gate.
+  - **S1**: 11 testów E2E z twardymi asercjami: export PNG (`waitForEvent('download')` + `.png` filename assertion), pricing modal z yearly price assertion, golden path add player → export.
+  - **S1 (LOOP fix)**: Usunięto wszystkie `if (visible)` soft-guardy. Export test używa `page.waitForEvent('download')`. Checkout test twardo asertuje obecność modala i ceny rocznej. Test PADA gdy funkcja zepsuta (zweryfikowane negatywnie).
+  - **S2**: CI workflow z E2E job (`pnpm e2e`) blokujący PR przy failu; `--frozen-lockfile` zamiast `--no-frozen-lockfile` we wszystkich jobach.
+  - Wszystkie 113 unit testów + 11 E2E green. CI `--frozen-lockfile` zweryfikowany lokalnie.
+- **Skrypty:** `pnpm e2e`, `pnpm e2e:ui` w root `package.json`.
+
+## [0.8.0] - 2026-06-22
+
 ## [0.8.0] - 2026-06-22
 
 ### Added

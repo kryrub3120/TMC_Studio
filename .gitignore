@@ -32,6 +32,11 @@ pnpm-debug.log*
 # Testing
 coverage/
 
+# E2E — Playwright artifacts (never commit)
+test-results/
+e2e/playwright-report/
+playwright-report/
+
 # Misc
 *.local
 .cache/
