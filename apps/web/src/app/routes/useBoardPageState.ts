@@ -149,6 +149,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const theme = useUIStore((s) => s.theme);
   const focusMode = useUIStore((s) => s.focusMode);
   const inspectorOpen = useUIStore((s) => s.inspectorOpen);
+  const inspectorActiveTab = useUIStore((s) => s.inspectorActiveTab);
+  const setInspectorActiveTab = useUIStore((s) => s.setInspectorActiveTab);
   const inspectorWidth = useUIStore((s) => s.inspectorWidth);
   const setInspectorWidth = useUIStore((s) => s.setInspectorWidth);
   const cheatSheetVisible = useUIStore((s) => s.cheatSheetVisible);
@@ -509,6 +511,8 @@ export function useBoardPageState(props: BoardPageProps) {
     theme,
     focusMode,
     inspectorOpen,
+    inspectorActiveTab,
+    setInspectorActiveTab,
     inspectorWidth,
     setInspectorWidth,
     cheatSheetVisible,

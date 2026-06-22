@@ -76,7 +76,7 @@ export interface BoardCanvasSectionProps {
   onStageMouseDown: (e: any) => void;
   onStageMouseMove: (e: any) => void;
   onStageMouseUp: () => void;
-  onStageDblClick?: () => void;
+  onStageDblClick?: (e: any) => void;
   onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => void;
   onElementSelect: (id: string, addToSelection: boolean) => void;
   onElementDragEnd: (id: string, position: Position) => void;

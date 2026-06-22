@@ -71,6 +71,24 @@ export type UserPreferences = {
   snapEnabled?: boolean;
   cheatSheetVisible?: boolean;
   bottomBar?: { height: number; collapsed?: boolean };
+  inspector?: { width: number };
+  defaultArrowType?: string;
+  stepDuration?: number;
+  gridSize?: number;
+  arrowDefaults?: {
+    strokeWidth?: Record<string, number>;
+    color?: Record<string, string>;
+    startHead?: string;
+    endHead?: string;
+  };
+  zoneDefaults?: {
+    borderStyle?: string;
+    borderWidth?: number;
+    borderColor?: string;
+    showCorners?: boolean;
+    fillColor?: string;
+    opacity?: number;
+  };
 };
 
 /** Get current authenticated user */
@@ -234,6 +252,22 @@ export async function updatePreferences(preferences: Partial<UserPreferences>): 
     .update({ preferences: updatedPrefs })
     .eq('id', user.id);
   
+  if (error) throw error;
+}
+
+/** Atomic JSONB-merge via RPC — used by beforeunload flush to avoid overwriting other keys.
+ *  Unlike updatePreferences (read-merge-write), this runs atomically on the DB side. */
+export async function mergePreferences(preferences: Partial<UserPreferences>): Promise<void> {
+  if (isDevCloudActive()) return;
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { error } = await supabase.rpc('merge_preferences', {
+    p_user_id: user.id,
+    p_preferences: preferences,
+  });
   if (error) throw error;
 }
 

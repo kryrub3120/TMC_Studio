@@ -806,12 +806,12 @@ export function SettingsModal({
             </div>
           )}
 
-          {/* Preferences Tab */}
+          {/* Preferences Tab — B2: grupowane w karty, mniej scrollowania */}
           {activeTab === 'preferences' && (
-            <div className="space-y-8">
-              {/* Appearance */}
-              <div>
-                <h3 className="text-lg font-semibold text-text mb-4">{t('settings.appearance')}</h3>
+            <div className="space-y-4">
+              {/* Karta: Appearance */}
+              <div className="rounded-lg border border-border bg-surface2 p-4">
+                <h3 className="text-sm font-semibold text-text mb-3">{t('settings.appearance')}</h3>
                 <label className="block text-xs font-medium text-muted mb-2">{t('settings.theme')}</label>
                 <SegmentedControl
                   ariaLabel={t('settings.theme')}
@@ -825,42 +825,41 @@ export function SettingsModal({
                 />
               </div>
 
-              {/* Editor */}
-              <div>
-                <h3 className="text-lg font-semibold text-text mb-2">{t('settings.editor')}</h3>
-                <div className="divide-y divide-border">
-                  <SettingRow
-                    label={t('settings.showGrid')}
-                    description={t('settings.showGridHint')}
-                    control={<Toggle checked={gridVisible} onChange={() => onToggleGrid?.()} ariaLabel={t('settings.showGrid')} />}
+              {/* Karta: Editor */}
+              <div className="rounded-lg border border-border bg-surface2 p-4">
+                <h3 className="text-sm font-semibold text-text mb-3">{t('settings.editor')}</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <SettingRow
+                      label={t('settings.showGrid')}
+                      description={t('settings.showGridHint')}
+                      control={<Toggle checked={gridVisible} onChange={() => onToggleGrid?.()} ariaLabel={t('settings.showGrid')} />}
+                    />
+                    <SettingRow
+                      label={t('settings.snapGrid')}
+                      description={t('settings.snapGridHint')}
+                      control={<Toggle checked={snapEnabled} onChange={() => onToggleSnap?.()} ariaLabel={t('settings.snapGrid')} />}
+                    />
+                  </div>
+                  <Slider
+                    label={t('settings.gridDensity')}
+                    value={gridSize}
+                    min={5}
+                    max={40}
+                    step={5}
+                    format={(value) => t('settings.pixelsValue', { value })}
+                    onChange={(value) => onSetGridSize?.(value)}
                   />
-                  <SettingRow
-                    label={t('settings.snapGrid')}
-                    description={t('settings.snapGridHint')}
-                    control={<Toggle checked={snapEnabled} onChange={() => onToggleSnap?.()} ariaLabel={t('settings.snapGrid')} />}
-                  />
+                  <p className="text-xs text-muted">{t('settings.gridDensityHint')}</p>
                 </div>
               </div>
 
-              <div>
-                <Slider
-                  label={t('settings.gridDensity')}
-                  value={gridSize}
-                  min={5}
-                  max={40}
-                  step={5}
-                  format={(value) => t('settings.pixelsValue', { value })}
-                  onChange={(value) => onSetGridSize?.(value)}
-                />
-                <p className="text-xs text-muted">{t('settings.gridDensityHint')}</p>
-              </div>
-
-              {/* Editor defaults */}
-              <div>
-                <h3 className="text-lg font-semibold text-text mb-2">{t('settings.editorDefaults')}</h3>
-                <div className="space-y-4">
+              {/* Karta: Element defaults */}
+              <div className="rounded-lg border border-border bg-surface2 p-4">
+                <h3 className="text-sm font-semibold text-text mb-3">{t('settings.editorDefaults')}</h3>
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-2">{t('settings.defaultArrow')}</label>
+                    <label className="block text-xs font-medium text-muted mb-1.5">{t('settings.defaultArrow')}</label>
                     <SegmentedControl
                       ariaLabel={t('settings.defaultArrow')}
                       value={defaultArrowType}
@@ -872,9 +871,8 @@ export function SettingsModal({
                         { value: 'dribble', label: t('settings.arrowDribble') },
                       ]}
                     />
-                    <p className="mt-1.5 text-xs text-muted">{t('settings.defaultArrowHint')}</p>
+                    <p className="mt-1 text-xs text-muted">{t('settings.defaultArrowHint')}</p>
                   </div>
-
                   <Slider
                     label={t('settings.defaultStepDuration')}
                     value={stepDuration}
@@ -888,11 +886,11 @@ export function SettingsModal({
                 </div>
               </div>
 
-              {/* Arrow & Zone style defaults */}
+              {/* Karta: Style defaults */}
               {(arrowDefaults && onSetArrowDefaults) || (zoneDefaults && onSetZoneDefaults) ? (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-text">{t('settings.styleDefaults')}</h3>
+                <div className="rounded-lg border border-border bg-surface2 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-text">{t('settings.styleDefaults')}</h3>
                     {onResetElementDefaults && (
                       <button
                         onClick={onResetElementDefaults}
@@ -904,33 +902,35 @@ export function SettingsModal({
                   </div>
 
                   {arrowDefaults && onSetArrowDefaults && (
-                    <div className="mb-5">
+                    <div className="mb-4">
                       <label className="block text-xs font-medium text-muted mb-2">{t('settings.arrowDefaults')}</label>
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
                         {(['pass', 'run', 'shoot', 'dribble'] as const).map((tp) => (
-                          <div key={tp} className="space-y-2">
-                            <Slider
-                              label={t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)}
-                              value={arrowDefaults.strokeWidth[tp]}
+                          <div key={tp} className="flex items-center gap-2 rounded-md border border-border p-2">
+                            <span className="text-xs font-medium text-text w-10 shrink-0">{t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)}</span>
+                            <input
+                              type="range"
                               min={1}
                               max={12}
-                              format={(v) => `${v}px`}
-                              onChange={(v) => onSetArrowDefaults({ strokeWidth: { ...arrowDefaults.strokeWidth, [tp]: v } })}
+                              value={arrowDefaults.strokeWidth[tp]}
+                              onChange={(v) => onSetArrowDefaults({ strokeWidth: { ...arrowDefaults.strokeWidth, [tp]: Number(v.target.value) } })}
+                              className="flex-1 h-1 accent-accent"
+                              aria-label={`${tp} thickness`}
                             />
-                            <div className="flex items-center gap-2">
-                              <label className="text-xs font-medium text-muted">{t('inspector.arrow.color')}</label>
-                              <input
-                                type="color"
-                                value={arrowDefaults.color?.[tp] ?? '#1a1a1a'}
-                                onChange={(e) => onSetArrowDefaults({ color: { ...(arrowDefaults.color ?? {}), [tp]: e.target.value } })}
-                                className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
-                                aria-label={`${t(`settings.arrow${tp[0].toUpperCase()}${tp.slice(1)}`)} ${t('inspector.arrow.color')}`}
-                              />
-                            </div>
+                            <span className="text-[10px] text-muted w-6 text-right">{arrowDefaults.strokeWidth[tp]}px</span>
+                            <input
+                              type="color"
+                              value={arrowDefaults.color?.[tp] ?? '#1a1a1a'}
+                              onChange={(e) => onSetArrowDefaults({ color: { ...(arrowDefaults.color ?? {}), [tp]: e.target.value } })}
+                              className="w-5 h-5 rounded border border-border cursor-pointer bg-transparent"
+                              aria-label={`${tp} color`}
+                            />
                           </div>
                         ))}
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-medium text-muted mb-1.5">{t('inspector.arrow.startHead')}</label>
+                          <label className="block text-[10px] font-medium text-muted mb-1">{t('inspector.arrow.startHead')}</label>
                           <SegmentedControl
                             ariaLabel={t('inspector.arrow.startHead')}
                             value={arrowDefaults.startHead}
@@ -944,7 +944,7 @@ export function SettingsModal({
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-muted mb-1.5">{t('inspector.arrow.endHead')}</label>
+                          <label className="block text-[10px] font-medium text-muted mb-1">{t('inspector.arrow.endHead')}</label>
                           <SegmentedControl
                             ariaLabel={t('inspector.arrow.endHead')}
                             value={arrowDefaults.endHead}
@@ -964,7 +964,7 @@ export function SettingsModal({
                   {zoneDefaults && onSetZoneDefaults && (
                     <div>
                       <label className="block text-xs font-medium text-muted mb-2">{t('settings.zoneDefaults')}</label>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <SegmentedControl
                           ariaLabel={t('inspector.zone.borderStyle')}
                           value={zoneDefaults.borderStyle}
@@ -975,25 +975,25 @@ export function SettingsModal({
                             { value: 'none', label: t('inspector.zone.none') },
                           ]}
                         />
-                        <div className={zoneDefaults.borderStyle === 'none' ? 'opacity-50 pointer-events-none' : ''}>
-                          <Slider
-                            label={t('inspector.zone.borderWidth')}
-                            value={zoneDefaults.borderWidth}
-                            min={1}
-                            max={8}
-                            disabled={zoneDefaults.borderStyle === 'none'}
-                            format={(v) => `${v}px`}
-                            onChange={(v) => onSetZoneDefaults({ borderWidth: v })}
-                          />
-                        </div>
                         <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <Slider
+                              label={t('inspector.zone.borderWidth')}
+                              value={zoneDefaults.borderWidth}
+                              min={1}
+                              max={8}
+                              disabled={zoneDefaults.borderStyle === 'none'}
+                              format={(v) => `${v}px`}
+                              onChange={(v) => onSetZoneDefaults({ borderWidth: v })}
+                            />
+                          </div>
                           <div className="flex items-center gap-2">
                             <label className="text-xs font-medium text-muted">{t('inspector.zone.borderColor')}</label>
                             <input
                               type="color"
                               value={zoneDefaults.borderColor || '#ef4444'}
                               onChange={(e) => onSetZoneDefaults({ borderColor: e.target.value })}
-                              className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
+                              className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent"
                               aria-label={t('inspector.zone.borderColor')}
                             />
                           </div>
@@ -1003,35 +1003,32 @@ export function SettingsModal({
                               type="color"
                               value={zoneDefaults.fillColor}
                               onChange={(e) => onSetZoneDefaults({ fillColor: e.target.value })}
-                              className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
+                              className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent"
                               aria-label={t('settings.zoneFill')}
                             />
                           </div>
                         </div>
-                        <Slider
-                          label={t('settings.zoneOpacity')}
-                          value={Math.round(zoneDefaults.opacity * 100)}
-                          min={10}
-                          max={100}
-                          format={(v) => `${v}%`}
-                          onChange={(v) => onSetZoneDefaults({ opacity: v / 100 })}
-                        />
-                        <SettingRow
-                          label={t('inspector.zone.corners')}
-                          control={<Toggle checked={zoneDefaults.showCorners} onChange={() => onSetZoneDefaults({ showCorners: !zoneDefaults.showCorners })} ariaLabel={t('inspector.zone.corners')} />}
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Slider
+                            label={t('settings.zoneOpacity')}
+                            value={Math.round(zoneDefaults.opacity * 100)}
+                            min={10}
+                            max={100}
+                            format={(v) => `${v}%`}
+                            onChange={(v) => onSetZoneDefaults({ opacity: v / 100 })}
+                          />
+                          <SettingRow
+                            label={t('inspector.zone.corners')}
+                            control={<Toggle checked={zoneDefaults.showCorners} onChange={() => onSetZoneDefaults({ showCorners: !zoneDefaults.showCorners })} ariaLabel={t('inspector.zone.corners')} size="sm" />}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
               ) : null}
 
-              {/* Info footer */}
-              <div className="pt-4 border-t border-border">
-                <p className="text-xs text-muted">
-                  {t('settings.preferencesHint')}
-                </p>
-              </div>
+              {/* Info footer — usunięty, bo cloud sync już działa */}
             </div>
           )}
 

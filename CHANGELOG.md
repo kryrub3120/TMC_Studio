@@ -7,11 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-22
+
+### Added
+- **UX-B: Cloud sync preferencji (B1)** — synchronizacja między urządzeniami przez `profiles.preferences` JSONB.
+  - **B1.1**: Rozszerzono `UserPreferences` o `arrowDefaults`, `zoneDefaults`, `gridSize`, `defaultArrowType`, `stepDuration`, `inspector` (wcześniej tylko theme/grid/snap/bottomBar).
+  - **B1.2**: `queueSync` — debounced (600ms) upsert do chmury z `setArrowDefaults`, `setZoneDefaults`, `setGridSize`, `setDefaultArrowType`, `setStepDuration`, `resetElementDefaults`.
+  - **B1.3**: Pełny load cloud → local w `useAuthStore` po Google login (wszystkie pola, nie tylko podzbiór).
+  - **B1.4**: Migracja lokalnych preferencji → cloud przy pierwszym logowaniu (pusta chmura = push lokalnego stanu).
+  - **B1.5**: Usunięto martwy komunikat „Cloud sync coming in a future update" — zaktualizowano klucze locale pl/en/es.
+  - **B1.6**: Nowa migracja `20260622000000_add_preferences_updated_at.sql` — kolumna `preferences_updated_at` + trigger dla last-write-wins.
+- **UX-B: Redesign panelu preferencji (B2)**: grupowanie w karty (`rounded-lg border bg-surface2 p-4`), mniej scrollowania — Appearance, Editor, Element Defaults, Style Defaults w osobnych kartach, arrow defaults w grid 2-kolumnowym.
+
+## [0.7.2] - 2026-06-22
+
+### Added
+- **UX-A: Menu konta — nowa struktura (A3)**: "Opcje edytora", "Ustawienia boiska", "Ustawienia drużyny", "Twój profil" zamiast "Konto i płatności". Ustawienia tablicy/zawodników jako podzakładki. (2026-06-20)
+- **UX-A: Klucze i18n dla menu PPM (A4)**: Pełny zestaw `contextMenu.*` w pl/en/es — brak surowych kluczy w context menu canvasu. (2026-06-20)
+- **UX-A: Sterowana zakładka inspektora (A8)**: `inspectorActiveTab` w `useUIStore`. Dwuklik obiektu przełącza na zakładkę Właściwości. (2026-06-20)
+
 ### Fixed
-- **Google OAuth: brak odświeżania po logowaniu + CSP dla custom domain** (2026-06-18)
-  - Dodano fallback sprawdzania sesji 1.5s po OAuth callbacku — UI aktualizuje się bez ręcznego odświeżania.
-  - Dodano `auth.tmcstudio.app` do CSP `connect-src` w `netlify.toml` (prepared for custom domain).
-  - Pliki: `apps/web/src/store/useAuthStore.ts`, `netlify.toml`, `.env.example`.
+- **UX-A: Gość nie widzi "Wyloguj" (A2)**: Dla `plan === 'guest'` AccountMenu pokazuje tylko przycisk "Zaloguj się" bez dropdownu. (2026-06-20)
+- **UX-A: Logowanie Google — brak ręcznego odświeżania (A5)**: AuthModal zamyka się natychmiast po kliknięciu Google, OAuth działa w tle. (2026-06-20)
+- **UX-A: Kontrast menu pomocy (A7)**: Naprawione `text-muted/70` → `text-muted` w `HelpSidebar.tsx` i `FaqCategory.tsx` dla WCAG AA. (2026-06-20)
+- **UX-A: Dwuklik elementu na canvasie (A8)**: Usunięto `e.cancelBubble` z `PlayerNode.handleDblClick` i `TextNode.handleDblClick` żeby event propagował do stage handlera.
+- **UX-A: "Ustaw jako domyślne" (A6)**: Potwierdzono persist `arrowDefaults`/`zoneDefaults` w `useUIStore` — działa i przeżywa reload. (2026-06-20)
+- **UX-A: Zapis dla gościa (A1)**: Cmd+S dla gościa pokazuje toast z CTA logowania zamiast zapisu lokalnego. (2026-06-20)
+
+### Changed
+- **UX-A: Przebudowa AccountMenu (A3)**: Nowe 6 pozycji menu + obsługa gościa. `AccountMenu` przyjmuje `onOpenSettings` i `onOpenSquadSettings`. (2026-06-20)
 
 ## [0.7.0] - 2026-06-18
 

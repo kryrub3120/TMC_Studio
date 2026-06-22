@@ -309,6 +309,7 @@ export function BoardPage(props: BoardPageProps) {
         onOpenAccount={state.authIsAuthenticated ? onOpenSettingsModal : onOpenAuthModal}
         onUpgrade={onOpenPricingModal}
         onLogout={state.authIsAuthenticated ? state.signOut : undefined}
+        onOpenSettings={() => onOpenSettingsModal('preferences')}
         // DEV-ONLY: "Test login" plan switcher in the account menu.
         // Remove this prop (and useAuthStore.devLogin) once done testing.
         onDevLogin={import.meta.env.DEV ? state.devLogin : undefined}
@@ -530,6 +531,8 @@ export function BoardPage(props: BoardPageProps) {
           isOpen={state.inspectorOpen}
           width={state.inspectorWidth}
           onWidthChange={state.setInspectorWidth}
+          activeTab={state.inspectorActiveTab}
+          onActiveTabChange={state.setInspectorActiveTab}
           onToggle={() => {
             // Mutex: close CheatSheet when Inspector opens
             if (!state.inspectorOpen && state.cheatSheetVisible) {

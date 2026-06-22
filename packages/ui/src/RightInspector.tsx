@@ -105,6 +105,9 @@ export interface RightInspectorProps {
   maxWidth?: number;
   /** Called with the new width while/after dragging. */
   onWidthChange?: (width: number) => void;
+  /** A8: controlled active tab. When not provided, uses local state. */
+  activeTab?: 'props' | 'layers';
+  onActiveTabChange?: (tab: 'props' | 'layers') => void;
 }
 
 type TabType = 'props' | 'layers';
@@ -968,9 +971,17 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   minWidth = MIN_INSPECTOR_WIDTH,
   maxWidth = MAX_INSPECTOR_WIDTH,
   onWidthChange,
+  activeTab: controlledActiveTab,
+  onActiveTabChange,
 }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabType>('props');
+  const [localActiveTab, setLocalActiveTab] = useState<TabType>('props');
+  // A8: use controlled tab if provided, otherwise local state
+  const activeTab = controlledActiveTab ?? localActiveTab;
+  const setActiveTab = useCallback((tab: TabType) => {
+    setLocalActiveTab(tab);
+    onActiveTabChange?.(tab);
+  }, [onActiveTabChange]);
   const isBottomSheetLayout = breakpoint === 'sm';
   // isSheetOpen syncs with isOpen prop only on phone layout (TopBar toggle → open BottomSheet)
   const [isSheetOpen, setIsSheetOpen] = useState(false);

@@ -233,7 +233,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
               <div className="space-y-2">
                 {SHORTCUT_SECTIONS.map((section) => (
                   <div key={section.title}>
-                    <h4 className="text-[10px] font-medium text-muted/70 uppercase tracking-wider mb-1">{t(`cheatsheet.sections.${section.title}`)}</h4>
+                    <h4 className="text-[10px] font-medium text-muted uppercase tracking-wider mb-1">{t(`cheatsheet.sections.${section.title}`)}</h4>
                     <div className="space-y-0.5">
                       {section.items.map((item) => (
                         <div key={item.key} className="flex items-center justify-between text-xs">

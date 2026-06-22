@@ -20,6 +20,7 @@ import {
   signInWithGoogle as supabaseSignInWithGoogle,
   onAuthStateChange,
   getPreferences,
+  updatePreferences,
   supabase,
   type User,
 } from '../lib/supabase';
@@ -229,6 +230,65 @@ async function waitForOAuthSession() {
   return null;
 }
 
+/**
+ * B1.1/4 DRY: apply cloud preferences to the UI store.
+ * Loads ALL fields from cloudPrefs (theme, grid, snap, arrowDefaults, etc.)
+ * and merges them into useUIStore. Must be called from any auth path that
+ * establishes a session (init, restore, Google popup, fallback).
+ */
+async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
+  const { useUIStore } = await import('./useUIStore');
+  
+  if (!cloudPrefs || Object.keys(cloudPrefs).length === 0) {
+    // B1.5: first login — push local preferences to cloud
+    const local = useUIStore.getState();
+    updatePreferences({
+      theme: local.theme,
+      gridVisible: local.gridVisible,
+      snapEnabled: local.snapEnabled,
+      gridSize: local.gridSize,
+      defaultArrowType: local.defaultArrowType,
+      stepDuration: local.stepDuration,
+      arrowDefaults: {
+        strokeWidth: local.arrowDefaults.strokeWidth,
+        color: local.arrowDefaults.color,
+        startHead: local.arrowDefaults.startHead,
+        endHead: local.arrowDefaults.endHead,
+      },
+      zoneDefaults: {
+        borderStyle: local.zoneDefaults.borderStyle,
+        borderWidth: local.zoneDefaults.borderWidth,
+        borderColor: local.zoneDefaults.borderColor,
+        showCorners: local.zoneDefaults.showCorners,
+        fillColor: local.zoneDefaults.fillColor,
+        opacity: local.zoneDefaults.opacity,
+      },
+      bottomBar: { height: local.bottomBarHeight, collapsed: local.bottomBarCollapsed },
+      inspector: { width: local.inspectorWidth },
+    }).catch(() => {});
+    return;
+  }
+
+  // Load all fields from cloud (cloud takes precedence over local)
+  if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+  if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
+  if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
+  if (cloudPrefs.gridSize !== undefined) useUIStore.setState({ gridSize: cloudPrefs.gridSize });
+  if (cloudPrefs.defaultArrowType) useUIStore.setState({ defaultArrowType: cloudPrefs.defaultArrowType as any });
+  if (cloudPrefs.stepDuration !== undefined) useUIStore.setState({ stepDuration: cloudPrefs.stepDuration });
+  if (cloudPrefs.arrowDefaults) useUIStore.setState({ arrowDefaults: cloudPrefs.arrowDefaults as any });
+  if (cloudPrefs.zoneDefaults) useUIStore.setState({ zoneDefaults: cloudPrefs.zoneDefaults as any });
+  if (cloudPrefs.bottomBar) {
+    useUIStore.setState({
+      bottomBarHeight: cloudPrefs.bottomBar.height,
+      bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
+    });
+  }
+  if (cloudPrefs.inspector) {
+    useUIStore.setState({ inspectorWidth: cloudPrefs.inspector.width });
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, _get) => ({
@@ -315,20 +375,8 @@ export const useAuthStore = create<AuthState>()(
                 logger.debug('[Auth] Loading preferences from cloud...');
                 try {
                   const cloudPrefs = await getPreferences();
-                  if (cloudPrefs) {
-                    const { useUIStore } = await import('./useUIStore');
-                    // Merge cloud preferences with local (cloud takes precedence)
-                    if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                    if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                    if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                    if (cloudPrefs.bottomBar) {
-                      useUIStore.setState({
-                        bottomBarHeight: cloudPrefs.bottomBar.height,
-                        bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
-                      });
-                    }
-                    logger.debug('[Auth] Preferences loaded from cloud');
-                  }
+                  await applyCloudPreferences(cloudPrefs);
+                  logger.debug('[Auth] Preferences loaded from cloud');
                 } catch (error) {
                   logger.error('[Auth] Failed to load preferences:', error);
                 }
@@ -393,19 +441,8 @@ export const useAuthStore = create<AuthState>()(
                 // Load preferences
                 try {
                   const cloudPrefs = await getPreferences();
-                  if (cloudPrefs) {
-                    const { useUIStore } = await import('./useUIStore');
-                    if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                    if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                    if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                    if (cloudPrefs.bottomBar) {
-                      useUIStore.setState({
-                        bottomBarHeight: cloudPrefs.bottomBar.height,
-                        bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
-                      });
-                    }
-                    logger.debug('[Auth] Preferences loaded from cloud (fallback)');
-                  }
+                  await applyCloudPreferences(cloudPrefs);
+                  logger.debug('[Auth] Preferences loaded from cloud (fallback)');
                 } catch (error) {
                   logger.error('[Auth] Failed to load preferences (fallback):', error);
                 }
@@ -456,19 +493,8 @@ export const useAuthStore = create<AuthState>()(
                   // Load preferences for existing session
                   try {
                     const cloudPrefs = await getPreferences();
-                    if (cloudPrefs) {
-                      const { useUIStore } = await import('./useUIStore');
-                      if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-                      if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-                      if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-                      if (cloudPrefs.bottomBar) {
-                        useUIStore.setState({
-                          bottomBarHeight: cloudPrefs.bottomBar.height,
-                          bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
-                        });
-                      }
-                      logger.debug('[Auth] Preferences loaded from cloud');
-                    }
+                    await applyCloudPreferences(cloudPrefs);
+                    logger.debug('[Auth] Preferences loaded from cloud');
                   } catch (error) {
                     logger.error('[Auth] Failed to load preferences:', error);
                   }
@@ -607,20 +633,10 @@ export const useAuthStore = create<AuthState>()(
 
           try {
             const cloudPrefs = await getPreferences();
-            if (cloudPrefs) {
-              const { useUIStore } = await import('./useUIStore');
-              if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
-              if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
-              if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
-              if (cloudPrefs.bottomBar) {
-                useUIStore.setState({
-                  bottomBarHeight: cloudPrefs.bottomBar.height,
-                  bottomBarCollapsed: cloudPrefs.bottomBar.collapsed ?? false,
-                });
-              }
-            }
+            // B1.4 + B1.5: load cloud prefs (or push local if first login)
+            await applyCloudPreferences(cloudPrefs);
           } catch (error) {
-            logger.error('[Auth] Failed to load preferences after Google popup:', error);
+            logger.error('[Auth] Failed to load/preferences after Google popup:', error);
           }
 
           try {

@@ -95,11 +95,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     if (onSignInWithGoogle) {
       try {
-        const signIn = onSignInWithGoogle();
+        // A5: close modal immediately so user sees the board during OAuth popup
         onClose();
-        await signIn;
+        await onSignInWithGoogle();
       } catch (err) {
-        // Error is handled by parent
+        // Error handled by parent (toast shows failure)
       }
     }
   };

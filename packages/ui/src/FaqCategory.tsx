@@ -46,7 +46,7 @@ export const FaqCategory: React.FC<FaqCategoryProps> = ({
           <span>{t(category.titleKey)}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="text-[10px] text-muted/60 font-normal">{category.items.length}</span>
+          <span className="text-[10px] text-muted font-normal">{category.items.length}</span>
           <ChevronIcon open={isOpen} />
         </span>
       </button>

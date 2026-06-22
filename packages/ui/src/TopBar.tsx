@@ -61,6 +61,8 @@ export interface TopBarProps {
   onOpenAccount?: () => void;
   onUpgrade?: () => void;
   onLogout?: () => void;
+  onOpenSettings?: () => void;
+  onOpenSquadSettingsFromAccount?: () => void;
   /** DEV-ONLY: quickly switch the mock test session's plan, or end it.
    *  Only pass this in when import.meta.env.DEV is true. Safe to remove
    *  later along with the matching block in useAuthStore. */
@@ -903,12 +905,29 @@ const AccountMenu: React.FC<{
   onOpenAccount?: () => void;
   onUpgrade?: () => void;
   onLogout?: () => void;
+  onOpenSettings?: () => void;
+  onOpenSquadSettings?: () => void;
   onDevLogin?: (tier: 'guest' | 'free' | 'pro' | 'team') => void;
   /** DEV-ONLY: see onDevLogin / useAuthStore.devClearData */
   onClearDevData?: () => void;
-}> = ({ initials, plan, onOpenAccount, onUpgrade, onLogout, onDevLogin, onClearDevData }) => {
+}> = ({ initials, plan, onOpenAccount, onUpgrade, onLogout, onOpenSettings, onOpenSquadSettings, onDevLogin, onClearDevData }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const { t } = useTranslation();
+
+  // A2: Gość widzi tylko "Sign In", bez dropdownu z Wyloguj
+  if (plan === 'guest') {
+    return (
+      <button
+        onClick={onOpenAccount}
+        className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+        {t('topbar.signIn')}
+      </button>
+    );
+  }
 
   return (
     <div className="relative">
@@ -945,7 +964,18 @@ const AccountMenu: React.FC<{
           />
           
           {/* Menu */}
-          <div className="absolute right-0 top-full mt-1 w-48 py-1 bg-surface border border-border rounded-lg shadow-lg z-50">
+          <div className="absolute right-0 top-full mt-1 w-52 py-1 bg-surface border border-border rounded-lg shadow-lg z-50">
+            {/* A3: Nowa struktura menu — 6 pozycji */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onOpenSettings?.();
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface2 transition-colors"
+            >
+              {t('topbar.accountEditorOptions')}
+            </button>
+            
             <button
               onClick={() => {
                 setIsOpen(false);
@@ -953,23 +983,45 @@ const AccountMenu: React.FC<{
               }}
               className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface2 transition-colors"
             >
-              {t('topbar.accountBilling')}
+              {t('topbar.accountPitchSettings')}
             </button>
-            
+
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onOpenSquadSettings?.();
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface2 transition-colors"
+            >
+              {t('topbar.accountSquadSettings')}
+            </button>
+
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onOpenAccount?.();
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface2 transition-colors"
+            >
+              {t('topbar.accountYourProfile')}
+            </button>
+
             {plan === 'free' && (
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  onUpgrade?.();
-                }}
-                className="w-full px-3 py-2 text-left text-sm text-accent font-medium hover:bg-surface2 transition-colors flex items-center gap-2"
-              >
-                <span>⭐</span> {t('topbar.upgradePro')}
-              </button>
+              <>
+                <div className="h-px bg-border my-1" />
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onUpgrade?.();
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-accent font-medium hover:bg-surface2 transition-colors flex items-center gap-2"
+                >
+                  <span>⭐</span> {t('topbar.upgradePro')}
+                </button>
+              </>
             )}
             
-            {/* DEV-ONLY: quick plan switcher for testing. Safe to delete
-                this block + onDevLogin prop once real-auth testing is done. */}
+            {/* DEV-ONLY: quick plan switcher for testing */}
             {onDevLogin && (
               <>
                 <div className="h-px bg-border my-1" />
@@ -1064,6 +1116,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenAccount,
   onUpgrade,
   onLogout,
+  onOpenSettings,
+  onOpenSquadSettingsFromAccount,
   onDevLogin,
   onClearDevData,
 }) => {
@@ -1266,6 +1320,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           onOpenAccount={onOpenAccount}
           onUpgrade={onUpgrade}
           onLogout={onLogout}
+          onOpenSettings={onOpenSettings}
+          onOpenSquadSettings={onOpenSquadSettingsFromAccount}
           onDevLogin={onDevLogin}
           onClearDevData={onClearDevData}
         />

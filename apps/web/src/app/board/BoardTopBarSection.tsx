@@ -43,6 +43,7 @@ export interface BoardTopBarSectionProps {
   onOpenAccount: () => void;
   onUpgrade: () => void;
   onLogout?: () => void;
+  onOpenSettings: () => void;
   /** DEV-ONLY: see useAuthStore.devLogin */
   onDevLogin?: (tier: 'guest' | 'free' | 'pro' | 'team') => void;
   /** DEV-ONLY: see useAuthStore.devClearData */
@@ -81,6 +82,7 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
     onOpenAccount,
     onUpgrade,
     onLogout,
+    onOpenSettings,
     onDevLogin,
     onClearDevData,
   } = props;
@@ -118,6 +120,8 @@ export function BoardTopBarSection(props: BoardTopBarSectionProps) {
       onOpenAccount={onOpenAccount}
       onUpgrade={onUpgrade}
       onLogout={onLogout}
+      onOpenSettings={onOpenSettings}
+      onOpenSquadSettingsFromAccount={onOpenSquadSettings}
       onDevLogin={onDevLogin}
       onClearDevData={onClearDevData}
     />

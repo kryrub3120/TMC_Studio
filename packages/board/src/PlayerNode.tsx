@@ -210,8 +210,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     onSelect(player.id, addToSelection);
   };
 
-  const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true;
+  const handleDblClick = () => {
     onQuickEditNumber?.(player.id, player.number);
   };
 
