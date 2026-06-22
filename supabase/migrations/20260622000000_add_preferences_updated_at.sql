@@ -10,12 +10,15 @@ COMMENT ON COLUMN profiles.preferences IS 'User preferences stored as JSONB: the
 
 -- Create or replace trigger function to auto-update preferences_updated_at
 CREATE OR REPLACE FUNCTION update_preferences_timestamp()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   NEW.preferences_updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Drop and recreate trigger to ensure it's current
 DROP TRIGGER IF EXISTS trg_profiles_preferences_updated_at ON profiles;
@@ -24,18 +27,27 @@ CREATE TRIGGER trg_profiles_preferences_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_preferences_timestamp();
 
--- RPC for atomic JSONB merge — used by beforeunload flush and updatePreferences.
--- Merges partial preferences into the existing JSONB column without overwriting
--- other keys (fixes the race where raw PATCH would nuke arrowDefaults/zoneDefaults).
-CREATE OR REPLACE FUNCTION merge_preferences(p_user_id UUID, p_preferences JSONB)
+-- Remove any earlier insecure overload that trusted a client-supplied user id.
+DROP FUNCTION IF EXISTS merge_preferences(UUID, JSONB);
+
+-- RPC for atomic JSONB merge — used by the beforeunload flush.
+-- SECURITY: the target row is derived from auth.uid() (the caller's JWT), never from a
+-- client-supplied id, so a caller can only ever merge into their OWN preferences.
+-- Merges partial preferences into the existing JSONB without overwriting other keys.
+CREATE OR REPLACE FUNCTION merge_preferences(p_preferences JSONB)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  UPDATE profiles
+  UPDATE public.profiles
   SET preferences = COALESCE(preferences, '{}'::jsonb) || p_preferences
-  WHERE id = p_user_id;
+  WHERE id = auth.uid();
 END;
 $$;
+
+-- Lock down execution: authenticated users only, never anon/public.
+REVOKE EXECUTE ON FUNCTION merge_preferences(JSONB) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION merge_preferences(JSONB) FROM anon;
+GRANT EXECUTE ON FUNCTION merge_preferences(JSONB) TO authenticated;

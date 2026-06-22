@@ -265,7 +265,6 @@ export async function mergePreferences(preferences: Partial<UserPreferences>): P
   if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase.rpc('merge_preferences', {
-    p_user_id: user.id,
     p_preferences: preferences,
   });
   if (error) throw error;

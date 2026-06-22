@@ -367,8 +367,7 @@ if (typeof window !== 'undefined') {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       const token = parsed?.access_token;
-      const userId = parsed?.user?.id;
-      if (!token || !userId) return;
+      if (!token) return;
       // Atomicky merge przez RPC — nie niszczy innych kluczy JSONB
       fetch(`${SB_URL}/rest/v1/rpc/merge_preferences`, {
         method: 'POST',
@@ -377,7 +376,7 @@ if (typeof window !== 'undefined') {
           'Authorization': `Bearer ${token}`,
           'apikey': SB_KEY,
         },
-        body: JSON.stringify({ p_user_id: userId, p_preferences: batch }),
+        body: JSON.stringify({ p_preferences: batch }),
         keepalive: true,
       }).catch(() => {});
     } catch {
