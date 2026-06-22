@@ -29,6 +29,8 @@ interface ModalOrchestratorProps {
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (email: string, password: string) => Promise<void>;
   onSignInWithGoogle: () => Promise<void>;
+  onSendResetLink: (email: string) => Promise<void>;
+  onResendConfirmation: (email: string) => Promise<void>;
   authError: string | null;
   authIsLoading: boolean;
   /** DEV-ONLY: see useAuthStore.devLogin */
@@ -160,6 +162,8 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onSignIn={props.onSignIn}
         onSignUp={props.onSignUp}
         onSignInWithGoogle={props.onSignInWithGoogle}
+        onSendResetLink={props.onSendResetLink}
+        onResendConfirmation={props.onResendConfirmation}
         onDevLogin={props.onDevLogin}
         error={props.authError}
         isLoading={props.authIsLoading}

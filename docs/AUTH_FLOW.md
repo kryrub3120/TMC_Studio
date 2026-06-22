@@ -305,15 +305,93 @@ DEV-ONLY: `useAuthStore.devLogin(tier)` tworzy fałszywą sesję dla lokalnego d
 
 ---
 
+## 12. Reset hasła (S-AUTH S1)
+
+### Flow
+
+```
+AuthModal (forgot mode)
+  → useAuthStore.sendResetLink(email)
+    → supabase.auth.resetPasswordForEmail(email, redirectTo=/auth/reset-password)
+      → Supabase wysyła email z linkiem zawierającym ?code=... (PKCE)
+        → user klika link → /auth/reset-password?code=xxx
+          → Supabase SDK detectSessionInUrl:true automatycznie wymienia kod na sesję
+          → useAuthStore auto-init (setTimeout(100ms)) uruchamia listener
+          → ResetPasswordPage: getSession() z retry (500/1500/3000ms) czeka na PKCE
+            → formularz → auth.updateUser({ password })
+              → redirect do /app
+```
+
+### Kluczowe decyzje
+
+| Decyzja | Powód |
+|---------|-------|
+| `redirectTo` na `/auth/reset-password` (nie przez AuthCallbackPage) | PKCE exchange zachodzi na stronie resetu; Supabase SDK `detectSessionInUrl:true` obsługuje go automatycznie. AuthCallbackPage ma złożoną logikę OAuth popup — reset hasła nie potrzebuje postMessage, wykrywania popup ani fallback pollingu. |
+| ResetPasswordPage czeka do 3.5s na PKCE completion | Race condition między React Router mount a Supabase SDK processing URL. Auto-init w useAuthStore startuje po 100ms, ale SDK może potrzebować czasu na wymianę kodu. Retry co 500/1500/3000ms pokrywa normalne warunki sieciowe. |
+| Walidacja forgot mode tylko email (bez hasła) | Forgot mode nie pokazuje pola hasła |
+
+### Pliki
+- `apps/web/src/pages/ResetPasswordPage.tsx` — NOWY: formularz hasła z retry PKCE
+- `apps/web/src/lib/supabase.ts` — `resetPasswordForEmail()`
+- `apps/web/src/store/useAuthStore.ts` — `sendResetLink()`
+
+### Produkcja: redirect allowlist
+
+Supabase Auth weryfikuje `redirectTo` względem `site_url` i `additional_redirect_urls`.
+Ponieważ `redirectTo` to `/auth/reset-password` pod tym samym originem, lokalny dev
+działa bez zmian (`site_url=http://127.0.0.1:3000` → dozwala subpath).
+
+**Dla produkcji** upewnij się, że w Supabase Dashboard → Authentication → Settings
+→ Redirect URLs znajduje się:
+- `https://tmcstudio.app/auth/reset-password` (lub właściwy domeny produkcyjnej)
+- `https://tmcstudio.app/auth/callback` (już istnieje dla OAuth - zweryfikuj)
+
+Supabase pozwala na `https://*.tmcstudio.app/**` jako wildcard, co pokrywa wszystkie
+ścieżki. Jeśli używasz konkretnych URL-i, dodaj obie wyżej.
+
+---
+
+## 13. Email confirmation (S-AUTH S2)
+
+### Flow
+
+```
+AuthModal (register mode)
+  → useAuthStore.signUp(email, password)
+    → supabase.auth.signUp() z emailRedirectTo=/auth/callback
+      → Supabase wysyła confirmation email → successMessage "Check your email"
+        ↓
+User próbuje się zalogować przed potwierdzeniem
+  → supabase.auth.signInWithPassword() → błąd
+    → useAuthStore wykrywa email_not_confirmed
+      → ustawia error = 'auth.errorEmailNotConfirmed'
+        → AuthModal pokazuje yellow warning + "Resend confirmation" button
+          → onResendConfirmation → supabase.auth.resend({ type: 'signup', email })
+```
+
+### Kluczowe decyzje
+
+| Decyzja | Powód |
+|---------|-------|
+| Detekcja przez string match na błędzie | Supabase nie zwraca `user.email_confirmed_at` w błędzie logowania |
+| Resend tylko dla login mode | Po signUp Supabase już wysłał maila — nie duplikujemy |
+
+### Pliki
+- `apps/web/src/lib/supabase.ts` — `resendConfirmationEmail()`
+- `apps/web/src/store/useAuthStore.ts` — `resendConfirmation()`
+- `packages/ui/src/AuthModal.tsx` — `onResendConfirmation` + UI
+
+---
+
 ## 10. Pliki i odpowiedzialności
 
 | Plik | Odpowiedzialność |
 |---|---|
-| `apps/web/src/lib/supabase.ts` | Klient Supabase, helpery auth (signIn, signOut, signInWithGoogle, getCurrentUser, getPreferences, onAuthStateChange) |
-| `apps/web/src/store/useAuthStore.ts` | Stan autha (Zustand + persist), maszyna stanów, initialize(), popup flow (openOAuthPopup, waitForOAuthPopup, waitForOAuthSession), fallback polling |
+| `apps/web/src/lib/supabase.ts` | Klient Supabase, helpery auth (signIn, signOut, signInWithGoogle, getCurrentUser, getPreferences, onAuthStateChange, resetPasswordForEmail, resendConfirmationEmail) |
+| `apps/web/src/store/useAuthStore.ts` | Stan autha (Zustand + persist), maszyna stanów, initialize(), popup flow (openOAuthPopup, waitForOAuthPopup, waitForOAuthSession), fallback polling, sendResetLink, resendConfirmation |
 | `apps/web/src/pages/AuthCallbackPage.tsx` | Strona callback OAuth — wykonuje PKCE, wysyła postMessage (popup) lub navigate (redirect fallback) |
 | `apps/web/src/app/AppShell.tsx` | `GoogleAuthStatus` — nieblokujący toast "Logowanie przez Google..." gdy `isOAuthInProgress` |
-| `packages/ui/src/AuthModal.tsx` | Modal logowania — zamyka się od razu po starcie Google |
+| `packages/ui/src/AuthModal.tsx` | Modal logowania — zamyka się od razu po starcie Google; forgot/resend confirmation UI |
 | `apps/web/src/lib/logger.ts` | Logger strukturalny z poziomami debug/log/error |
 
 ---
@@ -422,11 +500,56 @@ Gdy użytkownik wyląduje na `/auth/callback` z `?code=` (np. czysty redirect, b
 
 ---
 
+## Z. Przedprodukcyjna checklista — S-AUTH
+
+Przed wypuszczeniem S-AUTH na produkcję wykonaj kolejno:
+
+### Z.1 Supabase Dashboard — redirect allowlist
+Wejdź w Supabase Dashboard → Authentication → Settings → Redirect URLs.
+- [ ] `https://<twoja-domena>.app/auth/callback` (już istnieje dla OAuth — zweryfikuj)
+- [ ] `https://<twoja-domena>.app/auth/reset-password` (NOWY dla resetu hasła)
+- [ ] Opcjonalnie wildcard: `https://<twoja-domena>.app/**` (pokrywa wszystkie ścieżki)
+
+### Z.2 SMTP / email delivery
+Reset hasła i confirmation email wymagają działającego SMTP.
+- [ ] Supabase Dashboard → Authentication → Settings → SMTP — skonfiguruj (Postmark / SendGrid / inny)
+- [ ] Ustaw `auth.email.enable_confirmations = true` w projekcie Supabase (domyślnie `false`)
+- [ ] Zweryfikuj `max_frequency` — domyślnie `1s`, dla produkcji warto podnieść do `60s`
+
+### Z.3 Test flow reset hasła end-to-end
+1. [ ] Wyślij reset link z AuthModal (forgot mode)
+2. [ ] Sprawdź, czy email dotarł (Postmark dashboard / Inbucket lokalnie)
+3. [ ] Kliknij link — czy ląduje na `/auth/reset-password`?
+4. [ ] Czy PKCE exchange wykonał się (sesja dostępna)?
+5. [ ] Ustaw nowe hasło — czy `auth.updateUser()` działa?
+6. [ ] Zaloguj się nowym hasłem
+
+### Z.4 Test email confirmation flow
+1. [ ] Zarejestruj nowe konto (signUp z emailem)
+2. [ ] Sprawdź, czy confirmation email dotarł
+3. [ ] Nie klikaj linku — spróbuj się zalogować → czy widzisz komunikat „Potwierdź email"?
+4. [ ] Kliknij „Resend confirmation" → czy drugi email dotarł?
+5. [ ] Kliknij link potwierdzający → czy lądujesz w aplikacji?
+
+### Z.5 Test istniejących flowów (regresja)
+- [ ] Google OAuth login (popup) — czy działa?
+- [ ] email/password login — czy działa?
+- [ ] Logout — czy czyści stan i board?
+- [ ] Guest — czy nadal działa bez logowania?
+- [ ] SignUp z nowym emailem — czy profil tworzy się poprawnie?
+
+### Z.6 Ustawienia produkcji Supabase
+- [ ] `auth.email.enable_confirmations = true` (jeśli chcesz wymagać potwierdzenia emaila)
+- [ ] `auth.email.secure_password_change = true` (wymaga recent login do zmiany hasła)
+- [ ] `minimum_password_length = 8` (lub więcej)
+- [ ] `auth.email.max_frequency` — ograniczenie wysyłki (np. `60s`)
+- [ ] `enable_refresh_token_rotation = true` (bezpieczeństwo)
+
+---
+
 ## Historia zmian
 
 | Data | Zmiana |
 |---|---|
-| 2026-06-18 | Pierwsza wersja — popup flow z postMessage |
-| 2026-06-18 | Hotfix v1: bezpośredni redirect na /app (wycofany) |
-| 2026-06-18 | Hotfix v2: przywrócony /auth/callback, naprawiony cleanAuthCallbackUrl |
+| 2026-06-22 | Dodano sekcje 12 (Reset hasła), 13 (Email confirmation), Z (Przedprodukcyjna checklista) |
 | 2026-06-20 | Dokumentacja auth flow |

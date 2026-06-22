@@ -21,6 +21,8 @@ import {
   onAuthStateChange,
   getPreferences,
   updatePreferences,
+  resetPasswordForEmail as supabaseResetPasswordForEmail,
+  resendConfirmationEmail as supabaseResendConfirmation,
   supabase,
   type User,
 } from '../lib/supabase';
@@ -42,6 +44,8 @@ interface AuthState {
   signUp: (email: string, password: string, fullName?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  sendResetLink: (email: string) => Promise<void>;
+  resendConfirmation: (email: string) => Promise<void>;
   clearError: () => void;
   /** DEV-ONLY: instantly "log in" as a fake user with the given plan,
    *  without going through Google/Supabase. Used by the "Test login"
@@ -543,7 +547,21 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign in failed';
-          set({ isLoading: false, error: message });
+
+          // Supabase returns a generic error for unconfirmed emails.
+          // Detect the pattern and forward a clearer sentinel key so the
+          // UI can show "check your inbox / resend" instead of a raw error.
+          const msgLower = message.toLowerCase();
+          const isUnconfirmed =
+            msgLower.includes('email_not_confirmed') ||
+            msgLower.includes('email not confirmed') ||
+            msgLower.includes('confirm') ||
+            message === 'Sign in failed';
+
+          set({
+            isLoading: false,
+            error: isUnconfirmed ? 'auth.errorEmailNotConfirmed' : message,
+          });
           throw error;
         }
       },
@@ -713,6 +731,45 @@ export const useAuthStore = create<AuthState>()(
 
       // Clear error
       clearError: () => set({ error: null }),
+
+      // Send reset password email
+      sendResetLink: async (email: string) => {
+        if (!isSupabaseEnabled()) {
+          set({ error: 'auth.errorOfflineMode' });
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          await supabaseResetPasswordForEmail(email);
+          set({ isLoading: false });
+          // Don't clear the form state — let the modal show success message
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to send reset link';
+          set({ isLoading: false, error: message });
+          throw error;
+        }
+      },
+
+      // Resend confirmation email
+      resendConfirmation: async (email: string) => {
+        if (!isSupabaseEnabled()) {
+          set({ error: 'auth.errorOfflineMode' });
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          await supabaseResendConfirmation(email);
+          set({ isLoading: false, error: null });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to resend confirmation email';
+          set({ isLoading: false, error: message });
+          throw error;
+        }
+      },
 
       // ===== DEV-ONLY TEST AUTH =====
       // Lets devs flip between guest/free/pro/team instantly without

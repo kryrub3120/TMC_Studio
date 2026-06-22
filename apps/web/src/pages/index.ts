@@ -13,3 +13,4 @@ export { RefundsPage } from './RefundsPage';
 export { LegalNoticePage } from './LegalNoticePage';
 export { AccessibilityPage } from './AccessibilityPage';
 export { AuthCallbackPage } from './AuthCallbackPage';
+export { ResetPasswordPage } from './ResetPasswordPage';

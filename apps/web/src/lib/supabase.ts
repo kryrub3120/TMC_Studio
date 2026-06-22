@@ -170,6 +170,7 @@ export async function signUp(email: string, password: string, fullName?: string)
     password,
     options: {
       data: { full_name: fullName },
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
     },
   });
   
@@ -268,6 +269,33 @@ export async function mergePreferences(preferences: Partial<UserPreferences>): P
     p_preferences: preferences,
   });
   if (error) throw error;
+}
+
+/** Send reset password email via Supabase Auth.
+ *  PKCE code exchange happens on /auth/reset-password route directly.
+ *  Supabase SDK detectSessionInUrl handles the exchange automatically. */
+export async function resetPasswordForEmail(email: string) {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/reset-password`,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/** Resend confirmation email after signUp. */
+export async function resendConfirmationEmail(email: string) {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+
+  if (error) throw error;
+  return data;
 }
 
 /** Change password */

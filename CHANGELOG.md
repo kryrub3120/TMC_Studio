@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-22
+
+### Added
+- **S-AUTH: Reset hasła end-to-end (S1)** — backend `resetPasswordForEmail`, action `sendResetLink` w store, strona `/auth/reset-password` z formularzem nowego hasła, naprawiony forgot mode w AuthModal.
+- **S-AUTH: Email confirmation flow (S2)** — `resendConfirmationEmail` w backend, detekcja niepotwierdzonego emaila przy loginie, przycisk resend w AuthModal, i18n w en/pl/es.
+- **S-AUTH: Sync debt cleanup (S3)** — usunięto martwą kolumnę `preferences_updated_at` + trigger; beforeunload flush już używa atomic JSONB-merge przez RPC.
+
+### Fixed
+- **S-AUTH: ResetPasswordPage i18n** — wszystkie user-facing stringi przez `useTranslation()` z `@tmc/ui`, 13 nowych kluczy auth.* w en/pl/es.
+- **S-AUTH: Recovery flow dokumentacja** — udokumentowano decyzję o bezpośrednim redirect na `/auth/reset-password` (zamiast przez AuthCallbackPage).
+
 ## [0.8.0] - 2026-06-22
 
 ### Added

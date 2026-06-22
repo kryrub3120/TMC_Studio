@@ -12,6 +12,7 @@ import {
   LegalNoticePage,
   AccessibilityPage,
   AuthCallbackPage,
+  ResetPasswordPage,
 } from './pages';
 import { LanguageProvider } from '@tmc/ui';
 import { UpdatePrompt } from './components/UpdatePrompt';
@@ -62,6 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/legal" element={<LegalNoticePage />} />
           <Route path="/accessibility" element={<AccessibilityPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         </Routes>
         <CookieConsentBanner />
       </Router>

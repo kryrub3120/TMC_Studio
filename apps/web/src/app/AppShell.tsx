@@ -65,6 +65,8 @@ export function AppShell() {
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const sendResetLink = useAuthStore((s) => s.sendResetLink);
+  const resendConfirmation = useAuthStore((s) => s.resendConfirmation);
   const clearAuthError = useAuthStore((s) => s.clearError);
   // DEV-ONLY: see useAuthStore.devLogin
   const devLogin = useAuthStore((s) => s.devLogin);
@@ -382,6 +384,8 @@ export function AppShell() {
             throw error;
           }
         }}
+        onSendResetLink={sendResetLink}
+        onResendConfirmation={resendConfirmation}
         // DEV-ONLY: "Test login" buttons in the auth modal. Remove this
         // prop (and useAuthStore.devLogin) once done testing.
         onDevLogin={import.meta.env.DEV ? (tier) => {
