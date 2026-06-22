@@ -13,7 +13,7 @@ import type { Cycle } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
 import { ENTITLEMENTS_BY_PLAN, type Plan } from '../lib/entitlements';
-import { usePublicDarkTheme } from './PublicPageShell';
+import { usePublicDarkTheme, PublicFooter } from './PublicPageShell';
 
 const PLANS: Plan[] = ['guest', 'free', 'pro', 'team'];
 
@@ -227,16 +227,8 @@ export function PricingPage() {
         </p>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-surface/60">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-8">
-          <Link to="/" className="text-base text-muted hover:text-text">TMC Studio</Link>
-          <Link to="/privacy" className="text-base text-muted hover:text-text">{t('footer.privacy')}</Link>
-          <Link to="/terms" className="text-base text-muted hover:text-text">{t('footer.terms')}</Link>
-          <Link to="/cookies" className="text-base text-muted hover:text-text">{t('footer.cookies')}</Link>
-          <Link to="/refunds" className="text-base text-muted hover:text-text">{t('landing.footer.refunds')}</Link>
-        </div>
-      </footer>
+      {/* Footer — shared PublicFooter */}
+      <PublicFooter />
     </div>
   );
 }

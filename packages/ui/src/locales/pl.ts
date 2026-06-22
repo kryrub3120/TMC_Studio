@@ -91,9 +91,19 @@ export const pl: Dictionary = {
         "titlePre": "Narysuj dowolną taktykę w ",
         "titleHighlight": "30 sekund",
         "subtitle": "Błyskawiczna tablica taktyczna dla trenerów, analityków i twórców. Działa w przeglądarce i na komputerze — Twoje tablice synchronizują się wszędzie.",
+        "trustLine": "Bez konta · Darmowe na zawsze · Przeglądarka i desktop",
         "ctaPrimary": "Otwórz tablicę — bez rejestracji",
         "ctaSecondary": "Zobacz plany",
         "demoAlt": "Animacja tworzenia taktyki"
+    },
+    "credibility": {
+        "title": "Zaufane przez trenerów na całym świecie",
+        "item1Metric": "50 000+",
+        "item1Label": "narysowanych taktyk",
+        "item2Metric": "4.9★",
+        "item2Label": "satysfakcji trenerów",
+        "item3Metric": "180+",
+        "item3Label": "krajów używa TMC Studio"
     },
     "how": {
         "title": "Od pomysłu do taktyki w 30 sekund",
@@ -140,6 +150,35 @@ export const pl: Dictionary = {
         "cta": "Porównaj plany",
         "free": "Darmowy",
         "pro": "Pro"
+    },
+    "spotlight": {
+        "title": "Stworzone do Twojego sposobu pracy",
+        "kbTitle": "Najpierw klawiatura. Wszystko ma skrót.",
+        "kbDesc": "Naciśnij Cmd+K, by otworzyć paletę poleceń, albo A dla strzałek, P dla zawodników, N dla nowych kroków. Ręce nie schodzą z klawiatury — przeciągaj, zmieniaj rozmiar i edytuj bez sięgania po mysz.",
+        "stepsTitle": "Eksportuj punkty do omówienia, nie zrzuty ekranu.",
+        "stepsDesc": "Buduj taktyki krok po kroku, a potem wyeksportuj całą sekwencję jako animowany GIF lub wielostronicowy PDF. Trenerzy używają tego do odpraw, twórcy zamieniają w content social media.",
+        "syncTitle": "Przeglądarka. Desktop. Wszędzie.",
+        "syncDesc": "Zacznij taktykę na laptopie, dopracuj na desktopie. Synchronizacja w chmurze aktualizuje każdą tablicę — bez ręcznego przenoszenia, bez chaosu wersji."
+    },
+    "faq": {
+        "title": "Najczęściej zadawane pytania",
+        "q1": "Czy to naprawdę darmowe?",
+        "a1": "Tak. Tryb Gość nie wymaga konta ani karty kredytowej. Załóż darmowe konto, a dostajesz 3 projekty z synchronizacją w chmurze na zawsze — bez okresu próbnego, bez wygaśnięcia.",
+        "q2": "Co mogę zrobić jako Gość?",
+        "a2": "Zacznij rysować od razu — bez konta, bez rejestracji. Dostajesz 1 projekt z 5 krokami i eksportem PNG. Gotowy zapisywać? Załóż darmowe konto jednym kliknięciem.",
+        "q3": "Czy muszę coś pobierać?",
+        "a3": "Nie. TMC Studio działa w każdej nowoczesnej przeglądarce — Chrome, Safari, Firefox, Edge. Opcjonalna aplikacja desktopowa (macOS, Windows) jest dla trenerów, którzy chcą okiennego trybu i dostępu offline.",
+        "q4": "Jakie formaty eksportu są dostępne?",
+        "a4": "Gość i Free: PNG i JPG. Pro dodaje animacje GIF i PDF ze wszystkimi krokami. Każdy format jest jedno kliknięcie lub skrót klawiszowy.",
+        "q5": "Jak działa rozliczenie Pro?",
+        "a5": "Pro kosztuje 9 USD/miesiąc lub 90 USD/rok (oszczędzasz 17%). Anuluj w każdej chwili — dostęp trwa do końca opłaconego okresu. Ceny dla klientów UE zawierają VAT.",
+        "q6": "Czy cały sztab może używać Team?",
+        "a6": "Tak. Team daje 5 miejsc z indywidualnymi obszarami roboczymi i wspólnym billingiem. Każdy trener zarządza własnymi tablicami, a Ty dostajesz jedną fakturę. 29 USD/miesiąc lub 290 USD/rok."
+    },
+    "finalCta": {
+        "title": "Zacznij rysować w 30 sekund.",
+        "desc": "Bez konta, bez pobierania, bez karty kredytowej. Tylko Ty i boisko.",
+        "cta": "Otwórz tablicę — bez rejestracji"
     },
     "footer": {
         "tagline": "Szybka, profesjonalna tablica taktyczna.",
@@ -1223,6 +1262,7 @@ export const pl: Dictionary = {
     },
   },
   legal: {
+    draftBanner: '⚠ To jest szkic — oczekuje na przegląd prawny.',
     updated: 'Ostatnia aktualizacja: {{date}}',
     back: 'Wróć do TMC Studio',
     privacy: {

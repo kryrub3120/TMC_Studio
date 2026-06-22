@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-22
+
+### Added
+- **S-SITE: Pełny redesign LandingPage (S1)** — 11 sekcji w stylu Linear/Vercel: sticky nav + Download link, hero z dużym animowanym demo tablicy (zawodnicy+strzałki+kroki+eksport), linia zaufania pod CTA, pasek wiarygodności z metrykami, How it works z mini-wizualami, 4 pillar cards z outcome-focused copy, 3 naprzemienne feature spotlights (keyboard-first/steps&export/sync everywhere), use cases z CTA per persona, pricing teaser z 3 kartami (Free/Pro/Team) z prawdziwymi limitami, FAQ accordion (6 Q&A — landing.faq.*), final CTA band. Hero H1 `text-5xl→md:text-7xl`, typograficzna skala, spójny rytm sekcji `py-20→md:py-24`, tylko tokeny design systemu.
+- **S-SITE: i18n — nowe klucze** `landing.credibility.*`, `landing.spotlight.*`, `landing.faq.*`, `landing.finalCta.*`, `landing.hero.trustLine` w en/pl/es (identyczna struktura).
+- **S-SITE: Spójny PublicFooter** w PublicPageShell + LandingPage + PricingPage, usunięto duplikację footer HTML.
+- **S-SITE: Sitemap — dodano /download URL**.
+- **S-SITE: Design system compliance** — zastąpiono hardcoded `text-slate-950`/`text-slate-500` tokenami `text-text`/`text-muted` we wszystkich legal pages.
+- **S-SITE: LegalReviewBanner** (S3) — wizualny znacznik "draft — pending legal review" na wszystkich legal pages.
+- **i18n: klucz `legal.draftBanner`** — dodany w en/pl/es.
+
 ## [0.8.0] - 2026-06-22
 
 ### Added

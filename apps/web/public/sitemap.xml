@@ -10,6 +10,10 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://tmcstudio.app/download</loc>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://tmcstudio.app/pricing</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://tmcstudio.app/pricing"/>
     <xhtml:link rel="alternate" hreflang="pl" href="https://tmcstudio.app/pricing"/>
