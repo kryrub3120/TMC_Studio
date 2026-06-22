@@ -45,3 +45,24 @@ export const PRICE_TO_TIER: Record<string, 'pro' | 'team'> = {
 export function getTierFromPriceId(priceId: string): 'free' | 'pro' | 'team' {
   return PRICE_TO_TIER[priceId] ?? 'free';
 }
+
+/**
+ * Map Stripe Price IDs to billing cycles
+ * Used by create-checkout to set billing_cycle metadata
+ */
+export const PRICE_TO_CYCLE: Record<string, 'monthly' | 'yearly'> = {
+  // Pro plans
+  [STRIPE_PRICES.pro.monthly]: 'monthly',
+  [STRIPE_PRICES.pro.yearly]: 'yearly',
+  
+  // Team plans
+  [STRIPE_PRICES.team.monthly]: 'monthly',
+  [STRIPE_PRICES.team.yearly]: 'yearly',
+};
+
+/**
+ * Get billing cycle from Price ID
+ */
+export function getCycleFromPriceId(priceId: string): 'monthly' | 'yearly' {
+  return PRICE_TO_CYCLE[priceId] ?? 'monthly';
+}

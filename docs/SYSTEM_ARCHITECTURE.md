@@ -533,7 +533,8 @@ Główna karta                     Popup OAuth
 | `create-portal-session.ts` | Stripe Customer Portal session |
 | `stripe-webhook.ts` | Stripe webhook handler (subscription sync) |
 | `health.ts` | Health check endpoint |
-| `_stripeConfig.ts` | Shared Stripe config (price IDs, tier mapping) |
+| `_stripeConfig.ts` | Shared Stripe config (price IDs, tier mapping, billing cycle mapping) |
+| `checkRateLimit.ts` | (in `_rateLimit.ts`) In-memory rate limiter for billing endpoints |
 
 ---
 

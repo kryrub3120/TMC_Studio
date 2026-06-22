@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from './_rateLimit';
 import { getCorsHeaders, handlePreflight } from './_cors';
 import { verifyAuth, AuthError } from './_auth';
-import { STRIPE_PRICES, getTierFromPriceId } from './_stripeConfig';
+import { STRIPE_PRICES, getTierFromPriceId, getCycleFromPriceId } from './_stripeConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-12-15.clover',
@@ -140,9 +140,10 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       priceId?: string;
       successUrl?: string;
       cancelUrl?: string;
+      billingCycle?: string;
     } = JSON.parse(event.body || '{}');
 
-    const { priceId, successUrl, cancelUrl } = body;
+    const { priceId, successUrl, cancelUrl, billingCycle } = body;
 
     // ── Validate priceId ─────────────────────────────────────────
     if (!priceId) {
@@ -187,7 +188,8 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
     // ── Determine tier from priceId ──────────────────────────────
     const tier = getTierFromPriceId(priceId);
-    const billingCycle = priceId.includes('yearly') ? 'yearly' : 'monthly';
+    // Use billingCycle from body (preferred) with fallback to priceId derivation
+    const cycle = billingCycle ?? getCycleFromPriceId(priceId);
 
     // ── Build session params ─────────────────────────────────────
     // NOTE: client_reference_id is set from AUTH, not from body.
@@ -216,7 +218,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
           source: 'tmc-studio-web',
           user_id: authUser.id,
           plan: tier,
-          billing_cycle: billingCycle,
+          billing_cycle: cycle,
           created_at: new Date().toISOString(),
         },
       },

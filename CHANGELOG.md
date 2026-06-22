@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-06-22
+
+### Fixed
+- **S-BILLING S1**: Bug rocznego cyklu w PricingModal — priceId yearly nie propagował poprawnie billing_cycle do create-checkout. Dodano `billingCycle` w body requestu, `getCycleFromPriceId()` w `_stripeConfig.ts`, reset `pricingUpgradeCycle` przy zamknięciu modala. (PATCH)
+- **S-BILLING S2**: Webhook hardening — dodano 17 testów stripe-webhook: signature verification, idempotencja (duplicate → 200 z `duplicate: true`), checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, rate limiting, unknown event. (PATCH)
+
+### Added
+- **S-BILLING S1**: Spec dla sprintu S-SITE — jak /pricing przekazuje cykl do PricingModal (`thoughts/2026-06-22/1808_spec-s-site-cycle-propagation.md`)
+- **S-BILLING S2**: Testy `getCycleFromPriceId` i `PRICE_TO_CYCLE` w billing.security.test.ts (52 testy, wszystkie zielone)
+
 ## [0.8.0] - 2026-06-22
 
 ### Added

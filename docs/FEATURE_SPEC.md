@@ -1863,9 +1863,16 @@ TMC Studio has four plan types:
 - Auth required for checkout: guest → sign-in first.
 - Checkout via `create-checkout` Netlify Function (CORS + auth enforced server-side).
 
-**Cycle propagation:**
-- `/pricing?upgrade=pro&cycle=yearly` → modal opens on yearly → yearly priceId sent to Stripe.
+**Cycle propagation (S-BILLING):**
+- `/pricing?upgrade=pro&cycle=yearly` → AppShell czyta `cycle` z URL → `setPricingUpgradeCycle('yearly')` → PricingModal `initialCycle='yearly'` → `billingCycle: 'yearly'` w body checkout requestu.
+- create-checkout używa `billingCycle` z body (preferowane) z fallbackiem do `getCycleFromPriceId()` z `_stripeConfig.ts`.
+- `getCycleFromPriceId()` mapuje price ID → `'monthly'` | `'yearly'` przez `PRICE_TO_CYCLE` (ta sama struktura co `PRICE_TO_TIER`).
 - Default cycle: monthly.
+- Cykl resetowany do 'monthly' przy zamknięciu modala (`onClosePricingModal`), by nie zostawał stale na 'yearly'.
+
+**billing_cycle metadata:**
+- create-checkout ustawia `subscription_data.metadata.billing_cycle` z powyższej wartości.
+- Webhook stripe-webhook nie używa bezpośrednio billing_cycle — tier dedukowany przez `getTierFromPriceId()`. billing_cycle jest informacyjny w metadata.
 
 ### 16.3 Prices (TEST mode)
 

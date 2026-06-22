@@ -394,7 +394,10 @@ export function AppShell() {
 
         // Pricing Modal
         pricingModalOpen={billingController.pricingModalOpen}
-        onClosePricingModal={() => billingController.closePricingModal()}
+        onClosePricingModal={() => {
+          billingController.closePricingModal();
+          setPricingUpgradeCycle('monthly');
+        }}
         onOpenAuthModal={() => setAuthModalOpen(true)}
         authIsPro={authIsPro}
         authIsAuthenticated={authIsAuthenticated}
