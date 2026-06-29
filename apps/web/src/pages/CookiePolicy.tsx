@@ -28,7 +28,7 @@ export function CookiePolicy() {
       </LegalSection>
 
       <LegalSection title={t('legal.cookies.types.title')}>
-        <h3 className="font-semibold text-slate-950">{t('legal.cookies.types.essentialTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.cookies.types.essentialTitle')}</h3>
         <p>{t('legal.cookies.types.essentialBody')}</p>
         <LegalList>
           {essentialKeys.map((key) => (
@@ -38,7 +38,7 @@ export function CookiePolicy() {
           ))}
         </LegalList>
 
-        <h3 className="font-semibold text-slate-950">{t('legal.cookies.types.preferenceTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.cookies.types.preferenceTitle')}</h3>
         <p>{t('legal.cookies.types.preferenceBody')}</p>
         <LegalList>
           {preferenceKeys.map((key) => (
@@ -48,7 +48,7 @@ export function CookiePolicy() {
           ))}
         </LegalList>
 
-        <h3 className="font-semibold text-slate-950">{t('legal.cookies.types.analyticsTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.cookies.types.analyticsTitle')}</h3>
         <p>{t('legal.cookies.types.analyticsBody')}</p>
         <LegalList>
           {analyticsKeys.map((key) => (
@@ -57,7 +57,7 @@ export function CookiePolicy() {
             </li>
           ))}
         </LegalList>
-        <p className="text-sm text-slate-500">{t('legal.cookies.types.analyticsNote')}</p>
+        <p className="text-sm text-muted">{t('legal.cookies.types.analyticsNote')}</p>
       </LegalSection>
 
       <LegalSection title={t('legal.cookies.thirdParty.title')}>
@@ -81,12 +81,12 @@ export function CookiePolicy() {
       </LegalSection>
 
       <LegalSection title={t('legal.cookies.manage.title')}>
-        <h3 className="font-semibold text-slate-950">{t('legal.cookies.manage.browserTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.cookies.manage.browserTitle')}</h3>
         <p>{t('legal.cookies.manage.browserBody')}</p>
         <LegalList>
           {browserKeys.map((key) => <li key={key}>{t(`legal.cookies.manage.browser.${key}`)}</li>)}
         </LegalList>
-        <h3 className="font-semibold text-slate-950">{t('legal.cookies.manage.impactTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.cookies.manage.impactTitle')}</h3>
         <p><strong>{t('legal.cookies.manage.important')}</strong> {t('legal.cookies.manage.impactBody')}</p>
       </LegalSection>
 

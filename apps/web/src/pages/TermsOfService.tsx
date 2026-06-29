@@ -25,31 +25,31 @@ export function TermsOfService() {
       </LegalSection>
 
       <LegalSection title={t('legal.terms.accounts.title')}>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.accounts.registrationTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.accounts.registrationTitle')}</h3>
         <p>{t('legal.terms.accounts.registration')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.accounts.securityTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.accounts.securityTitle')}</h3>
         <p>{t('legal.terms.accounts.security')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.accounts.terminationTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.accounts.terminationTitle')}</h3>
         <p>{t('legal.terms.accounts.termination')}</p>
       </LegalSection>
 
       <LegalSection title={t('legal.terms.payments.title')}>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.payments.pricingTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.payments.pricingTitle')}</h3>
         <p>{t('legal.terms.payments.pricing')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.payments.billingTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.payments.billingTitle')}</h3>
         <p>{t('legal.terms.payments.billing')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.payments.refundsTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.payments.refundsTitle')}</h3>
         <p>{t('legal.terms.payments.refunds')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.payments.cancellationTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.payments.cancellationTitle')}</h3>
         <p>{t('legal.terms.payments.cancellation')}</p>
       </LegalSection>
 
       <LegalSection title={t('legal.terms.content.title')}>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.content.ownershipTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.content.ownershipTitle')}</h3>
         <p>{t('legal.terms.content.ownership')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.content.licenseTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.content.licenseTitle')}</h3>
         <p>{t('legal.terms.content.license')}</p>
-        <h3 className="font-semibold text-slate-950">{t('legal.terms.content.prohibitedTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.terms.content.prohibitedTitle')}</h3>
         <p>{t('legal.terms.content.prohibitedIntro')}</p>
         <LegalList>
           {prohibitedKeys.map((key) => <li key={key}>{t(`legal.terms.content.prohibited.${key}`)}</li>)}

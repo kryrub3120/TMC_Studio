@@ -7,15 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.8.1] - 2026-06-22
+## [0.9.0] - 2026-06-22
+
+### Added
+- **S-SITE: Pełny redesign LandingPage (S1)** — 11 sekcji w stylu Linear/Vercel: sticky nav + Download link, hero z dużym animowanym demo tablicy (zawodnicy+strzałki+kroki+eksport), linia zaufania pod CTA, pasek wiarygodności z metrykami, How it works z mini-wizualami, 4 pillar cards z outcome-focused copy, 3 naprzemienne feature spotlights (keyboard-first/steps&export/sync everywhere), use cases z CTA per persona, pricing teaser z 3 kartami (Free/Pro/Team) z prawdziwymi limitami, FAQ accordion (6 Q&A — landing.faq.*), final CTA band. Hero H1 `text-5xl→md:text-7xl`, typograficzna skala, spójny rytm sekcji `py-20→md:py-24`, tylko tokeny design systemu.
+- **S-SITE: i18n — nowe klucze** `landing.credibility.*`, `landing.spotlight.*`, `landing.faq.*`, `landing.finalCta.*`, `landing.hero.trustLine` w en/pl/es (identyczna struktura).
+- **S-SITE: Spójny PublicFooter** w PublicPageShell + LandingPage + PricingPage, usunięto duplikację footer HTML.
+- **S-SITE: Sitemap — dodano /download URL**.
+- **S-SITE: Design system compliance** — zastąpiono hardcoded `text-slate-950`/`text-slate-500` tokenami `text-text`/`text-muted` we wszystkich legal pages.
+- **S-SITE: LegalReviewBanner** (S3) — wizualny znacznik "draft — pending legal review" na wszystkich legal pages.
+- **i18n: klucz `legal.draftBanner`** — dodany w en/pl/es.
+- **S-BILLING S1**: Spec dla sprintu S-SITE — jak /pricing przekazuje cykl do PricingModal (`thoughts/2026-06-22/1808_spec-s-site-cycle-propagation.md`)
+- **S-BILLING S2**: Testy `getCycleFromPriceId` i `PRICE_TO_CYCLE` w billing.security.test.ts (52 testy, wszystkie zielone)
 
 ### Fixed
 - **S-BILLING S1**: Bug rocznego cyklu w PricingModal — priceId yearly nie propagował poprawnie billing_cycle do create-checkout. Dodano `billingCycle` w body requestu, `getCycleFromPriceId()` w `_stripeConfig.ts`, reset `pricingUpgradeCycle` przy zamknięciu modala. (PATCH)
 - **S-BILLING S2**: Webhook hardening — dodano 17 testów stripe-webhook: signature verification, idempotencja (duplicate → 200 z `duplicate: true`), checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, rate limiting, unknown event. (PATCH)
-
-### Added
-- **S-BILLING S1**: Spec dla sprintu S-SITE — jak /pricing przekazuje cykl do PricingModal (`thoughts/2026-06-22/1808_spec-s-site-cycle-propagation.md`)
-- **S-BILLING S2**: Testy `getCycleFromPriceId` i `PRICE_TO_CYCLE` w billing.security.test.ts (52 testy, wszystkie zielone)
 
 ## [0.8.0] - 2026-06-22
 
