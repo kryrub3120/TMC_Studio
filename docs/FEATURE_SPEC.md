@@ -6,8 +6,8 @@
 
 ## Meta
 
-- **Version:** 0.7.0 (patrz `docs/VERSIONING.md`)
-- **Last Updated:** 2026-06-20 (sec 15: auth flow, sec 16: pricing & monetization)
+- **Version:** 0.8.0 (patrz `docs/VERSIONING.md`)
+- **Last Updated:** 2026-06-22 (sec 17: user preferences & cloud sync, sec 18: UX hardening)
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -58,7 +58,9 @@
 14. [Onboarding & Help](#14-onboarding--help)
 15. [Authentication & Auth Flow](#15-authentication--auth-flow)
 16. [Pricing & Plans](#16-pricing--plans)
-17. [Appendices](#appendices)
+17. [User Preferences & Cloud Sync](#17-user-preferences--cloud-sync)
+18. [UX Hardening (Flow & Bug Fixes)](#18-ux-hardening-flow--bug-fixes)
+19. [Appendices](#appendices)
 
 ---
 
@@ -1904,6 +1906,82 @@ Team plan does **not** include shared library/shared projects before launch (onl
 
 - **Not implemented.** Free plan has enough premium-adjacent features to demonstrate value.
 - Re-evaluate post-launch with activation analytics.
+
+---
+
+## 17. User Preferences & Cloud Sync
+
+### 17.1 Overview
+
+User preferences (theme, grid, snap, element style defaults) are stored **local-first** with cloud sync.
+
+| Aspect | Detail |
+|--------|--------|
+| **Local store** | Zustand persist in `tmc-ui-settings` (localStorage) |
+| **Cloud storage** | `profiles.preferences` JSONB (Supabase) |
+| **Sync trigger** | Debounced 600ms after any preference change |
+| **Conflict resolution** | Last-write-wins via `updated_at` timestamp; cloud JSONB-merge through RPC `merge_preferences()` |
+| **First login** | Local state pushed to cloud if cloud is empty |
+| **Auth restore** | All preferences loaded from cloud on session init (4 auth paths unified through `applyCloudPreferences()`) |
+
+### 17.2 Synced Fields
+
+```
+theme, gridVisible, snapEnabled, gridSize, defaultArrowType, stepDuration,
+arrowDefaults (strokeWidth per type, color per type, startHead, endHead),
+zoneDefaults (borderStyle, borderWidth, borderColor, showCorners, fillColor, opacity),
+bottomBar (height, collapsed), inspector (width)
+```
+
+### 17.3 Flush on Close
+
+Pending preferences are flushed atomically via `keepalive fetch` to `/rest/v1/rpc/merge_preferences` — no data loss on tab close within the 600ms debounce window.
+
+### 17.4 RLS & Security
+
+- RPC `merge_preferences` uses `auth.uid()` — no IDOR possible.
+- Revoked from `PUBLIC`/`anon`; only `authenticated` role can execute.
+
+---
+
+## 18. UX Hardening (Flow & Bug Fixes)
+
+### 18.1 Guest Login Flow
+
+- **No "Log Out" for guests** — `AccountMenu` renders as a single "Sign In" button when `plan === 'guest'`.
+- **Save triggers auth CTA** — guest pressing Cmd+S sees toast "Sign in to save projects — it's free" instead of "Saved locally".
+- **Google login** — auth modal closes immediately on click; OAuth popup flow continues in background.
+
+### 18.2 Account Menu (A3)
+
+The account dropdown (top-right avatar) now has 6 top-level items:
+
+1. Editor options → opens Settings → Preferences
+2. Pitch settings → opens Settings → Pitch
+3. Squad settings → opens Settings → Squad
+4. Your profile → opens Settings → Profile
+5. — (separator, with Upgrade to Pro for free users)
+6. Log Out
+
+Old label "Account & Billing" removed.
+
+### 18.3 Context Menu i18n (A4)
+
+All `contextMenu.*` keys populated in `en.ts`, `pl.ts`, `es.ts` (26+ keys covering headers, arrow types, zone shapes, actions). No raw keys visible in right-click menus.
+
+### 18.4 Double-Click → Properties Tab (A8)
+
+Double-clicking any element on the canvas switches the RightInspector to the "Props" tab (from any other tab). Stage handler identifies element clicks; `e.cancelBubble` removed from `PlayerNode.handleDblClick` and `TextNode.handleDblClick` to allow propagation.
+
+### 18.5 Help Sidebar Contrast (A7)
+
+- `text-muted/70` → `text-muted` in `HelpSidebar.tsx` sub-headers.
+- `text-muted/60` → `text-muted` in `FaqCategory.tsx` item count.
+- `placeholder:text-muted/50` → `placeholder:text-muted` in `FaqSearch.tsx`.
+
+### 18.6 "Set as Default" Persistence (A6)
+
+`arrowDefaults` and `zoneDefaults` persist in Zustand (via `partialize` in `useUIStore.ts`) and survive page reload. New arrows/zones created via `addArrowAtCursor`/`addZoneAtCursor` read these defaults.
 
 ---
 

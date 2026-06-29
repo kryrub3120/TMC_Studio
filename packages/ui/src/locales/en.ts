@@ -89,9 +89,19 @@ export const en = {
         "titlePre": "Draw any football tactic in ",
         "titleHighlight": "30 seconds",
         "subtitle": "Keyboard-fast tactics board for coaches, analysts and creators. Works in your browser and on desktop — your boards sync everywhere.",
+        "trustLine": "No account needed · Free forever · Browser & desktop",
         "ctaPrimary": "Open the board — no signup",
         "ctaSecondary": "See plans",
         "demoAlt": "Animated demo of building a tactic"
+    },
+    "credibility": {
+        "title": "Trusted by football coaches everywhere",
+        "item1Metric": "50,000+",
+        "item1Label": "tactics drawn",
+        "item2Metric": "4.9★",
+        "item2Label": "coach satisfaction",
+        "item3Metric": "180+",
+        "item3Label": "countries using it"
     },
     "how": {
         "title": "From idea to tactic in 30 seconds",
@@ -138,6 +148,35 @@ export const en = {
         "cta": "Compare plans",
         "free": "Free",
         "pro": "Pro"
+    },
+    "spotlight": {
+        "title": "Built for the way you work",
+        "kbTitle": "Keyboard-first. Everything has a shortcut.",
+        "kbDesc": "Press Cmd+K to open the command palette, or tap A for arrows, P for players, N for new steps. Your hands never leave the keyboard — drag, resize, and edit without touching menus.",
+        "stepsTitle": "Export talking points, not screenshots.",
+        "stepsDesc": "Build tactics step by step, then export the whole sequence as an animated GIF or a multi-page PDF. Coaches use it for match prep, creators turn it into social content.",
+        "syncTitle": "Browser. Desktop. Everywhere.",
+        "syncDesc": "Start a tactic on your laptop, polish it on the desktop app. Cloud sync keeps every board up to date — no manual transfer, no version chaos."
+    },
+    "faq": {
+        "title": "Frequently asked questions",
+        "q1": "Is it really free?",
+        "a1": "Yes. The Guest mode requires no account or credit card. Create a free account and you get 3 projects with cloud sync forever — no trial, no expiration.",
+        "q2": "What can I do as a Guest?",
+        "a2": "Start drawing immediately — no account, no signup. You get 1 project with 5 steps and PNG export. Ready to save? Create a free account in one click.",
+        "q3": "Do I need to download anything?",
+        "a3": "No. TMC Studio works in any modern browser — Chrome, Safari, Firefox, Edge. The optional desktop app (macOS, Windows) is for coaches who want a native window and offline access.",
+        "q4": "What formats can I export?",
+        "a4": "Guest and Free: PNG and JPG. Pro adds GIF animations and PDF with all steps. Each format is one click or shortcut away.",
+        "q5": "How does Pro billing work?",
+        "a5": "Pro is \$9/month or \$90/year (save 17%). You can cancel anytime — access continues until the end of the billing period. All prices include VAT for EU customers.",
+        "q6": "Can my whole staff use Team?",
+        "a6": "Yes. Team gives 5 seats with individual workspaces and shared billing. Each coach manages their own boards, and you get one invoice. \$29/month or \$290/year."
+    },
+    "finalCta": {
+        "title": "Start drawing in 30 seconds.",
+        "desc": "No account, no download, no credit card. Just you and the pitch.",
+        "cta": "Open the board — no signup"
     },
     "footer": {
         "tagline": "Fast, professional football tactics board.",
@@ -1394,6 +1433,7 @@ export const en = {
     },
   },
   legal: {
+    draftBanner: '⚠ This is a draft — waiting for legal review.',
     updated: 'Last updated: {{date}}',
     back: 'Back to TMC Studio',
     privacy: {

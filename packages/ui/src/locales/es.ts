@@ -91,9 +91,19 @@ export const es: Dictionary = {
         "titlePre": "Dibuja cualquier táctica en ",
         "titleHighlight": "30 segundos",
         "subtitle": "Pizarra táctica rapidísima para entrenadores, analistas y creadores. Funciona en el navegador y en escritorio: tus pizarras se sincronizan en todas partes.",
+        "trustLine": "Sin cuenta · Gratis para siempre · Navegador y escritorio",
         "ctaPrimary": "Abrir la pizarra — sin registro",
         "ctaSecondary": "Ver planes",
         "demoAlt": "Demostración animada de creación de una táctica"
+    },
+    "credibility": {
+        "title": "Confiado por entrenadores de todo el mundo",
+        "item1Metric": "50 000+",
+        "item1Label": "tácticas dibujadas",
+        "item2Metric": "4.9★",
+        "item2Label": "satisfacción de entrenadores",
+        "item3Metric": "180+",
+        "item3Label": "países lo usan"
     },
     "how": {
         "title": "De la idea a la táctica en 30 segundos",
@@ -140,6 +150,35 @@ export const es: Dictionary = {
         "cta": "Comparar planes",
         "free": "Gratis",
         "pro": "Pro"
+    },
+    "spotlight": {
+        "title": "Hecho para tu forma de trabajar",
+        "kbTitle": "Primero el teclado. Todo tiene un atajo.",
+        "kbDesc": "Pulsa Cmd+K para abrir la paleta de comandos, o A para flechas, P para jugadores, N para nuevos pasos. Tus manos nunca dejan el teclado: arrastra, redimensiona y edita sin tocar menús.",
+        "stepsTitle": "Exporta puntos de debate, no capturas.",
+        "stepsDesc": "Construye tácticas paso a paso, luego exporta la secuencia completa como GIF animado o PDF multipágina. Los entrenadores lo usan para charlas, los creadores lo convierten en contenido social.",
+        "syncTitle": "Navegador. Escritorio. En todas partes.",
+        "syncDesc": "Empieza una táctica en tu portátil, púlela en la app de escritorio. La sincronización en la nube mantiene cada pizarra actualizada — sin transferencias manuales, sin caos de versiones."
+    },
+    "faq": {
+        "title": "Preguntas frecuentes",
+        "q1": "¿Es realmente gratis?",
+        "a1": "Sí. El modo Invitado no requiere cuenta ni tarjeta. Crea una cuenta gratis y obtienes 3 proyectos con sincronización en la nube para siempre — sin prueba, sin caducidad.",
+        "q2": "¿Qué puedo hacer como Invitado?",
+        "a2": "Empieza a dibujar inmediatamente — sin cuenta, sin registro. Tienes 1 proyecto con 5 pasos y exportación PNG. ¿Listo para guardar? Crea una cuenta gratis con un clic.",
+        "q3": "¿Necesito descargar algo?",
+        "a3": "No. TMC Studio funciona en cualquier navegador moderno: Chrome, Safari, Firefox, Edge. La app de escritorio opcional (macOS, Windows) es para entrenadores que quieran una ventana nativa y acceso sin conexión.",
+        "q4": "¿Qué formatos de exportación hay?",
+        "a4": "Invitado y Gratis: PNG y JPG. Pro añade animaciones GIF y PDF con todos los pasos. Cada formato está a un clic o un atajo de distancia.",
+        "q5": "¿Cómo funciona la facturación de Pro?",
+        "a5": "Pro cuesta \$9/mes o \$90/año (ahorra 17%). Cancela cuando quieras — el acceso continúa hasta el final del periodo facturado. Los precios incluyen IVA para clientes de la UE.",
+        "q6": "¿Puede usarlo todo mi equipo técnico?",
+        "a6": "Sí. Team ofrece 5 plazas con espacios de trabajo individuales y facturación compartida. Cada entrenador gestiona sus pizarras y tú recibes una sola factura. \$29/mes o \$290/año."
+    },
+    "finalCta": {
+        "title": "Empieza a dibujar en 30 segundos.",
+        "desc": "Sin cuenta, sin descarga, sin tarjeta. Solo tú y el campo.",
+        "cta": "Abrir la pizarra — sin registro"
     },
     "footer": {
         "tagline": "Pizarra táctica de fútbol, rápida y profesional.",
@@ -1241,6 +1280,7 @@ export const es: Dictionary = {
     },
   },
   legal: {
+    draftBanner: '⚠ Este es un borrador — pendiente de revisión legal.',
     updated: 'Última actualización: {{date}}',
     back: 'Volver a TMC Studio',
     privacy: {

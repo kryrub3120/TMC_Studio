@@ -23,11 +23,11 @@ export function PrivacyPolicy() {
   return (
     <PublicPageShell title={title} description={description} updatedAt={LEGAL_UPDATED_AT}>
       <LegalSection title={t('legal.privacy.collect.title')}>
-        <h3 className="font-semibold text-slate-950">{t('legal.privacy.collect.providedTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.privacy.collect.providedTitle')}</h3>
         <LegalList>
           {providedKeys.map((key) => <li key={key}>{t(`legal.privacy.collect.provided.${key}`)}</li>)}
         </LegalList>
-        <h3 className="font-semibold text-slate-950">{t('legal.privacy.collect.automaticTitle')}</h3>
+        <h3 className="font-semibold text-text">{t('legal.privacy.collect.automaticTitle')}</h3>
         <LegalList>
           {automaticKeys.map((key) => <li key={key}>{t(`legal.privacy.collect.automatic.${key}`)}</li>)}
         </LegalList>
