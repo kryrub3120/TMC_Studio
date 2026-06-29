@@ -19,10 +19,13 @@
     "supabase:link-prod": "supabase link --project-ref pgacjczecyfnwsaadyvj",
     "supabase:push": "supabase db push",
     "supabase:status": "supabase projects list",
-    "supabase:diff": "supabase db diff"
+    "supabase:diff": "supabase db diff",
+    "e2e": "playwright test --config=e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui"
   },
   "devDependencies": {
     "@netlify/functions": "^5.1.2",
+    "@playwright/test": "^1.61.0",
     "@supabase/supabase-js": "^2.90.1",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
@@ -30,6 +33,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "playwright": "^1.61.0",
     "prettier": "^3.2.0",
     "stripe": "^20.1.2",
     "turbo": "^2.3.0",
