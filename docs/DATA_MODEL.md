@@ -443,15 +443,35 @@ CREATE INDEX idx_profiles_stripe_customer_id ON profiles(stripe_customer_id) WHE
 CREATE INDEX idx_profiles_preferences ON profiles USING gin(preferences);
 ```
 
-**`preferences` JSONB structure:**
+**`preferences` JSONB structure (B1 — cloud sync):**
 ```json
 {
   "theme": "dark",
   "gridVisible": false,
-  "snapEnabled": false,
-  "cheatSheetVisible": false
+  "snapEnabled": true,
+  "gridSize": 10,
+  "defaultArrowType": "pass",
+  "stepDuration": 0.8,
+  "arrowDefaults": {
+    "strokeWidth": { "pass": 4, "run": 4, "shoot": 4, "dribble": 4 },
+    "color": { "pass": "#1a1a1a", "run": "#1a1a1a", "shoot": "#1a1a1a", "dribble": "#1a1a1a" },
+    "startHead": "none",
+    "endHead": "arrow"
+  },
+  "zoneDefaults": {
+    "borderStyle": "solid",
+    "borderWidth": 3,
+    "borderColor": "#ef4444",
+    "showCorners": false,
+    "fillColor": "rgba(0,0,0,0)",
+    "opacity": 0.3
+  },
+  "bottomBar": { "height": 56, "collapsed": false },
+  "inspector": { "width": 340 }
 }
 ```
+
+**Sync strategy:** Local-first (Zustand persist w localStorage) z debounced (600ms) upsertem do chmury przez RPC `merge_preferences` (atomowy JSONB-merge na DB). Pull przy każdym logowaniu/auth restore. Przy pierwszym logowaniu — push lokalnego stanu do chmury.
 
 #### `projects` Table
 

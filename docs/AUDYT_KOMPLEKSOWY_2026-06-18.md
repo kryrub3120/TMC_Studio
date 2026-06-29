@@ -1,7 +1,7 @@
 # Audyt kompleksowy TMC Studio + plan launchu
 
 **Data:** 2026-06-18  
-**Wersja aplikacji:** 0.8.1  
+**Wersja aplikacji:** 0.7.0  
 **Status dokumentu:** ACTIVE SOURCE OF TRUTH dla prac do publicznego launchu  
 **Cel:** doprowadzic aplikacje do bezpiecznego wydania rynkowego, bez dalszego rozdmuchiwania zakresu.
 

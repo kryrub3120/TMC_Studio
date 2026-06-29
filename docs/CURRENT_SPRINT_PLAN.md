@@ -1,44 +1,14 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-06-22  
+**Data:** 2026-06-18  
 **Status:** ACTIVE, krotki wskaznik operacyjny  
 **Source of truth:** `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`
 
 ---
 
-## Zakończone sprinty
+## Zakonczone sprinty
 
-### S-BILLING — Stripe gotowy do sprzedaży (live)
-
-**Status:** ✅ DONE (2026-06-22)
-
-**Cel:** Doprowadzić lejek płatności do stanu, w którym po ręcznym wpięciu kluczy live sprzedaż po prostu działa.
-
-**Sprint S1 — Bug rocznego cyklu:**
-1. PricingModal wysyła `billingCycle` w body requestu do create-checkout.
-2. create-checkout przyjmuje `billingCycle` z body (fallback: `getCycleFromPriceId()` z `_stripeConfig.ts`).
-3. `_stripeConfig.ts` — dodano `PRICE_TO_CYCLE` i `getCycleFromPriceId()` (mapowanie, a nie fragile `priceId.includes('yearly')`).
-4. AppShell — reset `pricingUpgradeCycle` do `'monthly'` przy zamknięciu modala (anti-stale).
-5. +3 testy yearly priceId + billingCycle override.
-6. Spec S-SITE: `thoughts/2026-06-22/1808_spec-s-site-cycle-propagation.md`
-
-**Sprint S2 — Webhook hardening + testy:**
-1. +17 testów stripe-webhook (signature verification, idempotencja, checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, rate limiting, unknown event).
-2. +2 testy `getCycleFromPriceId` + `PRICE_TO_CYCLE`.
-3. Mock Stripe rozszerzony o `constructEvent`, `subscriptions.retrieve`, `customers.retrieve`.
-4. Security review: brak secret leak, env vars validation, signature verification.
-
-**Testy:** 52/52 passed (billing.security.test.ts)
-**Bump:** v0.8.0 → v0.8.1 (PATCH)
-**Pliki:** `_stripeConfig.ts`, `create-checkout.ts`, `PricingModal.tsx`, `AppShell.tsx`, `billing.security.test.ts` + 6× `package.json` + `CHANGELOG.md`
-
-**Raport:** `thoughts/2026-06-22/1835_master-autopilot_summary-s-billing.md` (z checklistą go-live)
-
----
-
-## Sprinty archiwalne
-
-### Sprint 0.5 — Release & Deployment Verification (triage produkcyjny)
+### Sprint 0.5 — Release & Deploy Verification (triage produkcyjny)
 
 **Status:** ✅ DONE (2026-06-18)
 
