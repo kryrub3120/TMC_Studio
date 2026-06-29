@@ -71,6 +71,24 @@ export type UserPreferences = {
   snapEnabled?: boolean;
   cheatSheetVisible?: boolean;
   bottomBar?: { height: number; collapsed?: boolean };
+  inspector?: { width: number };
+  defaultArrowType?: string;
+  stepDuration?: number;
+  gridSize?: number;
+  arrowDefaults?: {
+    strokeWidth?: Record<string, number>;
+    color?: Record<string, string>;
+    startHead?: string;
+    endHead?: string;
+  };
+  zoneDefaults?: {
+    borderStyle?: string;
+    borderWidth?: number;
+    borderColor?: string;
+    showCorners?: boolean;
+    fillColor?: string;
+    opacity?: number;
+  };
 };
 
 /** Get current authenticated user */
@@ -152,6 +170,7 @@ export async function signUp(email: string, password: string, fullName?: string)
     password,
     options: {
       data: { full_name: fullName },
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
     },
   });
   
@@ -235,6 +254,48 @@ export async function updatePreferences(preferences: Partial<UserPreferences>): 
     .eq('id', user.id);
   
   if (error) throw error;
+}
+
+/** Atomic JSONB-merge via RPC — used by beforeunload flush to avoid overwriting other keys.
+ *  Unlike updatePreferences (read-merge-write), this runs atomically on the DB side. */
+export async function mergePreferences(preferences: Partial<UserPreferences>): Promise<void> {
+  if (isDevCloudActive()) return;
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { error } = await supabase.rpc('merge_preferences', {
+    p_preferences: preferences,
+  });
+  if (error) throw error;
+}
+
+/** Send reset password email via Supabase Auth.
+ *  PKCE code exchange happens on /auth/reset-password route directly.
+ *  Supabase SDK detectSessionInUrl handles the exchange automatically. */
+export async function resetPasswordForEmail(email: string) {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/reset-password`,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/** Resend confirmation email after signUp. */
+export async function resendConfirmationEmail(email: string) {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+
+  if (error) throw error;
+  return data;
 }
 
 /** Change password */

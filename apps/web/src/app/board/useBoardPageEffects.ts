@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import type Konva from 'konva';
 import type { Position, BoardElement } from '@tmc/core';
 import { useBoardStore } from '../../store';
+import { useUIStore } from '../../store/useUIStore';
 import { useAnimationPlayback as useAnimationPlaybackCore } from '../../hooks/useAnimationPlayback';
 import { useAnimationInterpolation } from '../../hooks/useAnimationInterpolation';
 import { getCanvasWorldCoords } from '../../utils/viewportUtils';
@@ -160,10 +161,23 @@ export function useStageEventHandlers(input: StageEventHandlersInput) {
     [clearSelection, activeTool, marqueeStart]
   );
 
-  // Double-click finishes an in-progress polygon zone.
+  // Double-click: finish polygon on empty space, or switch inspector to Properties tab on element
   const handleStageDblClick = useCallback(
-    () => {
-      drawingController.finishPolygon();
+    (e: any) => {
+      const target = e.target;
+      const stage = target.getStage();
+      const isStage = target === stage;
+      const isLayer = target.nodeType === 'Layer';
+      const isBackground = target.name()?.startsWith('pitch') || !target.name();
+      const isEmpty = isStage || isLayer || isBackground;
+      
+      if (isEmpty) {
+        // Empty space double-click: finish in-progress polygon zone
+        drawingController.finishPolygon();
+      } else {
+        // A8: element double-click → switch inspector to Properties tab
+        useUIStore.getState().setInspectorActiveTab('props');
+      }
     },
     [drawingController]
   );

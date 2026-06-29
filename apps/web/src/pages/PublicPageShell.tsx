@@ -115,10 +115,15 @@ export function PublicPageShell({ title, description, updatedAt, children }: Pub
           {updatedAt && <p className="mt-4 text-sm text-muted">{t('legal.updated', { date: updatedAt })}</p>}
         </div>
 
-        <div className="space-y-8">{children}</div>
+        <div className="space-y-8">
+          <LegalReviewBanner />
+          {children}
+        </div>
 
         <CompanyPanel />
       </main>
+
+      <PublicFooter />
     </div>
   );
 }
@@ -144,6 +149,18 @@ export function LegalLink({ href, children }: { href: string; children: ReactNod
   );
 }
 
+/**
+ * LegalReviewBanner — visible draft marker for legal pages pending lawyer review.
+ */
+export function LegalReviewBanner() {
+  const { t } = useTranslation();
+  return (
+    <div className="mb-6 rounded-lg border border-accent/40 bg-accent/5 p-4 text-sm text-text" role="alert">
+      <p className="font-medium">⚠ {t('legal.draftBanner')}</p>
+    </div>
+  );
+}
+
 function CompanyPanel() {
   return (
     <aside className="mt-10 rounded-lg border border-border bg-surface p-5 text-sm leading-6 text-muted shadow-sm">
@@ -151,5 +168,31 @@ function CompanyPanel() {
       <p>{COMPANY_DETAILS.address}</p>
       <p>KRS: {COMPANY_DETAILS.krs} · NIP: {COMPANY_DETAILS.nip} · REGON: {COMPANY_DETAILS.regon}</p>
     </aside>
+  );
+}
+
+/** Shared public footer used across all public pages. */
+export function PublicFooter() {
+  const { t } = useTranslation();
+  return (
+    <footer className="border-t border-border bg-surface/60">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="text-lg font-bold text-text">TMC Studio</div>
+          <p className="mt-2 max-w-xs text-base text-muted">{t('landing.footer.tagline')}</p>
+        </div>
+        <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label={t('footer.label')}>
+          <Link to="/privacy" className="text-base text-muted hover:text-text">{t('footer.privacy')}</Link>
+          <Link to="/terms" className="text-base text-muted hover:text-text">{t('footer.terms')}</Link>
+          <Link to="/cookies" className="text-base text-muted hover:text-text">{t('footer.cookies')}</Link>
+          <Link to="/refunds" className="text-base text-muted hover:text-text">{t('landing.footer.refunds')}</Link>
+          <Link to="/legal" className="text-base text-muted hover:text-text">{t('landing.footer.legalNotice')}</Link>
+          <Link to="/accessibility" className="text-base text-muted hover:text-text">{t('landing.footer.accessibility')}</Link>
+        </nav>
+      </div>
+      <div className="border-t border-border px-4 py-4 text-center text-sm text-muted">
+        © {new Date().getFullYear()} TMC Studio · {t('landing.footer.rights')}
+      </div>
+    </footer>
   );
 }

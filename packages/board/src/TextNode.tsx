@@ -83,8 +83,7 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
     onSelect(text.id, addToSelection);
   };
 
-  const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true;
+  const handleDblClick = () => {
     onDoubleClick?.(text.id);
   };
 

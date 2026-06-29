@@ -28,7 +28,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ value, onChange, placehold
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full pl-8 pr-3 py-2 rounded-md bg-surface2 border border-border text-xs text-text placeholder:text-muted/50 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-colors"
+        className="w-full pl-8 pr-3 py-2 rounded-md bg-surface2 border border-border text-xs text-text placeholder:text-muted focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-colors"
       />
       {value && (
         <button

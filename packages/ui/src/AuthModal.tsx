@@ -14,6 +14,8 @@ interface AuthModalProps {
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (email: string, password: string, fullName?: string) => Promise<void>;
   onSignInWithGoogle?: () => Promise<void>;
+  onSendResetLink?: (email: string) => Promise<void>;
+  onResendConfirmation?: (email: string) => Promise<void>;
   error?: string | null;
   isLoading?: boolean;
   /** DEV-ONLY: instantly sign in as a fake free/pro/team user for testing.
@@ -28,6 +30,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSignIn,
   onSignUp,
   onSignInWithGoogle,
+  onSendResetLink,
+  onResendConfirmation,
   onDevLogin,
   error,
   isLoading = false,
@@ -60,8 +64,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLocalError(null);
     setSuccessMessage(null);
 
-    // Validation
-    if (!email || !password) {
+    // Validation — forgot mode only needs email
+    if (mode === 'forgot') {
+      if (!email) {
+        setLocalError(t('auth.requiredFields'));
+        return;
+      }
+    } else if (!email || !password) {
       setLocalError(t('auth.requiredFields'));
       return;
     }
@@ -86,6 +95,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setSuccessMessage(t('auth.verifyEmail'));
         resetForm();
         setMode('login');
+      } else if (mode === 'forgot') {
+        if (onSendResetLink) {
+          await onSendResetLink(email);
+          setSuccessMessage(t('auth.resetEmailSent'));
+          resetForm();
+          setMode('login');
+        }
       }
     } catch (err) {
       // Error is handled by parent via error prop
@@ -95,11 +111,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     if (onSignInWithGoogle) {
       try {
-        const signIn = onSignInWithGoogle();
+        // A5: close modal immediately so user sees the board during OAuth popup
         onClose();
-        await signIn;
+        await onSignInWithGoogle();
       } catch (err) {
-        // Error is handled by parent
+        // Error handled by parent (toast shows failure)
       }
     }
   };
@@ -111,6 +127,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // only the known sentinel keys, pass everything else through verbatim.
   const translatedError = error && error.startsWith('auth.error') ? t(error) : error;
   const displayError = localError || translatedError;
+  const isUnconfirmedError = error === 'auth.errorEmailNotConfirmed';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -159,6 +176,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {displayError && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
               {displayError}
+            </div>
+          )}
+
+          {/* Resend confirmation (shown when login fails with unconfirmed email) */}
+          {isUnconfirmedError && onResendConfirmation && email && (
+            <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-400 text-sm space-y-2">
+              <p>{t('auth.emailNotConfirmed')}</p>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await onResendConfirmation(email);
+                    setSuccessMessage(t('auth.confirmationResent'));
+                  } catch {
+                    // Error shown via parent error prop
+                  }
+                }}
+                disabled={isLoading}
+                className="text-sm text-blue-400 hover:text-blue-300 font-medium disabled:opacity-50"
+              >
+                {t('auth.resendConfirmation')}
+              </button>
             </div>
           )}
 

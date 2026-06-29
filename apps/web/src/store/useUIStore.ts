@@ -112,6 +112,8 @@ interface UIState {
   
   // Visibility toggles
   inspectorOpen: boolean;
+  /** A8: controlled tab for the inspector — can be switched externally (e.g. double-click element) */
+  inspectorActiveTab: 'props' | 'layers';
   cheatSheetVisible: boolean;
   commandPaletteOpen: boolean;
   gridVisible: boolean;
@@ -192,6 +194,7 @@ interface UIState {
   // Actions - Visibility
   toggleInspector: () => void;
   setInspectorOpen: (open: boolean) => void;
+  setInspectorActiveTab: (tab: 'props' | 'layers') => void;
   toggleCheatSheet: () => void;
   setCheatSheetVisible: (visible: boolean) => void;
   setHasSeenShortcutsHint: (seen: boolean) => void;
@@ -325,23 +328,62 @@ const updateSystemThemeListener = (mode: ThemeMode, onChange: (t: Theme) => void
   }
 };
 
-/** Sync preferences to cloud */
-const syncPreferencesToCloud = async (prefs: {
-  theme?: Theme;
-  gridVisible?: boolean;
-  snapEnabled?: boolean;
-  cheatSheetVisible?: boolean;
-  bottomBar?: { height: number; collapsed: boolean };
-  inspector?: { width: number };
-}) => {
-  try {
-    if (isSupabaseEnabled()) {
-      await updatePreferences(prefs);
+/** Debounced sync to cloud — accumulates writes, fires 600ms after last change */
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingPrefs: Record<string, any> = {};
+
+const debouncedSyncPreferences = () => {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    const batch = { ...pendingPrefs };
+    pendingPrefs = {};
+    try {
+      if (isSupabaseEnabled()) {
+        await updatePreferences(batch);
+      }
+    } catch (error) {
+      logger.error('Failed to sync preferences to cloud:', error);
     }
-  } catch (error) {
-    logger.error('Failed to sync preferences to cloud:', error);
-  }
+  }, 600);
 };
+
+const queueSync = (patch: Record<string, any>) => {
+  Object.assign(pendingPrefs, patch);
+  debouncedSyncPreferences();
+};
+
+/** B1.3: flush pending preferences on tab close — uses RPC merge_preferences for atomic JSONB-merge */
+if (typeof window !== 'undefined') {
+  const SB_URL = import.meta.env.VITE_SUPABASE_URL as string;
+  const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+  window.addEventListener('beforeunload', () => {
+    if (syncTimer) clearTimeout(syncTimer);
+    if (Object.keys(pendingPrefs).length === 0) return;
+    const batch = { ...pendingPrefs };
+    pendingPrefs = {};
+    if (!SB_URL || !SB_KEY) return;
+    try {
+      const raw = localStorage.getItem('tmc-auth-token');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const token = parsed?.access_token;
+      if (!token) return;
+      // Atomicky merge przez RPC — nie niszczy innych kluczy JSONB
+      fetch(`${SB_URL}/rest/v1/rpc/merge_preferences`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': SB_KEY,
+        },
+        body: JSON.stringify({ p_preferences: batch }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      // best-effort
+    }
+  });
+}
 
 /** Create the UI store with persistence for theme */
 export const useUIStore = create<UIState>()(
@@ -353,6 +395,7 @@ export const useUIStore = create<UIState>()(
       focusMode: false,
       isPrintMode: false, // Print mode is UI-only, not persisted
       inspectorOpen: getInitialInspectorState(),
+      inspectorActiveTab: 'props',
       cheatSheetVisible: false, // Never auto-open (Hard Rule A)
       commandPaletteOpen: false,
       gridVisible: false,
@@ -403,7 +446,7 @@ export const useUIStore = create<UIState>()(
         updateSystemThemeListener(newTheme, () => {});
         set({ theme: newTheme, themeMode: newTheme });
         // Sync to cloud
-        syncPreferencesToCloud({ theme: newTheme });
+        queueSync({ theme: newTheme });
       },
       
       setTheme: (theme) => {
@@ -411,7 +454,7 @@ export const useUIStore = create<UIState>()(
         updateSystemThemeListener(theme, () => {});
         set({ theme, themeMode: theme });
         // Sync to cloud
-        syncPreferencesToCloud({ theme });
+        queueSync({ theme });
       },
 
       setThemeMode: (mode) => {
@@ -423,7 +466,7 @@ export const useUIStore = create<UIState>()(
         });
         set({ themeMode: mode, theme: resolved });
         // Sync to cloud
-        syncPreferencesToCloud({ theme: resolved });
+        queueSync({ theme: resolved });
       },
 
       // Focus mode actions
@@ -453,6 +496,7 @@ export const useUIStore = create<UIState>()(
       // Visibility actions
       toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
       setInspectorOpen: (open) => set({ inspectorOpen: open }),
+      setInspectorActiveTab: (tab) => set({ inspectorActiveTab: tab }),
       
       toggleCheatSheet: () => set((s) => ({ cheatSheetVisible: !s.cheatSheetVisible })),
       setCheatSheetVisible: (visible) => set({ cheatSheetVisible: visible }),
@@ -465,20 +509,24 @@ export const useUIStore = create<UIState>()(
         const newValue = !get().gridVisible;
         set({ gridVisible: newValue });
         // Sync to cloud
-        syncPreferencesToCloud({ gridVisible: newValue });
+        queueSync({ gridVisible: newValue });
       },
       toggleSnap: () => {
         const newValue = !get().snapEnabled;
         set({ snapEnabled: newValue });
         // Sync to cloud
-        syncPreferencesToCloud({ snapEnabled: newValue });
+        queueSync({ snapEnabled: newValue });
       },
       setGridSize: (size) => {
         const next = Math.max(5, Math.min(40, Math.round(size)));
         set({ gridSize: next });
+        queueSync({ gridSize: next });
       },
-      setDefaultArrowType: (type) => set({ defaultArrowType: type }),
-      setArrowDefaults: (patch) =>
+      setDefaultArrowType: (type) => {
+        set({ defaultArrowType: type });
+        queueSync({ defaultArrowType: type });
+      },
+      setArrowDefaults: (patch) => {
         set((state) => ({
           arrowDefaults: {
             ...state.arrowDefaults,
@@ -486,11 +534,17 @@ export const useUIStore = create<UIState>()(
             strokeWidth: { ...state.arrowDefaults.strokeWidth, ...(patch.strokeWidth ?? {}) },
             color: { ...(state.arrowDefaults.color ?? {}), ...(patch.color ?? {}) },
           },
-        })),
-      setZoneDefaults: (patch) =>
-        set((state) => ({ zoneDefaults: { ...state.zoneDefaults, ...patch } })),
-      resetElementDefaults: () =>
-        set({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS }),
+        }));
+        queueSync({ arrowDefaults: patch });
+      },
+      setZoneDefaults: (patch) => {
+        set((state) => ({ zoneDefaults: { ...state.zoneDefaults, ...patch } }));
+        queueSync({ zoneDefaults: patch });
+      },
+      resetElementDefaults: () => {
+        set({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS });
+        queueSync({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS });
+      },
       setShortcutOverride: (id, shortcut) =>
         set((state) => ({
           shortcutOverrides: {
@@ -510,7 +564,7 @@ export const useUIStore = create<UIState>()(
           Math.min(BOTTOM_BAR_MAX_HEIGHT, Math.round(height))
         );
         set({ bottomBarHeight: clamped });
-        syncPreferencesToCloud({ bottomBar: { height: clamped, collapsed: get().bottomBarCollapsed } });
+        queueSync({ bottomBar: { height: clamped, collapsed: get().bottomBarCollapsed } });
       },
       setInspectorWidth: (width) => {
         const clamped = Math.max(
@@ -518,16 +572,16 @@ export const useUIStore = create<UIState>()(
           Math.min(INSPECTOR_MAX_WIDTH, Math.round(width))
         );
         set({ inspectorWidth: clamped });
-        syncPreferencesToCloud({ inspector: { width: clamped } });
+        queueSync({ inspector: { width: clamped } });
       },
       toggleBottomBarCollapsed: () => {
         const collapsed = !get().bottomBarCollapsed;
         set({ bottomBarCollapsed: collapsed });
-        syncPreferencesToCloud({ bottomBar: { height: get().bottomBarHeight, collapsed } });
+        queueSync({ bottomBar: { height: get().bottomBarHeight, collapsed } });
       },
       setBottomBarCollapsed: (collapsed) => {
         set({ bottomBarCollapsed: collapsed });
-        syncPreferencesToCloud({ bottomBar: { height: get().bottomBarHeight, collapsed } });
+        queueSync({ bottomBar: { height: get().bottomBarHeight, collapsed } });
       },
 
       // Tool actions
@@ -630,7 +684,10 @@ export const useUIStore = create<UIState>()(
       play: () => set({ isPlaying: true, animationProgress: 0 }),
       pause: () => set({ isPlaying: false }),
       toggleLoop: () => set((s) => ({ isLooping: !s.isLooping })),
-      setStepDuration: (duration) => set({ stepDuration: Math.max(0.1, Math.min(5, duration)) }),
+      setStepDuration: (duration) => {
+        set({ stepDuration: Math.max(0.1, Math.min(5, duration)) });
+        queueSync({ stepDuration: Math.max(0.1, Math.min(5, duration)) });
+      },
       setAnimationProgress: (progress) => set({ animationProgress: Math.max(0, Math.min(1, progress)) }),
       
       // Online/offline actions (PR-L5-MINI)

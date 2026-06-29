@@ -7,11 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-22
+
+### Added
+- **S-AUTH: Reset hasła end-to-end (S1)** — backend `resetPasswordForEmail`, action `sendResetLink` w store, strona `/auth/reset-password` z formularzem nowego hasła, naprawiony forgot mode w AuthModal.
+- **S-AUTH: Email confirmation flow (S2)** — `resendConfirmationEmail` w backend, detekcja niepotwierdzonego emaila przy loginie, przycisk resend w AuthModal, i18n w en/pl/es.
+- **S-AUTH: Sync debt cleanup (S3)** — usunięto martwą kolumnę `preferences_updated_at` + trigger; beforeunload flush już używa atomic JSONB-merge przez RPC.
+- **S-SITE: Pełny redesign LandingPage (S1)** — 11 sekcji w stylu Linear/Vercel: sticky nav + Download link, hero z dużym animowanym demo tablicy (zawodnicy+strzałki+kroki+eksport), linia zaufania pod CTA, pasek wiarygodności z metrykami, How it works z mini-wizualami, 4 pillar cards z outcome-focused copy, 3 naprzemienne feature spotlights (keyboard-first/steps&export/sync everywhere), use cases z CTA per persona, pricing teaser z 3 kartami (Free/Pro/Team) z prawdziwymi limitami, FAQ accordion (6 Q&A — landing.faq.*), final CTA band. Hero H1 `text-5xl→md:text-7xl`, typograficzna skala, spójny rytm sekcji `py-20→md:py-24`, tylko tokeny design systemu.
+- **S-SITE: i18n — nowe klucze** `landing.credibility.*`, `landing.spotlight.*`, `landing.faq.*`, `landing.finalCta.*`, `landing.hero.trustLine` w en/pl/es (identyczna struktura).
+- **S-SITE: Spójny PublicFooter** w PublicPageShell + LandingPage + PricingPage, usunięto duplikację footer HTML.
+- **S-SITE: Sitemap — dodano /download URL**.
+- **S-SITE: Design system compliance** — zastąpiono hardcoded `text-slate-950`/`text-slate-500` tokenami `text-text`/`text-muted` we wszystkich legal pages.
+- **S-SITE: LegalReviewBanner** (S3) — wizualny znacznik "draft — pending legal review" na wszystkich legal pages.
+- **i18n: klucz `legal.draftBanner`** — dodany w en/pl/es.
+- **S-BILLING S1**: Spec dla sprintu S-SITE — jak /pricing przekazuje cykl do PricingModal (`thoughts/2026-06-22/1808_spec-s-site-cycle-propagation.md`)
+- **S-BILLING S2**: Testy `getCycleFromPriceId` i `PRICE_TO_CYCLE` w billing.security.test.ts (52 testy, wszystkie zielone)
+
 ### Fixed
-- **Google OAuth: brak odświeżania po logowaniu + CSP dla custom domain** (2026-06-18)
-  - Dodano fallback sprawdzania sesji 1.5s po OAuth callbacku — UI aktualizuje się bez ręcznego odświeżania.
-  - Dodano `auth.tmcstudio.app` do CSP `connect-src` w `netlify.toml` (prepared for custom domain).
-  - Pliki: `apps/web/src/store/useAuthStore.ts`, `netlify.toml`, `.env.example`.
+- **S-AUTH: ResetPasswordPage i18n** — wszystkie user-facing stringi przez `useTranslation()` z `@tmc/ui`, 13 nowych kluczy auth.* w en/pl/es.
+- **S-AUTH: Recovery flow dokumentacja** — udokumentowano decyzję o bezpośrednim redirect na `/auth/reset-password` (zamiast przez AuthCallbackPage).
+- **S-BILLING S1**: Bug rocznego cyklu w PricingModal — priceId yearly nie propagował poprawnie billing_cycle do create-checkout. Dodano `billingCycle` w body requestu, `getCycleFromPriceId()` w `_stripeConfig.ts`, reset `pricingUpgradeCycle` przy zamknięciu modala. (PATCH)
+- **S-BILLING S2**: Webhook hardening — dodano 17 testów stripe-webhook: signature verification, idempotencja (duplicate → 200 z `duplicate: true`), checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, rate limiting, unknown event. (PATCH)
+- **S-QA: Bramka jakości** — E2E golden path (Playwright) + CI gate.
+  - **S1**: 11 testów E2E z twardymi asercjami: export PNG (`waitForEvent('download')` + `.png` filename assertion), pricing modal z yearly price assertion, golden path add player → export.
+  - **S1 (LOOP fix)**: Usunięto wszystkie `if (visible)` soft-guardy. Export test używa `page.waitForEvent('download')`. Checkout test twardo asertuje obecność modala i ceny rocznej. Test PADA gdy funkcja zepsuta (zweryfikowane negatywnie).
+  - **S2**: CI workflow z E2E job (`pnpm e2e`) blokujący PR przy failu; `--frozen-lockfile` zamiast `--no-frozen-lockfile` we wszystkich jobach.
+  - Wszystkie 113 unit testów + 11 E2E green. CI `--frozen-lockfile` zweryfikowany lokalnie.
+- **Skrypty:** `pnpm e2e`, `pnpm e2e:ui` w root `package.json`.
+
+## [0.8.0] - 2026-06-22
+
+### Added
+- **UX-B: Cloud sync preferencji (B1)** — synchronizacja między urządzeniami przez `profiles.preferences` JSONB.
+  - **B1.1**: Rozszerzono `UserPreferences` o `arrowDefaults`, `zoneDefaults`, `gridSize`, `defaultArrowType`, `stepDuration`, `inspector` (wcześniej tylko theme/grid/snap/bottomBar).
+  - **B1.2**: `queueSync` — debounced (600ms) upsert do chmury z `setArrowDefaults`, `setZoneDefaults`, `setGridSize`, `setDefaultArrowType`, `setStepDuration`, `resetElementDefaults`.
+  - **B1.3**: Pełny load cloud → local w `useAuthStore` po Google login (wszystkie pola, nie tylko podzbiór).
+  - **B1.4**: Migracja lokalnych preferencji → cloud przy pierwszym logowaniu (pusta chmura = push lokalnego stanu).
+  - **B1.5**: Usunięto martwy komunikat „Cloud sync coming in a future update" — zaktualizowano klucze locale pl/en/es.
+  - **B1.6**: Nowa migracja `20260622000000_add_preferences_updated_at.sql` — kolumna `preferences_updated_at` + trigger dla last-write-wins.
+- **UX-B: Redesign panelu preferencji (B2)**: grupowanie w karty (`rounded-lg border bg-surface2 p-4`), mniej scrollowania — Appearance, Editor, Element Defaults, Style Defaults w osobnych kartach, arrow defaults w grid 2-kolumnowym.
+
+## [0.7.2] - 2026-06-22
+
+### Added
+- **UX-A: Menu konta — nowa struktura (A3)**: "Opcje edytora", "Ustawienia boiska", "Ustawienia drużyny", "Twój profil" zamiast "Konto i płatności". Ustawienia tablicy/zawodników jako podzakładki. (2026-06-20)
+- **UX-A: Klucze i18n dla menu PPM (A4)**: Pełny zestaw `contextMenu.*` w pl/en/es — brak surowych kluczy w context menu canvasu. (2026-06-20)
+- **UX-A: Sterowana zakładka inspektora (A8)**: `inspectorActiveTab` w `useUIStore`. Dwuklik obiektu przełącza na zakładkę Właściwości. (2026-06-20)
+
+### Fixed
+- **UX-A: Gość nie widzi "Wyloguj" (A2)**: Dla `plan === 'guest'` AccountMenu pokazuje tylko przycisk "Zaloguj się" bez dropdownu. (2026-06-20)
+- **UX-A: Logowanie Google — brak ręcznego odświeżania (A5)**: AuthModal zamyka się natychmiast po kliknięciu Google, OAuth działa w tle. (2026-06-20)
+- **UX-A: Kontrast menu pomocy (A7)**: Naprawione `text-muted/70` → `text-muted` w `HelpSidebar.tsx` i `FaqCategory.tsx` dla WCAG AA. (2026-06-20)
+- **UX-A: Dwuklik elementu na canvasie (A8)**: Usunięto `e.cancelBubble` z `PlayerNode.handleDblClick` i `TextNode.handleDblClick` żeby event propagował do stage handlera.
+- **UX-A: "Ustaw jako domyślne" (A6)**: Potwierdzono persist `arrowDefaults`/`zoneDefaults` w `useUIStore` — działa i przeżywa reload. (2026-06-20)
+- **UX-A: Zapis dla gościa (A1)**: Cmd+S dla gościa pokazuje toast z CTA logowania zamiast zapisu lokalnego. (2026-06-20)
+
+### Changed
+- **UX-A: Przebudowa AccountMenu (A3)**: Nowe 6 pozycji menu + obsługa gościa. `AccountMenu` przyjmuje `onOpenSettings` i `onOpenSquadSettings`. (2026-06-20)
 
 ## [0.7.0] - 2026-06-18
 

@@ -622,13 +622,14 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       case 's':
         if (isCmd) {
           e.preventDefault();
+          // A1: guest sees sign-in CTA instead of "saved locally"
+          if (!authIsAuthenticated) {
+            showTranslatedToast('signInToSave');
+            return;
+          }
           manualSave().then((cloudSaved) => {
-            if (authIsAuthenticated) {
-              fetchCloudProjects();
-              showTranslatedToast(cloudSaved ? 'savedCloud' : 'cloudSaveFailed');
-            } else {
-              showTranslatedToast('savedLocal');
-            }
+            fetchCloudProjects();
+            showTranslatedToast(cloudSaved ? 'savedCloud' : 'cloudSaveFailed');
           });
         } else if (e.shiftKey && hasSelectedPlayer()) {
           // Shift+S = cycle player shape (when player selected)

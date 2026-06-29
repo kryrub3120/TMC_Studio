@@ -5,7 +5,7 @@ ALTER TABLE profiles
 ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb;
 
 -- Add comment explaining the structure
-COMMENT ON COLUMN profiles.preferences IS 'User preferences stored as JSONB: { theme, gridVisible, snapEnabled, cheatSheetVisible }';
+COMMENT ON COLUMN profiles.preferences IS 'User preferences stored as JSONB: theme, gridVisible, snapEnabled, gridSize, defaultArrowType, stepDuration, arrowDefaults, zoneDefaults, bottomBar, inspector';
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_profiles_preferences ON profiles USING gin(preferences);

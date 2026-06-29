@@ -80,7 +80,7 @@ export interface CanvasAdapterProps {
   onStageMouseDown: (e: any) => void;
   onStageMouseMove: (e: any) => void;
   onStageMouseUp: () => void;
-  onStageDblClick?: () => void;
+  onStageDblClick?: (e: any) => void;
   onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => void;
   
   // Element event handlers
