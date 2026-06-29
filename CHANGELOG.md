@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **S-AUTH: Recovery flow dokumentacja** — udokumentowano decyzję o bezpośrednim redirect na `/auth/reset-password` (zamiast przez AuthCallbackPage).
 - **S-BILLING S1**: Bug rocznego cyklu w PricingModal — priceId yearly nie propagował poprawnie billing_cycle do create-checkout. Dodano `billingCycle` w body requestu, `getCycleFromPriceId()` w `_stripeConfig.ts`, reset `pricingUpgradeCycle` przy zamknięciu modala. (PATCH)
 - **S-BILLING S2**: Webhook hardening — dodano 17 testów stripe-webhook: signature verification, idempotencja (duplicate → 200 z `duplicate: true`), checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, rate limiting, unknown event. (PATCH)
+- **S-QA: Bramka jakości** — E2E golden path (Playwright) + CI gate.
+  - **S1**: 11 testów E2E z twardymi asercjami: export PNG (`waitForEvent('download')` + `.png` filename assertion), pricing modal z yearly price assertion, golden path add player → export.
+  - **S1 (LOOP fix)**: Usunięto wszystkie `if (visible)` soft-guardy. Export test używa `page.waitForEvent('download')`. Checkout test twardo asertuje obecność modala i ceny rocznej. Test PADA gdy funkcja zepsuta (zweryfikowane negatywnie).
+  - **S2**: CI workflow z E2E job (`pnpm e2e`) blokujący PR przy failu; `--frozen-lockfile` zamiast `--no-frozen-lockfile` we wszystkich jobach.
+  - Wszystkie 113 unit testów + 11 E2E green. CI `--frozen-lockfile` zweryfikowany lokalnie.
+- **Skrypty:** `pnpm e2e`, `pnpm e2e:ui` w root `package.json`.
 
 ## [0.8.0] - 2026-06-22
 
