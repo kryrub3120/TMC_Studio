@@ -22,6 +22,7 @@ export interface TextNodeProps {
   onDoubleClick?: (id: string) => void;
   /** Print mode flag for render-time color sanitization */
   isPrintMode?: boolean;
+  snapEnabled?: boolean;
 }
 
 const SELECTION_PADDING = 6;
@@ -57,6 +58,7 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   onDragStart,
   onDoubleClick,
   isPrintMode,
+  snapEnabled = true,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const textRef = useRef<Konva.Text>(null);
@@ -129,8 +131,8 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
     const rawPosition: Position = { x: node.x(), y: node.y() };
     
     // Snap to grid and clamp to bounds
-    const snapped = snapToGrid(rawPosition, pitchConfig.gridSize);
-    const clamped = clampToBounds(snapped, pitchConfig);
+    const target = snapEnabled ? snapToGrid(rawPosition, pitchConfig.gridSize) : rawPosition;
+    const clamped = clampToBounds(target, pitchConfig);
     
     // Update node position to snapped location
     node.x(clamped.x);
@@ -226,7 +228,8 @@ export const TextNode = memo(TextNodeComponent, (prevProps, nextProps) => {
     prevProps.text.italic === nextProps.text.italic &&
     prevProps.text.backgroundColor === nextProps.text.backgroundColor &&
     prevProps.isPrintMode === nextProps.isPrintMode && // Print mode affects rendering
-    prevProps.isSelected === nextProps.isSelected
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.snapEnabled === nextProps.snapEnabled
   );
 });
 

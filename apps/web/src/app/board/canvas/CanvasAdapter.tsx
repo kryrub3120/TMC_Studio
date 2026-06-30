@@ -87,6 +87,7 @@ export interface CanvasAdapterProps {
   onElementSelect: (id: string, addToSelection: boolean) => void;
   onElementDragEnd: (id: string, position: Position) => void;
   onElementDragStart: (id: string, mouseX?: number, mouseY?: number) => boolean;
+  snapEnabled: boolean;
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
   onUpdateZonePoints?: (id: string, points: number[]) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
@@ -144,6 +145,7 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     onElementSelect,
     onElementDragEnd,
     onElementDragStart,
+    snapEnabled,
     onResizeZone,
     onUpdateZonePoints,
     onResizeEquipment,
@@ -221,6 +223,7 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
         onElementSelect={onElementSelect}
         onElementDragEnd={onElementDragEnd}
         onElementDragStart={onElementDragStart}
+        snapEnabled={snapEnabled}
         onResizeZone={onResizeZone}
         onUpdateZonePoints={onUpdateZonePoints}
         onResizeEquipment={onResizeEquipment}

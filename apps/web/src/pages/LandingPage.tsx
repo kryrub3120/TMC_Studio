@@ -574,7 +574,7 @@ export function LandingPage() {
                   <span className="pb-1 text-sm text-muted">{t('pricingPage.plans.perMonth')}</span>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm text-muted" role="list">
-                  {t('pricing.plans.free.features').split('|').map((f) => (
+                  {String(t('pricing.plans.free.features')).split('|').map((f) => (
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>
                   ))}
                 </ul>
@@ -593,7 +593,7 @@ export function LandingPage() {
                 </div>
                 <p className="mt-1 text-xs text-accent">{t('pricingPage.billing.yearlyHint')} — {DISPLAY_PRICES.pro.yearly}/yr</p>
                 <ul className="mt-4 space-y-2 text-sm text-muted" role="list">
-                  {t('pricing.plans.pro.features').split('|').map((f) => (
+                  {String(t('pricing.plans.pro.features')).split('|').map((f) => (
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>
                   ))}
                 </ul>
@@ -609,7 +609,7 @@ export function LandingPage() {
                 </div>
                 <p className="mt-1 text-xs text-muted">{t('pricingPage.billing.yearlyHint')} — {DISPLAY_PRICES.team.yearly}/yr</p>
                 <ul className="mt-4 space-y-2 text-sm text-muted" role="list">
-                  {t('pricing.plans.team.features').split('|').map((f) => (
+                  {String(t('pricing.plans.team.features')).split('|').map((f) => (
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>
                   ))}
                 </ul>

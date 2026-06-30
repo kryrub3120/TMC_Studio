@@ -580,14 +580,7 @@ export function BoardPage(props: BoardPageProps) {
           isAutoNumbering={state.isAutoNumbering}
           onToggleAutoNumbering={handlers.contextMenuActions.onToggleAutoNumbering}
           onRenumberArrows={() => {
-            const store = useBoardStore.getState();
-            const hasNumbered = store.elements.some(
-              (el: any) => el.type === 'arrow' && el.showNumber
-            );
-            if (hasNumbered) {
-              store.renumberAllArrows();
-              store.pushHistory();
-            }
+            useBoardStore.getState().renumberAllArrowsWithHistory();
           }}
           onUpdateSelectedElements={(u) => useBoardStore.getState().updateSelectedElements(u)}
         />

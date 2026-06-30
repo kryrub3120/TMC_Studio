@@ -20,6 +20,8 @@ export interface ZoneNodeProps {
   isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
+  /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
+  onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
   onResize?: (id: string, position: Position, width: number, height: number) => void;
   /** Replace polygon vertices (flat array relative to zone.position). */
   onUpdatePoints?: (id: string, points: number[]) => void;
@@ -58,10 +60,12 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   isLocked = false,
   onSelect,
   onDragEnd,
+  onDragStart,
   onResize,
   onUpdatePoints,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
+  const [multiDragActive, setMultiDragActive] = useState(false);
 
   const isPolygon = zone.shape === 'polygon';
 
@@ -193,19 +197,52 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
   const handleClick = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
-      onSelect(zone.id, e.evt.shiftKey || e.evt.metaKey);
+      onSelect(zone.id, e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey);
     },
     [zone.id, onSelect]
   );
 
+  const handleGroupMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isLocked || activeHandle || draggingVertex) {
+        setMultiDragActive(false);
+        return;
+      }
+      if (!onDragStart) {
+        setMultiDragActive(false);
+        return;
+      }
+
+      const stage = e.target.getStage();
+      const rect = stage?.container().getBoundingClientRect();
+      if (!rect) {
+        setMultiDragActive(false);
+        return;
+      }
+
+      const shouldMultiDrag = onDragStart(
+        zone.id,
+        e.evt.clientX - rect.left,
+        e.evt.clientY - rect.top
+      );
+      if (shouldMultiDrag) {
+        e.cancelBubble = true;
+        setMultiDragActive(true);
+        return;
+      }
+      setMultiDragActive(false);
+    },
+    [zone.id, isLocked, activeHandle, draggingVertex, onDragStart]
+  );
+
   const handleGroupDragEnd = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (activeHandle || draggingVertex) return;
+      if (multiDragActive || activeHandle || draggingVertex) return;
       applyGrab(groupRef);
       const node = e.target;
       onDragEnd(zone.id, { x: node.x(), y: node.y() });
     },
-    [zone.id, onDragEnd, activeHandle, draggingVertex]
+    [zone.id, onDragEnd, multiDragActive, activeHandle, draggingVertex]
   );
 
   const handleResizeStart = useCallback(
@@ -357,12 +394,13 @@ export const ZoneNode: React.FC<ZoneNodeProps> = ({
       ref={groupRef}
       x={displayX}
       y={displayY}
-      draggable={!activeHandle && !draggingVertex && !isLocked}
+      draggable={!multiDragActive && !activeHandle && !draggingVertex && !isLocked}
       onClick={handleClick}
       onTap={handleClick}
+      onMouseDown={handleGroupMouseDown}
       onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
-      onDragStart={() => { if (!isLocked) applyGrabbing(groupRef); }}
+      onDragStart={() => { if (!multiDragActive && !isLocked) applyGrabbing(groupRef); }}
       onDragEnd={handleGroupDragEnd}
     >
       {/* Zone fill (translucent, interactive) */}

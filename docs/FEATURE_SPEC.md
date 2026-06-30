@@ -448,6 +448,7 @@ When enabled via `Shift+N`, every newly created arrow automatically receives the
 - Called automatically after `deleteSelected` if any numbered arrow was deleted.
 - Also called when Auto-Numbering Mode is toggled ON (`toggleAutoNumbering`).
 - **Does NOT call `pushHistory()`** — only the calling function owns the history snapshot.
+- `renumberAllArrowsWithHistory()` wraps `renumberAllArrows()` + `pushHistory()` — used by context menu "Renumber from 1".
 - Button "🔃 Renumber arrows (1..N)" in Inspector → Props tab (arrow selected).
 
 **One-shot auto-number via drag (post-draw action):**
@@ -465,6 +466,7 @@ When enabled via `Shift+N`, every newly created arrow automatically receives the
 | `Shift+R` | Activate run arrow tool + one-shot auto-number flag |
 | `Shift+N` | Toggle Auto-Numbering Mode ON/OFF |
 | Context Menu (arrow) → `Dodaj/Edytuj numer` | Toggle per-arrow number (Smart Sequencing) |
+| Context Menu (arrow) → `Renumber from 1` | Renumber all arrows 1..N + push history |
 | Context Menu (any) → `Auto-numeracja` | Toggle global Auto-Numbering Mode |
 
 **Rendering:**
@@ -786,6 +788,8 @@ interface SquadPlayer {
 **Multi-drag:**
 - Select multiple elements
 - Drag any selected element → all move together maintaining relative positions
+- Groups: dragging any member of a group moves all group members together
+- Arrows in multi-drag: both endpoints AND curve control point move together, preserving arc curvature
 - Preview during drag, commit to history on drop
 
 **Nudge (keyboard):**
@@ -794,7 +798,10 @@ interface SquadPlayer {
 | Arrow keys | ±5px (default) |
 | `Shift+Arrow` | ±1px (fine control) |
 
-**Grid snap:** None (free positioning)
+**Grid snap (drag):**
+- Single element drag: position snaps to grid when `snapEnabled` is ON (default: ON)
+- Multi-drag: all elements respect `snapEnabled` — center of arrow endpoints + curve snap, position-based elements snap
+- `snapEnabled` preference read from UI store (`useUIStore.snapEnabled`, persisted via localStorage + cloud)
 
 ### 2.3 Context Menu
 

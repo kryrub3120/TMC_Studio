@@ -19,6 +19,8 @@ export interface ArrowNodeProps {
   isLocked?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, position: Position) => void;
+  /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
+  onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
   onEndpointDrag?: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   /** Print mode: all arrows render as black, shoot gets 1.5x stroke */
   isPrintMode?: boolean;
@@ -313,10 +315,12 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   isLocked = false,
   onSelect,
   onDragEnd,
+  onDragStart,
   onEndpointDrag,
   isPrintMode,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
+  const [multiDragActive, setMultiDragActive] = useState(false);
 
   // Endpoint/control drag state
   const [draggingEndpoint, setDraggingEndpoint] = useState<DraggingEndpoint>(null);
@@ -434,14 +438,47 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
   const handleClick = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       e.cancelBubble = true;
-      onSelect(arrow.id, e.evt.shiftKey || e.evt.metaKey);
+      onSelect(arrow.id, e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey);
     },
     [arrow.id, onSelect]
   );
 
+  const handleMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isLocked) {
+        setMultiDragActive(false);
+        return;
+      }
+      if (!onDragStart) {
+        setMultiDragActive(false);
+        return;
+      }
+
+      const stage = e.target.getStage();
+      const rect = stage?.container().getBoundingClientRect();
+      if (!rect) {
+        setMultiDragActive(false);
+        return;
+      }
+
+      const shouldMultiDrag = onDragStart(
+        arrow.id,
+        e.evt.clientX - rect.left,
+        e.evt.clientY - rect.top
+      );
+      if (shouldMultiDrag) {
+        e.cancelBubble = true;
+        setMultiDragActive(true);
+        return;
+      }
+      setMultiDragActive(false);
+    },
+    [arrow.id, isLocked, onDragStart]
+  );
+
   const handleDragEnd = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (draggingEndpoint) return;
+      if (draggingEndpoint || multiDragActive) return;
       applyGrab(groupRef);
       const node = e.target;
       const originalCenterX = (arrow.startPoint.x + arrow.endPoint.x) / 2;
@@ -470,7 +507,7 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
 
       onDragEnd(arrow.id, { x: node.x(), y: node.y() });
     },
-    [arrow.id, arrow.startPoint, arrow.endPoint, arrow.curveControl, onDragEnd, onEndpointDrag, draggingEndpoint]
+    [arrow.id, arrow.startPoint, arrow.endPoint, arrow.curveControl, onDragEnd, onEndpointDrag, draggingEndpoint, multiDragActive]
   );
 
   // Start endpoint drag
@@ -549,12 +586,13 @@ export const ArrowNode: React.FC<ArrowNodeProps> = ({
       ref={groupRef}
       x={centerX}
       y={centerY}
-      draggable={!draggingEndpoint && !isLocked}
+      draggable={!multiDragActive && !draggingEndpoint && !isLocked}
       onClick={handleClick}
       onTap={handleClick}
+      onMouseDown={handleMouseDown}
       onMouseEnter={isLocked ? cursorDefault : cursorGrab}
       onMouseLeave={cursorDefault}
-      onDragStart={() => { if (!isLocked) applyGrabbing(groupRef); }}
+      onDragStart={() => { if (!multiDragActive && !isLocked) applyGrabbing(groupRef); }}
       onDragEnd={handleDragEnd}
     >
       {/* Shoot arrow - double parallel lines + custom heads */}

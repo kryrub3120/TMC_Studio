@@ -33,6 +33,7 @@ interface ContextMenuHandlers {
   onChangeTextColor?: () => void;
   onResize?: () => void;
   onEditArrowNumber?: () => void;
+  onRenumberArrows?: () => void;
   // Empty space actions
   onAddPlayer?: () => void;
   onAddPlayerTeam1?: () => void;
@@ -210,6 +211,7 @@ export function getCanvasContextMenuItems(
     return [
       { label: label('editArrowNumber', 'Add/edit number'), icon: 'number', onClick: handlers.onEditArrowNumber ?? (() => {}), shortcut: '→' },
       { label: autoNumLabel, icon: 'number', onClick: handlers.onToggleAutoNumbering ?? (() => {}), shortcut: 'Shift+N' },
+      { label: label('renumberArrows', 'Renumber from 1'), icon: 'number', onClick: handlers.onRenumberArrows ?? (() => {}) },
       { label: label('changeColor', 'Change color'), icon: 'palette', onClick: handlers.onCycleColor ?? (() => {}), shortcut: `${opt}+↓` },
       ...layerItems,
       ...commonItems,

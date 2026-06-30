@@ -61,7 +61,8 @@ export interface BoardCanvasProps {
   onStageMouseUp?: (e: any) => void;
   onElementSelect?: (id: string, addToSelection: boolean) => void;
   onElementDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
-  onElementDragStart?: (id: string) => boolean;
+  onElementDragStart?: (id: string, mouseX?: number, mouseY?: number) => boolean;
+  snapEnabled?: boolean;
   onResizeZone?: (id: string, pos: { x: number; y: number }, width: number, height: number) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
   onUpdateArrowEndpoint?: (id: string, endpoint: 'start' | 'end' | 'control', pos: { x: number; y: number }) => void;
@@ -93,6 +94,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
     onElementSelect,
     onElementDragEnd,
     onElementDragStart,
+    snapEnabled = true,
     onResizeZone,
     onResizeEquipment,
     onUpdateArrowEndpoint,
@@ -129,6 +131,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         visible={layerVisibility.zones}
         onSelect={onElementSelect}
         onDragEnd={onElementDragEnd}
+        onDragStart={onElementDragStart}
         onResize={onResizeZone}
         isElementLocked={isElementLocked}
       />
@@ -142,6 +145,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         visible={layerVisibility.arrows}
         onSelect={onElementSelect}
         onDragEnd={onElementDragEnd}
+        onDragStart={onElementDragStart}
         onEndpointDrag={onUpdateArrowEndpoint}
         isElementLocked={isElementLocked}
       />
@@ -158,6 +162,7 @@ export const BoardCanvas = forwardRef<Konva.Stage, BoardCanvasProps>((props, ref
         onSelect={onElementSelect}
         onDragEnd={onElementDragEnd}
         onDragStart={onElementDragStart}
+        snapEnabled={snapEnabled}
         onPlayerQuickEdit={onPlayerQuickEdit}
         onResizeEquipment={onResizeEquipment}
         isElementLocked={isElementLocked}
