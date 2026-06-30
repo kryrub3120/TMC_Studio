@@ -214,13 +214,22 @@ function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
 async function waitForOAuthSession() {
   if (!supabase) return null;
 
-  const delays = [0, 150, 350, 700, 1200, 2000, 3000, 5000];
+  // Skip delay=0 — getSession at 0ms races supabase-js internal lock (locks.js)
+  // after a just-completed PKCE exchange, producing "signal is aborted without reason".
+  const delays = [150, 350, 700, 1200, 2000, 3000, 5000];
   for (const delay of delays) {
-    if (delay > 0) {
-      await new Promise((resolve) => window.setTimeout(resolve, delay));
+    await new Promise((resolve) => window.setTimeout(resolve, delay));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) return session;
+    } catch (err) {
+      // AbortError from supabase-js internal lock — retry on next delay
+      if (err instanceof Error && err.name === 'AbortError') {
+        logger.debug('[Auth] waitForOAuthSession: AbortError (retrying)');
+        continue;
+      }
+      throw err;
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) return session;
   }
 
   return null;

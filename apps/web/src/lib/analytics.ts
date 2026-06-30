@@ -47,10 +47,18 @@ function forward(event: string, props: Record<string, unknown>): void {
       (window as any).plausible(event, { props });
       return;
     }
-    // Fallback: sendBeacon to Plausible proxy endpoint
+    // Fallback: fetch to Plausible proxy endpoint.
+    // sendBeacon sends credentials=include by default, which breaks Plausible's
+    // Access-Control-Allow-Origin: * (CORS spec forbids wildcard + credentials).
+    // fetch with credentials:omit + keepalive:true is the fix.
     const payload = { name: event, url: window.location.href, domain: window.location.hostname, props };
-    const body = JSON.stringify(payload);
-    navigator.sendBeacon(`${PLAUSIBLE_HOST}/api/event`, new Blob([body], { type: 'application/json' }));
+    void fetch(`${PLAUSIBLE_HOST}/api/event`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'omit',
+    });
   } catch {
     // analytics failure is non-blocking — silently ignore
   }
