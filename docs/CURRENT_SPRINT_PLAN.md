@@ -50,6 +50,26 @@ Evidence:
 
 ## Aktualny sprint
 
+### Sprint UX-C — Editor Viewport, Pan i Squad Bench
+
+**Status:** 🟢 READY (2026-06-29)  
+**Source of truth:** `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`
+
+Cel: tablica ma byc glownym, duzym i wygodnym obszarem pracy na laptopach; po powiekszeniu ma dac sie naturalnie przesuwac; Squad Bench ma startowac ukryty i zapamietywac preferencje; overlaye nie moga nachodzic na siebie.
+
+Zakres:
+
+1. Domyslny rozmiar tablicy + poprawne `Dopasuj do widoku`.
+2. Pan przez drag pustego obszaru tablicy, bez psucia dragowania elementow.
+3. Overlay safe areas dla zoom/help/squad/bottom bar/inspector.
+4. Squad Bench default hidden.
+5. Squad Bench visibility jako preferencja uzytkownika, persisted lokalnie i w cloud prefs po zalogowaniu.
+6. Manual QA na viewportach laptopowych.
+
+DoD i manual QA matrix sa w `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`.
+
+---
+
 ### Sprint 2 - Quality Gate i testy minimalne (S-QA)
 
 **Status:** ✅ DONE (2026-06-22)

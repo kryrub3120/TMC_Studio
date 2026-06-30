@@ -131,8 +131,12 @@ export function useBoardPageState(props: BoardPageProps) {
   const updateTextContent = useBoardStore((s) => s.updateTextContent);
   const addSquadPlayer = useBoardStore((s) => s.addSquadPlayer);
   const removeSquadPlayer = useBoardStore((s) => s.removeSquadPlayer);
-  const setSquadVisible = useBoardStore((s) => s.setSquadVisible);
-  const toggleSquadVisible = useBoardStore((s) => s.toggleSquadVisible);
+  // UX-C: Squad Bench visibility is now a UI preference, not document state.
+  // We still read setSquadVisible/toggleSquadVisible for backward compat (AppShell/SettingsModal),
+  // but BoardPage reads squadBenchVisible from useUIStore.
+  const squadBenchVisible = useUIStore((s) => s.squadBenchVisible);
+  const setSquadBenchVisible = useUIStore((s) => s.setSquadBenchVisible);
+  const toggleSquadBenchVisible = useUIStore((s) => s.toggleSquadBenchVisible);
 
   // Cloud/step actions
   const cloudProjectId = useBoardStore((s) => s.cloudProjectId);
@@ -613,10 +617,10 @@ export function useBoardPageState(props: BoardPageProps) {
 
     // Squad bench
     squad: boardDoc.squad ?? [],
-    squadVisible: boardDoc.squadVisible ?? false,
+    squadVisible: squadBenchVisible, // UX-C: from UI preference, not document
     addSquadPlayer,
     removeSquadPlayer,
-    setSquadVisible,
-    toggleSquadVisible,
+    setSquadVisible: setSquadBenchVisible, // UX-C: redirect to UI preference
+    toggleSquadVisible: toggleSquadBenchVisible, // UX-C: redirect to UI preference
   };
 }

@@ -19,6 +19,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Position, BoardElement } from '@tmc/core';
 import { isArrowElement, hasPosition } from '@tmc/core';
 import type { ActiveTool } from '../store/useUIStore';
+import { useBoardStore } from '../store';
 import { useCommandRegistry } from './useCommandRegistry';
 
 interface UseCanvasEventsOptions {
@@ -244,10 +245,13 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
 
   /**
    * Handle stage mouse move
-   * Updates marquee selection rectangle
+   * Updates marquee selection rectangle + tracks cursor position for element placement
    */
   const handleStageMouseMove = useCallback(
     (pos: Position) => {
+      // Track cursor position so element placement (addPlayerAtCursor etc.) uses it
+      useBoardStore.getState().setCursorPosition(pos);
+
       // Update marquee selection
       if (marqueeStart) {
         setMarqueeEnd(pos);

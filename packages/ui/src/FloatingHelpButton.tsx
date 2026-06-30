@@ -35,8 +35,8 @@ export const FloatingHelpButton: React.FC<FloatingHelpButtonProps> = ({
       aria-label={t('help.title')}
       title={`${t('help.title')} (?)`}
       className="
-        fixed bottom-6 right-6
-        w-14 h-14 sm:w-14 sm:h-14
+        absolute bottom-4 left-4
+        w-12 h-12 sm:w-14 sm:h-14
         bg-accent hover:bg-accent-hover
         text-white
         rounded-full

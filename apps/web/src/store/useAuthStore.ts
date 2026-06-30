@@ -190,13 +190,6 @@ function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
       reject(new Error('Google login took too long. Please try again.'));
     }, 120000);
 
-    const closedPoll = window.setInterval(() => {
-      if (popup.closed) {
-        cleanup();
-        reject(new Error('Google login window was closed before sign-in finished.'));
-      }
-    }, 500);
-
     const onMessage = (event: MessageEvent<AuthPopupMessage>) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== AUTH_POPUP_MESSAGE) return;
@@ -211,7 +204,6 @@ function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
 
     const cleanup = () => {
       window.clearTimeout(timeout);
-      window.clearInterval(closedPoll);
       window.removeEventListener('message', onMessage);
     };
 
@@ -390,10 +382,17 @@ export const useAuthStore = create<AuthState>()(
                 try {
                   const { useBoardStore } = await import('./index');
                   const boardState = useBoardStore.getState();
-                  await Promise.all([
+                  const results = await Promise.allSettled([
                     boardState.fetchCloudProjects(),
                     boardState.fetchCloudFolders(),
                   ]);
+                  results.forEach((r) => {
+                    if (r.status === 'rejected' && r.reason instanceof Error && r.reason.name === 'AbortError') {
+                      logger.debug('[Auth] AbortError in prefetch (expected) - ignored');
+                    } else if (r.status === 'rejected') {
+                      logger.error('[Auth] Failed to prefetch projects/folders:', r.reason);
+                    }
+                  });
                 } catch (error) {
                   logger.error('[Auth] Failed to prefetch projects/folders:', error);
                 }
@@ -536,13 +535,21 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          await supabaseSignIn(email, password);
-          const user = await getCurrentUser();
+          const authResponse = await supabaseSignIn(email, password);
+          
+          // Set basic user state from signIn response immediately.
+          // The onAuthStateChange listener will fill in the full profile
+          // (preferences, projects, folders) asynchronously — avoid calling
+          // getCurrentUser() here to prevent racing with the listener on
+          // supabase-js internal locks (locks.js AbortError).
+          const authUser = authResponse?.user ?? null;
           set({
-            user,
-            isAuthenticated: !!user,
-            isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
-            isTeam: user?.subscription_tier === 'team',
+            user: authUser ? {
+              id: authUser.id,
+              email: authUser.email ?? '',
+              subscription_tier: 'free',
+            } : null,
+            isAuthenticated: !!authUser,
             isLoading: false,
           });
         } catch (error) {

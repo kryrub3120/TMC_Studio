@@ -111,9 +111,11 @@ export interface BoardCanvasSectionProps {
 
 // ─── Constants ──────────────────────────────────────────────────────────
 const MIN_CONTAINER_SIZE = 200;
-const MAX_FIT_UPSCALE = 2.4; // pitch is the hero — let it fill ~75-80% of the work area on laptops/Macs
+const MAX_FIT_UPSCALE = 2.8; // pitch is the hero — let it fill ~85-92% of the work area on laptops/Macs
 const PAN_CLAMP_MARGIN = 200;
 const WHEEL_ZOOM_FACTOR = 0.001; // sensitivity for Ctrl+wheel zoom
+/** Minimum drag distance (px) to initiate natural pan — below this = click (clear selection) */
+const NATURAL_PAN_THRESHOLD = 5;
 
 export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const {
@@ -240,6 +242,14 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const panStartRef = useRef({ x: 0, y: 0 });
   const panOffsetStartRef = useRef({ x: 0, y: 0 });
   const [spaceHeld, setSpaceHeld] = useState(false);
+  
+  // ─── Natural panning (drag empty pitch area when zoomed in) ─────────
+  const isNaturalPanRef = useRef(false);
+  const naturalPanStartRef = useRef({ x: 0, y: 0 });
+  const naturalPanOffsetStartRef = useRef({ x: 0, y: 0 });
+  const isNaturalPanCandidateRef = useRef(false);
+  const [showGrabCursor, setShowGrabCursor] = useState(false);
+
   // ─── ETAP 3: Track first valid container measurement for initial center ──
   const hasInitializedRef = useRef(false);
 
@@ -276,36 +286,106 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     );
   }, [canvasWidth, canvasHeight, effectiveZoom, containerSize]);
 
-  // ─── Space+drag panning (desktop) ───────────────────────────────────
-  const handleContainerPointerDown = useCallback((e: React.PointerEvent) => {
-    if (!spaceHeld) return;
-    // ✅ IMPERATIVE read — stale closure proof
-    if (useUIStore.getState().viewportLocked) return;
-    isPanningRef.current = true;
-    panStartRef.current = { x: e.clientX, y: e.clientY };
-    panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    e.preventDefault();
-    e.stopPropagation();
-  }, [spaceHeld, panOffset]);
+  const canStartNaturalPan = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return false;
+    if (activeTool && activeTool !== 'select') return false;
+    if (!(e.target instanceof HTMLCanvasElement)) return false;
 
-  const handleContainerPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isPanningRef.current) return;
-    // ✅ IMPERATIVE read — catch mid-pan lock toggle
-    if (useUIStore.getState().viewportLocked) {
-      isPanningRef.current = false;
+    const stage = stageRef.current;
+    if (!stage) return true;
+
+    stage.setPointersPositions(e.nativeEvent);
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return true;
+
+    const hit = stage.getIntersection(pointer);
+    let node: Konva.Node | null = hit;
+    while (node && node !== stage) {
+      if (node.draggable()) return false;
+      node = node.getParent();
+    }
+
+    return true;
+  }, [activeTool, stageRef]);
+
+  // ─── Space+drag panning (desktop) + Natural panning (drag empty pitch) ──
+  const handleContainerPointerDown = useCallback((e: React.PointerEvent) => {
+    // Space+drag panning
+    if (spaceHeld) {
+      if (useUIStore.getState().viewportLocked) return;
+      isPanningRef.current = true;
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
-    const dx = e.clientX - panStartRef.current.x;
-    const dy = e.clientY - panStartRef.current.y;
-    const clamped = clampPan(panOffsetStartRef.current.x + dx, panOffsetStartRef.current.y + dy);
-    setPanOffset(clamped);
+
+    // Natural panning: candidate when zoomed in enough (> 1.1 threshold to avoid accidental pan at fit)
+    const curEffZoom = effectiveZoom;
+    if (curEffZoom > 1.1 && !useUIStore.getState().viewportLocked && canStartNaturalPan(e)) {
+      isNaturalPanCandidateRef.current = true;
+      isNaturalPanRef.current = false;
+      setShowGrabCursor(false);
+      naturalPanStartRef.current = { x: e.clientX, y: e.clientY };
+      naturalPanOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
+    }
+  }, [spaceHeld, panOffset, effectiveZoom, canStartNaturalPan]);
+
+  const handleContainerPointerMove = useCallback((e: React.PointerEvent) => {
+    // Space+drag panning
+    if (isPanningRef.current) {
+      if (useUIStore.getState().viewportLocked) {
+        isPanningRef.current = false;
+        return;
+      }
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      const clamped = clampPan(panOffsetStartRef.current.x + dx, panOffsetStartRef.current.y + dy);
+      setPanOffset(clamped);
+      return;
+    }
+
+    // Natural panning candidate → active after threshold
+    if (isNaturalPanCandidateRef.current && !useUIStore.getState().viewportLocked) {
+      const dx = e.clientX - naturalPanStartRef.current.x;
+      const dy = e.clientY - naturalPanStartRef.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > NATURAL_PAN_THRESHOLD) {
+        isNaturalPanCandidateRef.current = false;
+        isNaturalPanRef.current = true;
+        setShowGrabCursor(true);
+        // Capture pointer so Konva doesn't interfere
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      }
+    }
+
+    // Active natural panning
+    if (isNaturalPanRef.current) {
+      const dx = e.clientX - naturalPanStartRef.current.x;
+      const dy = e.clientY - naturalPanStartRef.current.y;
+      const clamped = clampPan(naturalPanOffsetStartRef.current.x + dx, naturalPanOffsetStartRef.current.y + dy);
+      setPanOffset(clamped);
+    }
   }, [clampPan]);
 
   const handleContainerPointerUp = useCallback((e: React.PointerEvent) => {
+    // Space+drag panning
     if (isPanningRef.current) {
       isPanningRef.current = false;
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      return;
+    }
+
+    // Natural panning — on threshold-crossed pan, release
+    if (isNaturalPanRef.current || isNaturalPanCandidateRef.current) {
+      if (isNaturalPanRef.current) {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      }
+      isNaturalPanRef.current = false;
+      isNaturalPanCandidateRef.current = false;
+      setShowGrabCursor(false);
     }
   }, []);
 
@@ -444,6 +524,25 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     }
   }, [containerSize, zoom, fitZoom, canvasWidth, canvasHeight]);
 
+  // ─── Center pan when zoomFit (zoom=1 transition) is explicitly called ──
+  // Uses a ref to track previous zoom and only fires on transition TO 1.
+  const prevZoomRef = useRef(zoom);
+  useEffect(() => {
+    const prevZoom = prevZoomRef.current;
+    prevZoomRef.current = zoom;
+    // Only act when zoom transitions TO 1 (zoomFit) from a different value
+    if (zoom === 1 && prevZoom !== 1 && hasInitializedRef.current) {
+      const center = centerPanOffset(
+        containerSize.width,
+        containerSize.height,
+        canvasWidth,
+        canvasHeight,
+        effectiveZoom, // = 1 * fitZoom = fitZoom
+      );
+      setPanOffset(center);
+    }
+  }, [zoom, containerSize, canvasWidth, canvasHeight, effectiveZoom]);
+
   // ─── Group transform (panOffset IS groupPan directly) ───────────────
   // In True Virtual Canvas: panOffset = {x: groupPanX, y: groupPanY}
   const groupPan = panOffset;
@@ -463,9 +562,14 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const toolCursor = activeTool && activeTool !== 'select'
     ? (activeTool === 'text' ? 'cursor-text' : 'cursor-crosshair')
     : '';
+  const hasNaturalPan = effectiveZoom > 1.1 && !spaceHeld;
   const cursorClass = spaceHeld
     ? (isPanningRef.current ? 'cursor-grabbing' : 'cursor-grab')
-    : toolCursor;
+    : showGrabCursor
+      ? 'cursor-grabbing'
+      : hasNaturalPan && !toolCursor && (!activeTool || activeTool === 'select')
+        ? 'cursor-grab'
+        : toolCursor;
 
   return (
     <div

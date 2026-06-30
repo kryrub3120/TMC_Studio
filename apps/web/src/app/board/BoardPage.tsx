@@ -193,6 +193,11 @@ export function BoardPage(props: BoardPageProps) {
     onCloseSettingsModal();
     state.setTutorialCompleted(true);
     state.setShowTutorial(false);
+    // UX-C: restore user's original Squad Bench preference after tutorial
+    if (tutorialSquadPreference !== null) {
+      state.setSquadVisible(tutorialSquadPreference);
+      tutorialSquadPreference = null;
+    }
   };
 
   const handleTutorialComplete = () => {
@@ -201,7 +206,15 @@ export function BoardPage(props: BoardPageProps) {
     onCloseSettingsModal();
     state.setTutorialCompleted(true);
     state.setShowTutorial(false);
+    // UX-C: restore user's original Squad Bench preference after tutorial
+    if (tutorialSquadPreference !== null) {
+      state.setSquadVisible(tutorialSquadPreference);
+      tutorialSquadPreference = null;
+    }
   };
+
+  // UX-C: track original Squad Bench preference for tutorial restore
+  let tutorialSquadPreference: boolean | null = null;
 
   // Reveal the real element each tutorial step describes, so the coach sees the
   // actual panel open — not just a label floating over a collapsed strip.
@@ -233,6 +246,10 @@ export function BoardPage(props: BoardPageProps) {
         break;
       }
       case 'squad':
+        // UX-C: save original preference, temporarily show bench
+        if (tutorialSquadPreference === null) {
+          tutorialSquadPreference = state.squadVisible;
+        }
         if (!state.squadVisible) state.setSquadVisible(true);
         break;
       case 'steps':

@@ -1,5 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useCallback, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { LanguageSwitcher, useTranslation } from '@tmc/ui';
 
 export const LEGAL_UPDATED_AT = 'June 16, 2026';
@@ -77,7 +77,19 @@ interface PublicPageShellProps {
 
 export function PublicPageShell({ title, description, updatedAt, children }: PublicPageShellProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePublicDarkTheme();
+
+  const handleBack = useCallback(() => {
+    // If document referrer is within this app, use browser history;
+    // otherwise go to the board (/app) since that's where users
+    // typically come from (footer links on the editor).
+    if (document.referrer && new URL(document.referrer).hostname === window.location.hostname) {
+      navigate(-1);
+    } else {
+      navigate('/app', { replace: true });
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-bg font-sans text-text">
@@ -106,10 +118,10 @@ export function PublicPageShell({ title, description, updatedAt, children }: Pub
 
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="mb-8 border-b border-border pb-8">
-          <Link to="/" className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-text">
+          <button onClick={handleBack} className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-text">
             <span aria-hidden="true">←</span>
             {t('legal.back')}
-          </Link>
+          </button>
           <h1 className="text-3xl font-bold tracking-tight text-text sm:text-5xl">{title}</h1>
           {description && <p className="mt-4 max-w-2xl text-base leading-7 text-muted">{description}</p>}
           {updatedAt && <p className="mt-4 text-sm text-muted">{t('legal.updated', { date: updatedAt })}</p>}

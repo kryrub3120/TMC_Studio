@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Viewport: Pitch wypełnia ~85-92% obszaru roboczego** — zwiększono `MAX_FIT_UPSCALE` z 2.4 do 2.8, poprawiono auto-center przy zoomFit (Shift+1) i przy pierwszym załadowaniu (`BoardCanvasSection.tsx`).
+- **Canvas: Naturalny pan przez drag pustego obszaru** — przeciągnięcie pustego tła/pitcha przy zoom > 1.1 inicjuje panning z progiem 5 px. Cursor: grab/grabbing. Space+drag nadal działa. Konflikt z marquee/selection rozwiązany przez threshold i priorytet narzędzi (`BoardCanvasSection.tsx`).
+- **Squad Bench: Default hidden** — nowe dokumenty mają `squadVisible: false` (`serialization.ts`).
+- **Squad Bench: Visibility jako persisted user preference** — dodano `squadBenchVisible` do `useUIStore` z localStorage persist, `toggleSquadBenchVisible`/`setSquadBenchVisible` akcje, cloud sync przez `queueSync`. BoardPage i AppShell czytają z UI store, nie z dokumentu (`useUIStore.ts`, `useBoardPageState.ts`, `AppShell.tsx`).
+- **Overlay safe areas: FloatingHelpButton absolutne względem canvas** — zmieniono z `fixed bottom-6 right-6` na `absolute bottom-4 left-4`, aby nie nachodził na ZoomWidget i Squad Bench (`FloatingHelpButton.tsx`).
+
+### Fixed
+- **CSP: Content Security Policy** — dodano `fonts.googleapis.com` do `style-src`/`style-src-elem`, `fonts.gstatic.com` do `font-src`, `plausible.io` do `connect-src` (`netlify.toml`).
+- **Auth: AbortError przy logowaniu email+password** — usunięto race condition między `signIn()` a `onAuthStateChange` listenerem. `signIn` nie woła już `getCurrentUser()`, używa danych z response. Prefetch projects/folders używa `Promise.allSettled()` z obsługą AbortError.
+- **Board: Element placement na pozycji kursora** — `handleStageMouseMove` zapisuje `cursorPosition` do store'a, dzięki czemu dodawanie elementów z TopBar/skrotów klawiszowych trafia tam gdzie wskaźnik myszy.
+- **TopBar: Tutorial menu nie blokuje języka i innych akcji** — dropdowny wymuszane przez Coach Tour renderują nieinteraktywny backdrop (`pointer-events-none`), więc pełnoekranowa warstwa `z-40` nie przechwytuje kliknięć w `LanguageSwitcher`, konto ani pozostałe akcje (`TopBar.tsx`).
+- **TopBar: Dropdowny nie są przycinane przez prawy klaster akcji** — usunięto `overflow-x-auto` z kontenera akcji, ponieważ absolutne menu języka/narzędzi muszą wychodzić poza pasek bez utraty hit-area (`TopBar.tsx`).
+- **Canvas: Naturalny pan nie uzbraja się na elementach i overlayach** — panning przez pusty obszar działa tylko dla lewego przycisku myszy, na rzeczywistym `<canvas>`, bez aktywnego narzędzia rysowania i bez trafienia w draggable node Konvy (`BoardCanvasSection.tsx`).
+- **Legal pages: Powrót do tablicy** — link "← back" na `/privacy`, `/terms`, `/cookies` używa `navigate(-1)` z fallbackiem do `/app` zamiast stałego `/`.
+
 ## [0.9.0] - 2026-06-22
 
 ### Added
