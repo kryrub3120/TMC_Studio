@@ -1,7 +1,7 @@
 # TMC Studio — Authentication Flow
 
 > Kompletny opis mechanizmu logowania i zarządzania sesją w TMC Studio.
-> **Last Updated:** 2026-06-20
+> **Last Updated:** 2026-06-29
 
 ---
 
@@ -214,15 +214,14 @@ export function AuthCallbackPage() {
 |---|---|---|
 | `user` | `User \| null` | Zalogowany użytkownik (pełny profil z DB) |
 | `isLoading` | `boolean` | Flaga ogólnego ładowania |
-| `isOAuthInProgress` | `boolean` | **Google popup otwarty** → status UI |
+| `isOAuthInProgress` | `boolean` | Google popup otwarty → status UI |
 | `isInitialized` | `boolean` | Czy `initialize()` zakończone (UI startuje od razu) |
-| `isAuthenticated` | `boolean` = `!!user` i listenerconfirmed Po przerwaniu logowania Google OAuth z popupem, czyścimy również flagę isOAuthInProgress w stanie, aby zapewnić konsystentny stan UI | maintained przez listenera |
+| `isAuthenticated` | `boolean` | maintained przez listenera; `= !!user` |
 | `error` | `string \| null` | Błąd autha do pokazania w UI |
-| `isMockUserisDevCloudActive() && !supabase (DEV-ONLY) fałszowanie poziomów premium`,
-jest flagą wskazującą czy bieżący użytkownik został zalogowany przez dedykowane API developerskie |
-| `teamId` | `string \| ``null` | ID zespołu Team plan |
-| `isPro` | `boolean` = `user.subscription_tier === 'pro' \|\| 'team'` |
-| `isTeam` | `boolean` = `user.subscription_tier === ''team'`help w rozpoznaniu poziomu uprawnień w kontekście planów |
+| `isMockUser` | `boolean` | DEV-ONLY: mock z devLogin() zamiast Supabase |
+| `teamId` | `string \| null` | ID zespołu Team plan |
+| `isPro` | `boolean` | `= user.subscription_tier === 'pro' \|\| user.subscription_tier === 'team'` |
+| `isTeam` | `boolean` | `= user.subscription_tier === 'team'` |
 
 ```
 PLAN MAP:
@@ -259,7 +258,7 @@ if (!authUnsubscribe) {
     set({ user, isAuthenticated: !!user, isPro: ..., isTeam: ..., teamId: ... });
     if (user) {
       await loadPreferences();
-      await prefetchProjects();
+      await prefetchProjects();  // Promise.allSettled z obsługą AbortError
     }
     if (hasAuthCallback && user) {
       cleanAuthCallbackUrl();
@@ -269,7 +268,30 @@ if (!authUnsubscribe) {
 ```
 
 **Dlaczego singleton?** Wcześniej `initialize()` mogło być wywołane wielokrotnie (React Strict Mode w dev, re-mount komponentu). Każde wywołanie zakładało nowy listener → wielokrotne fetchowanie preferencji i projektów, race condition na stanie.
+### A.7.1 Race condition email+password signIn (2026-06-29)
 
+**Problem:** Po zalogowaniu email+password `signIn()` w useAuthStore wywoływał `getCurrentUser()` bezpośrednio po `supabaseSignIn()`. To tworzyło race condition z `onAuthStateChange` listenerem – oba procesy próbowały jednocześnie pobrać profil/preferencje/projekty, walcząc o wewnętrzne locki supabase-js (`locks.js`). Efekt: `AbortError: signal is aborted without reason`, profile nigdy nie były ładowane.
+
+**Fix (2026-06-29):**
+- `signIn()` nie woła już `getCurrentUser()` po `supabaseSignIn()`.
+- Używa `authResponse.user` bezpośrednio z odpowiedzi Supabase.
+- Pełny profil (preferencje, projekty, foldery) ładowany przez `onAuthStateChange` listener asynchronicznie.
+- Prefetch używa `Promise.allSettled()` z jawnym ignorowaniem `AbortError`.
+
+```typescript
+// Before (race):
+const authResponse = await supabaseSignIn(email, password);
+const user = await getCurrentUser();  // ← race z listenerem!
+
+// After (no race):
+const authResponse = await supabaseSignIn(email, password);
+const authUser = authResponse?.user ?? null;
+set({ user: authUser ? { id: authUser.id, email: authUser.email ?? '' } : null,
+      isAuthenticated: !!authUser });
+// Listener w tle uzupełnia profil/preferencje/projekty.
+```
+
+**Skutki:** Brak AbortError przy logowaniu email+password.
 ---
 
 ## 8. Polityka czyszczenia URL

@@ -6,8 +6,8 @@
 
 ## Meta
 
-- **Version:** 0.8.0 (patrz `docs/VERSIONING.md`)
-- **Last Updated:** 2026-06-22 (sec 17: user preferences & cloud sync, sec 18: UX hardening)
+- **Version:** 0.9.0 (patrz `docs/VERSIONING.md`)
+- **Last Updated:** 2026-06-30 (sec 3.2: natural pan guards, sec 14.1: tutorial menu backdrop safety)
 - **Status:** Living document — updated with every feature change
 
 ## Documentation Integrity Rules
@@ -70,11 +70,14 @@
 
 #### 1.1.1 Creation & Placement
 
+> **Cursor tracking:** `cursorPosition` is updated on every mouse move over the canvas (`handleStageMouseMove` in `useCanvasEventsController.ts`). If the mouse hasn't moved over the canvas (e.g. fresh load), fallback to board center via `getBoardCenter(document)`.
+
 | Trigger | Behavior |
 |---------|----------|
-| `P` | Add home team player at cursor position |
+| `P` | Add home team player at cursor position (tracked on mouse move over canvas) |
 | `Shift+P` | Add away team player at cursor position |
 | Context Menu → Add Home/Away Player | Add player at menu location |
+| TopBar dropdown → Players | Add player at last cursor position on canvas |
 | Formations (keys `1-6`) | Replace all home team players with formation |
 | Formations (`Shift+1-6`) | Replace all away team players with formation |
 
@@ -905,6 +908,14 @@ Where `fitZoom` is auto-computed to fit pitch in container
 | Trigger | Behavior |
 |---------|----------|
 | `Space+Drag` | Pan canvas |
+| Drag empty canvas at zoom > 110% | Natural pan after a 5px movement threshold |
+
+**Natural pan guards:**
+- Starts only from the real Konva `<canvas>`, never from HTML overlays, TopBar, modals, empty-state buttons, or other UI controls.
+- Uses the primary mouse button only.
+- Disabled while a drawing/placement tool is active.
+- Disabled when the pointer is over a draggable Konva node or one of its draggable parents, so players, zones, equipment, and other editable elements keep their own drag/click behavior.
+- Respects viewport lock.
 
 **Mobile:**
 | Trigger | Behavior |
@@ -916,7 +927,7 @@ Where `fitZoom` is auto-computed to fit pitch in container
 - 80px margin beyond pitch edges
 - Pan reset when zoom ≤ 1.0 (pitch fits in view)
 
-**CSS:** `touch-action: none` on canvas container (prevents native gestures)
+**CSS:** `touch-action: manipulation` on canvas container; custom pinch/two-finger gestures are handled by the viewport gesture hook.
 
 ### 3.3 Mobile Touch
 
@@ -1712,6 +1723,8 @@ Dla Pro/Team — wszystkie opcje dostępne.
 - Coach card includes eyebrow, title, description, mini-demo, keycaps, progress bars, Back, Next/Finish, and Skip.
 - Positioning recalculates on step change, scroll, resize, and orientation change.
 - If a target is unavailable, the card falls back to a safe centered position.
+- Steps that reveal real TopBar dropdowns may force a menu open, but their backdrop must be non-interactive (`pointer-events: none`) so language, account, help, and other TopBar actions remain clickable during the tour.
+- TopBar dropdown panels must not be clipped by a scroll/overflow parent; action clusters should preserve visible overflow for absolutely positioned menus.
 
 ### 14.2 Help Sidebar Tutorial Restart
 

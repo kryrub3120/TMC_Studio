@@ -179,6 +179,9 @@ interface UIState {
   // User-customized keyboard shortcuts (stable shortcut id -> combo label).
   shortcutOverrides: ShortcutOverrides;
   
+  // Squad Bench visibility (persisted user preference, not document state)
+  squadBenchVisible: boolean;
+
   // Actions - Theme
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -273,6 +276,10 @@ interface UIState {
   
   // Actions - Club Welcome (Sprint H3)
   setClubWelcomeSeen: (seen: boolean) => void;
+  
+  // Actions - Squad Bench visibility
+  toggleSquadBenchVisible: () => void;
+  setSquadBenchVisible: (visible: boolean) => void;
   
   // Breakpoint
   breakpoint: Breakpoint;
@@ -437,6 +444,7 @@ export const useUIStore = create<UIState>()(
       tutorialForceVisible: false,
       clubWelcomeSeen: false,
       shortcutOverrides: {},
+      squadBenchVisible: false,
       breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
@@ -668,6 +676,7 @@ export const useUIStore = create<UIState>()(
       
       zoomFit: () => {
         set({ zoom: 1 });
+        // UX-C: BoardCanvasSection's zoom-fit pan effect will auto-center
         get().showToast(t('storeToast.zoomFit'), 800);
       },
       
@@ -698,6 +707,17 @@ export const useUIStore = create<UIState>()(
         } else {
           get().showToast(t('storeToast.offline'), 1500);
         }
+      },
+      
+      // Squad Bench visibility actions
+      toggleSquadBenchVisible: () => {
+        const next = !get().squadBenchVisible;
+        set({ squadBenchVisible: next });
+        queueSync({ squadBenchVisible: next });
+      },
+      setSquadBenchVisible: (visible) => {
+        set({ squadBenchVisible: visible });
+        queueSync({ squadBenchVisible: visible });
       },
       
       setBreakpoint: (bp) => set({ breakpoint: bp }),
@@ -746,6 +766,7 @@ export const useUIStore = create<UIState>()(
         viewportLocked: state.viewportLocked, // PR-UX-3 ETAP 4
         tutorialCompleted: state.tutorialCompleted, // Sprint F
         clubWelcomeSeen: state.clubWelcomeSeen, // Sprint H3
+        squadBenchVisible: state.squadBenchVisible, // UX-C
         shortcutOverrides: state.shortcutOverrides,
         bottomBarHeight: state.bottomBarHeight,
         bottomBarCollapsed: state.bottomBarCollapsed,

@@ -170,6 +170,15 @@
   .truncate-fade {
     mask-image: linear-gradient(to right, black 90%, transparent);
   }
+
+  /* Hide scrollbar while keeping functionality */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Print styles - hide UI when printing/exporting */

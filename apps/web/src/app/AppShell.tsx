@@ -105,7 +105,8 @@ export function AppShell() {
   const document = useBoardStore((s) => s.document);
   const addSquadPlayer = useBoardStore((s) => s.addSquadPlayer);
   const removeSquadPlayer = useBoardStore((s) => s.removeSquadPlayer);
-  const setSquadVisible = useBoardStore((s) => s.setSquadVisible);
+  const squadBenchVisible = useUIStore((s) => s.squadBenchVisible);
+  const setSquadBenchVisible = useUIStore((s) => s.setSquadBenchVisible);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
   const applyPitchBoard = useBoardStore((s) => s.applyPitchBoard);
@@ -511,11 +512,11 @@ export function AppShell() {
 
         // Squad Bench
         squad={document.squad ?? []}
-        squadVisible={document.squadVisible ?? true}
+        squadVisible={squadBenchVisible} // UX-C: use UI preference
         isPro={authIsPro}
         onAddSquadPlayer={(name, number, team, isGoalkeeper) => addSquadPlayer(name, number, team as any, isGoalkeeper)}
         onRemoveSquadPlayer={(id) => removeSquadPlayer(id)}
-        onSetSquadVisible={(visible) => setSquadVisible(visible)}
+        onSetSquadVisible={(visible) => setSquadBenchVisible(visible)} // UX-C: redirect to UI preference
         // Board settings (Teams / Pitch — moved from inspector)
         teamSettings={document.teamSettings ?? DEFAULT_TEAM_SETTINGS}
         onUpdateTeam={updateTeamSettings}

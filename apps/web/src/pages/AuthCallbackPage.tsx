@@ -25,15 +25,19 @@ export function AuthCallbackPage() {
       if (done) return;
       done = true;
 
-      if (isPopup && window.opener && !window.opener.closed) {
-        window.opener.postMessage({
-          type: AUTH_POPUP_MESSAGE,
-          status,
-          error,
-          elapsed: Math.round(performance.now() - startedAt),
-        }, window.location.origin);
-        window.setTimeout(() => window.close(), 150);
-        return;
+      if (isPopup && window.opener) {
+        try {
+          window.opener.postMessage({
+            type: AUTH_POPUP_MESSAGE,
+            status,
+            error,
+            elapsed: Math.round(performance.now() - startedAt),
+          }, window.location.origin);
+          window.setTimeout(() => window.close(), 150);
+          return;
+        } catch (err) {
+          logger.error('[Auth] OAuth callback could not notify opener', err);
+        }
       }
 
       navigate('/app', { replace: true });

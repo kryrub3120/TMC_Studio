@@ -42,7 +42,7 @@ export function createDocument(
     teamSettings,
     playerDefaults: DEFAULT_PLAYER_DEFAULTS,
     squad: DEFAULT_SQUAD,
-    squadVisible: true,
+    squadVisible: false,
   };
 }
 

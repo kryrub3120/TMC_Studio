@@ -335,8 +335,11 @@ const ToolMenuButton: React.FC<{
   </button>
 );
 
-const MenuBackdrop: React.FC<{ onClose: () => void }> = ({ onClose }) => (
-  <div className="fixed inset-0 z-40" onClick={onClose} />
+const MenuBackdrop: React.FC<{ onClose: () => void; interactive?: boolean }> = ({ onClose, interactive = true }) => (
+  <div
+    className={`fixed inset-0 z-40 ${interactive ? '' : 'pointer-events-none'}`}
+    onClick={interactive ? onClose : undefined}
+  />
 );
 
 const ToolMenuPanel: React.FC<{ widthClass?: string; dataTour?: string; children: React.ReactNode }> = ({ widthClass = 'w-[320px]', dataTour, children }) => (
@@ -398,6 +401,7 @@ const PlayersMenu: React.FC<{
   const [isOpen, setIsOpen] = React.useState(false);
   React.useEffect(() => { setIsOpen(tutorialMenu === 'players'); }, [tutorialMenu]);
   const { t } = useTranslation();
+  const isTutorialOpen = tutorialMenu === 'players';
 
   if (!onAddPlayer) return null;
 
@@ -413,7 +417,7 @@ const PlayersMenu: React.FC<{
       />
       {isOpen && (
         <>
-          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <MenuBackdrop onClose={() => setIsOpen(false)} interactive={!isTutorialOpen} />
           <ToolMenuPanel widthClass="w-[300px]" dataTour="players-menu">
             <div className="grid grid-cols-2 gap-1.5">
               {PLAYER_ITEMS.map((item) => (
@@ -509,6 +513,7 @@ const PitchMenu: React.FC<{
   const [isOpen, setIsOpen] = React.useState(false);
   React.useEffect(() => { setIsOpen(tutorialMenu === 'pitch'); }, [tutorialMenu]);
   const { t } = useTranslation();
+  const isTutorialOpen = tutorialMenu === 'pitch';
 
   if (!onSelectBoard) return null;
 
@@ -524,7 +529,7 @@ const PitchMenu: React.FC<{
       />
       {isOpen && (
         <>
-          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <MenuBackdrop onClose={() => setIsOpen(false)} interactive={!isTutorialOpen} />
           <ToolMenuPanel widthClass="w-[320px]" dataTour="pitch-menu">
             <div className="grid grid-cols-3 gap-1.5">
               {PITCH_BOARDS.map((board) => {
@@ -559,6 +564,7 @@ const ArrowsMenu: React.FC<{
   const [isOpen, setIsOpen] = React.useState(false);
   React.useEffect(() => { setIsOpen(tutorialMenu === 'arrows'); }, [tutorialMenu]);
   const { t } = useTranslation();
+  const isTutorialOpen = tutorialMenu === 'arrows';
 
   if (!onSelectArrowTool) return null;
 
@@ -574,7 +580,7 @@ const ArrowsMenu: React.FC<{
       />
       {isOpen && (
         <>
-          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <MenuBackdrop onClose={() => setIsOpen(false)} interactive={!isTutorialOpen} />
           <ToolMenuPanel widthClass="w-[300px]" dataTour="arrows-menu">
             <div className="grid grid-cols-1 gap-1.5">
               {ARROW_ITEMS.map((item) => (
@@ -660,6 +666,7 @@ const EquipmentMenu: React.FC<{
   const [isOpen, setIsOpen] = React.useState(false);
   React.useEffect(() => { setIsOpen(tutorialMenu === 'equipment'); }, [tutorialMenu]);
   const { t } = useTranslation();
+  const isTutorialOpen = tutorialMenu === 'equipment';
 
   if (!onAddEquipment) return null;
 
@@ -676,7 +683,7 @@ const EquipmentMenu: React.FC<{
 
       {isOpen && (
         <>
-          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <MenuBackdrop onClose={() => setIsOpen(false)} interactive={!isTutorialOpen} />
           <ToolMenuPanel widthClass="w-[320px]" dataTour="equipment-menu">
             <div className="grid grid-cols-2 gap-1.5">
               {onAddBall && (
@@ -757,6 +764,7 @@ const ExportMenu: React.FC<{
   const [isOpen, setIsOpen] = React.useState(false);
   React.useEffect(() => { setIsOpen(tutorialMenu === 'export'); }, [tutorialMenu]);
   const { t } = useTranslation();
+  const isTutorialOpen = tutorialMenu === 'export';
 
   if (!onExport) return null;
 
@@ -787,7 +795,7 @@ const ExportMenu: React.FC<{
       />
       {isOpen && (
         <>
-          <MenuBackdrop onClose={() => setIsOpen(false)} />
+          <MenuBackdrop onClose={() => setIsOpen(false)} interactive={!isTutorialOpen} />
           <ToolMenuPanel widthClass="w-[280px]" dataTour="export-menu">
             <div className="grid grid-cols-1 gap-1.5">
               {EXPPORT_ITEMS.map((item) => {
@@ -1158,9 +1166,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <header className="h-12 px-4 flex items-center justify-between bg-surface border-b border-border z-topbar">
+    <header className="h-12 px-2 sm:px-4 flex items-center justify-between bg-surface border-b border-border z-topbar">
       {/* Left: Logo + Project */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0 max-w-[40%] sm:max-w-none">
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center">
@@ -1247,7 +1255,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-auto overflow-visible">
         {/* Command Palette Trigger */}
         <button
           data-tour="shortcuts"

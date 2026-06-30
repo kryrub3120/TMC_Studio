@@ -3,7 +3,7 @@ export const en = {
   seo: {
     "landing": {
         "title": "TMC Studio — Draw any football tactic in 30 seconds",
-        "description": "Keyboard-fast football tactics board for coaches, analysts and creators. Build formations, animate plays and export PNG, GIF or PDF — in the browser and on desktop."
+        "description": "Keyboard-fast football tactics board for coaches, analysts and creators. Build formations, animate plays and export PNG, GIF, PDF or SVG — right in your browser."
     },
     "pricing": {
         "title": "Pricing — TMC Studio",
@@ -88,20 +88,21 @@ export const en = {
     "hero": {
         "titlePre": "Draw any football tactic in ",
         "titleHighlight": "30 seconds",
-        "subtitle": "Keyboard-fast tactics board for coaches, analysts and creators. Works in your browser and on desktop — your boards sync everywhere.",
-        "trustLine": "No account needed · Free forever · Browser & desktop",
+        "subtitle": "Keyboard-fast tactics board for coaches, analysts and creators. Open it in your browser and start drawing — no install, no login.",
+        "trustLine": "No account · Free · Runs in your browser",
         "ctaPrimary": "Open the board — no signup",
         "ctaSecondary": "See plans",
-        "demoAlt": "Animated demo of building a tactic"
+        "demoAlt": "Animated demo of building a tactic",
+        "badge": "Runs in your browser — no install"
     },
     "credibility": {
-        "title": "Trusted by football coaches everywhere",
-        "item1Metric": "50,000+",
-        "item1Label": "tactics drawn",
-        "item2Metric": "4.9★",
-        "item2Label": "coach satisfaction",
-        "item3Metric": "180+",
-        "item3Label": "countries using it"
+        "title": "Everything you need, right away",
+        "item1Metric": "30 s",
+        "item1Label": "to your first finished tactic",
+        "item2Metric": "4 formats",
+        "item2Label": "export PNG · GIF · PDF · SVG",
+        "item3Metric": "$0",
+        "item3Label": "start with no account or card"
     },
     "how": {
         "title": "From idea to tactic in 30 seconds",
@@ -118,8 +119,8 @@ export const en = {
         "speedDesc": "From blank pitch to finished tactic before the kettle boils.",
         "stepsTitle": "Minimum steps",
         "stepsDesc": "No digging through menus. A shortcut for everything, plus a command palette.",
-        "everywhereTitle": "Everywhere",
-        "everywhereDesc": "Browser and desktop. Your boards sync across every device.",
+        "everywhereTitle": "No install",
+        "everywhereDesc": "Works in any modern browser — Chrome, Safari, Firefox, Edge. Nothing to download.",
         "shareTitle": "Ready to share",
         "shareDesc": "Export PNG, GIF, PDF or SVG in one keystroke."
     },
@@ -131,7 +132,7 @@ export const en = {
     "everywhere": {
         "title": "On every device",
         "desc": "Use TMC Studio in any browser, or install the desktop app for macOS and Windows. Everything syncs through your account.",
-        "cta": "Download desktop app"
+        "cta": "Open the board"
     },
     "useCases": {
         "title": "Made for your workflow",
@@ -140,7 +141,7 @@ export const en = {
         "creatorsTitle": "Content creators",
         "creatorsDesc": "Turn ideas into shareable animated GIFs in under a minute.",
         "clubsTitle": "Clubs & staff",
-        "clubsDesc": "Share boards across your whole staff, on every device."
+        "clubsDesc": "Export briefings to PDF and hand them to your whole staff — one consistent plan."
     },
     "pricingTeaser": {
         "title": "Free stays free forever",
@@ -155,8 +156,8 @@ export const en = {
         "kbDesc": "Press Cmd+K to open the command palette, or tap A for arrows, P for players, N for new steps. Your hands never leave the keyboard — drag, resize, and edit without touching menus.",
         "stepsTitle": "Export talking points, not screenshots.",
         "stepsDesc": "Build tactics step by step, then export the whole sequence as an animated GIF or a multi-page PDF. Coaches use it for match prep, creators turn it into social content.",
-        "syncTitle": "Browser. Desktop. Everywhere.",
-        "syncDesc": "Start a tactic on your laptop, polish it on the desktop app. Cloud sync keeps every board up to date — no manual transfer, no version chaos."
+        "syncTitle": "Open a link. Start drawing.",
+        "syncDesc": "No install, no account to begin. Guest mode lets you draw instantly, and a free account saves your projects to the cloud."
     },
     "faq": {
         "title": "Frequently asked questions",
@@ -165,7 +166,7 @@ export const en = {
         "q2": "What can I do as a Guest?",
         "a2": "Start drawing immediately — no account, no signup. You get 1 project with 5 steps and PNG export. Ready to save? Create a free account in one click.",
         "q3": "Do I need to download anything?",
-        "a3": "No. TMC Studio works in any modern browser — Chrome, Safari, Firefox, Edge. The optional desktop app (macOS, Windows) is for coaches who want a native window and offline access.",
+        "a3": "No. TMC Studio works in any modern browser — Chrome, Safari, Firefox, Edge. Just open it and draw, nothing to download.",
         "q4": "What formats can I export?",
         "a4": "Guest and Free: PNG and JPG. Pro adds GIF animations and PDF with all steps. Each format is one click or shortcut away.",
         "q5": "How does Pro billing work?",

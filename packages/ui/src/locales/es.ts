@@ -5,7 +5,7 @@ export const es: Dictionary = {
   seo: {
     "landing": {
         "title": "TMC Studio — dibuja cualquier táctica en 30 segundos",
-        "description": "Pizarra táctica rapidísima para entrenadores, analistas y creadores. Crea formaciones, anima jugadas y exporta PNG, GIF o PDF — en el navegador y en escritorio."
+        "description": "Pizarra táctica rapidísima para entrenadores, analistas y creadores. Crea formaciones, anima jugadas y exporta PNG, GIF, PDF o SVG — directamente en el navegador."
     },
     "pricing": {
         "title": "Precios — TMC Studio",
@@ -90,20 +90,21 @@ export const es: Dictionary = {
     "hero": {
         "titlePre": "Dibuja cualquier táctica en ",
         "titleHighlight": "30 segundos",
-        "subtitle": "Pizarra táctica rapidísima para entrenadores, analistas y creadores. Funciona en el navegador y en escritorio: tus pizarras se sincronizan en todas partes.",
-        "trustLine": "Sin cuenta · Gratis para siempre · Navegador y escritorio",
+        "subtitle": "Pizarra táctica rapidísima para entrenadores, analistas y creadores. Ábrela en el navegador y empieza a dibujar: sin instalación y sin registro.",
+        "trustLine": "Sin cuenta · Gratis · Funciona en el navegador",
         "ctaPrimary": "Abrir la pizarra — sin registro",
         "ctaSecondary": "Ver planes",
-        "demoAlt": "Demostración animada de creación de una táctica"
+        "demoAlt": "Demostración animada de creación de una táctica",
+        "badge": "Funciona en el navegador — sin instalación"
     },
     "credibility": {
-        "title": "Confiado por entrenadores de todo el mundo",
-        "item1Metric": "50 000+",
-        "item1Label": "tácticas dibujadas",
-        "item2Metric": "4.9★",
-        "item2Label": "satisfacción de entrenadores",
-        "item3Metric": "180+",
-        "item3Label": "países lo usan"
+        "title": "Todo lo que necesitas, al instante",
+        "item1Metric": "30 s",
+        "item1Label": "hasta tu primera táctica lista",
+        "item2Metric": "4 formatos",
+        "item2Label": "exporta PNG · GIF · PDF · SVG",
+        "item3Metric": "0 €",
+        "item3Label": "empieza sin cuenta ni tarjeta"
     },
     "how": {
         "title": "De la idea a la táctica en 30 segundos",
@@ -120,8 +121,8 @@ export const es: Dictionary = {
         "speedDesc": "Del campo en blanco a la táctica terminada en un momento.",
         "stepsTitle": "Mínimos pasos",
         "stepsDesc": "Sin rebuscar en menús. Un atajo para todo y una paleta de comandos.",
-        "everywhereTitle": "En todas partes",
-        "everywhereDesc": "Navegador y escritorio. Tus pizarras se sincronizan en cada dispositivo.",
+        "everywhereTitle": "Sin instalación",
+        "everywhereDesc": "Funciona en cualquier navegador moderno — Chrome, Safari, Firefox, Edge. Nada que descargar.",
         "shareTitle": "Listo para compartir",
         "shareDesc": "Exporta PNG, GIF, PDF o SVG con una sola tecla."
     },
@@ -133,7 +134,7 @@ export const es: Dictionary = {
     "everywhere": {
         "title": "En cada dispositivo",
         "desc": "Usa TMC Studio en cualquier navegador, o instala la app de escritorio para macOS y Windows. Todo se sincroniza con tu cuenta.",
-        "cta": "Descargar app de escritorio"
+        "cta": "Abrir la pizarra"
     },
     "useCases": {
         "title": "Hecha para tu flujo de trabajo",
@@ -142,7 +143,7 @@ export const es: Dictionary = {
         "creatorsTitle": "Creadores de contenido",
         "creatorsDesc": "Convierte ideas en GIFs animados para compartir en menos de un minuto.",
         "clubsTitle": "Clubes y cuerpo técnico",
-        "clubsDesc": "Comparte pizarras con todo tu cuerpo técnico, en cada dispositivo."
+        "clubsDesc": "Exporta las charlas a PDF y entrégalas a todo tu cuerpo técnico — un plan coherente para todos."
     },
     "pricingTeaser": {
         "title": "Lo gratis es gratis para siempre",
@@ -157,8 +158,8 @@ export const es: Dictionary = {
         "kbDesc": "Pulsa Cmd+K para abrir la paleta de comandos, o A para flechas, P para jugadores, N para nuevos pasos. Tus manos nunca dejan el teclado: arrastra, redimensiona y edita sin tocar menús.",
         "stepsTitle": "Exporta puntos de debate, no capturas.",
         "stepsDesc": "Construye tácticas paso a paso, luego exporta la secuencia completa como GIF animado o PDF multipágina. Los entrenadores lo usan para charlas, los creadores lo convierten en contenido social.",
-        "syncTitle": "Navegador. Escritorio. En todas partes.",
-        "syncDesc": "Empieza una táctica en tu portátil, púlela en la app de escritorio. La sincronización en la nube mantiene cada pizarra actualizada — sin transferencias manuales, sin caos de versiones."
+        "syncTitle": "Abre un enlace. Empieza a dibujar.",
+        "syncDesc": "Sin instalación ni cuenta para empezar. El modo Invitado te deja dibujar al instante, y una cuenta gratis guarda tus proyectos en la nube."
     },
     "faq": {
         "title": "Preguntas frecuentes",
@@ -167,7 +168,7 @@ export const es: Dictionary = {
         "q2": "¿Qué puedo hacer como Invitado?",
         "a2": "Empieza a dibujar inmediatamente — sin cuenta, sin registro. Tienes 1 proyecto con 5 pasos y exportación PNG. ¿Listo para guardar? Crea una cuenta gratis con un clic.",
         "q3": "¿Necesito descargar algo?",
-        "a3": "No. TMC Studio funciona en cualquier navegador moderno: Chrome, Safari, Firefox, Edge. La app de escritorio opcional (macOS, Windows) es para entrenadores que quieran una ventana nativa y acceso sin conexión.",
+        "a3": "No. TMC Studio funciona en cualquier navegador moderno: Chrome, Safari, Firefox, Edge. Solo ábrelo y dibuja, nada que descargar.",
         "q4": "¿Qué formatos de exportación hay?",
         "a4": "Invitado y Gratis: PNG y JPG. Pro añade animaciones GIF y PDF con todos los pasos. Cada formato está a un clic o un atajo de distancia.",
         "q5": "¿Cómo funciona la facturación de Pro?",
