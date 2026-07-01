@@ -47,13 +47,13 @@ Legenda: 🟢 istnieje · 🟡 częściowo / do przebudowy · 🔴 do zbudowania
 
 | Ścieżka | Strona | Status |
 |---|---|---|
-| `/app` (lub `/board`) | **Edytor / Board** | 🟢 (dziś pod `/`) |
+| `/board` (legacy `/app` → redirect) | **Edytor / Board** | 🟢 (dziś pod `/`) |
 | `/login`, `/signup` | **Auth** (email + Google) | 🟢 (modal) |
 | `/account` | **Ustawienia konta** (profil, bezpieczeństwo, preferencje) | 🟢 (modal) |
 | `/billing` | **Subskrypcja / faktury** | 🟢 (modal) |
 | `/invite` | **Zaproszenia do zespołu** | 🟢 |
 
-> Rekomendacja architektoniczna: **oddzielić landing (`/`) od edytora (`/app`)**. Dziś `/` to od razu narzędzie — to dobre dla retencji, ale złe dla SEO i sprzedaży. Wzorzec docelowy: `/` = marketing z przyciskiem „Open the board" → `/app` (guest mode od razu, zero tarcia, zgodnie z filozofią PLG).
+> Rekomendacja architektoniczna: **oddzielić landing (`/`) od edytora (`/board`)**. Dziś `/` to od razu narzędzie — to dobre dla retencji, ale złe dla SEO i sprzedaży. Wzorzec docelowy: `/` = marketing z przyciskiem „Open the board" → `/board` (guest mode od razu, zero tarcia, zgodnie z filozofią PLG). `/app` pozostaje jako legacy redirect.
 
 ### 2.3 Warstwa prawna UE (stopka, każda strona)
 
@@ -78,7 +78,7 @@ Spójna z `PRODUCT_PHILOSOPHY.md`: **wartość najpierw, brak dark patterns, Gue
 
 1. **Pozyskanie (TOFU)** — blog/SEO, social (eksporty GIF jako naturalna reklama), `/use-cases/*`. Każdy eksport GIF/PNG może nieść dyskretny watermark „made with tmcstudio.app" (dla Guest/Free) — to organiczny kanał akwizycji.
 2. **Zainteresowanie (MOFU)** — `/` i `/product` pokazują wartość; główne CTA: **„Open the board — no signup"** (guest mode). Drugorzędne: „See plans".
-3. **Aktywacja** — `/app` w trybie guest: użytkownik tworzy pierwszą taktykę zanim cokolwiek go zatrzyma.
+3. **Aktywacja** — `/board` w trybie guest: użytkownik tworzy pierwszą taktykę zanim cokolwiek go zatrzyma.
 4. **Konwersja Free** — kontekstowy prompt przy limicie (5 kroków guest) → „Continue for free".
 5. **Konwersja Pro** — prompt pojawia się **tylko** przy realnej potrzebie (eksport GIF/PDF, brak miejsca na projekty), z linkiem do `/pricing`.
 6. **Ekspansja Team** — `/use-cases/clubs` + „Talk to us" (sprzedaż wspomagana, nie self-serve od razu).
@@ -156,7 +156,7 @@ tmcstudio.app/es/...    → hiszpański
 tmcstudio.app/pl/...    → polski
 ```
 
-Każda strona marketingowa i prawna istnieje w trzech wariantach. **Edytor (`/app`) lokalizujemy przez UI i18n** (nie przez osobne URL — to aplikacja, nie treść SEO).
+Każda strona marketingowa i prawna istnieje w trzech wariantach. **Edytor (`/board`) lokalizujemy przez UI i18n** (nie przez osobne URL — to aplikacja, nie treść SEO).
 
 ### 5.2 Implementacja techniczna
 
@@ -179,7 +179,7 @@ Strony prawne tłumaczy/weryfikuje osoba z kompetencjami prawnymi w danym język
 ## 6. Rekomendowana kolejność wdrożenia (roadmapa stron)
 
 **Faza 1 — Launch-ready (must-have prawne + sprzedaż):**
-`/` jako landing oddzielony od `/app` · `/pricing` · audyt `/privacy` `/terms` `/cookies` · `/refunds` · `/legal` (Impressum) · baner cookie opt-in · `/download` (jest) · checkbox zrzeczenia prawa odstąpienia w checkout · podstawowy i18n EN+PL.
+`/` jako landing oddzielony od `/board` · `/pricing` · audyt `/privacy` `/terms` `/cookies` · `/refunds` · `/legal` (Impressum) · baner cookie opt-in · `/download` (jest) · checkbox zrzeczenia prawa odstąpienia w checkout · podstawowy i18n EN+PL.
 
 **Faza 2 — Wzrost:**
 `/use-cases/coaches|creators|clubs` · `/blog` + 5–10 artykułów SEO · `/changelog` publiczny · `/about` · `/contact` · ES jako trzeci język · deklaracja `/accessibility` + audyt WCAG.
@@ -192,7 +192,7 @@ Strony prawne tłumaczy/weryfikuje osoba z kompetencjami prawnymi w danym język
 ## 7. Decyzje — ZATWIERDZONE
 
 1. **Domena:** `tmcstudio.app` (produkt), `tacticsmadeclear.com` jako marka-parasol z przekierowaniem.
-2. **Rozdział `/` (marketing) od `/app` (edytor):** tak.
+2. **Rozdział `/` (marketing) od `/board` (edytor):** tak. `/app` → `/board` legacy redirect.
 3. **Płatności:** **Stripe + Stripe Tax** (nie MoR). VAT OSS i faktury po naszej stronie — przewodnik: `STRIPE_TAX_SETUP.md`.
 4. **Watermark Guest/Free:** tak — lewy dolny róg, `tmcstudio.app`, niskie krycie, elegancki, znika w Pro.
 5. **`/product`:** sekcje na landingu na start; osobna strona później.

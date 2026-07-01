@@ -11,7 +11,7 @@ _Utworzono: 2026-06-15 · Uzupełnia `WEBSITE_LAUNCH_PLAN.md` §4.3–4.4_
 | OG bazowe + `og:site_name`/`og:locale` + `twitter:image` | ✅ | `apps/web/index.html` |
 | JSON-LD `SoftwareApplication` | ✅ | statycznie w `index.html` |
 | `sitemap.xml` (wszystkie strony publiczne) | ✅ | `apps/web/public/sitemap.xml` |
-| `robots.txt` (+ `Disallow: /app`, `/invite`) | ✅ | edytor i zaproszenia poza indeksem |
+| `robots.txt` (+ `Disallow: /board`, `/invite`) ✅ | edytor i zaproszenia poza indeksem |
 
 ## Ważne ograniczenie: wielojęzyczne SEO (hreflang)
 

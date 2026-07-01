@@ -33,7 +33,7 @@ W `analytics.ts` w `track()` odkomentować wywołanie dostawcy (np. Plausible) i
 - [ ] `pnpm --filter @tmc/web build` — build przechodzi
 - [ ] `pnpm --filter @tmc/web test` — testy zielone
 - [ ] **Lighthouse** na `/` i `/pricing`: perf + a11y ≥ 90
-- [ ] **Routing:** `/` = landing (bez bundla edytora), `/app` = edytor, Tauri otwiera `/app`
+- [ ] **Routing:** `/` = landing (bez bundla edytora), `/board` = edytor (`/app` → legacy redirect), Tauri otwiera `/board`
 - [ ] **Deep-linki** bez regresji: `/privacy` `/terms` `/cookies` `/refunds` `/legal` `/accessibility` `/download` `/invite` `/pricing`
 - [ ] **i18n:** przełączanie PL/EN/ES zmienia całą treść; brak „surowych" kluczy; fallback EN działa
 - [ ] **Baner cookie:** pojawia się raz, opt-in działa, wybór zapisany; analityka OFF do akceptacji
@@ -46,7 +46,7 @@ W `analytics.ts` w `track()` odkomentować wywołanie dostawcy (np. Plausible) i
 
 | Sprint | Zakres | Status |
 |---|---|---|
-| S1 | rozdział `/` od `/app`, lazy-load, fix URL-i | ✅ |
+| S1 | rozdział `/` od `/board`, lazy-load, fix URL-i, `/app` → legacy redirect | ✅ |
 | S2 | landing (treść) | ✅ w S1 (sekcje gotowe; brak tylko animacji hero — placeholder) |
 | S3 | `/pricing` | ✅ |
 | S4 | zgodność UE (strony + baner) | ✅ (treści do przeglądu prawnika; checkbox odstąpienia w Stripe — TODO) |

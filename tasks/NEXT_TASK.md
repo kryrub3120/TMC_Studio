@@ -37,14 +37,17 @@ Po implementacji uruchom typecheck/test/build i wypelnij evidence manual QA dla 
 
 ## Zakonczone / kontekst
 
-**Auth Flow V3 comprehensive plan** — 🟠 IN PROGRESS (2026-07-01)
-Docelowy redesign logowania web + desktop: S-AUTH3.0 wdrozone (blokada "app in popup"), S-AUTH3.1 prawie gotowe (adapter popup + surface resolver), S-AUTH3.3 scaffolded (Tauri deep-link + single-instance + frontend bridge). Pierwszy launch jest WWW-only: landing `https://tmcstudio.app`, kanoniczny board `/board`, legacy `/app` -> `/board`, Netlify + Supabase prod `pgacjczecyfnwsaadyvj`. Szczegoly: `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md`, `docs/WEB_LAUNCH_CHECKLIST.md`.
+**Auth Flow V3 — Web-Only Launch Flow** — ✅ DONE (2026-07-01)
+- S-AUTH3.0 (popup regression fix), S-AUTH3.1 (web popup adapter + surface resolver), routing `/board` kanoniczne, `/app` → `/board` legacy redirect.
+- Linki landing/pricing/auth/Stripe/billing portal zaktualizowane na `/board`.
+- Desktop/Tauri scaffold (S-AUTH3.3) zachowany, nie blokuje web launchu.
+- Dokumentacja: `docs/WEB_LAUNCH_CHECKLIST.md`, `docs/AUTH_FLOW.md`, `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md`.
+- Merge `develop` → `main` (commity: `42e7309`, `5a929f5`).
+- Szczegóły: `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md`, `docs/WEB_LAUNCH_CHECKLIST.md`, `docs/CURRENT_SPRINT_PLAN.md`.
 
-**Auth Flow hotfix** — ✅ DONE (2026-06-20)  
-Google OAuth w popupie zamiast redirectu. Szczegoly: `docs/AUTH_FLOW.md`, `docs/CURRENT_SPRINT_PLAN.md`.
+**Auth Flow hotfix** — ✅ DONE (2026-06-20, wchłonięty przez Auth V3)
+Google OAuth popup zamiast redirectu. Szczegoly: `docs/AUTH_FLOW.md`, `docs/CURRENT_SPRINT_PLAN.md`.
 
-**Sprint 2 - Quality Gate i testy minimalne** — ✅ DONE (2026-06-22)  
-CI/test/build/e2e gate opisane w `docs/CURRENT_SPRINT_PLAN.md`.
-
+**Sprint 2 - Quality Gate i testy minimalne** — ✅ DONE (2026-06-22)
 **Sprint 1 - Security & Billing Hardening** — ✅ DONE (2026-06-18)
 **Sprint 0.5 - Release & Deploy Verification** — ✅ DONE (2026-06-18)
