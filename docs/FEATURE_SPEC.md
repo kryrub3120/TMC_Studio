@@ -1828,7 +1828,7 @@ Standardowy formularz w `AuthModal` → `supabaseSignIn(email, password)` → `g
 | Path | `/auth/callback` |
 | Popup detect | `window.name === 'tmc-google-auth'` lub `sessionStorage.getItem('tmc-oauth-popup')` |
 | Popup action | PKCE → `postMessage` → `window.close()` |
-| Fallback action | PKCE → `navigate('/app', { replace: true })` |
+| Fallback action | PKCE → `navigate('/board', { replace: true })` |
 | Safety net | 10s timeout → redirect |
 | Preload | `void import('../App')` — jeśli nie popup, preloaduje bundle edytora |
 
@@ -1876,11 +1876,11 @@ TMC Studio has four plan types:
 **Public page (`/pricing`):**
 - Accessible without auth, shows all 4 plans with comparison matrix.
 - Billing cycle toggle: Monthly (default) / Yearly ("Save 17%" badge).
-- CTA for Pro/Team opens `/app?upgrade=<plan>&cycle=<cycle>`.
+- CTA for Pro/Team opens `/board?upgrade=<plan>&cycle=<cycle>`.
 - Guest/Free CTA opens the board directly.
 
 **In-app modal (PricingModal):**
-- Triggered from: TopBar user menu, limit modals, keyboard shortcut, export gating, or `/app?upgrade=` param.
+- Triggered from: TopBar user menu, limit modals, keyboard shortcut, export gating, or `/board?upgrade=` param.
 - Shows 3 plans (Free/Pro/Team) with pricing from shared config.
 - Auth required for checkout: guest → sign-in first.
 - Checkout via `create-checkout` Netlify Function (CORS + auth enforced server-side).

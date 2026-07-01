@@ -305,7 +305,7 @@ Zakladana kolejnosc jest sekwencyjna. Nie przeskakujemy do landing polish przed 
 
 1. **Popup flow** — `window.open('', 'tmc-google-auth')` z loading spinnerem, `postMessage` z callbacka do głównej karty, `waitForOAuthSession()` polling.
 2. **Non-blocking status UI** — `isOAuthInProgress` + `GoogleAuthStatus` toast w AppShell.
-3. **AuthCallbackPage** — wykrywa czy jest popupem (popup → postMessage + close, fallback → navigate /app).
+3. **AuthCallbackPage** — wykrywa czy jest popupem (popup → postMessage + close, fallback → navigate /board).
 4. **AuthModal** — zamyka się od razu po starcie Google.
 5. **Singleton listenera** — `onAuthStateChange` zakładany raz, brak duplikatów i kaskadowych fetchy.
 6. **PKCE fix** — `cleanAuthCallbackUrl()` wywoływane **dopiero po potwierdzonej sesji**.
@@ -362,7 +362,7 @@ Zakladana kolejnosc jest sekwencyjna. Nie przeskakujemy do landing polish przed 
 
 **Jeden test, nie cala armia:**
 
-1. Otworz `/app`.
+1. Otworz `/board`.
 2. Dodaj zawodnika.
 3. Dodaj strzalke.
 4. Dodaj krok.
@@ -387,7 +387,7 @@ Zakladana kolejnosc jest sekwencyjna. Nie przeskakujemy do landing polish przed 
 
 **Kroki:**
 
-1. Klik z `/pricing` powinien otwierac konkretny plan i cykl, nie tylko `/app?upgrade=pro`.
+1. Klik z `/pricing` powinien otwierac konkretny plan i cykl, nie tylko `/board?upgrade=pro`.
 2. Jesli user wybiera yearly na stronie, modal/checkout ma zachowac yearly.
 3. Jesli nie potrafimy przeniesc cyklu bezpiecznie, usuwamy yearly toggle z publicznej strony do czasu fixu.
 4. Wszystkie ceny i plany ida przez jedno zrodlo prawdy.
@@ -440,7 +440,7 @@ Zakladana kolejnosc jest sekwencyjna. Nie przeskakujemy do landing polish przed 
 **Scenariusz:**
 
 1. Czysta przegladarka.
-2. `/app` jako guest.
+2. `/board` jako guest.
 3. Pojawia sie empty state albo gotowy start, nie chaotyczny canvas.
 4. Tutorial prowadzi przez realne elementy UI.
 5. Uzytkownik dodaje zawodnika, strzalke, krok i eksportuje.

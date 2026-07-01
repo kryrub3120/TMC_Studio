@@ -196,7 +196,7 @@ Zwraca Promise, który resolve'uje się gdy:
 | Scenariusz | Detekcja | Zachowanie |
 |---|---|---|
 | **Popup** | `window.name === 'tmc-google-auth'` lub `sessionStorage.getItem('tmc-oauth-popup')` | Wykonuje PKCE, wysyła `postMessage` do openera, zamyka okno |
-| **Fallback (redirect)** | Brak flag popupa | Wykonuje PKCE, `navigate('/app', { replace: true })` przez React Router |
+| **Fallback (redirect)** | Brak flag popupa | Wykonuje PKCE, `navigate('/board', { replace: true })` przez React Router |
 
 ### Kod (uproszczony):
 
@@ -223,7 +223,7 @@ export function AuthCallbackPage() {
         window.setTimeout(() => window.close(), 150);
         return;
       }
-      navigate('/app', { replace: true });
+      navigate('/board', { replace: true });
     };
 
     // Safety net: 10s timeout
@@ -403,7 +403,7 @@ AuthModal (forgot mode)
           → useAuthStore auto-init (setTimeout(100ms)) uruchamia listener
           → ResetPasswordPage: getSession() z retry (500/1500/3000ms) czeka na PKCE
             → formularz → auth.updateUser({ password })
-              → redirect do /app
+              → redirect do /board
 ```
 
 ### Kluczowe decyzje

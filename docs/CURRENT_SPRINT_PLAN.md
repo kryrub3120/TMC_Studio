@@ -1,12 +1,38 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-06-18  
+**Data:** 2026-07-01  
 **Status:** ACTIVE, krotki wskaznik operacyjny  
 **Source of truth:** `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`
 
 ---
 
 ## Zakonczone sprinty
+
+### Sprint Auth V3 — Web-Only Launch Flow (S-AUTH3)
+
+**Status:** ✅ DONE (2026-07-01)  
+**Source of truth:** `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md`, `docs/WEB_LAUNCH_CHECKLIST.md`
+
+Cel: przygotowanie auth flow i routingu na wyłączność webowego launchu. Zero blokad ze strony desktopu.
+
+Zrealizowane punkty:
+
+1. **S-AUTH3.0 — Popup regression fix** — blokada renderowania app w popupie Google OAuth.
+2. **S-AUTH3.1 — Web popup adapter + surface resolver** — `oauthWebPopup.ts`, `oauthSurface.ts`, `authFlow.ts` z dedykowanym stanem `authFlow`.
+3. **Routing web-only**:
+   - `/board` jako kanoniczna ścieżka aplikacji.
+   - `/app` → `/board` legacy redirect z zachowaniem query i hash.
+4. **Aktualizacja linków** — landing, pricing, auth callback, Stripe return, billing portal.
+5. **S-AUTH3.3 — Scaffold desktop (Tauri deep-link)** — `oauthDesktopBridge.ts`, `lib.rs`, `tauri.conf.json` — gotowe, ale nie blokuje web launchu.
+6. **Dokumentacja**:
+   - `docs/WEB_LAUNCH_CHECKLIST.md` — checklista web launchu.
+   - `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md` — pełny plan.
+   - `docs/AUTH_FLOW.md` — zaktualizowany o web-only scope.
+7. **Weryfikacja**: typecheck + 116/116 testów + build + `git diff --check` — wszystkie zielone. Merge `develop` → `main` i push.
+
+Evidence:
+- 33 pliki zmodyfikowane, +1602/-202.
+- Commity: `42e7309` (develop), `5a929f5` (main — merge).
 
 ### Sprint 0.5 — Release & Deploy Verification (triage produkcyjny)
 
@@ -81,7 +107,7 @@ Zrealizowane punkty:
 1. **E2E golden path (Playwright)** — 11 testow w 3 specach:
    - `tactical-board.spec.ts` (4): guest board, add players, **export PNG z `waitForEvent('download')` i asercja `.png` filename**, Shift+P.
    - `auth.spec.ts` (3): guest state, dev login smoke, close modal.
-   - `checkout.spec.ts` (4): pricing page, CTA, **/app?upgrade=pro modal z yearly price**, feature comparison.
+   - `checkout.spec.ts` (4): pricing page, CTA, **/board?upgrade=pro modal z yearly price**, feature comparison.
 2. **CI gate** — `.github/workflows/ci.yml`:
    - E2E job (`pnpm e2e`) po buildzie.
    - `--frozen-lockfile` zamiast `--no-frozen-lockfile` we wszystkich 4 jobach.
@@ -110,35 +136,14 @@ Pozostaje:
 
 ---
 
-## Hotfix — Auth Flow (Google OAuth popup)
-
-**Status:** ✅ DONE (2026-06-20)
-
-Cel: Google login nie wywala uzytkownika z aplikacji. Popup zamiast redirectu.
-
-Zrealizowane punkty:
-
-1. **Popup flow** — `window.open('', 'tmc-google-auth')` z loading spinnerem, postMessage z callbacka do głównej karty.
-2. **Non-blocking status** — `isOAuthInProgress` + `GoogleAuthStatus` toast w AppShell.
-3. **AuthCallbackPage** — wykrywa czy jest popupem (popup → postMessage + close, fallback → navigate).
-4. **AuthModal** — zamyka się od razu po starcie Google.
-5. **Singleton listenera** — `onAuthStateChange` zakładany raz, brak kaskadowych fetchy.
-6. **PKCE fix** — `cleanAuthCallbackUrl()` dopiero po potwierdzonej sesji (nie po 400ms).
-7. **Dokumentacja** — `docs/AUTH_FLOW.md` z pełnym opisem, diagramami i sekwencjami.
-8. **FEATURE_SPEC** — nowa sekcja 15 (Authentication & Auth Flow).
-
-Evidence:
-- Pliki: `useAuthStore.ts`, `AuthCallbackPage.tsx`, `supabase.ts`, `AppShell.tsx`, `AuthModal.tsx`, locale (en/es/pl)
-- Dokumentacja: `docs/AUTH_FLOW.md`, `docs/FEATURE_SPEC.md` (sec 15)
-- Weryfikacja: `tsc --noEmit + vite build` — OK
-
----
-
 ## Kolejnosc sprintow do launchu
 
-| Kolejnosc | Sprint | Priorytet | Cel |
-|---|---|---:|---|| — | Auth Flow hotfix | P0 | Google OAuth popup zamiast redirectu || 1 | Security & Billing Hardening | P0 | Bezpieczny checkout, portal, Stripe config |
-| 2 | Quality Gate i testy minimalne | P1 | CI lint/test/typecheck/build + core/billing/E2E smoke |
+| Kolejnosc | Sprint | Status | Cel |
+|---:|---|:---:|---|
+| — | Auth Flow V3 | ✅ DONE (2026-07-01) | Web-only auth & routing, `/board` kanoniczne |
+| — | Auth Flow hotfix (popup) | ✅ DONE (2026-06-20, wchłonięty przez Auth V3) | Google OAuth popup zamiast redirectu |
+| 1 | Security & Billing Hardening | ✅ DONE (2026-06-18) | Bezpieczny checkout, portal, Stripe config |
+| 2 | Quality Gate i testy minimalne | ✅ DONE (2026-06-22) | CI lint/test/typecheck/build + core/billing/E2E smoke |
 | 3 | Pricing i monetizacja | P1 | Spojnosc pricing -> modal -> checkout, Team value |
 | 4 | Activation UX | P1 | First tactic + first export bez pomocy |
 | 5 | Landing, legal, SEO, tracking | P1 | Strona gotowa do sprzedazy i minimum UE |
