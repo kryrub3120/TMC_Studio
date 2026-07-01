@@ -2,7 +2,7 @@
  * PricingPage — public `/pricing` page.
  *
  * Comparison of Guest / Free / Pro / Team built from the single source of
- * truth (`ENTITLEMENTS_BY_PLAN`). Paid CTAs route to `/app?upgrade=<plan>`,
+ * truth (`ENTITLEMENTS_BY_PLAN`). Paid CTAs route to `/board?upgrade=<plan>`,
  * which auto-opens the in-app pricing modal (PricingModal / useBillingController)
  * to start sign-in + Stripe Checkout — we don't duplicate checkout logic here.
  */
@@ -76,7 +76,7 @@ export function PricingPage() {
           <Link to="/" className="text-lg font-bold tracking-tight text-text">TMC&nbsp;Studio</Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <Link to="/app" className="rounded-md bg-accent px-4 py-2 text-base font-medium text-white transition-colors hover:bg-accent-hover">
+            <Link to="/board" className="rounded-md bg-accent px-4 py-2 text-base font-medium text-white transition-colors hover:bg-accent-hover">
               {t('landing.nav.openBoard')}
             </Link>
           </div>
@@ -117,7 +117,7 @@ export function PricingPage() {
           {PLANS.map((p) => {
             const m = planMeta[p];
             const highlight = p === 'pro';
-            const upgradeHref = p === 'pro' || p === 'team' ? `/app?upgrade=${p}&cycle=${cycle}` : '/app';
+            const upgradeHref = p === 'pro' || p === 'team' ? `/board?upgrade=${p}&cycle=${cycle}` : '/board';
             return (
               <div key={p} className={`relative flex flex-col rounded-xl border p-6 ${highlight ? 'border-accent bg-surface ring-1 ring-accent' : 'border-border bg-surface'}`}>
                 {highlight && (
@@ -214,7 +214,7 @@ export function PricingPage() {
           </div>
           <div className="mt-6 text-center">
             <Link
-              to={`/app?upgrade=team&cycle=${cycle}`}
+              to={`/board?upgrade=team&cycle=${cycle}`}
               className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-base font-medium text-white transition-colors hover:bg-accent-hover"
             >
               {t('pricingPage.teamCalc.cta')}

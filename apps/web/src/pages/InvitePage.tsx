@@ -117,7 +117,7 @@ export function InvitePage() {
               {t('invitePage.accepted.description', { club: invitation?.organization_name ?? '' })}
             </p>
             <Link
-              to="/app"
+              to="/board"
               className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity"
             >
               {t('invitePage.goToApp')}
@@ -146,7 +146,7 @@ export function InvitePage() {
               <div className="space-y-2">
                 <p className="text-sm text-muted">{t('invitePage.ready.signInPrompt', { email: invitation.email })}</p>
                 <Link
-                  to="/app"
+                  to="/board"
                   className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity"
                 >
                   {t('invitePage.ready.signIn')}

@@ -1,14 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
-
-const AUTH_POPUP_NAME = 'tmc-google-auth';
-const AUTH_POPUP_MESSAGE = 'tmc:auth-popup-result';
+import { translate } from '@tmc/ui';
+import { AUTH_POPUP_MESSAGE, AUTH_POPUP_NAME } from '../auth/oauthWebPopup';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
+  const [popupRecovery, setPopupRecovery] = useState<{ status: 'success' | 'error'; error?: string } | null>(null);
 
   useEffect(() => {
     let done = false;
@@ -25,22 +25,34 @@ export function AuthCallbackPage() {
       if (done) return;
       done = true;
 
-      if (isPopup && window.opener) {
+      if (isPopup) {
         try {
-          window.opener.postMessage({
-            type: AUTH_POPUP_MESSAGE,
-            status,
-            error,
-            elapsed: Math.round(performance.now() - startedAt),
-          }, window.location.origin);
-          window.setTimeout(() => window.close(), 150);
-          return;
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: AUTH_POPUP_MESSAGE,
+              status,
+              error,
+              elapsed: Math.round(performance.now() - startedAt),
+            }, window.location.origin);
+            window.setTimeout(() => window.close(), 150);
+            return;
+          }
         } catch (err) {
           logger.error('[Auth] OAuth callback could not notify opener', err);
         }
+
+        setPopupRecovery({ status, error });
+        window.setTimeout(() => {
+          try {
+            window.close();
+          } catch {
+            // Some browsers only allow script-opened windows to close themselves.
+          }
+        }, 500);
+        return;
       }
 
-      navigate('/app', { replace: true });
+      navigate('/board', { replace: true });
     };
 
     // Safety net: if PKCE exchange hangs, redirect after 10s
@@ -104,6 +116,63 @@ export function AuthCallbackPage() {
       clearTimeout(safety);
     };
   }, [navigate]);
+
+  if (popupRecovery) {
+    const isSuccess = popupRecovery.status === 'success';
+    return (
+      <div style={{
+        minHeight: '100vh',
+        margin: 0,
+        display: 'grid',
+        placeItems: 'center',
+        background: '#0f172a',
+        color: '#f8fafc',
+        fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        padding: 24,
+      }}>
+        <main style={{
+          width: 'min(380px, calc(100vw - 32px))',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            width: 48,
+            height: 48,
+            margin: '0 auto 18px',
+            borderRadius: 999,
+            display: 'grid',
+            placeItems: 'center',
+            background: isSuccess ? '#16a34a' : '#dc2626',
+            color: '#fff',
+            fontSize: 26,
+            fontWeight: 700,
+          }}>
+            {isSuccess ? 'OK' : '!'}
+          </div>
+          <h1 style={{ margin: '0 0 8px', fontSize: 22 }}>
+            {translate(isSuccess ? 'auth.popupRecoverySuccessTitle' : 'auth.popupRecoveryErrorTitle')}
+          </h1>
+          <p style={{ margin: '0 0 18px', color: '#cbd5e1', lineHeight: 1.5 }}>
+            {popupRecovery.error || translate('auth.popupRecoveryDescription')}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.close()}
+            style={{
+              border: 0,
+              borderRadius: 8,
+              background: '#2563eb',
+              color: '#fff',
+              cursor: 'pointer',
+              fontWeight: 600,
+              padding: '10px 16px',
+            }}
+          >
+            {translate('auth.popupRecoveryClose')}
+          </button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={{

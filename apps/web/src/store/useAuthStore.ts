@@ -10,7 +10,12 @@ import { logger } from '../lib/logger';
 import { setDevCloudUser, clearDevCloudData, clearAllDevCloudData, isDevCloudActive } from '../lib/devCloud';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { track, EVENTS } from '../lib/analytics';
+import { openOAuthPopup, waitForOAuthPopup } from '../auth/oauthWebPopup';
+import { getDesktopAuthRedirectTo, waitForDesktopOAuthCode } from '../auth/oauthDesktopBridge';
+import { resolveGoogleOAuthSurface } from '../auth/oauthSurface';
+import { idleAuthFlow, type AuthFlowState } from '../auth/authFlow';
 import {
   isSupabaseEnabled,
   getCurrentUser,
@@ -32,6 +37,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isOAuthInProgress: boolean;
+  authFlow: AuthFlowState;
   isInitialized: boolean;
   error: string | null;
   /** DEV-ONLY: true when the current session was created via devLogin()
@@ -103,113 +109,11 @@ function cleanAuthCallbackUrl() {
 
   if (changed) {
     const next = `${url.pathname}${url.search}${url.hash}`;
-    window.history.replaceState(null, '', next || '/app');
+    window.history.replaceState(null, '', next || '/board');
   }
 }
 
 let authUnsubscribe: (() => void) | null = null;
-
-const AUTH_POPUP_NAME = 'tmc-google-auth';
-const AUTH_POPUP_MESSAGE = 'tmc:auth-popup-result';
-
-type AuthPopupMessage = {
-  type: typeof AUTH_POPUP_MESSAGE;
-  status: 'success' | 'error';
-  error?: string;
-  elapsed?: number;
-};
-
-function writeOAuthPopupShell(popup: Window) {
-  try {
-    popup.document.title = 'TMC Studio - Google login';
-    popup.document.body.innerHTML = `
-      <main style="
-        min-height: 100vh;
-        margin: 0;
-        display: grid;
-        place-items: center;
-        background: #0f172a;
-        color: #f8fafc;
-        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      ">
-        <section style="width: min(340px, calc(100vw - 32px)); text-align: center;">
-          <div style="
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 18px;
-            border-radius: 999px;
-            border: 4px solid rgba(255,255,255,.18);
-            border-top-color: #38bdf8;
-            animation: tmcSpin .8s linear infinite;
-          "></div>
-          <h1 style="margin: 0 0 8px; font-size: 20px;">TMC Studio</h1>
-          <p style="margin: 0; color: #cbd5e1; line-height: 1.5;">Opening Google login...</p>
-        </section>
-        <style>@keyframes tmcSpin { to { transform: rotate(360deg); } }</style>
-      </main>
-    `;
-    popup.sessionStorage.setItem('tmc-oauth-popup', '1');
-  } catch {
-    // Some browsers restrict writing to the popup. The OAuth flow can continue.
-  }
-}
-
-function openOAuthPopup(): Window {
-  const width = 500;
-  const height = 680;
-  const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
-  const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
-  const features = [
-    `width=${width}`,
-    `height=${height}`,
-    `left=${Math.round(left)}`,
-    `top=${Math.round(top)}`,
-    'popup=yes',
-    'resizable=yes',
-    'scrollbars=yes',
-  ].join(',');
-
-  const popup = window.open('', AUTH_POPUP_NAME, features);
-  if (!popup) {
-    throw new Error('Google login popup was blocked by the browser');
-  }
-  writeOAuthPopupShell(popup);
-  popup.focus();
-  return popup;
-}
-
-function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
-  return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      cleanup();
-      try {
-        popup.close();
-      } catch {
-        // no-op
-      }
-      reject(new Error('Google login took too long. Please try again.'));
-    }, 120000);
-
-    const onMessage = (event: MessageEvent<AuthPopupMessage>) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type !== AUTH_POPUP_MESSAGE) return;
-
-      cleanup();
-      if (event.data.status === 'success') {
-        resolve(event.data);
-      } else {
-        reject(new Error(event.data.error ?? 'Google login failed.'));
-      }
-    };
-
-    const cleanup = () => {
-      window.clearTimeout(timeout);
-      window.removeEventListener('message', onMessage);
-    };
-
-    window.addEventListener('message', onMessage);
-  });
-}
 
 async function waitForOAuthSession() {
   if (!supabase) return null;
@@ -301,6 +205,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: false,
       isOAuthInProgress: false,
+      authFlow: idleAuthFlow,
       isInitialized: false,
       error: null,
       isMockUser: false,
@@ -334,17 +239,18 @@ export const useAuthStore = create<AuthState>()(
               isInitialized: true,
               isLoading: false,
               isOAuthInProgress: false,
+              authFlow: idleAuthFlow,
             });
             return;
           }
           logger.debug('[Auth] Mock dev session active - skipping Supabase init');
-          set({ isInitialized: true, isLoading: false, isOAuthInProgress: false });
+          set({ isInitialized: true, isLoading: false, isOAuthInProgress: false, authFlow: idleAuthFlow });
           return;
         }
 
         if (!isSupabaseEnabled() || !supabase) {
           logger.debug('[Auth] Supabase disabled - using offline mode');
-          set({ isInitialized: true, isLoading: false, isOAuthInProgress: false });
+          set({ isInitialized: true, isLoading: false, isOAuthInProgress: false, authFlow: idleAuthFlow });
           return;
         }
 
@@ -541,7 +447,18 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
-        set({ isLoading: true, error: null });
+        set({
+          isLoading: true,
+          error: null,
+          authFlow: {
+            status: 'emailSubmitting',
+            method: 'email',
+            surface: null,
+            startedAt: Date.now(),
+            error: null,
+            retryable: false,
+          },
+        });
 
         try {
           const authResponse = await supabaseSignIn(email, password);
@@ -560,6 +477,7 @@ export const useAuthStore = create<AuthState>()(
             } : null,
             isAuthenticated: !!authUser,
             isLoading: false,
+            authFlow: { ...idleAuthFlow, status: authUser ? 'done' : 'idle' },
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign in failed';
@@ -577,6 +495,14 @@ export const useAuthStore = create<AuthState>()(
           set({
             isLoading: false,
             error: isUnconfirmed ? 'auth.errorEmailNotConfirmed' : message,
+            authFlow: {
+              status: 'error',
+              method: 'email',
+              surface: null,
+              startedAt: null,
+              error: isUnconfirmed ? 'auth.errorEmailNotConfirmed' : message,
+              retryable: true,
+            },
           });
           throw error;
         }
@@ -614,12 +540,23 @@ export const useAuthStore = create<AuthState>()(
         }
 
         let popup: Window | null = null;
-        set({ isLoading: false, isOAuthInProgress: true, error: null });
+        set({
+          isLoading: false,
+          isOAuthInProgress: true,
+          error: null,
+          authFlow: {
+            status: 'oauthOpening',
+            method: 'google',
+            surface: null,
+            startedAt: Date.now(),
+            error: null,
+            retryable: false,
+          },
+        });
 
         try {
           logger.debug('[Auth] Starting Google sign in...');
-          popup = openOAuthPopup();
-          
+
           // H4: Save current work to localStorage BEFORE OAuth redirect
           // This prevents loss of unsaved work during the redirect flow
           try {
@@ -628,6 +565,115 @@ export const useAuthStore = create<AuthState>()(
             logger.debug('[Auth] Board state saved before OAuth redirect');
           } catch (e) {
             logger.error('[Auth] Failed to save before redirect:', e);
+          }
+
+          const finishGoogleLogin = async (authUser: SupabaseAuthUser) => {
+            const user = await getCurrentUser(authUser);
+            if (!user) {
+              throw new Error('Google login finished, but user profile could not be loaded');
+            }
+
+            set({
+              user,
+              isAuthenticated: true,
+              isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
+              isTeam: user.subscription_tier === 'team',
+              teamId: user.team_id ?? null,
+              isLoading: false,
+              isOAuthInProgress: false,
+              error: null,
+              authFlow: {
+                status: 'sessionReady',
+                method: 'google',
+                surface: _get().authFlow.surface,
+                startedAt: _get().authFlow.startedAt,
+                error: null,
+                retryable: false,
+              },
+            });
+            logger.debug('[Auth] Google login applied for', user.email);
+
+            void (async () => {
+              try {
+                const cloudPrefs = await getPreferences();
+                // B1.4 + B1.5: load cloud prefs (or push local if first login)
+                await applyCloudPreferences(cloudPrefs);
+              } catch (error) {
+                logger.error('[Auth] Failed to load/preferences after Google login:', error);
+              }
+
+              try {
+                const { useBoardStore } = await import('./index');
+                const boardState = useBoardStore.getState();
+                const results = await Promise.allSettled([
+                  boardState.fetchCloudProjects(),
+                  boardState.fetchCloudFolders(),
+                ]);
+                results.forEach((result) => {
+                  if (result.status === 'rejected') {
+                    logger.error('[Auth] Failed to prefetch after Google login:', result.reason);
+                  }
+                });
+              } catch (error) {
+                logger.error('[Auth] Failed to prefetch after Google login:', error);
+              }
+            })();
+          };
+
+          const surface = resolveGoogleOAuthSurface();
+          set((state) => ({
+            authFlow: {
+              ...state.authFlow,
+              status: 'oauthWaitingForProvider',
+              surface,
+            },
+          }));
+          if (surface === 'web-redirect') {
+            await supabaseSignInWithGoogle({
+              redirectTo: `${window.location.origin}/auth/callback`,
+              skipBrowserRedirect: false,
+            });
+            return;
+          }
+
+          if (surface === 'desktop-deeplink') {
+            const result = await supabaseSignInWithGoogle({
+              redirectTo: getDesktopAuthRedirectTo(),
+              skipBrowserRedirect: true,
+            });
+
+            if (!result?.url) {
+              throw new Error('Google login URL was not returned by Supabase');
+            }
+
+            const code = await waitForDesktopOAuthCode(result.url);
+            set((state) => ({
+              authFlow: {
+                ...state.authFlow,
+                status: 'oauthCallbackReceived',
+              },
+            }));
+            if (!supabase) throw new Error('Supabase not configured');
+
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) throw error;
+            if (!data.session?.user) {
+              throw new Error('Google login finished, but no Supabase session was found');
+            }
+
+            await finishGoogleLogin(data.session.user);
+            return;
+          }
+
+          try {
+            popup = openOAuthPopup();
+          } catch {
+            logger.warn('[Auth] Google popup unavailable - falling back to full-page redirect');
+            await supabaseSignInWithGoogle({
+              redirectTo: `${window.location.origin}/auth/callback`,
+              skipBrowserRedirect: false,
+            });
+            return;
           }
           
           const result = await supabaseSignInWithGoogle({
@@ -642,47 +688,19 @@ export const useAuthStore = create<AuthState>()(
           const popupResult = waitForOAuthPopup(popup);
           popup.location.href = result.url;
           await popupResult;
+          set((state) => ({
+            authFlow: {
+              ...state.authFlow,
+              status: 'oauthCallbackReceived',
+            },
+          }));
 
           const session = await waitForOAuthSession();
           if (!session?.user) {
             throw new Error('Google login finished, but no Supabase session was found');
           }
 
-          const user = await getCurrentUser(session.user);
-          if (!user) {
-            throw new Error('Google login finished, but user profile could not be loaded');
-          }
-
-          set({
-            user,
-            isAuthenticated: true,
-            isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-            isTeam: user.subscription_tier === 'team',
-            teamId: user.team_id ?? null,
-            isLoading: false,
-            isOAuthInProgress: false,
-            error: null,
-          });
-          logger.debug('[Auth] Google popup login applied for', user.email);
-
-          try {
-            const cloudPrefs = await getPreferences();
-            // B1.4 + B1.5: load cloud prefs (or push local if first login)
-            await applyCloudPreferences(cloudPrefs);
-          } catch (error) {
-            logger.error('[Auth] Failed to load/preferences after Google popup:', error);
-          }
-
-          try {
-            const { useBoardStore } = await import('./index');
-            const boardState = useBoardStore.getState();
-            await Promise.all([
-              boardState.fetchCloudProjects(),
-              boardState.fetchCloudFolders(),
-            ]);
-          } catch (error) {
-            logger.error('[Auth] Failed to prefetch after Google popup:', error);
-          }
+          await finishGoogleLogin(session.user);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Google sign in failed';
           logger.error('[Auth] Google sign in error:', error);
@@ -691,7 +709,19 @@ export const useAuthStore = create<AuthState>()(
           } catch {
             // no-op
           }
-          set({ isLoading: false, isOAuthInProgress: false, error: message });
+          set((state) => ({
+            isLoading: false,
+            isOAuthInProgress: false,
+            error: message,
+            authFlow: {
+              status: 'error',
+              method: 'google',
+              surface: state.authFlow.surface,
+              startedAt: state.authFlow.startedAt,
+              error: message,
+              retryable: true,
+            },
+          }));
           throw error;
         }
       },
@@ -716,6 +746,7 @@ export const useAuthStore = create<AuthState>()(
             teamId: null,
             isLoading: false,
             isOAuthInProgress: false,
+            authFlow: idleAuthFlow,
           });
           logger.debug('[Auth] Successfully signed out');
 
@@ -803,6 +834,7 @@ export const useAuthStore = create<AuthState>()(
             isMockUser: true,
             isOAuthInProgress: false,
             error: null,
+            authFlow: idleAuthFlow,
           });
           setDevCloudUser(null);
           logger.debug('[Auth][DEV] Logged in as guest (mock)');
@@ -825,6 +857,7 @@ export const useAuthStore = create<AuthState>()(
           isMockUser: true,
           isOAuthInProgress: false,
           error: null,
+          authFlow: idleAuthFlow,
         });
         setDevCloudUser(mockUser.id);
         logger.debug(`[Auth][DEV] Logged in as mock ${tier} user`);
@@ -856,6 +889,7 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
           isOAuthInProgress: false,
           error: null,
+          authFlow: idleAuthFlow,
         });
         setDevCloudUser(null);
         logger.debug('[Auth][DEV] Mock session cleared');

@@ -33,6 +33,7 @@ interface ModalOrchestratorProps {
   onResendConfirmation: (email: string) => Promise<void>;
   authError: string | null;
   authIsLoading: boolean;
+  authOAuthStatus?: 'idle' | 'emailSubmitting' | 'oauthOpening' | 'oauthWaitingForProvider' | 'oauthCallbackReceived' | 'sessionReady' | 'profileHydrating' | 'done' | 'cancelled' | 'error';
   /** DEV-ONLY: see useAuthStore.devLogin */
   onDevLogin?: (tier: 'free' | 'pro' | 'team') => void;
   
@@ -167,6 +168,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onDevLogin={props.onDevLogin}
         error={props.authError}
         isLoading={props.authIsLoading}
+        oauthStatus={props.authOAuthStatus}
       />
       
       {/* Pricing Modal */}

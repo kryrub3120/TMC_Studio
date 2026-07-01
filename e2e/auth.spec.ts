@@ -12,8 +12,24 @@
 import { test, expect } from './fixtures';
 
 test.describe('Authentication — Dev Login Flow', () => {
+  test('OAuth popup callback without opener never renders the app shell', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.name = 'tmc-google-auth';
+      window.localStorage.setItem('tmc-language', 'en');
+    });
+
+    await page.goto('/auth/callback?error=access_denied&error_description=Simulated');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1200);
+
+    await expect(page).not.toHaveURL(/\/board/);
+    await expect(page.getByText('Login could not finish')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: 'Close window' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign In' })).toHaveCount(0);
+  });
+
   test('guest can see the app without authentication', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/board');
     await page.waitForLoadState('networkidle');
 
     // The app loads — the landing page or board should be visible
@@ -24,7 +40,7 @@ test.describe('Authentication — Dev Login Flow', () => {
   });
 
   test('dev login as Pro user via keyboard shortcut', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/board');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
@@ -59,7 +75,7 @@ test.describe('Authentication — Dev Login Flow', () => {
   });
 
   test('auth modal can be closed without login', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/board');
     await page.waitForLoadState('networkidle');
 
     // Press Escape multiple times to close any open modals

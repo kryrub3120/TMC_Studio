@@ -37,6 +37,9 @@ Po implementacji uruchom typecheck/test/build i wypelnij evidence manual QA dla 
 
 ## Zakonczone / kontekst
 
+**Auth Flow V3 comprehensive plan** — 🟠 IN PROGRESS (2026-07-01)
+Docelowy redesign logowania web + desktop: S-AUTH3.0 wdrozone (blokada "app in popup"), S-AUTH3.1 prawie gotowe (adapter popup + surface resolver), S-AUTH3.3 scaffolded (Tauri deep-link + single-instance + frontend bridge). Pierwszy launch jest WWW-only: landing `https://tmcstudio.app`, kanoniczny board `/board`, legacy `/app` -> `/board`, Netlify + Supabase prod `pgacjczecyfnwsaadyvj`. Szczegoly: `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md`, `docs/WEB_LAUNCH_CHECKLIST.md`.
+
 **Auth Flow hotfix** — ✅ DONE (2026-06-20)  
 Google OAuth w popupie zamiast redirectu. Szczegoly: `docs/AUTH_FLOW.md`, `docs/CURRENT_SPRINT_PLAN.md`.
 
