@@ -18,6 +18,7 @@ export interface ArrowsLayerProps {
   isPrintMode?: boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
+  onDragStart?: (id: string, mouseX?: number, mouseY?: number) => boolean;
   onEndpointDrag?: (id: string, endpoint: 'start' | 'end' | 'control', pos: { x: number; y: number }) => void;
 }
 
@@ -31,6 +32,7 @@ export const ArrowsLayer = memo<ArrowsLayerProps>(({
   isPrintMode,
   onSelect,
   onDragEnd,
+  onDragStart,
   onEndpointDrag,
 }) => {
   if (!visible) return null;
@@ -48,6 +50,7 @@ export const ArrowsLayer = memo<ArrowsLayerProps>(({
           isLocked={isElementLocked(arrow.id)}
           onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
           onDragEnd={isPlaying ? () => {} : (onDragEnd || (() => {}))}
+          onDragStart={isPlaying ? () => false : (onDragStart || (() => false))}
           isPrintMode={isPrintMode}
           onEndpointDrag={onEndpointDrag || (() => {})}
         />

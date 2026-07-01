@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Snap-to-grid w dragu: `snapEnabled` respektowane** — `moveElement()` w `@tmc/core` przyjmuje opcjonalny parametr `snap` (domyślnie `true`). Single drag i multi-drag czytają `useUIStore.snapEnabled`. Gdy snap OFF, elementy poruszają się pixel-freely. Dotyczy zawodników, piłki, stref, tekstu, sprzętu oraz strzałek (endpointy + curve) (`board.ts`, `useCanvasEventsController.ts`).
+- **Multi-drag dla grup** — przeciągnięcie dowolnego członka grupy przesuwa wszystkich członków grupy. Działa dla: grup zaznaczonych elementów (selekcja) oraz grup zdefiniowanych w `groups` w store. Strzałki w multi-drag przesuwają też punkt krzywizny (`curveControl`), zachowując kształt łuków (`useCanvasEventsController.ts`, `ArrowNode.tsx`).
+- **Renumber arrows z historią** — `renumberAllArrowsWithHistory()` w `elementsSlice` woła `renumberAllArrows()` + `pushHistory()`. Nowa pozycja "Renumber from 1" w menu kontekstowym strzałki (`elementsSlice.ts`, `canvasContextMenu.ts`).
+- **i18n: klucz `contextMenu.renumberArrows`** — dodany w `en.ts`, `pl.ts`, `es.ts`.
+
+### Fixed
+- **LandingPage: typecheck — implicit any** — 3 wystąpienia `String(t('...'))` jawnie rzutują string zamiast domyślnego `any`, odblokowując pełny `pnpm --filter @tmc/web typecheck` (`LandingPage.tsx`).
+
+## [0.10.0] - 2026-06-30
+
+### Added
 - **Viewport: Pitch wypełnia ~85-92% obszaru roboczego** — zwiększono `MAX_FIT_UPSCALE` z 2.4 do 2.8, poprawiono auto-center przy zoomFit (Shift+1) i przy pierwszym załadowaniu (`BoardCanvasSection.tsx`).
 - **Canvas: Naturalny pan przez drag pustego obszaru** — przeciągnięcie pustego tła/pitcha przy zoom > 1.1 inicjuje panning z progiem 5 px. Cursor: grab/grabbing. Space+drag nadal działa. Konflikt z marquee/selection rozwiązany przez threshold i priorytet narzędzi (`BoardCanvasSection.tsx`).
 - **Squad Bench: Default hidden** — nowe dokumenty mają `squadVisible: false` (`serialization.ts`).

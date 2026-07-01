@@ -67,6 +67,7 @@ export interface CanvasElementsProps {
   onElementSelect: (id: string, addToSelection: boolean) => void;
   onElementDragEnd: (id: string, position: Position) => void;
   onElementDragStart: (id: string, mouseX?: number, mouseY?: number) => boolean;
+  snapEnabled: boolean;
   onResizeZone: (id: string, position: Position, width: number, height: number) => void;
   onUpdateZonePoints?: (id: string, points: number[]) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
@@ -112,6 +113,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     onElementSelect,
     onElementDragEnd,
     onElementDragStart,
+    snapEnabled,
     onResizeZone,
     onUpdateZonePoints,
     onResizeEquipment,
@@ -203,6 +205,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               isLocked={isElementLocked(zone.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
+              onDragStart={isPlaying ? () => false : onElementDragStart}
               onResize={onResizeZone}
               onUpdatePoints={isPlaying ? undefined : onUpdateZonePoints}
             />
@@ -224,6 +227,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               isLocked={isElementLocked(arrow.id)}
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
+              onDragStart={isPlaying ? () => false : onElementDragStart}
               isPrintMode={isPrintMode}
               onEndpointDrag={(id, endpoint, pos) => {
                 onUpdateArrowEndpoint(id, endpoint, pos);
@@ -259,6 +263,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
+              snapEnabled={snapEnabled}
               onQuickEditNumber={isPlaying ? undefined : onPlayerQuickEdit}
               onOrientationPreview={isPlaying ? undefined : onOrientationPreview}
               onOrientationCommit={isPlaying ? undefined : onOrientationCommit}
@@ -282,6 +287,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
+              snapEnabled={snapEnabled}
             />
           );
         })}
@@ -299,6 +305,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               isLocked={isElementLocked(equipment.id)}
               isPrintMode={isPrintMode}
               onSelect={isPlaying ? () => {} : onElementSelect}
+              onDragStart={isPlaying ? () => false : onElementDragStart}
               onDragEnd={isPlaying ? () => {} : (id, x, y) => {
                 onElementDragEnd(id, { x, y });
               }}
@@ -323,6 +330,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onSelect={isPlaying ? () => {} : onElementSelect}
               onDragEnd={isPlaying ? () => {} : onElementDragEnd}
               onDragStart={isPlaying ? () => false : onElementDragStart}
+              snapEnabled={snapEnabled}
               onDoubleClick={isPlaying ? undefined : onTextDoubleClick}
             />
           );

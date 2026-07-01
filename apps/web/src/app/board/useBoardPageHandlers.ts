@@ -612,6 +612,11 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
         if (menuElementId) store.toggleArrowNumber(menuElementId);
         hideMenu();
       },
+      onRenumberArrows: () => {
+        useBoardStore.getState().renumberAllArrowsWithHistory();
+        showToast(t('inspector.renumber'));
+        hideMenu();
+      },
       onToggleAutoNumbering: () => {
         useBoardStore.getState().toggleAutoNumbering();
         const isOn = useBoardStore.getState().isAutoNumbering;

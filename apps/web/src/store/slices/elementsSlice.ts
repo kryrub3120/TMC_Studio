@@ -46,6 +46,7 @@ import { useUIStore } from '../useUIStore';
 import { track, EVENTS } from '../../lib/analytics';
 
 const getGridSize = () => useUIStore.getState().gridSize ?? DEFAULT_PITCH_CONFIG.gridSize;
+const getSnapEnabled = () => useUIStore.getState().snapEnabled !== false;
 
 const getBoardCenter = (
   document: AppState['document'],
@@ -186,6 +187,7 @@ export interface ElementsSlice {
   toggleArrowNumber: (id: ElementId) => void;
   setArrowNumber: (id: ElementId, number: number | undefined) => void;
   renumberAllArrows: () => void;
+  renumberAllArrowsWithHistory: () => void;
   /** Patch arrow style props (heads / color / strokeWidth) for a single arrow + push history. */
   updateArrowStyle: (id: ElementId, patch: Partial<Pick<ArrowElement, 'startHead' | 'endHead' | 'color' | 'strokeWidth'>>) => void;
   /** Patch zone style props (border / corners / fill) for a single zone + push history. */
@@ -462,7 +464,7 @@ export const createElementsSlice: StateCreator<
     if (get().isElementLocked(id)) return;
     set((state) => ({
       elements: state.elements.map((el) =>
-        el.id === id ? moveElement(el, position, getGridSize()) : el
+        el.id === id ? moveElement(el, position, getGridSize(), getSnapEnabled()) : el
       ),
     }));
     // ⚠️ Don't push history on every move - only on drag end via endContinuous
@@ -690,6 +692,15 @@ export const createElementsSlice: StateCreator<
       }),
     }));
     // UWAGA: NIE wołamy pushHistory() tutaj — wołamy go w deleteSelected
+  },
+
+  renumberAllArrowsWithHistory: () => {
+    const hadNumberedArrows = get().elements.some(
+      (el) => isArrowElement(el) && el.showNumber
+    );
+    if (!hadNumberedArrows) return;
+    get().renumberAllArrows();
+    get().pushHistory();
   },
 
   deleteSelected: () => {

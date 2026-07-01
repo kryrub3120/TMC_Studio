@@ -17,8 +17,9 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Position, BoardElement } from '@tmc/core';
-import { isArrowElement, hasPosition } from '@tmc/core';
+import { isArrowElement, hasPosition, snapToGrid, DEFAULT_PITCH_CONFIG } from '@tmc/core';
 import type { ActiveTool } from '../store/useUIStore';
+import { useUIStore } from '../store/useUIStore';
 import { useBoardStore } from '../store';
 import { useCommandRegistry } from './useCommandRegistry';
 
@@ -91,7 +92,7 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
   const multiDragRef = useRef<{
     startMouseX: number;
     startMouseY: number;
-    elementOffsets: Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position }>;
+    elementOffsets: Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position; controlPoint?: Position }>;
   } | null>(null);
   const [isMultiDragging, setIsMultiDragging] = useState(false);
 
@@ -100,12 +101,27 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
    * Returns true if multi-drag started, false otherwise
    */
   const startMultiDrag = useCallback((draggedId: string, mouseX: number, mouseY: number): boolean => {
-    if (selectedIds.length <= 1) return false;
-    if (!selectedIds.includes(draggedId)) return false;
+    const selectedSet = new Set(selectedIds);
+    const groups = useBoardStore.getState().groups;
+    const draggedGroups = groups.filter((group) => group.memberIds.includes(draggedId));
+    const groupMemberIds = draggedGroups.flatMap((group) => group.memberIds);
+    const shouldDragSelected = selectedSet.size > 1 && selectedSet.has(draggedId);
+    const shouldDragGroup = groupMemberIds.length > 1;
 
-    const offsets = new Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position }>();
+    if (!shouldDragSelected && !shouldDragGroup) return false;
 
-    for (const id of selectedIds) {
+    const dragIds = new Set<string>();
+    if (shouldDragSelected) {
+      selectedIds.forEach((id) => dragIds.add(id));
+    }
+    if (shouldDragGroup) {
+      groupMemberIds.forEach((id) => dragIds.add(id));
+    }
+    if (dragIds.size <= 1) return false;
+
+    const offsets = new Map<string, { x: number; y: number; isArrow?: boolean; startPoint?: Position; endPoint?: Position; controlPoint?: Position }>();
+
+    for (const id of dragIds) {
       if (isElementLocked(id)) continue;
       const el = elements.find((e) => e.id === id);
       if (!el) continue;
@@ -117,6 +133,7 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
           isArrow: true,
           startPoint: { ...el.startPoint },
           endPoint: { ...el.endPoint },
+          controlPoint: el.curveControl ? { ...el.curveControl } : undefined,
         });
       } else if (hasPosition(el)) {
         offsets.set(id, {
@@ -160,20 +177,37 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
       
       const dx = mouseX - multiDragRef.current.startMouseX;
       const dy = mouseY - multiDragRef.current.startMouseY;
+      const snapEnabled = useUIStore.getState().snapEnabled !== false;
+      const gridSize = useUIStore.getState().gridSize ?? DEFAULT_PITCH_CONFIG.gridSize;
       
       // Update all selected elements
       // ✅ INTENT: moveElementLive - no history commits during drag
       multiDragRef.current.elementOffsets.forEach((offset, id) => {
         if (offset.isArrow && offset.startPoint && offset.endPoint) {
+          const oldCenter = {
+            x: (offset.startPoint.x + offset.endPoint.x) / 2,
+            y: (offset.startPoint.y + offset.endPoint.y) / 2,
+          };
+          const targetCenter = { x: oldCenter.x + dx, y: oldCenter.y + dy };
+          const nextCenter = snapEnabled ? snapToGrid(targetCenter, gridSize) : targetCenter;
+          const arrowDx = nextCenter.x - oldCenter.x;
+          const arrowDy = nextCenter.y - oldCenter.y;
+
           // For arrows, update both endpoints
           updateArrowEndpoint(id, 'start', {
-            x: offset.startPoint.x + dx,
-            y: offset.startPoint.y + dy,
+            x: offset.startPoint.x + arrowDx,
+            y: offset.startPoint.y + arrowDy,
           });
           updateArrowEndpoint(id, 'end', {
-            x: offset.endPoint.x + dx,
-            y: offset.endPoint.y + dy,
+            x: offset.endPoint.x + arrowDx,
+            y: offset.endPoint.y + arrowDy,
           });
+          if (offset.controlPoint) {
+            updateArrowEndpoint(id, 'control', {
+              x: offset.controlPoint.x + arrowDx,
+              y: offset.controlPoint.y + arrowDy,
+            });
+          }
         } else {
           // For position-based elements - INTENT (live update)
           cmdRegistry.board.canvas.moveElementLive(id, {

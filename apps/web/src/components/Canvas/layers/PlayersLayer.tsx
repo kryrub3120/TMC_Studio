@@ -25,7 +25,8 @@ export interface PlayersLayerProps {
   isElementLocked?: (id: string) => boolean;
   onSelect?: (id: string, addToSelection: boolean) => void;
   onDragEnd?: (id: string, newPos: { x: number; y: number }) => void;
-  onDragStart?: (id: string) => boolean;
+  onDragStart?: (id: string, mouseX?: number, mouseY?: number) => boolean;
+  snapEnabled?: boolean;
   onPlayerQuickEdit?: (id: string) => void;
   onResizeEquipment?: (id: string, scale: number) => void;
 }
@@ -42,6 +43,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
   onSelect,
   onDragEnd,
   onDragStart,
+  snapEnabled = true,
   onPlayerQuickEdit,
   onResizeEquipment,
 }) => {
@@ -72,6 +74,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
           onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
           onDragEnd={isPlaying ? () => {} : (onDragEnd || (() => {}))}
           onDragStart={isPlaying ? () => false : (onDragStart || (() => false))}
+          snapEnabled={snapEnabled}
           onQuickEditNumber={isPlaying ? undefined : onPlayerQuickEdit}
         />
       ))}
@@ -88,6 +91,8 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             isLocked={isElementLocked(ball.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleBallDragEnd}
+            onDragStart={isPlaying ? () => false : (onDragStart || (() => false))}
+            snapEnabled={snapEnabled}
           />
         );
       })}
@@ -102,6 +107,7 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             isSelected={!isPlaying && selectedIds.includes(eq.id)}
             isLocked={isElementLocked(eq.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
+            onDragStart={isPlaying ? () => false : (onDragStart || (() => false))}
             onDragEnd={isPlaying ? () => {} : handleDragEnd}
             onResize={isPlaying ? undefined : onResizeEquipment}
           />
@@ -120,6 +126,8 @@ export const PlayersLayer = memo<PlayersLayerProps>(({
             isLocked={isElementLocked(text.id)}
             onSelect={isPlaying ? () => {} : (onSelect || (() => {}))}
             onDragEnd={isPlaying ? () => {} : handleDragEnd}
+            onDragStart={isPlaying ? () => false : (onDragStart || (() => false))}
+            snapEnabled={snapEnabled}
           />
         );
       })}

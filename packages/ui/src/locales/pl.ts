@@ -298,6 +298,7 @@ export const pl: Dictionary = {
     autoNumberingOn: 'Auto-numeracja: WŁ.',
     autoNumberingOff: 'Auto-numeracja: WYŁ.',
     changeNumber: 'Zmień numer',
+    renumberArrows: 'Przenumeruj od 1',
     switchTeam: 'Zmień drużynę',
     cycleShape: 'Zmień kształt',
     changeColor: 'Zmień kolor',

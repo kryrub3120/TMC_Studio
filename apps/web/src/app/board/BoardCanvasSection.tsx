@@ -172,6 +172,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   const setZoom = useUIStore((s) => s.setZoom);
   const viewportLocked = useUIStore((s) => s.viewportLocked); // ETAP 4
+  const snapEnabled = useUIStore((s) => s.snapEnabled);
 
   // ─── zoomRef: always-fresh snapshot for ResizeObserver callback ────
   const zoomRef = useRef(zoom);
@@ -620,6 +621,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             onElementSelect={activeCanvasInteraction?.handleElementSelect}
             onElementDragEnd={activeCanvasInteraction?.handleElementDragEnd}
             onElementDragStart={activeCanvasInteraction?.handleDragStart}
+            snapEnabled={snapEnabled}
             onResizeZone={onResizeZone}
             onResizeEquipment={onResizeEquipment}
             onUpdateArrowEndpoint={onUpdateArrowEndpoint}
@@ -669,6 +671,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             onElementSelect={onElementSelect}
             onElementDragEnd={onElementDragEnd}
             onElementDragStart={onElementDragStart}
+            snapEnabled={snapEnabled}
             onResizeZone={onResizeZone}
             onUpdateZonePoints={onUpdateZonePoints}
             onResizeEquipment={onResizeEquipment}

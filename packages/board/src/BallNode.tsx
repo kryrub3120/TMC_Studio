@@ -23,6 +23,7 @@ export interface BallNodeProps {
   onDragEnd: (id: string, position: Position) => void;
   /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
   onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
+  snapEnabled?: boolean;
 }
 
 const BALL_RADIUS = 11;
@@ -150,6 +151,7 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   onSelect,
   onDragEnd,
   onDragStart,
+  snapEnabled = true,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -201,8 +203,8 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
     const rawPosition: Position = { x: node.x(), y: node.y() };
 
     // Snap to grid and clamp to bounds
-    const snapped = snapToGrid(rawPosition, pitchConfig.gridSize);
-    const clamped = clampToBounds(snapped, pitchConfig);
+    const target = snapEnabled ? snapToGrid(rawPosition, pitchConfig.gridSize) : rawPosition;
+    const clamped = clampToBounds(target, pitchConfig);
 
     node.x(clamped.x);
     node.y(clamped.y);
@@ -294,7 +296,8 @@ export const BallNode = memo(BallNodeComponent, (prevProps, nextProps) => {
     prevProps.ball.strokeColor === nextProps.ball.strokeColor &&
     prevProps.ball.strokeWidth === nextProps.ball.strokeWidth &&
     prevProps.ball.variant === nextProps.ball.variant &&
-    prevProps.isSelected === nextProps.isSelected
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.snapEnabled === nextProps.snapEnabled
   );
 });
 

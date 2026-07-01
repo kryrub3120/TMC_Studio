@@ -17,6 +17,8 @@ export interface EquipmentNodeProps {
   isPrintMode?: boolean;
   onSelect: (id: string, addToSelection: boolean) => void;
   onDragEnd: (id: string, x: number, y: number) => void;
+  /** Called on mousedown - return true to prevent Konva's default drag (for multi-drag) */
+  onDragStart?: (id: string, mouseX: number, mouseY: number) => boolean;
   /** Commit a new absolute scale after drag-resize. */
   onResize?: (id: string, scale: number) => void;
 }
@@ -43,6 +45,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   isPrintMode,
   onSelect,
   onDragEnd,
+  onDragStart,
   onResize,
 }) => {
   const { id, position, equipmentType, variant, rotation, color, scale } = element;
@@ -51,6 +54,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   // Live preview scale during a resize drag (null when not resizing).
   const [previewScale, setPreviewScale] = React.useState<number | null>(null);
   const [activeCorner, setActiveCorner] = React.useState<Corner | null>(null);
+  const [multiDragActive, setMultiDragActive] = React.useState(false);
   const resizeStart = React.useRef<{ startScale: number; startDist: number } | null>(null);
 
   const effScale = previewScale ?? scale;
@@ -65,7 +69,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
   const ShapeComponent = EQUIPMENT_RENDERERS[equipmentType];
 
   const handleClick = (e: any) => {
-    const addToSelection = e.evt?.shiftKey ?? false;
+    const addToSelection = !!(e.evt?.shiftKey || e.evt?.metaKey || e.evt?.ctrlKey);
     onSelect(id, addToSelection);
   };
 
@@ -79,15 +83,45 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
     // Block marquee selection on right-click only
     if (e.evt.button === 2) {
       e.cancelBubble = true;
+      setMultiDragActive(false);
+      return;
     }
+    if (isLocked || activeCorner) {
+      setMultiDragActive(false);
+      return;
+    }
+    if (!onDragStart) {
+      setMultiDragActive(false);
+      return;
+    }
+
+    const stage = e.target.getStage?.();
+    const rect = stage?.container().getBoundingClientRect();
+    if (!rect) {
+      setMultiDragActive(false);
+      return;
+    }
+
+    const shouldMultiDrag = onDragStart(
+      id,
+      e.evt.clientX - rect.left,
+      e.evt.clientY - rect.top
+    );
+    if (shouldMultiDrag) {
+      e.cancelBubble = true;
+      setMultiDragActive(true);
+      return;
+    }
+    setMultiDragActive(false);
   };
 
   const handleDragStart = () => {
-    if (isLocked) return;
+    if (multiDragActive || isLocked) return;
     applyGrabbing(groupRef);
   };
 
   const handleDragEnd = (e: any) => {
+    if (multiDragActive) return;
     applyGrab(groupRef);
     if (isLocked) return;
     onDragEnd(id, e.target.x(), e.target.y());
@@ -183,7 +217,7 @@ export const EquipmentNode: React.FC<EquipmentNodeProps> = ({
       x={position.x}
       y={position.y}
       rotation={rotation}
-      draggable={!activeCorner && !isLocked}
+      draggable={!multiDragActive && !activeCorner && !isLocked}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >

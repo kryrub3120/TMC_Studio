@@ -296,6 +296,7 @@ export const en = {
     autoNumberingOn: 'Auto-numbering: ON',
     autoNumberingOff: 'Auto-numbering: OFF',
     changeNumber: 'Change number',
+    renumberArrows: 'Renumber from 1',
     switchTeam: 'Switch team',
     cycleShape: 'Cycle shape',
     changeColor: 'Change color',

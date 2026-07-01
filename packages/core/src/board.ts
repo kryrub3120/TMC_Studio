@@ -315,7 +315,8 @@ export function createEquipment(
 export function moveElement(
   element: BoardElement,
   newPosition: Position,
-  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize
+  gridSize: number = DEFAULT_PITCH_CONFIG.gridSize,
+  snap: boolean = true
 ): BoardElement {
   if (isArrowElement(element)) {
     // For arrows, move both endpoints by the delta
@@ -323,9 +324,9 @@ export function moveElement(
       x: (element.startPoint.x + element.endPoint.x) / 2,
       y: (element.startPoint.y + element.endPoint.y) / 2,
     };
-    const snapped = snapToGrid(newPosition, gridSize);
-    const dx = snapped.x - oldCenter.x;
-    const dy = snapped.y - oldCenter.y;
+    const target = snap ? snapToGrid(newPosition, gridSize) : newPosition;
+    const dx = target.x - oldCenter.x;
+    const dy = target.y - oldCenter.y;
     return {
       ...element,
       startPoint: { x: element.startPoint.x + dx, y: element.startPoint.y + dy },
@@ -335,7 +336,7 @@ export function moveElement(
   // Elements with position (player, ball, zone)
   return {
     ...element,
-    position: snapToGrid(newPosition, gridSize),
+    position: snap ? snapToGrid(newPosition, gridSize) : newPosition,
   } as BoardElement;
 }
 

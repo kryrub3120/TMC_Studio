@@ -74,6 +74,7 @@ export interface PlayerNodeProps {
   teamSettings?: TeamSettings;
   onQuickEditNumber?: (id: string, currentNumber: number | null | undefined) => void;
   isPrintMode?: boolean;
+  snapEnabled?: boolean;
   playerOrientationSettings?: PlayerOrientationSettings;
   /** zoom in PERCENT, e.g. 100 */
   zoom?: number;
@@ -156,6 +157,7 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
   teamSettings,
   onQuickEditNumber,
   isPrintMode,
+  snapEnabled = true,
   playerOrientationSettings,
   zoom = 100,
   onOrientationPreview,
@@ -255,8 +257,10 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
     applyGrab(groupRef);
     const node = e.target;
 
-    const snapped = snapToGrid({ x: node.x(), y: node.y() }, pitchConfig.gridSize);
-    const clamped = clampToBounds(snapped, pitchConfig);
+    const target = snapEnabled
+      ? snapToGrid({ x: node.x(), y: node.y() }, pitchConfig.gridSize)
+      : { x: node.x(), y: node.y() };
+    const clamped = clampToBounds(target, pitchConfig);
 
     node.x(clamped.x);
     node.y(clamped.y);
@@ -770,6 +774,7 @@ export const PlayerNode = memo(PlayerNodeComponent, (prevProps, nextProps) => {
     prevProps.player.showVision === nextProps.player.showVision && // Per-player vision toggle
     prevProps.isPrintMode === nextProps.isPrintMode &&
     prevProps.isSelected === nextProps.isSelected &&
+    prevProps.snapEnabled === nextProps.snapEnabled &&
     prevProps.zoom === nextProps.zoom &&
     prevProps.onOrientationPreview === nextProps.onOrientationPreview &&
     prevProps.onOrientationCommit === nextProps.onOrientationCommit &&
