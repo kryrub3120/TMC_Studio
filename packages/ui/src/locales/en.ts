@@ -1303,6 +1303,8 @@ export const en = {
       italic: 'Italic',
       thinnerStroke: 'Thinner stroke',
       thickerStroke: 'Thicker stroke',
+      alignPrev: 'Previous alignment',
+      alignNext: 'Next alignment',
       arrowNumberToggled: 'Arrow number toggled',
       resizedUp: 'Resized +10%',
       resizedDown: 'Resized -10%',

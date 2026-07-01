@@ -79,12 +79,6 @@ export function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
       reject(new Error('Google login took too long. Please try again.'));
     }, 120000);
 
-    const closedCheck = window.setInterval(() => {
-      if (!popup.closed) return;
-      cleanup();
-      reject(new Error('Google login window was closed before sign-in finished.'));
-    }, 500);
-
     const onMessage = (event: MessageEvent<AuthPopupMessage>) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== AUTH_POPUP_MESSAGE) return;
@@ -99,11 +93,9 @@ export function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
 
     const cleanup = () => {
       window.clearTimeout(timeout);
-      window.clearInterval(closedCheck);
       window.removeEventListener('message', onMessage);
     };
 
     window.addEventListener('message', onMessage);
   });
 }
-

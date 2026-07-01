@@ -1150,6 +1150,8 @@ export const pl: Dictionary = {
       italic: 'Kursywa',
       thinnerStroke: 'Cieńsza linia',
       thickerStroke: 'Grubsza linia',
+      alignPrev: 'Poprzednie wyrównanie',
+      alignNext: 'Następne wyrównanie',
       arrowNumberToggled: 'Przełączono numer strzałki',
       resizedUp: 'Powiększono +10%',
       resizedDown: 'Zmniejszono -10%',

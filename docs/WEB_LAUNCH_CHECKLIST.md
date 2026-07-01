@@ -15,8 +15,23 @@ Authentication scope for launch:
 
 - Google OAuth.
 - Email/password.
-- Web popup as the default Google flow.
+- Web popup as the default Google flow (z COOP workaround — hotfix 2026-07-01).
 - Full-page redirect as fallback when popup opening fails.
+
+## Known Production Issue: COOP-breaking popup.closed
+
+**Problem:** `Cross-Origin-Opener-Policy` (COOP) na produkcji blokuje odczyt `popup.closed` po przejściu okna przez Google/Supabase. Stary kod (pre-2026-07-01) uznał to za zamknięcie okna i przerywał login.
+
+**Hotfix (2026-07-01):**
+1. Usunięto polling `popup.closed` z `waitForOAuthPopup()`.
+2. Parent window używa `Promise.race()` — równolegle czeka na `postMessage` I na realną sesję Supabase przez 120s.
+3. Jeśli COOP zerwie komunikację, login kończy się po wykryciu sesji pollingiem.
+
+**Awaryjne ominięcie (Netlify env):**
+```env
+VITE_AUTH_GOOGLE_SURFACE=redirect
+```
+Wymusza pełny redirect zamiast popupu, omijając problem COOP całkowicie.
 
 ## Staging Decision
 
@@ -35,6 +50,7 @@ Set in Netlify Dashboard -> Site configuration -> Environment variables:
 - `VITE_SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<production anon key>`
 - `VITE_AUTH_GOOGLE_SURFACE=popup`
+- `VITE_AUTH_GOOGLE_SURFACE=redirect` (awaryjne — omija COOP, patrz sekcja COOP-breaking powyżej)
 - `SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co`
 - `SUPABASE_SERVICE_ROLE_KEY=<production service role key>`
 - `VITE_STRIPE_PUBLISHABLE_KEY=<publishable key>`

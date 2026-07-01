@@ -103,15 +103,19 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
 
   const handleTextKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        // Enter without Shift = save
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        // Cmd/Ctrl+Enter = save and exit
         e.preventDefault();
         saveTextEdit();
       } else if (e.key === 'Escape') {
+        // Escape = cancel/discard (unchanged) — blur (click away) or
+        // Cmd/Ctrl+Enter are the two ways to save, on purpose: Escape
+        // keeps its "discard" meaning so it never surprises with data loss.
         e.preventDefault();
         cancelTextEdit();
       }
-      // Shift+Enter = add newline (default textarea behavior, no preventDefault)
+      // Plain Enter = newline (default textarea behavior, no preventDefault).
+      // Shift+Enter also falls through to the same default newline behavior.
     },
     [saveTextEdit, cancelTextEdit]
   );

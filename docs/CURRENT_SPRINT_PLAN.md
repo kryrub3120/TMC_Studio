@@ -19,15 +19,17 @@ Zrealizowane punkty:
 
 1. **S-AUTH3.0 — Popup regression fix** — blokada renderowania app w popupie Google OAuth.
 2. **S-AUTH3.1 — Web popup adapter + surface resolver** — `oauthWebPopup.ts`, `oauthSurface.ts`, `authFlow.ts` z dedykowanym stanem `authFlow`.
-3. **Routing web-only**:
+3. **S-AUTH3.4 — COOP hotfix (2026-07-01)** — usunięto polling `popup.closed` (COOP blokuje odczyt w produkcji). Parent window używa `Promise.race()` — równolegle czeka na `postMessage` i na realną sesję Supabase przez 120s.
+4. **Routing web-only**:
    - `/board` jako kanoniczna ścieżka aplikacji.
    - `/app` → `/board` legacy redirect z zachowaniem query i hash.
-4. **Aktualizacja linków** — landing, pricing, auth callback, Stripe return, billing portal.
-5. **S-AUTH3.3 — Scaffold desktop (Tauri deep-link)** — `oauthDesktopBridge.ts`, `lib.rs`, `tauri.conf.json` — gotowe, ale nie blokuje web launchu.
-6. **Dokumentacja**:
-   - `docs/WEB_LAUNCH_CHECKLIST.md` — checklista web launchu.
+5. **Aktualizacja linków** — landing, pricing, auth callback, Stripe return, billing portal.
+6. **S-AUTH3.3 — Scaffold desktop (Tauri deep-link)** — `oauthDesktopBridge.ts`, `lib.rs`, `tauri.conf.json` — gotowe, ale nie blokuje web launchu.
+7. **Dokumentacja**:
+   - `docs/WEB_LAUNCH_CHECKLIST.md` — checklista web launchu + COOP workaround.
    - `tasks/AUTH_FLOW_V3_COMPLEX_PLAN_2026-07-01.md` — pełny plan.
-   - `docs/AUTH_FLOW.md` — zaktualizowany o web-only scope.
+   - `docs/AUTH_FLOW.md` — zaktualizowany o web-only scope i COOP sekwencję.
+8. **Weryfikacja**: typecheck + 116/116 testów + build + `git diff --check` — wszystkie zielone.
 7. **Weryfikacja**: typecheck + 116/116 testów + build + `git diff --check` — wszystkie zielone. Merge `develop` → `main` i push.
 
 Evidence:

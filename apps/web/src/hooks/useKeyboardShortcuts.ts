@@ -103,6 +103,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const deleteSelected = useBoardStore((s) => s.deleteSelected);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
+  const cycleTextAlign = useBoardStore((s) => s.cycleTextAlign);
   const saveDocument = useBoardStore((s) => s.saveDocument);
   const manualSave = useBoardStore((s) => s.manualSave);
   const saveToCloud = useBoardStore((s) => s.saveToCloud);
@@ -857,7 +858,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         e.preventDefault();
         {
           const textEl = getSelectedText();
-          if (textEl) {
+          if (textEl && e.altKey) {
+            // Alt+Left on selected (non-editing) text = previous text alignment
+            cycleTextAlign(-1);
+            showTranslatedToast('alignPrev');
+          } else if (textEl) {
             updateTextProperties(textEl.id, { bold: !textEl.bold });
             showTranslatedToast(textEl.bold ? 'normal' : 'bold');
           } else if (e.altKey) {
@@ -883,7 +888,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             break;
           }
           const textEl = getSelectedText();
-          if (textEl) {
+          if (textEl && e.altKey) {
+            // Alt+Right on selected (non-editing) text = next text alignment
+            cycleTextAlign(1);
+            showTranslatedToast('alignNext');
+          } else if (textEl) {
             updateTextProperties(textEl.id, { italic: !textEl.italic });
             showTranslatedToast(textEl.italic ? 'normal' : 'italic');
           } else if (e.altKey) {
@@ -1040,7 +1049,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements,
     toggleSelectedLock,
     undo, redo, deleteSelected,
-    cycleZoneShape, cyclePlayerShape, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
+    cycleZoneShape, cyclePlayerShape, cycleTextAlign, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
     cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation,
     cycleGoalkeeperColor,

@@ -1150,6 +1150,8 @@ export const es: Dictionary = {
       italic: 'Cursiva',
       thinnerStroke: 'Trazo más fino',
       thickerStroke: 'Trazo más grueso',
+      alignPrev: 'Alineación anterior',
+      alignNext: 'Siguiente alineación',
       arrowNumberToggled: 'Número de flecha alternado',
       resizedUp: 'Redimensionado +10%',
       resizedDown: 'Redimensionado -10%',

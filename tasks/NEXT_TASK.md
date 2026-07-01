@@ -1,37 +1,44 @@
-# Current Task: Sprint UX-C — Editor Viewport, Pan i Squad Bench
+# Current Task: Label Editor Upgrade — Wariant B, Multiline, Wyrownanie, Jeden Model Skrotow
 
 **Status:** 🟢 READY
-**Source of truth:** `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`
+**Source of truth:** `tasks/LABEL_EDITOR_UPGRADE_2026-07-01.md`
 
 ---
 
 ## Aktualne zadanie
 
-**Sprint UX-C — Editor Viewport, Pan i Squad Bench** — 🟢 READY
+**Label Editor Upgrade** — 🟢 READY
 
-Cel: tablica ma byc glownym, duzym i wygodnym obszarem pracy na laptopach; po powiekszeniu ma dac sie naturalnie przesuwac; Squad Bench ma startowac ukryty i zapamietywac preferencje; overlaye nie moga nachodzic na siebie.
+Cel: etykiety tekstowe na tablicy (`TextNode`) dostaja Wariant B (mocny flat chip, dziala tez w print mode), edycja wspiera multiline (Enter = nowa linia, Ctrl/Cmd+Enter = zapisz), dochodzi wyrownanie tekstu (lewo/srodek/prawo/justuj), a rozmiar i kolor dostaja jeden spojny model skrotow dla WSZYSTKICH typow elementow na tablicy (nie tylko tekstu). Skrot `T` (dodaj tekst w miejscu kursora) zostaje bez zmian.
 
-Update 2026-06-29 po rownoleglym agencie: CSP/auth/legal/topbar/cursor-placement byly ruszone w osobnym strumieniu, ale C1-C6 UX-C pozostaja TODO. Szczegoly i lista plikow dirty sa w sekcji "Aktualizacja po rownoleglym agencie" w source of truth.
+Zakres (kolejnosc realizacji):
 
-Zakres:
-
-1. Domyslny rozmiar tablicy + poprawne `Dopasuj do widoku`.
-2. Pan przez drag pustego obszaru tablicy, bez psucia dragowania elementow.
-3. Overlay safe areas dla zoom/help/squad/bottom bar/inspector.
-4. Squad Bench default hidden.
-5. Squad Bench visibility jako preferencja uzytkownika, persisted lokalnie i w cloud prefs po zalogowaniu.
-6. Manual QA na viewportach laptopowych.
+1. TXT1 — model danych (`borderColor`, `borderWidth`, `textAlign` w `TextElement`) + wyglad chipa Wariant B w `TextNode.tsx`.
+2. TXT3 — wiring `align`/`width`/`lineHeight` w Konva `<Text>` (align wymaga jawnego width).
+3. TXT2 — multiline editing: Enter = nowa linia, Ctrl/Cmd+Enter = zapisz, autosize textarea.
+4. TXT4 — wyrownanie: pole danych + `Alt+←/→` (zaznaczony, nieedytowany tekst) + przyciski w `SelectionToolbar`.
+5. TXT5 — ujednolicenie: `Shift+"+"/"-"` = rozmiar dla kazdego typu elementu; `Alt+↑/↓` = kolor dla kazdego typu (naprawa martwego kodu dla tekstu, udokumentowanego juz w `docs/COMMANDS_MAP.md:186`); wycofanie `Cmd+Alt+=/-` i equipment-only `+/-`.
+6. TXT6 — dokumentacja: `docs/COMMANDS_MAP.md`, `docs/DATA_MODEL.md`, `CHANGELOG.md`, cheat sheet, i18n.
 
 Command dla agenta:
 
 ```text
-Zrealizuj `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`.
-Najpierw przeczytaj caly brief oraz `docs/UX_PATTERNS.md`, `docs/DESIGN_SYSTEM.md`.
-Uwzglednij sekcje "Aktualizacja po rownoleglym agencie — 2026-06-29".
-Nie ruszaj Postmarka, mailingu ani landing page.
-Nie cofaj zmian drugiego agenta; szczegolnie zachowaj cursor position tracking w `useCanvasEventsController.ts`.
-Po implementacji uruchom typecheck/test/build i wypelnij evidence manual QA dla viewportow laptopowych.
+Zrealizuj `tasks/LABEL_EDITOR_UPGRADE_2026-07-01.md`.
+Najpierw przeczytaj caly brief oraz docs/COMMANDS_MAP.md i docs/DATA_MODEL.md.
+Kolejnosc: TXT1 -> TXT3 -> TXT2 -> TXT4 -> TXT5 -> TXT6.
+Nie zmieniaj skrotu "T" (addTextAtCursor) i nie zmieniaj semantyki Escape (anuluj).
+Po kazdym TXT-bloku uruchom typecheck. Po calosci uruchom typecheck/test/build,
+zaktualizuj CHANGELOG.md, docs/COMMANDS_MAP.md, docs/DATA_MODEL.md i tasks/NEXT_TASK.md.
 ```
+
+---
+
+## Rownolegle strumienie (nie ruszac bez potrzeby)
+
+**Sprint UX-C — Editor Viewport, Pan i Squad Bench** — 🟡 W TLE, C1-C6 nadal TODO
+- Source of truth: `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`.
+- Nieukonczony przed rozpoczeciem Label Editor Upgrade. Nie zostal odwolany, tylko odlozony — priorytet uzytkownika przeszedl na etykiety tekstowe.
+- Jesli wracamy do niego pozniej: uwaga na dirty pliki z rownoleglego agenta opisane w sekcji "Aktualizacja po rownoleglym agencie — 2026-06-29" w tamtym dokumencie (`useCanvasEventsController.ts` cursorPosition itd.).
 
 ---
 

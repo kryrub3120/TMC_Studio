@@ -26,6 +26,11 @@ export interface TextNodeProps {
 }
 
 const SELECTION_PADDING = 6;
+const LINE_HEIGHT = 1.2;
+const CHIP_CORNER_RADIUS = 8;
+const CHIP_PAD_X = 8;
+const CHIP_PAD_Y = 5;
+const DEFAULT_BORDER_WIDTH = 2;
 
 /** Sanitize color for print mode — map all colors to solid black for B/W output */
 function sanitizeTextColor(color: string | undefined, isPrintMode: boolean): string {
@@ -33,18 +38,30 @@ function sanitizeTextColor(color: string | undefined, isPrintMode: boolean): str
   if (!color) {
     return isPrintMode ? '#000000' : '#ffffff';
   }
-  
+
   // In print mode, ALL colors → black (pure B/W output)
   if (isPrintMode) {
     return '#000000';
   }
-  
+
   // Normal mode: sanitize white fallback (defensive — white on white bg is invisible)
   if (color.trim().toLowerCase() === '#ffffff') {
     return '#000000';
   }
-  
+
   return color;
+}
+
+/** Darken a hex color by percent (for a visible default chip border over same-hue fill). */
+function darkenHex(hex: string, percent = 30): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const num = parseInt(m[1], 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.max(0, (num >> 16) - amt);
+  const g = Math.max(0, ((num >> 8) & 0xff) - amt);
+  const b = Math.max(0, (num & 0xff) - amt);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
 /** Draggable text element */
@@ -61,20 +78,29 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
   snapEnabled = true,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
-  const textRef = useRef<Konva.Text>(null);
+  const measureRef = useRef<Konva.Text>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [multiDragActive, setMultiDragActive] = useState(false);
   const [textSize, setTextSize] = useState({ width: 50, height: 20 });
-  
+
   // Effective color with print mode sanitization
   const effectiveColor = sanitizeTextColor(text.color, isPrintMode ?? false);
 
-  // Measure text dimensions after render
+  // Build font style string
+  const fontStyle = `${text.bold ? 'bold ' : ''}${text.italic ? 'italic' : ''}`.trim() || 'normal';
+
+  // Measure NATURAL (unconstrained) text dimensions via a hidden, non-listening
+  // Text node. This is intentionally decoupled from the visible <Text> below —
+  // the visible node needs an explicit `width` for `align` to take effect
+  // (Konva only honors `align` inside a fixed box), and reading .width() off a
+  // width-constrained node would just echo that fixed width back, freezing
+  // auto-fit forever. Measuring off a separate, always-unconstrained node keeps
+  // auto-fit correct no matter what alignment is applied to the visible text.
   useEffect(() => {
-    if (textRef.current) {
+    if (measureRef.current) {
       setTextSize({
-        width: textRef.current.width(),
-        height: textRef.current.height(),
+        width: measureRef.current.width(),
+        height: measureRef.current.height(),
       });
     }
   }, [text.content, text.fontSize, text.fontFamily, text.bold, text.italic]);
@@ -129,24 +155,29 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
     applyGrab(groupRef);
     const node = e.target;
     const rawPosition: Position = { x: node.x(), y: node.y() };
-    
+
     // Snap to grid and clamp to bounds
     const target = snapEnabled ? snapToGrid(rawPosition, pitchConfig.gridSize) : rawPosition;
     const clamped = clampToBounds(target, pitchConfig);
-    
+
     // Update node position to snapped location
     node.x(clamped.x);
     node.y(clamped.y);
-    
+
     onDragEnd(text.id, clamped);
   };
 
-  // Build font style string
-  const fontStyle = `${text.bold ? 'bold ' : ''}${text.italic ? 'italic' : ''}`.trim() || 'normal';
-
-  // Print mode: force no background and no shadow
+  // Style B chip: solid fill + contrasting border. Background is dropped in
+  // print mode, but the border survives (sanitized to black) — that's the
+  // point of this style, it reads the same on screen and on paper.
+  const hasChip = !!text.backgroundColor;
   const effectiveBgColor = isPrintMode ? undefined : (text.backgroundColor || undefined);
+  const effectiveBorderColor = hasChip
+    ? (isPrintMode ? '#000000' : (text.borderColor || darkenHex(text.backgroundColor as string, 30)))
+    : undefined;
+  const borderWidth = text.borderWidth ?? DEFAULT_BORDER_WIDTH;
   const showShadow = !isDragging && !isPrintMode;
+  const textAlign = text.textAlign ?? 'left';
 
   return (
     <Group id={text.id}
@@ -164,20 +195,21 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Background rectangle for visibility (disabled in print mode) */}
-      {effectiveBgColor && (
+      {/* Chip background + border (Style B). Border alone survives print mode. */}
+      {hasChip && (
         <Rect
-          x={-4}
-          y={-2}
-          width={textSize.width + 8}
-          height={textSize.height + 4}
+          x={-CHIP_PAD_X}
+          y={-CHIP_PAD_Y}
+          width={textSize.width + CHIP_PAD_X * 2}
+          height={textSize.height + CHIP_PAD_Y * 2}
           fill={effectiveBgColor}
-          opacity={0.85}
-          cornerRadius={4}
+          stroke={effectiveBorderColor}
+          strokeWidth={borderWidth}
+          cornerRadius={CHIP_CORNER_RADIUS}
           perfectDrawEnabled={false}
         />
       )}
-      
+
       {/* Selection indicator */}
       {isSelected && (
         <Rect
@@ -193,16 +225,34 @@ const TextNodeComponent: React.FC<TextNodeProps> = ({
           perfectDrawEnabled={false}
         />
       )}
-      
-      {/* Text content with shadow for readability (no shadow in print mode) */}
+
+      {/* Hidden measurement node — natural (unconstrained) size, never drawn. */}
       <Text
-        ref={textRef}
+        ref={measureRef}
         x={0}
         y={0}
         text={text.content}
         fontSize={text.fontSize}
         fontFamily={text.fontFamily}
         fontStyle={fontStyle}
+        lineHeight={LINE_HEIGHT}
+        visible={false}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+
+      {/* Visible text content. `width` is required for `align` to take effect —
+          Konva only distributes multiline text within an explicit box. */}
+      <Text
+        x={0}
+        y={0}
+        width={textSize.width}
+        align={textAlign}
+        text={text.content}
+        fontSize={text.fontSize}
+        fontFamily={text.fontFamily}
+        fontStyle={fontStyle}
+        lineHeight={LINE_HEIGHT}
         fill={effectiveColor}
         shadowColor={showShadow ? 'rgba(0,0,0,0.5)' : undefined}
         shadowBlur={showShadow ? 2 : 0}
@@ -227,6 +277,9 @@ export const TextNode = memo(TextNodeComponent, (prevProps, nextProps) => {
     prevProps.text.bold === nextProps.text.bold &&
     prevProps.text.italic === nextProps.text.italic &&
     prevProps.text.backgroundColor === nextProps.text.backgroundColor &&
+    prevProps.text.borderColor === nextProps.text.borderColor &&
+    prevProps.text.borderWidth === nextProps.text.borderWidth &&
+    prevProps.text.textAlign === nextProps.text.textAlign &&
     prevProps.isPrintMode === nextProps.isPrintMode && // Print mode affects rendering
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.snapEnabled === nextProps.snapEnabled
