@@ -88,7 +88,7 @@ export function ResetPasswordPage() {
       logger.debug('[Auth] Password reset successful');
 
       setTimeout(() => {
-        navigate('/app', { replace: true });
+        navigate('/board', { replace: true });
       }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : t('auth.resetFailed');

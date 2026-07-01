@@ -61,6 +61,7 @@ export function AppShell() {
   const authIsPro = useAuthStore((s) => s.isPro);
   const authIsLoading = useAuthStore((s) => s.isLoading);
   const authOAuthInProgress = useAuthStore((s) => s.isOAuthInProgress);
+  const authFlow = useAuthStore((s) => s.authFlow);
   const authError = useAuthStore((s) => s.error);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
@@ -215,7 +216,7 @@ export function AppShell() {
     },
   });
 
-  // Purchase intent from the public /pricing page. `/app?upgrade=pro|team&cycle=yearly`
+  // Purchase intent from the public /pricing page. `/board?upgrade=pro|team&cycle=yearly`
   // opens the pricing modal directly so visitors land on checkout, not a
   // blank board. Runs once on mount, then strips the param from the URL.
   const [pricingUpgradeCycle, setPricingUpgradeCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -379,6 +380,7 @@ export function AppShell() {
           showToast(t('appToast.googleLoginStarted'), 3500);
           try {
             await signInWithGoogle();
+            setAuthModalOpen(false);
             showToast(t('appToast.welcomeBack'));
           } catch (error) {
             showToast(t('appToast.googleLoginFailed'), 3500);
@@ -396,6 +398,7 @@ export function AppShell() {
         } : undefined}
         authError={authError}
         authIsLoading={authIsLoading || authOAuthInProgress}
+        authOAuthStatus={authFlow.status}
 
         // Pricing Modal
         pricingModalOpen={billingController.pricingModalOpen}
@@ -535,7 +538,7 @@ export function AppShell() {
         subscriptionActivating={billingController.subscriptionActivating}
       />
 
-      {authOAuthInProgress && (
+      {authOAuthInProgress && !authModalOpen && (
         <GoogleAuthStatus
           title={t('auth.googlePopupTitle')}
           description={t('auth.googlePopupDescription')}

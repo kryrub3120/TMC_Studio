@@ -82,12 +82,12 @@ export function PublicPageShell({ title, description, updatedAt, children }: Pub
 
   const handleBack = useCallback(() => {
     // If document referrer is within this app, use browser history;
-    // otherwise go to the board (/app) since that's where users
+    // otherwise go to the board (/board) since that's where users
     // typically come from (footer links on the editor).
     if (document.referrer && new URL(document.referrer).hostname === window.location.hostname) {
       navigate(-1);
     } else {
-      navigate('/app', { replace: true });
+      navigate('/board', { replace: true });
     }
   }, [navigate]);
 
@@ -109,7 +109,7 @@ export function PublicPageShell({ title, description, updatedAt, children }: Pub
           </nav>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <Link to="/app" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover">
+            <Link to="/board" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover">
               {t('landing.nav.openBoard')}
             </Link>
           </div>

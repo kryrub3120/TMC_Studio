@@ -1,7 +1,69 @@
 # TMC Studio — Authentication Flow
 
 > Kompletny opis mechanizmu logowania i zarządzania sesją w TMC Studio.
-> **Last Updated:** 2026-06-29
+> **Last Updated:** 2026-07-01
+
+---
+
+## Status 2026-07-01 — Auth Flow V3 in progress
+
+Auth Flow V3 rozdziela trzy powierzchnie Google OAuth. Dla pierwszego launchu aktywnym zakresem jest **WWW-only** opisany w `docs/WEB_LAUNCH_CHECKLIST.md`; desktop/Tauri zostaje jako later readiness.
+
+1. **Web popup** — domyślny web flow. Popup nie może renderować `/board`; callback popupu może tylko wysłać wynik do parent window, zamknąć się albo pokazać recovery screen.
+2. **Web redirect** — fallback, gdy popup jest zablokowany albo wymuszony przez `VITE_AUTH_GOOGLE_SURFACE=redirect`.
+3. **Desktop deep link** — Tauri flow przez external browser i `tmcstudio://auth/callback?code=...`; główne okno wymienia PKCE code przez `supabase.auth.exchangeCodeForSession(code)`.
+
+Stan wdrożenia:
+
+- ✅ P0 regression guard: popup callback bez `window.opener` nie nawiguje do `/board`.
+- ✅ Web popup adapter: `apps/web/src/auth/oauthWebPopup.ts`.
+- ✅ Surface resolver: `apps/web/src/auth/oauthSurface.ts`.
+- ✅ Desktop bridge scaffold: `apps/web/src/auth/oauthDesktopBridge.ts`.
+- ✅ Tauri deep-link + single-instance config scaffold.
+- ✅ Formalny `authFlow` state w `useAuthStore`.
+- ⚠️ Rust/Tauri compile wymaga maszyny z `rustc`/`cargo`; lokalne środowisko Codex nie ma Rust toolchain.
+- ⚠️ Realny desktop OAuth wymaga allowlist `tmcstudio://auth/callback` w Supabase/Google.
+
+Web launch checklist:
+
+1. `pnpm --filter @tmc/web typecheck`
+2. `pnpm --filter @tmc/web test`
+3. `pnpm --filter @tmc/web build`
+4. Supabase production settings:
+   - Site URL: `https://tmcstudio.app`
+   - redirect URL: `https://tmcstudio.app/auth/callback`
+   - local redirect URL: `http://localhost:3000/auth/callback`
+5. Google OAuth / Supabase provider config akceptuje produkcyjny callback Supabase:
+   - `https://pgacjczecyfnwsaadyvj.supabase.co/auth/v1/callback`
+6. Netlify production env zawiera:
+   - `VITE_SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_AUTH_GOOGLE_SURFACE=popup`
+   - server-side Supabase/Stripe keys dla funkcji.
+7. Manual smoke web:
+   - `/` landing,
+   - `/board` app,
+   - `/app` -> `/board` legacy redirect,
+   - Google success,
+   - Google cancel,
+   - popup blocked -> redirect fallback,
+   - popup no opener -> recovery screen, bez `/board`,
+   - email/password success.
+
+Desktop/Tauri later checklist:
+
+1. `cargo check` albo `pnpm --filter @tmc/web tauri build` na środowisku z Rust.
+2. Supabase redirect allowlist zawiera:
+   - `https://tmcstudio.app/auth/callback`
+   - `tmcstudio://auth/callback`
+3. Manual smoke desktop:
+   - app zainstalowana/bundlowana,
+   - Google otwiera system browser,
+   - `tmcstudio://auth/callback?code=...` wraca do głównego okna,
+   - główne okno loguje usera,
+   - brak mini-okna z edytorem.
+
+Historyczne sekcje poniżej opisują V2 popup flow i powinny być traktowane jako tło implementacyjne, dopóki dokument nie zostanie w całości przepisany pod V3.
 
 ---
 

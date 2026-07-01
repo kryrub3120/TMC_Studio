@@ -109,8 +109,8 @@ export function PricingModal({
       // userId, email, customerId are NOT sent — the server reads them from auth.
       const checkoutBody: any = {
         priceId: plan.priceId,
-        successUrl: `${window.location.origin}/app?checkout=success`,
-        cancelUrl: `${window.location.origin}/app?checkout=cancelled`,
+        successUrl: `${window.location.origin}/board?checkout=success`,
+        cancelUrl: `${window.location.origin}/board?checkout=cancelled`,
       };
 
       const headers: Record<string, string> = {

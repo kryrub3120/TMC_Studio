@@ -296,7 +296,7 @@ function BrowserMock() {
         </div>
         <div className="ml-2 flex flex-1 items-center gap-2 rounded-md border border-border bg-surface px-2.5 py-1">
           <I d={ICONS.browser} className="h-3.5 w-3.5 text-muted" />
-          <span className="font-mono text-[11px] text-muted">tmcstudio.app/app</span>
+          <span className="font-mono text-[11px] text-muted">tmcstudio.app/board</span>
           <span className="ml-auto rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">Gość</span>
         </div>
       </div>
@@ -371,7 +371,7 @@ export function LandingPage() {
   }, [t]);
 
   const CtaPrimary = () => (
-    <Link to="/app" className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-6 py-3 text-base font-semibold text-bg transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20">
+    <Link to="/board" className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-6 py-3 text-base font-semibold text-bg transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20">
       {t('landing.hero.ctaPrimary')}
       <I d={ICONS.arrowRight} className="h-4 w-4" />
     </Link>
@@ -401,7 +401,7 @@ export function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <Link to="/app" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-accent-hover">
+            <Link to="/board" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bg transition-colors hover:bg-accent-hover">
               {t('landing.nav.openBoard')}
             </Link>
           </div>
@@ -525,7 +525,7 @@ export function LandingPage() {
               <IconTile d={ICONS.browser} />
               <h2 className="mt-5 text-2xl font-bold tracking-tight md:text-3xl">{t('landing.spotlight.syncTitle')}</h2>
               <p className="mt-4 text-base leading-relaxed text-muted">{t('landing.spotlight.syncDesc')}</p>
-              <Link to="/app" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent hover:text-accent-hover">
+              <Link to="/board" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent hover:text-accent-hover">
                 {t('landing.everywhere.cta')}
                 <I d={ICONS.arrowRight} className="h-4 w-4" />
               </Link>
@@ -543,13 +543,13 @@ export function LandingPage() {
                 <IconTile d={ICONS.speed} />
                 <h3 className="mt-4 text-lg font-semibold text-text">{t('landing.useCases.coachesTitle')}</h3>
                 <p className="mt-2 text-base leading-relaxed text-muted">{t('landing.useCases.coachesDesc')}</p>
-                <Link to="/app" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent">{t('landing.nav.openBoard')} →</Link>
+                <Link to="/board" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent">{t('landing.nav.openBoard')} →</Link>
               </div>
               <div className="rounded-2xl border border-border bg-surface p-6">
                 <IconTile d={ICONS.export} />
                 <h3 className="mt-4 text-lg font-semibold text-text">{t('landing.useCases.creatorsTitle')}</h3>
                 <p className="mt-2 text-base leading-relaxed text-muted">{t('landing.useCases.creatorsDesc')}</p>
-                <Link to="/app" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent">{t('landing.nav.openBoard')} →</Link>
+                <Link to="/board" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent">{t('landing.nav.openBoard')} →</Link>
               </div>
               <div className="rounded-2xl border border-border bg-surface p-6">
                 <IconTile d={ICONS.share} />
@@ -578,7 +578,7 @@ export function LandingPage() {
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>
                   ))}
                 </ul>
-                <Link to="/app" className="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text transition-colors hover:bg-surface">
+                <Link to="/board" className="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text transition-colors hover:bg-surface">
                   {t('pricingPage.plans.freeCta')}
                 </Link>
               </div>
@@ -597,7 +597,7 @@ export function LandingPage() {
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>
                   ))}
                 </ul>
-                <Link to="/app?upgrade=pro" className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg transition-colors hover:bg-accent-hover">
+                <Link to="/board?upgrade=pro" className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg transition-colors hover:bg-accent-hover">
                   {t('pricingPage.plans.proCta')}
                 </Link>
               </div>

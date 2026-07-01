@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, HashRouter, Navigate, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom';
 import {
   LandingPage,
   PricingPage,
@@ -39,6 +39,11 @@ const HomeElement = isTauri ? (
   <LandingPage />
 );
 
+function LegacyAppRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/board${location.search}${location.hash}`} replace />;
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <LanguageProvider>
@@ -46,19 +51,20 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={HomeElement} />
           <Route
-            path="/app"
+            path="/board"
             element={
               <Suspense fallback={null}>
                 <App />
               </Suspense>
             }
           />
+          <Route path="/app" element={<LegacyAppRedirect />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cookies" element={<CookiePolicy />} />
           <Route path="/invite" element={<InvitePage />} />
           <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/download" element={<Navigate to="/app" replace />} />
+          <Route path="/download" element={<Navigate to="/board" replace />} />
           <Route path="/refunds" element={<RefundsPage />} />
           <Route path="/legal" element={<LegalNoticePage />} />
           <Route path="/accessibility" element={<AccessibilityPage />} />

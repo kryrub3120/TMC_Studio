@@ -95,7 +95,7 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ returnUrl: `${window.location.origin}/app?portal=return` }),
+        body: JSON.stringify({ returnUrl: `${window.location.origin}/board?portal=return` }),
       });
 
       const data = await response.json();
