@@ -51,6 +51,10 @@ export const SHORTCUT_SECTIONS: HelpSection[] = [
       { id: 'group-selection', key: '⌘G', description: 'Group Selection' },
       { id: 'ungroup-selection', key: 'Alt+G', description: 'Ungroup Selection' },
       { id: 'lock-unlock', key: 'Shift+L', description: 'Lock / Unlock Selection' },
+      { id: 'cycle-color', key: 'Alt+↑↓', description: 'Cycle Color' },
+      { id: 'stroke-width', key: 'Alt+←→', description: 'Stroke Width (text: Alignment)' },
+      { id: 'resize-selected', key: 'Shift+±', description: 'Resize Selected' },
+      { id: 'text-bold-italic', key: 'Ctrl+B / Ctrl+I', description: 'Bold / Italic (text)' },
     ],
   },
   {

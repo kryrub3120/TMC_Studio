@@ -5,7 +5,7 @@
 
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
 import { useTranslation, type InspectorElement, type ElementInList, type SettingsTab } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -399,6 +399,12 @@ export function useBoardPageState(props: BoardPageProps) {
       updateSelectedElement({ number: number === 0 ? undefined : number });
     },
     onSelectElement: (id: string) => selectElement(id, false),
+    onToggleTextFormat: (id: string, format: 'bold' | 'italic') => {
+      const el = elements.find((e) => e.id === id);
+      if (el && isTextElement(el)) {
+        useBoardStore.getState().updateTextProperties(id, { [format]: !el[format] });
+      }
+    },
     onToast: showToast,
   });
 

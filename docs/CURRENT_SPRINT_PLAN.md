@@ -1,12 +1,37 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-07-01  
+**Data:** 2026-07-02
 **Status:** ACTIVE, krotki wskaznik operacyjny  
 **Source of truth:** `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`
 
 ---
 
 ## Zakonczone sprinty
+
+### Sprint TXT1–TXT6 — Label Editor Upgrade (Wariant B, Multiline, Align, Unified Shortcuts)
+
+**Status:** ✅ DONE (2026-07-02)
+**Source of truth:** `tasks/LABEL_EDITOR_UPGRADE_2026-07-01.md`
+
+Cel: nowy wygląd chipa tekstowego (Wariant B), edycja wieloliniowa, auto-kontrast, wyrównanie tekstu, jeden model skrótów klawiszowych dla wszystkich typów elementów.
+
+Zrealizowane punkty:
+
+1. **TXT1 — Nowy chip (Wariant B)** — `TextNode.tsx`: solid fill, 2px border (`borderColor`/`borderWidth`, auto `darkenHex`), radius 8, elevation shadow, auto-kontrast (`getContrastInk`). W print mode fill/shadow znikają, border zostaje.
+2. **TXT2 — Multiline + auto-fit** — Enter = save, Shift+Enter = newline. `useAutosizeTextarea` (scrollHeight + mirror span). auto-width w edytorze.
+3. **TXT3 — Wyrównanie tekstu** — pole `textAlign` (`left`/`center`/`right`/`justify`). `Alt+←/→` cykluje align. Nowy `TextAlignToolbar.tsx` z bold/italic + 4 align przyciskami.
+4. **TXT4 — Jeden model skrótów: kolor** — `Alt+↑/↓` działa na tekście (naprawiona martwa gałąź). Cykluje kolor dla wszystkich typów elementów.
+5. **TXT5 — Jeden model skrótów: rozmiar** — `Shift++`/`Shift+-` zmienia rozmiar każdego typu (player/ball radius, equipment scale, zone W×H, text fontSize, arrow stroke ±1, drawing stroke ±2). Stare `Cmd+Alt+=/-` i equipment-only `+/-` wycofane.
+6. **TXT6 — Ctrl+B/I + word-wrap** — `Ctrl/Cmd+B/I` toggle bold/italic podczas edycji i na zaznaczonym tekście. `boxWidth` do ręcznego word-wrap przez boczne uchwyty Transformera.
+7. **Nowe testy** — 13 testów w `labelEditorShortcuts.logic.test.ts` (resizeSelected, cycleSelectedColor, cycleTextAlign, textAlignCycleWraps).
+8. **i18n** — nowe klucze: `alignLeft`, `alignCenter`, `alignRight`, `alignJustify` w en/pl/es.
+9. **Dokumentacja** — `FEATURE_SPEC.md` §1.6, `COMMANDS_MAP.md`, `DATA_MODEL.md` zaktualizowane.
+10. **Weryfikacja**: typecheck + 129/129 testów (w tym 13 nowych) + build + `git diff --check` — wszystkie zielone.
+
+Evidence:
+- 24 pliki zmodyfikowane, +644/-119.
+- Nowe pliki: `TextAlignToolbar.tsx`, `labelEditorShortcuts.logic.test.ts`, `useAutosizeTextarea.ts`.
+- Task: `tasks/LABEL_EDITOR_UPGRADE_2026-07-01.md`.
 
 ### Sprint Auth V3 — Web-Only Launch Flow (S-AUTH3)
 

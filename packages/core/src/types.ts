@@ -138,6 +138,7 @@ export interface TextElement extends BoardElementBase {
   borderColor?: string; // Chip border (Style B) — defaults to a darkened backgroundColor
   borderWidth?: number; // Chip border width in px — defaults to 2
   textAlign?: TextAlign; // Defaults to 'left'; requires explicit width on Konva Text to take effect
+  boxWidth?: number; // Manual width override (drag-to-stretch); undefined = auto-fit to content, word-wraps when set
 }
 
 /** Drawing types for coach tools */

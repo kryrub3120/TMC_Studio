@@ -166,7 +166,7 @@ export interface ElementsSlice {
   
   // Element updates
   updateTextContent: (id: ElementId, content: string) => void;
-  updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string; textAlign?: TextAlign }) => void;
+  updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string; textAlign?: TextAlign; boxWidth?: number; position?: Position }) => void;
   updatePlayerColor: (ids: ElementId[], color: string) => void;
   updateTextColor: (ids: ElementId[], color: string) => void;
   moveElementById: (id: ElementId, position: Position) => void;
@@ -1026,6 +1026,20 @@ export const createElementsSlice: StateCreator<
           if (isTextElement(el)) {
             const currentSize = el.fontSize ?? 18;
             return { ...el, fontSize: Math.round(currentSize * clampedScale) };
+          }
+          // Arrows have no "scale", only line thickness — Shift+"+/-" steps it
+          // by ±1 instead, same range as adjustSelectedStrokeWidth.
+          if (isArrowElement(el)) {
+            const current = el.strokeWidth ?? 3;
+            const delta = clampedScale >= 1 ? 1 : -1;
+            return { ...el, strokeWidth: Math.max(1, Math.min(10, current + delta)) };
+          }
+          // Freehand/highlighter drawings — same idea, wider range/step.
+          if (el.type === 'drawing') {
+            const drawing = el as { strokeWidth?: number };
+            const current = drawing.strokeWidth ?? 3;
+            const delta = clampedScale >= 1 ? 2 : -2;
+            return { ...el, strokeWidth: Math.max(1, Math.min(30, current + delta)) };
           }
         }
         return el;

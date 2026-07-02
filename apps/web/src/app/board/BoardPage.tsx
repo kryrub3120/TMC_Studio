@@ -21,8 +21,8 @@ import {
   useTranslation,
 } from '@tmc/ui';
 import type { TutorialStep } from '@tmc/ui';
-import type { PitchBoardPreset } from '@tmc/core';
-import { getPitchBoardId, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
+import type { PitchBoardPreset, TextElement } from '@tmc/core';
+import { getPitchBoardId, DEFAULT_PITCH_SETTINGS, isTextElement } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
 import { useBoardStore } from '../../store';
@@ -32,6 +32,7 @@ import { setThumbnailGenerator } from '../../store/slices/documentSlice';
 import { BoardTopBarSection } from './BoardTopBarSection';
 import { BoardCanvasSection } from './BoardCanvasSection';
 import { BoardEditOverlays } from './BoardEditOverlays';
+import { TextAlignToolbar } from './TextAlignToolbar';
 import { CanvasContextMenuOverlay, FocusModeExitBar } from './BoardOverlays';
 import { useBoardPageState, type BoardPageProps } from '../routes/useBoardPageState';
 import { useBoardPageHandlers } from './useBoardPageHandlers';
@@ -88,6 +89,7 @@ export function BoardPage(props: BoardPageProps) {
   const [showCelebration, setShowCelebration] = useState(false);
   // Tutorial-driven: which toolbar dropdown to force open for the active step.
   const [tutorialMenu, setTutorialMenu] = useState<string | null>(null);
+  const [resizingTextId, setResizingTextId] = useState<string | null>(null);
   const prevElementCount = useRef(0);
   useEffect(() => {
     if (prevElementCount.current === 0 && state.elements.length > 0) {
@@ -265,6 +267,39 @@ export function BoardPage(props: BoardPageProps) {
     state.setHelpSidebarOpen(false);
   };
 
+  // Single selected, non-editing text element — drives the floating
+  // alignment mini-toolbar (mouse-friendly counterpart to Alt+Left/Right).
+  const selectedTextForAlignToolbar: TextElement | undefined = (() => {
+    if (state.isPlaying || state.selectedIds.length !== 1) return undefined;
+    const el = state.elements.find((e) => e.id === state.selectedIds[0]);
+    if (!el || !isTextElement(el)) return undefined;
+    if (state.editOverlay.text.editingId === el.id) return undefined;
+    if (resizingTextId === el.id) return undefined;
+    return el;
+  })();
+
+  // Screen (page) position for the toolbar, read straight from Konva's own
+  // rendered transform via getClientRect — deliberately NOT reusing the
+  // CSS calc()-based getStyleForPosition/getTextStyle formula, which only
+  // accounts for the raw user zoom and not the separate `fitZoom`/pan that
+  // BoardCanvasSection computes internally for "fit to view". That mismatch
+  // is what sent the toolbar flying off to an unrelated part of the board.
+  // getClientRect({relativeTo: stage}) already reflects the real, current
+  // zoom+pan Konva is applying, so this stays correct at any viewport state.
+  const alignToolbarScreenPos = (() => {
+    if (!selectedTextForAlignToolbar) return null;
+    const stage = state.stageRef.current;
+    if (!stage) return null;
+    const node = stage.findOne('#' + selectedTextForAlignToolbar.id);
+    if (!node) return null;
+    const stageBox = stage.container().getBoundingClientRect();
+    const nodeBox = node.getClientRect({ relativeTo: stage });
+    return {
+      left: stageBox.left + nodeBox.x + nodeBox.width / 2,
+      top: stageBox.top + nodeBox.y,
+    };
+  })();
+
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       {/* Top Bar */}
@@ -411,6 +446,12 @@ export function BoardPage(props: BoardPageProps) {
             onUpdateArrowEndpoint={state.updateArrowEndpoint}
             onPlayerQuickEdit={handlers.handlePlayerQuickEdit}
             onTextDoubleClick={handlers.handleTextDoubleClick}
+            onResizeText={(id, boxWidth, position) => {
+              useBoardStore.getState().updateTextProperties(id, { boxWidth, ...(position ? { position } : {}) });
+            }}
+            onTextResizeStateChange={(id, isResizing) => {
+              setResizingTextId((current) => (isResizing ? id : current === id ? null : current));
+            }}
             pushHistory={state.pushHistory}
             onOrientationPreview={handlers.handleOrientationPreview}
             onOrientationCommit={handlers.handleOrientationCommit}
@@ -512,6 +553,7 @@ export function BoardPage(props: BoardPageProps) {
                 fontWeight: state.editOverlay.text.element.bold ? 'bold' : 'normal',
                 fontFamily: state.editOverlay.text.element.fontFamily,
               } : null,
+              hintText: t('textEdit.hint'),
             }}
             player={{
               elementExists: !!state.editOverlay.player.element,
@@ -522,6 +564,26 @@ export function BoardPage(props: BoardPageProps) {
               style: state.editOverlay.overlay.getPlayerStyle(),
             }}
           />
+
+          {/* Text format mini-toolbar (bold/italic/align) — floats above a selected, non-editing text element */}
+          {selectedTextForAlignToolbar && alignToolbarScreenPos && (
+            <TextAlignToolbar
+              visible
+              style={alignToolbarScreenPos}
+              align={selectedTextForAlignToolbar.textAlign ?? 'left'}
+              onSetAlign={(align) => {
+                useBoardStore.getState().updateTextProperties(selectedTextForAlignToolbar.id, { textAlign: align });
+              }}
+              bold={!!selectedTextForAlignToolbar.bold}
+              italic={!!selectedTextForAlignToolbar.italic}
+              onToggleBold={() => {
+                useBoardStore.getState().updateTextProperties(selectedTextForAlignToolbar.id, { bold: !selectedTextForAlignToolbar.bold });
+              }}
+              onToggleItalic={() => {
+                useBoardStore.getState().updateTextProperties(selectedTextForAlignToolbar.id, { italic: !selectedTextForAlignToolbar.italic });
+              }}
+            />
+          )}
 
           {/* Context Menu */}
           <CanvasContextMenuOverlay

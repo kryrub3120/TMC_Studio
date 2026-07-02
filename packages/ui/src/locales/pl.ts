@@ -303,6 +303,10 @@ export const pl: Dictionary = {
     cycleShape: 'Zmień kształt',
     changeColor: 'Zmień kolor',
     editText: 'Edytuj tekst',
+    alignLeft: 'Wyrównaj do lewej',
+    alignCenter: 'Wyśrodkuj',
+    alignRight: 'Wyrównaj do prawej',
+    alignJustify: 'Wyjustuj',
     editArrowNumber: 'Edytuj numer strzałki',
     rotate: 'Obróć',
     bringToFront: 'Na wierzch',
@@ -381,6 +385,9 @@ export const pl: Dictionary = {
   },
   offline: {
     message: 'Jesteś offline — zmiany zsynchronizują się po powrocie online',
+  },
+  textEdit: {
+    hint: 'Enter = zapisz · Shift+Enter = nowa linia',
   },
   shortcutsHint: {
     press: 'Naciśnij',

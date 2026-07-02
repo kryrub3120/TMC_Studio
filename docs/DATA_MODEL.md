@@ -198,7 +198,7 @@ interface TextElement {
   position: Position;
   
   // Content
-  content: string;
+  content: string;           // May contain \n for multiline (Enter inserts a line while editing)
   
   // Typography
   fontSize: number;
@@ -207,8 +207,16 @@ interface TextElement {
   bold: boolean;
   italic: boolean;
   backgroundColor?: string;
+  borderColor?: string;      // Chip border (Style B) — defaults to a darkened backgroundColor
+  borderWidth?: number;      // Chip border width in px — defaults to 2
+  textAlign?: 'left' | 'center' | 'right' | 'justify'; // Defaults to 'left'
+  boxWidth?: number;         // Manual width override from dragging a Transformer handle; undefined = auto-fit, word-wraps when set
 }
 ```
+
+Rendering note: `textAlign` requires the Konva `<Text>` node to have an explicit
+`width` set — Konva only distributes multiline text within a fixed box. See
+`packages/board/src/TextNode.tsx` (hidden measurement node pattern).
 
 #### 6. DrawingElement
 

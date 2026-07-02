@@ -1,7 +1,7 @@
 # Label Editor Upgrade — Wariant B, Multiline, Auto-fit, Wyrównanie, Jeden Model Skrótów
 
 **Data:** 2026-07-01
-**Status:** READY FOR AGENT
+**Status:** DONE (2026-07-01) — patrz sekcja "Evidence wdrozenia" na koncu pliku
 **Priorytet:** P1
 **Typ:** UX/editor feature (canvas text element)
 **Zasada nadrzedna:** etykiety na tablicy maja wygladac premium (spojne z reszta UI), edycja ma byc naturalna (Enter = nowa linia, autosize), a skroty klawiszowe maja byc jeden spojny model dla calej apki, nie per-typ-elementu wyjatki.
@@ -310,3 +310,108 @@ Nie zmieniaj skrotu "T" (addTextAtCursor) i nie zmieniaj semantyki Escape (anulu
 Po kazdym TXT-bloku uruchom typecheck. Po calosci uruchom typecheck/test/build,
 zaktualizuj CHANGELOG.md, docs/COMMANDS_MAP.md, docs/DATA_MODEL.md i tasks/NEXT_TASK.md.
 ```
+
+---
+
+## Evidence wdrozenia (2026-07-01)
+
+Zrealizowano TXT1-TXT6 w kolejnosci z planu. Zmienione/nowe pliki:
+
+- `packages/core/src/types.ts` — `TextElement.borderColor/borderWidth/textAlign`, nowy typ `TextAlign`.
+- `packages/board/src/TextNode.tsx` — chip Wariant B (solid fill + border, radius 8), ukryty wezel pomiarowy + `align`/`width`/`lineHeight` na widocznym `<Text>`, print-mode sanityzacja `borderColor`.
+- `apps/web/src/hooks/useTextEditController.ts` — Enter=nowa linia, Ctrl/Cmd+Enter=zapisz, Escape bez zmian.
+- `apps/web/src/app/board/BoardEditOverlays.tsx`, nowy `apps/web/src/hooks/useAutosizeTextarea.ts` — auto-grow textarea (wysokosc+szerokosc) + jednorazowy hint.
+- `apps/web/src/store/slices/elementsSlice.ts` — `cycleTextAlign` (nowa akcja), `resizeSelected` rozszerzony o arrow/drawing (grubosc linii zamiast skali), `updateTextProperties` przyjmuje `textAlign`.
+- `apps/web/src/hooks/useKeyboardShortcuts.ts` — `Alt+←/→` cykl wyrownania dla zaznaczonego tekstu, `Alt+↑/↓` naprawiony dla tekstu (kolor), `Shift+"+"/"-"` uniwersalny resize, wycofane `Cmd+Alt+=/-` i equipment-only `+/-`.
+- `apps/web/src/utils/canvasContextMenu.ts`, `apps/web/src/app/board/useBoardPageHandlers.ts` — 4 pozycje wyrownania w menu kontekstowym tekstu.
+- `packages/ui/src/ContextMenu.tsx` — 4 nowe ikony (`align-left/center/right/justify`).
+- `packages/ui/src/locales/{en,pl,es}.ts` — nowe klucze i18n (`alignPrev/alignNext`, `contextMenu.alignLeft/Center/Right/Justify`).
+- `packages/ui/src/CheatSheetOverlay.tsx`, `packages/ui/src/helpSidebarData.ts` — zaktualizowane skroty (dopisane rowniez `cycle-color`/`stroke-width`, ktore wczesniej brakowaly w `helpSidebarData.ts`).
+- `docs/COMMANDS_MAP.md`, `docs/DATA_MODEL.md`, `CHANGELOG.md` — zaktualizowane.
+- Nowy test: `apps/web/src/store/slices/__tests__/labelEditorShortcuts.logic.test.ts` (mirror pattern jak `arrowRenumber.test.ts`).
+
+### Weryfikacja
+
+- ✅ `tsc --noEmit` zielony dla: `@tmc/core`, `@tmc/board`, `@tmc/ui`, `@tmc/web` (uruchamiane przyrostowo po kazdym TXT-bloku).
+- ⚠️ `pnpm test` / `vitest` — **nie dalo sie uruchomic w tym sandboxie**: brakujacy natywny pakiet `@rollup/rollup-linux-arm64-gnu` (znany bug npm z optional dependencies) i zablokowany dostep do npm registry (403) uniemozliwily doinstalowanie. To ograniczenie srodowiska sesji, niezwiazane ze zmianami w kodzie. Logike z nowego testu (resize dispatch per typ, text color-cycle regresja, alignment cycle) zweryfikowano recznie identycznymi asercjami przez `node -e` — wszystkie przeszly.
+- ⚠️ `pnpm build` — nie uruchomiono, z tego samego powodu infrastrukturalnego (build tez zalezy od rollup/vite).
+- **Rekomendacja:** przed merge uruchomic `pnpm test` i `pnpm build` lokalnie lub w CI, gdzie `pnpm install` poprawnie rozwiazuje natywne binarki dla danej platformy.
+- Manualne QA (zrzuty ekranu, matryca scenariuszy z sekcji wyzej) — NIE wykonane w tej sesji (brak dostepu do uruchomionej aplikacji w przegladarce w tym trybie pracy). Do wykonania osobno przed release.
+
+---
+
+## Follow-up fixes po feedbacku uzytkownika (2026-07-01, ten sam dzien)
+
+Po pierwszym wdrozeniu uzytkownik zglosil 3 problemy na podstawie zrzutu ekranu:
+
+1. **Auto-kontrast tekstu** — czarny/szary tekst zlewal sie z czarnym lub czerwonym tlem chipa. Naprawione: gdy chip ma tlo, kolor tekstu jest liczony automatycznie (biel/czern wg jasnosci tla) zamiast byc niezaleznie cyklowanym polem `color` (`TextNode.tsx`, `getContrastInk`).
+2. **Rozciaganie chipa** — dotychczasowy Konva Transformer (Sprint B POC) mial tylko rogi i `keepRatio`, wiec przeciagniecie proporcjonalnie skalowalo caly chip i nic nie bylo zapisywane (`onTransformEnd` w ogole nie istnial). Naprawione: nowe pole `TextElement.boxWidth`, boczne uchwyty (`middle-left`/`middle-right`) + rogi, `onTransformEnd` w `TextNode.tsx` tlumaczy `scaleX` na `boxWidth` i resetuje transform; tekst word-wrapuje (`wrap: 'word'`), wysokosc auto-dopasowuje sie. Przekablowane `onResizeText` przez `BoardPage.tsx` -> `BoardCanvasSection.tsx` -> `CanvasAdapter.tsx` -> `CanvasElements.tsx`. Uwaga: dziala tylko na aktywnej (domyslnej) sciezce renderowania `CanvasAdapter`/`CanvasElements` (`useNewCanvas` flag = false domyslnie) — alternatywna sciezka `BoardCanvas`/`PlayersLayer` (opt-in, dzis wylaczona domyslnie) NIE dostala tej funkcji w tym passie.
+3. **"Brak tla" w cyklu** — `Shift+↑` cyklowal tylko przez liste kolorow tla, `Shift+↓` byl jedynym sposobem na "sam tekst bez tla". Naprawione: `'none'` jest teraz realnym przystankiem w cyklu `Shift+↑` (`useKeyboardShortcuts.ts`), `Shift+↓` zostaje jako szybki bezposredni skrot do tego samego stanu.
+
+Typecheck zielony ponownie dla `@tmc/core`, `@tmc/board`, `@tmc/ui`, `@tmc/web` po tych trzech poprawkach. `pnpm test`/`pnpm build` nadal niemozliwe do uruchomienia w tym sandboxie (patrz wyzej) — zalecana weryfikacja lokalna/CI przed merge, ze szczegolnym naciskiem na manualne przetestowanie drag-resize (nowa funkcja, brak automatycznych testow Konva w tym passie).
+
+---
+
+## Druga runda poprawek (2026-07-01, po kolejnym screenie)
+
+4. **Klucze i18n nie działały** — przyczyna: `packages/ui/dist` był nieaktualny (kompilacja `tsc` nie była uruchomiona po dodaniu `alignLeft/Center/Right/Justify`), więc `t()` zwracał surowy klucz zamiast tłumaczenia (lokalny helper `translate = (t, key, fallback) => t?.(key) ?? fallback` nie łapie tego przypadku, bo `t()` z brakującym kluczem zwraca sam klucz, nie `undefined`). Naprawione: przebudowano `packages/core`, `packages/board`, `packages/ui` (`tsc`) — dist teraz zawiera nowe pola/teksty.
+5. **Tekst "brzydko wygląda" podczas przeciągania** — Konva Transformer skaluje cały Group na żywo (rozciąga glify tekstu), a re-wrap następował dopiero na końcu. Naprawione: tekst chowa się na czas przeciągania (`isTransforming`, `onTransformStart`/`onTransformEnd`), widoczny zostaje tylko Rect (czysto się skaluje), tekst wraca poprawnie zawinięty dopiero po puszczeniu.
+6. **"Gdzie jest wyśrodkowanie"** — realna przyczyna to głównie #4 (surowe klucze wyglądały jak zepsuta funkcja) + dodatkowo: wyrównanie jest matematycznie niewidoczne na jednoliniowym tekście dopasowanym ściśle do treści (brak miejsca do wyrównania). Dodano `autoAlignPadding` (+32px) dla jednoliniowego tekstu z `textAlign !== 'left'`, żeby efekt był widoczny od razu, bez konieczności ręcznego rozciągania chipa.
+7. **Mini-toolbar wyrównania nad zaznaczonym tekstem** — nowy `apps/web/src/app/board/TextAlignToolbar.tsx`, pozycjonowany przez nowy `overlay.getStyleForPosition()` w `useTextEditController.ts`, wpięty w `BoardPage.tsx` (pokazuje się dla pojedynczego zaznaczonego, nieedytowanego tekstu).
+
+Typecheck zielony ponownie dla wszystkich 4 pakietów. `packages/{core,board,ui}/dist` przebudowane i zweryfikowane (grep na nowe symbole/klucze). `pnpm test`/`pnpm build` nadal niemożliwe w tym sandboxie z tego samego powodu infrastrukturalnego — bez zmian względem poprzedniej notatki.
+
+---
+
+## Trzecia poprawka (2026-07-01) — odwrócenie Enter/Shift+Enter
+
+Uzytkownik poprosil o odwrocenie decyzji z TXT2: **Enter (bez modyfikatora) znowu zapisuje i zamyka edycje**, **Shift+Enter dodaje nowa linie** — to byl pierwotny model sprzed tego sprintu, przywrocony bo jest bardziej naturalnym flow klawiaturowym niz wariant Enter=nowa-linia/Ctrl+Enter=zapisz. Escape bez zmian ("anuluj"). Zaktualizowano `useTextEditController.ts`, hint w `BoardEditOverlays.tsx`, `docs/COMMANDS_MAP.md`, `CHANGELOG.md`. Typecheck web zielony.
+
+---
+
+## Czwarta poprawka — Bold/Italic w toolbarze + Ctrl+B/Ctrl+I
+
+Dodano na prosbe uzytkownika:
+
+- **Ctrl/Cmd+B, Ctrl/Cmd+I podczas aktywnej edycji** (pisanie w polu tekstowym) — nowy `onToggleTextFormat` w `useTextEditController.ts`, wpiety w `useBoardPageState.ts` (`updateTextProperties` przez `useBoardStore.getState()`).
+- **Ctrl/Cmd+B, Ctrl/Cmd+I dla zaznaczonego, nieedytowanego tekstu** — w `useKeyboardShortcuts.ts`, case `'b'`/`'i'`: oba klawisze ignorowaly wczesniej `isCmd` (byly calkowicie wolne pod modyfikatorem), wiec to czysto addytywne, zero kolizji z "dodaj pilke"/"toggle inspector" pod plain `b`/`i`.
+- **Przyciski Bold/Italic w `TextAlignToolbar.tsx`** — obok istniejacych 4 przyciskow wyrownania, z separatorem; podswietlone gdy aktywne.
+- Dokumentacja: `docs/COMMANDS_MAP.md`, `CHANGELOG.md`, cheat sheet (`CheatSheetOverlay.tsx`, `helpSidebarData.ts`).
+
+Typecheck zielony dla wszystkich 4 pakietow. `packages/ui` dist przebudowany i zweryfikowany (nowe klucze/teksty obecne w skompilowanym JS) — pamietac o tym kroku przy kazdej zmianie w `packages/{core,board,ui}/src`, bo aplikacja konsumuje `dist`, nie `src` (patrz FIX4 wyzej).
+
+---
+
+## Piata poprawka — toolbar nachodzil na tekst
+
+Przyczyna: pozycjonowanie uzywalo tej samej logiki co edit-overlay (`transform: scale(zoom)` + swiatowy offset -32), co przy pewnych poziomach zoomu dawalo za maly/zly odstep, a dodatkowo skalowalo caly toolbar razem z plansza (male przyciski przy oddaleniu). Naprawione: `TextAlignToolbar.tsx` ignoruje teraz `style.transform` z `getStyleForPosition` (zoom-scale, sensowny dla textarea, nie dla przyciskow) i uzywa stalego, nieskalowanego przesuniecia w pikselach ekranu — `translate(-50%, calc(-100% - 10px))`, ten sam wzorzec co (nieuzywany dotad) `SelectionToolbar.tsx`. Toolbar ma teraz stalej wielkosci przyciski i staly odstep 10px nad tekstem, niezaleznie od poziomu zoomu.
+
+---
+
+## Szosta poprawka — toolbar dalej nachodzil na dluzszy tekst
+
+Poprzednia poprawka (piata) centrowala toolbar wzgledem lewej krawedzi tekstu przez CSS `translate(-50%, ...)` — to dzialalo tylko przypadkowo dla krotkich etykiet (chip ~tak szeroki jak toolbar). Dla dluzszego tekstu chip rosl na szerokosc, ale punkt zaczepienia toolbaru nie nadazal, wiec toolbar konczyl nad LEWA czescia dlugiego chipa zamiast nad caloscia — realnie nachodzac na tekst.
+
+Naprawione poprawnie: `TextNode.tsx` dostal nowy callback `onMeasure(id, {width, height})`, wywolywany w efekcie za kazdym razem gdy realny, obliczony rozmiar chipa (`boxWidth + padding`, `textSize.height + padding` — dokladnie te same wartosci co uzywane do rysowania `Rect`) sie zmienia. Przekablowane przez `CanvasElements.tsx` -> `CanvasAdapter.tsx` -> `BoardCanvasSection.tsx` -> `BoardPage.tsx` (ten sam lancuch co `onResizeText`). `BoardPage.tsx` trzyma `textBoxSizes` (id -> {width,height}) i liczy kotwice toolbara jako **prawdziwy srodek chipa** (`position.x + width/2`), nie przyblizenie. Toolbar centruje sie teraz poprawnie nad chipem kazdej dlugosci, bez duplikowania logiki szerokosci gdzie indziej (jedno zrodlo prawdy: `TextNode.tsx`).
+
+Typecheck zielony dla wszystkich 4 pakietow, `packages/board` dist przebudowany i zweryfikowany.
+
+---
+
+## Siodma poprawka — realna przyczyna przesuniecia toolbaru + hardcodowany hint
+
+**Toolbar daleko od tekstu:** przyczyna byla glebsza niz szerokosc chipa (poprzednia poprawka). `useTextEditController.ts`'s `getStyleForPosition`/`getTextStyle` uzywaja `zoom` z `useUIStore` — to tylko USER zoom, bez `fitZoom` (dopasowanie do widoku) i bez `panOffset`, ktore sa liczone LOKALNIE wewnatrz `BoardCanvasSection.tsx` (`effectiveZoom = zoom * fitZoom`) i nigdy nie byly wystawione na zewnatrz. Zamiast probowac zduplikowac te (swiadomie oznaczona jako ryzykowna w innym sprincie) matematyke, przepisano pozycjonowanie toolbaru na Konva: `stage.findOne('#'+id).getClientRect({relativeTo: stage})` + `stage.container().getBoundingClientRect()`, `position: fixed` w pikselach strony. To czyta bezposrednio z aktualnej transformacji Konva (zawsze poprawne, niezaleznie od zoom/pan/fit), zero zewnetrznej matematyki do utrzymania. `TextAlignToolbar.tsx` przyjmuje teraz `{left:number, top:number}` zamiast `CSSProperties`. Poprzednia proba (FIX10, `onMeasure`/`textBoxSizes`) zostala w kodzie jako ogolnie uzyteczne API (`TextNode` raportuje swoj rozmiar), ale toolbar juz z niej nie korzysta.
+
+**Hint po polsku niezaleznie od jezyka appki:** `"Enter = zapisz · Shift+Enter = nowa linia"` w `BoardEditOverlays.tsx` byl zaszytym na sztywno stringiem, ignorujac aktywny jezyk (np. ESP). Dodano klucz `textEdit.hint` do `en.ts`/`pl.ts`/`es.ts`, `BoardEditOverlays.tsx` dostaje teraz `text.hintText: string` jako prop (zgodnie ze swoim kontraktem "no i18n dependency, wszystko przez propsy"), `BoardPage.tsx` przekazuje `t('textEdit.hint')` (mial juz `useTranslation()` w uzyciu).
+
+Typecheck zielony dla wszystkich 4 pakietow. `packages/ui` dist przebudowany i zweryfikowany (nowy klucz `textEdit` obecny we wszystkich 3 jezykach w skompilowanym JS).
+
+---
+
+## Osma poprawka — prawdziwa przyczyna: brak portalu
+
+Toolbar dalej ladowal nie tam, gdzie trzeba, mimo poprawnych wspolrzednych z Konva (FIX11). Przyczyna: `position: fixed` jest wzgledem VIEWPORTU tylko jesli ZADEN ancestor nie ma ustawionego `transform` (ani `filter`/`perspective`/`will-change: transform`) — a w drzewie DOM canvasu/panelu takie ancestory istnieja (animacje, zoom-owe wrappery itp.), wiec "fixed" po cichu stawal sie "fixed wzgledem tego ancestora", a nie strony. Stad przesuniecie.
+
+Naprawione ostatecznie: `TextAlignToolbar.tsx` renderuje sie teraz przez `createPortal(..., document.body)` — dokladnie ten sam wzorzec, ktory `packages/ui/src/BottomSheet.tsx` juz uzywa w tym projekcie z tego samego powodu. Poza drzewem DOM canvasu, `position: fixed` jest gwarantowane wzgledem viewportu.
+
+Typecheck zielony.

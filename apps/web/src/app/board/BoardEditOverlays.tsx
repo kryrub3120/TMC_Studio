@@ -16,6 +16,10 @@ export interface BoardEditOverlaysProps {
     onBlur: () => void;
     style: React.CSSProperties | null;
     inputStyle: React.CSSProperties | null; // font style for text
+    /** Translated hint shown under the field the first few keystrokes
+     *  (e.g. "Enter to save..."). Passed in — this component takes no i18n
+     *  dependency of its own, per its "no store imports" contract. */
+    hintText: string;
   };
   player: {
     elementExists: boolean;
@@ -76,7 +80,7 @@ export function BoardEditOverlays(props: BoardEditOverlaysProps) {
           </span>
           {hintVisible && (
             <div className="absolute left-0 top-full mt-1 whitespace-nowrap text-[11px] text-muted bg-surface/90 border border-border rounded px-1.5 py-0.5 pointer-events-none">
-              Enter = nowa linia · kliknij poza = zapisz
+              {text.hintText}
             </div>
           )}
         </div>

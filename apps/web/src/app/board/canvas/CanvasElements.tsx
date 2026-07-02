@@ -74,6 +74,9 @@ export interface CanvasElementsProps {
   onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
+  onResizeText?: (id: string, boxWidth: number, position?: Position) => void;
+  onMeasureText?: (id: string, box: { width: number; height: number }) => void;
+  onTextResizeStateChange?: (id: string, isResizing: boolean) => void;
   pushHistory: () => void;
   
   // ALT+Drag rotation
@@ -120,6 +123,9 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     onUpdateArrowEndpoint,
     onPlayerQuickEdit,
     onTextDoubleClick,
+    onResizeText,
+    onMeasureText,
+    onTextResizeStateChange,
     pushHistory,
     onOrientationPreview,
     onOrientationCommit,
@@ -332,6 +338,9 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onDragStart={isPlaying ? () => false : onElementDragStart}
               snapEnabled={snapEnabled}
               onDoubleClick={isPlaying ? undefined : onTextDoubleClick}
+              onResize={isPlaying ? undefined : onResizeText}
+              onResizeStateChange={isPlaying ? undefined : onTextResizeStateChange}
+              onMeasure={onMeasureText}
             />
           );
         })}
@@ -346,10 +355,14 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
         anchorFill="#ffffff"
         anchorSize={8}
         rotateAnchorOffset={25}
-        enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+        // Text boxes resize horizontally only. Font size/vertical rhythm stay
+        // typographic, so resizing feels like changing a text frame, not
+        // stretching artwork.
+        enabledAnchors={['middle-left', 'middle-right']}
+        rotateEnabled={false}
         boundBoxFunc={(oldBox, newBox) => {
           // Prevent shrinking below minimum size
-          if (newBox.width < 20 || newBox.height < 10) return oldBox;
+          if (newBox.width < 30) return oldBox;
           return newBox;
         }}
       />

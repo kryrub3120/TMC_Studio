@@ -56,6 +56,10 @@ function MenuIcon({ name }: { name?: string }) {
     case 'switch': return <svg {...common}><path d="M7 7h11l-3-3" /><path d="M17 17H6l3 3" /></svg>;
     case 'shape': return <svg {...common}><rect x="4" y="4" width="7" height="7" rx="1" /><circle cx="17" cy="17" r="4" /></svg>;
     case 'check': return <svg {...common}><path d="M20 6L9 17l-5-5" /></svg>;
+    case 'align-left': return <svg {...common}><path d="M4 6h16" /><path d="M4 12h10" /><path d="M4 18h13" /></svg>;
+    case 'align-center': return <svg {...common}><path d="M4 6h16" /><path d="M7 12h10" /><path d="M5.5 18h13" /></svg>;
+    case 'align-right': return <svg {...common}><path d="M4 6h16" /><path d="M10 12h10" /><path d="M7 18h13" /></svg>;
+    case 'align-justify': return <svg {...common}><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>;
     default:
       return name ? <span className="text-sm leading-none">{name}</span> : <span className="w-4 h-4" />;
   }
