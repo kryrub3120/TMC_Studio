@@ -19,6 +19,9 @@ export interface UseTextEditControllerOptions {
   onUpdateText: (id: string, content: string) => void;
   onUpdatePlayerNumber: (id: string, number: number) => void;
   onSelectElement: (id: string) => void;
+  /** Ctrl/Cmd+B and Ctrl/Cmd+I while actively editing text — caller looks up
+   *  the current bold/italic value and flips it (mirrors onResizeText). */
+  onToggleTextFormat?: (id: string, format: 'bold' | 'italic') => void;
 
   onToast?: (msg: string) => void;
 }
@@ -52,11 +55,15 @@ export interface TextEditController {
   overlay: {
     getTextStyle: () => React.CSSProperties | null;
     getPlayerStyle: () => React.CSSProperties | null;
+    /** Generic screen-space position for a given pitch position — used for
+     *  floating UI (e.g. the text alignment mini-toolbar) that isn't tied to
+     *  the active edit session. */
+    getStyleForPosition: (position: { x: number; y: number }, offsetX?: number, offsetY?: number) => React.CSSProperties;
   };
 }
 
 export function useTextEditController(opts: UseTextEditControllerOptions): TextEditController {
-  const { elements, getZoom, getCanvasRect, onUpdateText, onUpdatePlayerNumber, onSelectElement, onToast } = opts;
+  const { elements, getZoom, getCanvasRect, onUpdateText, onUpdatePlayerNumber, onSelectElement, onToggleTextFormat, onToast } = opts;
 
   // Text editing state
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -103,17 +110,36 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
 
   const handleTextKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+      const isCmd = e.metaKey || e.ctrlKey;
+
+      if (isCmd && (e.key === 'b' || e.key === 'B')) {
+        // Ctrl/Cmd+B = toggle bold while actively typing — the same
+        // convention as any word processor, complementing the Left-arrow
+        // toggle available when the text is merely selected (not editing).
+        e.preventDefault();
+        if (editingTextId) onToggleTextFormat?.(editingTextId, 'bold');
+        return;
+      }
+      if (isCmd && (e.key === 'i' || e.key === 'I')) {
+        // Ctrl/Cmd+I = toggle italic while actively typing.
+        e.preventDefault();
+        if (editingTextId) onToggleTextFormat?.(editingTextId, 'italic');
+        return;
+      }
+
       if (e.key === 'Enter' && !e.shiftKey) {
-        // Enter without Shift = save
+        // Enter (no Shift) = save and exit — this is the natural keyboard
+        // flow: Enter commits, Shift+Enter adds a line, matching how most
+        // single-field text inputs with optional multiline behave.
         e.preventDefault();
         saveTextEdit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         cancelTextEdit();
       }
-      // Shift+Enter = add newline (default textarea behavior, no preventDefault)
+      // Shift+Enter = newline (default textarea behavior, no preventDefault).
     },
-    [saveTextEdit, cancelTextEdit]
+    [saveTextEdit, cancelTextEdit, editingTextId, onToggleTextFormat]
   );
 
   // Player number editing handlers
@@ -206,6 +232,18 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
     };
   }, [editingPlayerElement, getZoom, getCanvasRect]);
 
+  const getStyleForPosition = useCallback((position: { x: number; y: number }, offsetX = 12, offsetY = -4): React.CSSProperties => {
+    const zoom = getZoom();
+    const { width: canvasWidth, height: canvasHeight } = getCanvasRect();
+
+    return {
+      left: `calc(50% - ${canvasWidth * zoom / 2}px + ${(position.x + offsetX) * zoom}px)`,
+      top: `calc(50% - ${canvasHeight * zoom / 2}px + ${(position.y + offsetY) * zoom}px)`,
+      transform: `scale(${zoom})`,
+      transformOrigin: 'top left',
+    };
+  }, [getZoom, getCanvasRect]);
+
   return {
     text: {
       editingId: editingTextId,
@@ -230,6 +268,7 @@ export function useTextEditController(opts: UseTextEditControllerOptions): TextE
     overlay: {
       getTextStyle,
       getPlayerStyle,
+      getStyleForPosition,
     },
   };
 }

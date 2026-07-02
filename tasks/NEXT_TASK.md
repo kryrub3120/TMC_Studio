@@ -37,6 +37,14 @@ Po implementacji uruchom typecheck/test/build i wypelnij evidence manual QA dla 
 
 ## Zakonczone / kontekst
 
+**Label Editor Upgrade — Wariant B, Multiline, Wyrownanie, Jeden Model Skrotow** — ✅ DONE (2026-07-01)
+- TXT1-TXT6 zrealizowane: chip Wariant B (`TextNode.tsx`, `types.ts`), multiline editing (Enter=nowa linia, Ctrl/Cmd+Enter=zapisz, `useAutosizeTextarea.ts`), wyrownanie tekstu (`textAlign`, `Alt+←/→`, menu kontekstowe), ujednolicony `Shift+"+"/"-"` resize i naprawiony `Alt+↑/↓` color-cycle dla tekstu (`elementsSlice.ts`, `useKeyboardShortcuts.ts`).
+- `T` (addTextAtCursor) i semantyka Escape (anuluj) nietkniete, zgodnie z wymaganiem.
+- Dokumentacja zaktualizowana: `docs/COMMANDS_MAP.md`, `docs/DATA_MODEL.md`, `CHANGELOG.md`, cheat sheet (`CheatSheetOverlay.tsx`, `helpSidebarData.ts`), i18n (en/pl/es).
+- Typecheck zielony dla `@tmc/core`, `@tmc/board`, `@tmc/ui`, `@tmc/web`.
+- Nowy test `apps/web/src/store/slices/__tests__/labelEditorShortcuts.logic.test.ts` (resize dispatch per typ, text color-cycle regression, alignment cycle) — logika zweryfikowana recznie przez `node` (assercje przeszly), ale **`pnpm test`/`pnpm build` nie dalo sie uruchomic w tej sesji** — brakujacy natywny binarny pakiet `@rollup/rollup-linux-arm64-gnu` w sandboxie i zablokowany dostep do npm registry (infrastruktura, niezwiazane ze zmianami). Zalecane: uruchomic `pnpm test` i `pnpm build` lokalnie/w CI przed merge jako ostatni krok DoD.
+- Szczegoly: `tasks/LABEL_EDITOR_UPGRADE_2026-07-01.md`.
+
 **Auth Flow V3 — Web-Only Launch Flow** — ✅ DONE (2026-07-01)
 - S-AUTH3.0 (popup regression fix), S-AUTH3.1 (web popup adapter + surface resolver), routing `/board` kanoniczne, `/app` → `/board` legacy redirect.
 - Linki landing/pricing/auth/Stripe/billing portal zaktualizowane na `/board`.

@@ -148,12 +148,15 @@ Supabase używa **PKCE (Proof Key for Code Exchange)** do OAuth. Przebieg:
    → window.open('', 'tmc-google-auth', features)
    → writeOAuthPopupShell(popup)  // wstrzykuje HTML/loading spinner
 4. popup.location.href = result.url  // przekierowuje popup do Google
-5. await waitForOAuthPopup(popup)    // czeka na postMessage z popupa
+5. await Promise.race([              // czeka na sesję zamiast samego postMessage
+      waitForOAuthSession({ timeoutMs: 120000 }),  // równoległy polling sesji
+      waitForOAuthPopup(popup).then(() => waitForOAuthSession()),  // postMessage → sesja
+    ])
    → timeout: 120s
-   → sprawdza popup.closed co 500ms
-   → nasłuchuje window 'message' event
-6. await waitForOAuthSession()       // polluje supabase.auth.getSession()
-   → delays: [0, 150, 350, 700, 1200, 2000, 3000, 5000] ms
+   → NIE sprawdza popup.closed (COOP blokuje odczyt w produkcji)
+   → nasłuchuje window 'message' event (postMessage z popupa)
+   → równoległy polling sesji co 750ms przez 120s — ratuje login, gdy COOP zerwie postMessage
+6. ✔ sesja znaleziona — kontynuuje
 7. getCurrentUser(session.user)      // pobiera profil z DB
 8. set({ user, isAuthenticated: true, ... })
 9. loadPreferences() + fetchCloudProjects() + fetchCloudFolders()
@@ -178,9 +181,11 @@ const popup = window.open('', 'tmc-google-auth', features);
 
 Zwraca Promise, który resolve'uje się gdy:
 - Popup wyśle `postMessage({ type: 'tmc:auth-popup-result', status: 'success', elapsed })`.
-- Reject przy: timeout 120s, zamknięciu popupa przez użytkownika, błędzie z popupa.
+- Reject przy: timeout 120s, błędzie z popupa.
 
-### 3.4. Dlaczego pollujemy sesję po postMessage?
+**Uwaga:** Nie polega na `popup.closed`. W produkcji `Cross-Origin-Opener-Policy` (COOP) blokuje odczyt `popup.closed` po przejściu okna przez domenę Google/Supabase — nasze stare `setInterval` uznało to za zamknięcie i przerywało login. Hotfix (2026-07-01) usunął polling `popup.closed`.
+
+### 3.4. Dlaczego pollujemy sesję po postMessage (i równolegle)?
 
 `postMessage` oznacza, że popup zakończył PKCE i sesja powinna być dostępna. Ale w praktyce:
 - Supabase JS SDK na głównej karcie musi jeszcze zsynchronizować się z nową sesją (odczytać localStorage zapisany przez SDK w popupie, ale popup jest zamknięty).
@@ -523,19 +528,28 @@ AppShell → GoogleAuthStatus znika
 TopBar → pokazuje awatar/email użytkownika
 ```
 
-### Sekwencja 2: Google Login — popup zamknięty przez użytkownika
+### Sekwencja 2: Google Login — COOP zerwał komunikację lub użytkownik zamknął popup
 
 ```
-User → zamyka popup przed zalogowaniem
+User → zamyka popup LUB popup przechodzi przez Google/Supabase (COOP zmienia origin)
        │
        ▼
-waitForOAuthPopup → closedPoll wykrywa popup.closed = true
-  → reject(new Error('Google login window was closed'))
+waitForOAuthPopup → nie dostaje postMessage (COOP zerwał nasłuch)
+  → ale NIE przerywa — równoległy waitForOAuthSession({ timeoutMs: 120000 }) dalej działa
+       │
+       ▼ (co 750ms)
+Polling sesji → supabase.auth.getSession()
+  → sesja dostępna? → tak → resolve
+  → nie → kontynuuje do 120s
        │
        ▼
 catch → log error, popup?.close()
   → set({ isOAuthInProgress: false, error: '...' })
 ```
+
+**COOP workaround (hotfix 2026-07-01):** Gdy przeglądarka przez `Cross-Origin-Opener-Policy` blokuje odczyt `popup.closed` i jednocześnie zerwie postMessage, stary kod (closed polling) uznał to za zamknięcie okna. Nowy kod używa `Promise.race()` — równolegle czeka na postMessage I na realną sesję Supabase przez 120s. Nawet jeśli popup zniknie z radaru, login może zakończyć się po wykryciu sesji.
+
+**Awaryjne ominięcie dla produkcji:** `VITE_AUTH_GOOGLE_SURFACE=redirect` w Netlify wymusi pełny redirect zamiast popupu, omijając problem COOP całkowicie.
 
 ### Sekwencja 3: Session restore na starcie
 

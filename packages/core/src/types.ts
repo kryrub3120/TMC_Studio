@@ -122,6 +122,9 @@ export interface ZoneElement {
   points?: number[];
 }
 
+/** Text alignment for multiline labels */
+export type TextAlign = 'left' | 'center' | 'right' | 'justify';
+
 /** Text element for labels/annotations */
 export interface TextElement extends BoardElementBase {
   type: 'text';
@@ -132,6 +135,10 @@ export interface TextElement extends BoardElementBase {
   bold: boolean;
   italic: boolean;
   backgroundColor?: string; // Optional background for better visibility
+  borderColor?: string; // Chip border (Style B) — defaults to a darkened backgroundColor
+  borderWidth?: number; // Chip border width in px — defaults to 2
+  textAlign?: TextAlign; // Defaults to 'left'; requires explicit width on Konva Text to take effect
+  boxWidth?: number; // Manual width override (drag-to-stretch); undefined = auto-fit to content, word-wraps when set
 }
 
 /** Drawing types for coach tools */

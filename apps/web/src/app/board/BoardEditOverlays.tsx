@@ -3,7 +3,9 @@
  * No store imports - receives everything via props
  */
 
+import { useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useAutosizeTextarea } from '../../hooks/useAutosizeTextarea';
 
 export interface BoardEditOverlaysProps {
   text: {
@@ -14,6 +16,10 @@ export interface BoardEditOverlaysProps {
     onBlur: () => void;
     style: React.CSSProperties | null;
     inputStyle: React.CSSProperties | null; // font style for text
+    /** Translated hint shown under the field the first few keystrokes
+     *  (e.g. "Enter to save..."). Passed in — this component takes no i18n
+     *  dependency of its own, per its "no store imports" contract. */
+    hintText: string;
   };
   player: {
     elementExists: boolean;
@@ -27,6 +33,11 @@ export interface BoardEditOverlaysProps {
 
 export function BoardEditOverlays(props: BoardEditOverlaysProps) {
   const { text, player } = props;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mirrorRef = useRef<HTMLSpanElement>(null);
+  const [hintVisible, setHintVisible] = useState(true);
+
+  useAutosizeTextarea(textareaRef, mirrorRef, text.value);
 
   return (
     <>
@@ -37,15 +48,41 @@ export function BoardEditOverlays(props: BoardEditOverlaysProps) {
           style={text.style}
         >
           <textarea
+            ref={textareaRef}
             value={text.value}
             onChange={(e) => text.onChange(e.target.value)}
-            onKeyDown={text.onKeyDown}
+            onKeyDown={(e) => {
+              if (hintVisible) setHintVisible(false);
+              text.onKeyDown(e);
+            }}
             onBlur={text.onBlur}
             autoFocus
             rows={1}
             className="px-2 py-1 bg-surface border border-accent rounded text-white text-base min-w-[100px] outline-none shadow-lg resize-none overflow-hidden"
             style={text.inputStyle ?? undefined}
           />
+          {/* Hidden mirror for width auto-sizing — shares font metrics with the textarea above */}
+          <span
+            ref={mirrorRef}
+            aria-hidden="true"
+            className="px-2 py-1 text-base"
+            style={{
+              ...(text.inputStyle ?? undefined),
+              position: 'absolute',
+              visibility: 'hidden',
+              whiteSpace: 'pre',
+              pointerEvents: 'none',
+              top: 0,
+              left: 0,
+            }}
+          >
+            {text.value || ' '}
+          </span>
+          {hintVisible && (
+            <div className="absolute left-0 top-full mt-1 whitespace-nowrap text-[11px] text-muted bg-surface/90 border border-border rounded px-1.5 py-0.5 pointer-events-none">
+              {text.hintText}
+            </div>
+          )}
         </div>
       )}
 

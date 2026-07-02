@@ -17,6 +17,7 @@ import type {
   PlayerShape,
   ArrowElement,
   ZoneElement,
+  TextAlign,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
@@ -165,7 +166,7 @@ export interface ElementsSlice {
   
   // Element updates
   updateTextContent: (id: ElementId, content: string) => void;
-  updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string }) => void;
+  updateTextProperties: (id: ElementId, updates: { fontSize?: number; bold?: boolean; italic?: boolean; fontFamily?: string; backgroundColor?: string; textAlign?: TextAlign; boxWidth?: number; position?: Position }) => void;
   updatePlayerColor: (ids: ElementId[], color: string) => void;
   updateTextColor: (ids: ElementId[], color: string) => void;
   moveElementById: (id: ElementId, position: Position) => void;
@@ -206,6 +207,7 @@ export interface ElementsSlice {
   cycleSelectedColor: (direction: number) => void;
   cyclePlayerShape: () => void;
   cycleZoneShape: () => void;
+  cycleTextAlign: (direction: number) => void;
   rotateSelected: (degrees: number) => void;
   resizeSelected: (scaleFactor: number) => void;
   scaleSelectedEquipmentBy: (factor: number) => void;
@@ -946,6 +948,27 @@ export const createElementsSlice: StateCreator<
     get().pushHistory();
   },
   
+  cycleTextAlign: (direction) => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+
+    const ALIGNS: TextAlign[] = ['left', 'center', 'right', 'justify'];
+
+    set((state) => ({
+      elements: state.elements.map((el) => {
+        if (selectedIds.includes(el.id) && isTextElement(el)) {
+          const current = el.textAlign ?? 'left';
+          const currentIndex = ALIGNS.indexOf(current);
+          const newIndex = (currentIndex + direction + ALIGNS.length) % ALIGNS.length;
+          return { ...el, textAlign: ALIGNS[newIndex] };
+        }
+        return el;
+      }),
+    }));
+    get().pushHistory();
+  },
+
+
   rotateSelected: (degrees) => {
     const { selectedIds } = get();
     if (selectedIds.length === 0) return;
@@ -1003,6 +1026,20 @@ export const createElementsSlice: StateCreator<
           if (isTextElement(el)) {
             const currentSize = el.fontSize ?? 18;
             return { ...el, fontSize: Math.round(currentSize * clampedScale) };
+          }
+          // Arrows have no "scale", only line thickness — Shift+"+/-" steps it
+          // by ±1 instead, same range as adjustSelectedStrokeWidth.
+          if (isArrowElement(el)) {
+            const current = el.strokeWidth ?? 3;
+            const delta = clampedScale >= 1 ? 1 : -1;
+            return { ...el, strokeWidth: Math.max(1, Math.min(10, current + delta)) };
+          }
+          // Freehand/highlighter drawings — same idea, wider range/step.
+          if (el.type === 'drawing') {
+            const drawing = el as { strokeWidth?: number };
+            const current = drawing.strokeWidth ?? 3;
+            const delta = clampedScale >= 1 ? 2 : -2;
+            return { ...el, strokeWidth: Math.max(1, Math.min(30, current + delta)) };
           }
         }
         return el;

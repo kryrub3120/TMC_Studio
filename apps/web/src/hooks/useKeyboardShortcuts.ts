@@ -103,6 +103,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const deleteSelected = useBoardStore((s) => s.deleteSelected);
   const cycleZoneShape = useBoardStore((s) => s.cycleZoneShape);
   const cyclePlayerShape = useBoardStore((s) => s.cyclePlayerShape);
+  const cycleTextAlign = useBoardStore((s) => s.cycleTextAlign);
   const saveDocument = useBoardStore((s) => s.saveDocument);
   const manualSave = useBoardStore((s) => s.manualSave);
   const saveToCloud = useBoardStore((s) => s.saveToCloud);
@@ -353,6 +354,15 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           } else {
             addBallAtCursor();
             showTranslatedToast('ball');
+          }
+        } else {
+          // Ctrl/Cmd+B on selected (non-editing) text = toggle bold — same
+          // convention as Ctrl/Cmd+B while actively typing in the field.
+          const textEl = getSelectedText();
+          if (textEl) {
+            e.preventDefault();
+            updateTextProperties(textEl.id, { bold: !textEl.bold });
+            showTranslatedToast(textEl.bold ? 'normal' : 'bold');
           }
         }
         break;
@@ -648,6 +658,14 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         if (!isCmd) {
           e.preventDefault();
           toggleInspector();
+        } else {
+          // Ctrl/Cmd+I on selected (non-editing) text = toggle italic.
+          const textEl = getSelectedText();
+          if (textEl) {
+            e.preventDefault();
+            updateTextProperties(textEl.id, { italic: !textEl.italic });
+            showTranslatedToast(textEl.italic ? 'normal' : 'italic');
+          }
         }
         break;
         
@@ -807,15 +825,27 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         e.preventDefault();
         {
           const textEl = getSelectedText();
-          if (textEl) {
+          if (textEl && e.altKey) {
+            // Alt+Up on selected (non-editing) text = cycle text (ink) color.
+            // Unified with the same gesture on every other element type below.
+            cycleSelectedColor(-1);
+            showTranslatedToast('previousColor');
+          } else if (textEl) {
             if (e.shiftKey) {
-              // Shift+Up = cycle background color
-              const BG_COLORS = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#3b82f6', '#1f2937'];
+              // Shift+Up = cycle background color. 'none' is a real stop in
+              // the cycle (not just a separate Shift+Down shortcut) so users
+              // can reach "no chip, plain text" without a second key.
+              const BG_COLORS = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#3b82f6', '#1f2937', 'none'];
               const currentBg = textEl.backgroundColor;
-              const currentIndex = currentBg ? BG_COLORS.indexOf(currentBg) : -1;
+              const currentIndex = currentBg ? BG_COLORS.indexOf(currentBg) : BG_COLORS.indexOf('none');
               const newBg = BG_COLORS[(currentIndex + 1) % BG_COLORS.length];
-              updateTextProperties(textEl.id, { backgroundColor: newBg });
-              showTranslatedToast('background', { color: newBg });
+              if (newBg === 'none') {
+                updateTextProperties(textEl.id, { backgroundColor: undefined });
+                showTranslatedToast('backgroundRemoved');
+              } else {
+                updateTextProperties(textEl.id, { backgroundColor: newBg });
+                showTranslatedToast('background', { color: newBg });
+              }
             } else {
               // Up = increase font size
               const newSize = Math.min(72, (textEl.fontSize || 18) + 2);
@@ -835,7 +865,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         e.preventDefault();
         {
           const textEl = getSelectedText();
-          if (textEl) {
+          if (textEl && e.altKey) {
+            // Alt+Down on selected (non-editing) text = cycle text (ink) color.
+            cycleSelectedColor(1);
+            showTranslatedToast('nextColor');
+          } else if (textEl) {
             if (e.shiftKey) {
               updateTextProperties(textEl.id, { backgroundColor: undefined });
               showTranslatedToast('backgroundRemoved');
@@ -857,7 +891,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         e.preventDefault();
         {
           const textEl = getSelectedText();
-          if (textEl) {
+          if (textEl && e.altKey) {
+            // Alt+Left on selected (non-editing) text = previous text alignment
+            cycleTextAlign(-1);
+            showTranslatedToast('alignPrev');
+          } else if (textEl) {
             updateTextProperties(textEl.id, { bold: !textEl.bold });
             showTranslatedToast(textEl.bold ? 'normal' : 'bold');
           } else if (e.altKey) {
@@ -883,7 +921,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
             break;
           }
           const textEl = getSelectedText();
-          if (textEl) {
+          if (textEl && e.altKey) {
+            // Alt+Right on selected (non-editing) text = next text alignment
+            cycleTextAlign(1);
+            showTranslatedToast('alignNext');
+          } else if (textEl) {
             updateTextProperties(textEl.id, { italic: !textEl.italic });
             showTranslatedToast(textEl.italic ? 'normal' : 'italic');
           } else if (e.altKey) {
@@ -899,25 +941,20 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       // ===== ZOOM & RESIZE =====
+      // One unified model: Shift+"+/-" always resizes the current selection
+      // (whatever its type — resizeSelected() dispatches per element type).
+      // Plain +/- always zooms the canvas, with zero exceptions per element
+      // type. This replaces the old three-way split (equipment-only plain
+      // +/-, Cmd+Alt+=/- for everything else, and text's separate ↑/↓).
       case '=':
       case '+':
         // ✅ IMPERATIVE guard — lock disables zoom shortcuts
         if (useUIStore.getState().viewportLocked) break;
-        if (isCmd && e.altKey) {
-          // Option+Cmd+= = Resize up +10%
+        if (e.shiftKey && !isCmd) {
           e.preventDefault();
           resizeSelected(1.1);
           showTranslatedToast('resizedUp');
-        } else if (isCmd) {
-          e.preventDefault();
-          zoomIn();
-        } else if (!isCmd && hasSelectedEquipment()) {
-          // + = Equipment resize +15%
-          e.preventDefault();
-          scaleSelectedEquipmentBy(1.15);
-          showTranslatedToast('equipmentUp');
-        } else if (!isCmd) {
-          // Plain + / = = Zoom In (no selection required)
+        } else {
           e.preventDefault();
           zoomIn();
         }
@@ -926,21 +963,11 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       case '-':
         // ✅ IMPERATIVE guard — lock disables zoom shortcuts
         if (useUIStore.getState().viewportLocked) break;
-        if (isCmd && e.altKey) {
-          // Option+Cmd+- = Resize down -10%
+        if (e.shiftKey && !isCmd) {
           e.preventDefault();
           resizeSelected(0.9);
           showTranslatedToast('resizedDown');
-        } else if (isCmd) {
-          e.preventDefault();
-          zoomOut();
-        } else if (!isCmd && hasSelectedEquipment()) {
-          // - = Equipment resize -15%
-          e.preventDefault();
-          scaleSelectedEquipmentBy(0.85);
-          showTranslatedToast('equipmentDown');
-        } else if (!isCmd) {
-          // Plain - = Zoom Out (no selection required)
+        } else {
           e.preventDefault();
           zoomOut();
         }
@@ -1040,7 +1067,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     duplicateSelected, copySelection, pasteClipboard, clearAllDrawings, setElements,
     toggleSelectedLock,
     undo, redo, deleteSelected,
-    cycleZoneShape, cyclePlayerShape, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
+    cycleZoneShape, cyclePlayerShape, cycleTextAlign, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
     cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation,
     cycleGoalkeeperColor,

@@ -37,8 +37,8 @@ TMC Studio uses two types of commands:
 | `addHurdle` | U | Effect | Add hurdle | CommandRegistry |
 | `equipRotate` | `[` / `]` | Intent | Rotate equipment ±15° | App |
 | `equipRotate90` | `{` / `}` (Shift+[ / ]) | Intent | Rotate equipment ±90° | App |
-| `equipScaleUp` | `+` (equip selected) | Intent | Scale equipment +15% | App |
-| `equipScaleDown` | `-` (equip selected) | Intent | Scale equipment -15% | App |
+| `equipScaleUp` | Shift+"+" (equip selected); also scroll-up over equipment | Intent | Scale equipment +10%/scroll-step. Plain `+` no longer scales equipment — it always zooms now, see `resizeSelected`. | App |
+| `equipScaleDown` | Shift+"-" (equip selected); also scroll-down over equipment | Intent | Scale equipment -10%/scroll-step. Plain `-` no longer scales equipment — it always zooms now. | App |
 | **Selection** |
 | `select` | Click | Intent | Select element | OverlayLayer |
 | `multiSelect` | Shift+Click | Intent | Add to selection | OverlayLayer |
@@ -52,11 +52,10 @@ TMC Studio uses two types of commands:
 | `duplicate` | Cmd+D | Effect | Duplicate selected | App |
 | `copy` | Cmd+C | Effect | Copy to clipboard | App |
 | `paste` | Cmd+V | Effect | Paste from clipboard | App |
-| `cycleColor` | Alt+Up/Down | Intent | Cycle element color | App |
-| `adjustStroke` | Alt+Left/Right | Intent | Adjust stroke width | App |
+| `cycleColor` | Alt+Up/Down | Intent | Cycle element color (text included — see note below) | App |
+| `adjustStroke` | Alt+Left/Right | Intent | Adjust stroke width (arrow/zone/drawing); cycles text alignment when text is selected | App |
 | `cycleShape` | Shift+S (player), E (zone) | Intent | Cycle element shape | App |
-| `resizeRadiusUp` | Cmd+Alt+= | Effect | Increase player radius +10% | App |
-| `resizeRadiusDown` | Cmd+Alt+- | Effect | Decrease player radius -10% | App |
+| `resizeSelected` | Shift+"+" / Shift+"-" | Effect | Resize selected element(s) — one unified shortcut for every type (player/ball/zone/text scale; equipment scale; arrow/drawing adjust stroke width instead). Replaces the old `Cmd+Alt+=/-` and equipment-only `+/-`. | App |
 | **Groups** |
 | `group` | Cmd+G | Effect | Group selected elements | CommandRegistry |
 | `ungroup` | Cmd+Shift+G | Effect | Ungroup selection | CommandRegistry |
@@ -86,8 +85,8 @@ TMC Studio uses two types of commands:
 | **Editing (text)** |
 | `textSizeUp` | ↑ (text selected) | Intent | Increase font size +2 | App |
 | `textSizeDown` | ↓ (text selected) | Intent | Decrease font size -2 | App |
-| `textToggleBold` | ← (text selected) | Intent | Toggle bold | App |
-| `textToggleItalic` | → (text selected) | Intent | Toggle italic | App |
+| `textToggleBold` | ← (text selected) or Ctrl/Cmd+B (selected or while editing) | Intent | Toggle bold | App |
+| `textToggleItalic` | → (text selected) or Ctrl/Cmd+I (selected or while editing) | Intent | Toggle italic | App |
 | `textCycleBg` | Shift+↑ (text selected) | Intent | Cycle background color | App |
 | `textRemoveBg` | Shift+↓ (text selected) | Intent | Remove background | App |
 | **Arrow Numbering** |
@@ -175,16 +174,33 @@ cmd.addPlayer(300, 400, 'home');
 
 #### Add Text
 **Command:** `addText(x: number, y: number, text: string)`  
-**Shortcut:** `T`  
+**Shortcut:** `T` (unchanged — always adds text at the cursor position)
 **Type:** Effect  
-**Editing:**
-- Double-click or Enter to edit content
-- ↑/↓ to change font size ±2 (range 8-72)
-- ←/→ to toggle bold/italic
-- Shift+↑ to cycle background color (black, white, red, green, blue, dark)
-- Shift+↓ to remove background
-- Alt+↑/↓ to cycle text color
-- Enter to save, Escape to cancel
+
+**Style (Style B chip):** solid fill + 2px contrasting border, radius 8, elevation shadow on screen. In print mode the fill and shadow drop out but the border survives (sanitized to black), so the chip reads the same on paper as on screen. `TextElement` gained `borderColor?`, `borderWidth?`, `textAlign?` (`left | center | right | justify`, default `left`), `boxWidth?` (manual width override, see Resize below).
+
+**Ink color:** when the chip has a background, text color is auto-computed for contrast (white or black depending on background luminance) instead of being independently chosen — this is what keeps e.g. black or dark-gray chips from stranding unreadable text on top of them. Plain text with no chip background still uses the manually cycled `color`.
+
+**Resize (drag):** selecting a single text element shows a Transformer with side handles (`middle-left`/`middle-right`, plus corners). Dragging stretches chip width only — text word-wraps at the new width and height auto-follows the wrapped line count. This replaces the old behavior where dragging a corner just scaled the whole chip proportionally with nothing persisted.
+
+**While actively editing (double-click, cursor in the field):**
+- Enter (no Shift) — save and exit. This is the natural keyboard flow: Enter commits, matching how most single-line-first text inputs behave.
+- Shift+Enter — insert a new line (multiline is supported; Konva renders `\n` natively)
+- Click outside (blur) — save and exit (unchanged)
+- Escape — cancel and discard (unchanged)
+- Ctrl/Cmd+B / Ctrl/Cmd+I — toggle bold/italic (works while actively typing, unlike the arrow-key toggle which only applies when the text is selected but not being edited)
+- Alignment is mouse/toolbar-only in this mode (arrow keys stay dedicated to moving the text cursor)
+
+**Selected, not editing (single click, focus on canvas) — same convention as font size/bold/italic below:**
+- ↑/↓ — change font size ±2 (range 8-72)
+- ←/→ or Ctrl/Cmd+B / Ctrl/Cmd+I — toggle bold/italic
+- Shift+↑ — cycle background color (black, white, red, green, blue, dark, then **no background** — the cycle includes "plain text" as a stop, not just the color list)
+- Shift+↓ — remove background directly (quick shortcut to the same "no background" state)
+- Alt+↑/↓ — cycle text (ink) color — now unified with `cycleColor` on every other element type
+- Alt+←/→ — cycle text alignment (left → center → right → justify)
+- Shift+"+" / Shift+"-" — resize (scales font size), same unified shortcut as every other element type
+
+A floating mini-toolbar (bold, italic, align left/center/right/justify) appears above a selected, non-editing text element. Right-click context menu also exposes "Align left/center/right/justify" and "Change color..." for mouse users.
 
 ---
 

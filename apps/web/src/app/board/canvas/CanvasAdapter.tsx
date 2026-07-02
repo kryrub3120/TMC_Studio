@@ -94,6 +94,9 @@ export interface CanvasAdapterProps {
   onUpdateArrowEndpoint: (id: string, endpoint: 'start' | 'end' | 'control', position: Position) => void;
   onPlayerQuickEdit: (id: string, currentNumber: number | null | undefined) => void;
   onTextDoubleClick: (id: string) => void;
+  onResizeText?: (id: string, boxWidth: number, position?: Position) => void;
+  onMeasureText?: (id: string, box: { width: number; height: number }) => void;
+  onTextResizeStateChange?: (id: string, isResizing: boolean) => void;
   pushHistory: () => void;
   
   // ALT+Drag rotation
@@ -152,6 +155,9 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     onUpdateArrowEndpoint,
     onPlayerQuickEdit,
     onTextDoubleClick,
+    onResizeText,
+    onMeasureText,
+    onTextResizeStateChange,
     pushHistory,
     onOrientationPreview,
     onOrientationCommit,
@@ -230,6 +236,9 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
         onUpdateArrowEndpoint={onUpdateArrowEndpoint}
         onPlayerQuickEdit={onPlayerQuickEdit}
         onTextDoubleClick={onTextDoubleClick}
+        onResizeText={onResizeText}
+        onMeasureText={onMeasureText}
+        onTextResizeStateChange={onTextResizeStateChange}
         pushHistory={pushHistory}
         onOrientationPreview={onOrientationPreview}
         onOrientationCommit={onOrientationCommit}

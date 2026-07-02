@@ -303,6 +303,10 @@ export const es: Dictionary = {
     cycleShape: 'Cambiar forma',
     changeColor: 'Cambiar color',
     editText: 'Editar texto',
+    alignLeft: 'Alinear a la izquierda',
+    alignCenter: 'Centrar',
+    alignRight: 'Alinear a la derecha',
+    alignJustify: 'Justificar',
     editArrowNumber: 'Editar número de flecha',
     rotate: 'Rotar',
     bringToFront: 'Traer al frente',
@@ -381,6 +385,9 @@ export const es: Dictionary = {
   },
   offline: {
     message: 'Estás offline — los cambios se sincronizarán al volver online',
+  },
+  textEdit: {
+    hint: 'Enter para guardar · Shift+Enter para nueva línea',
   },
   shortcutsHint: {
     press: 'Pulsa',
@@ -1150,6 +1157,8 @@ export const es: Dictionary = {
       italic: 'Cursiva',
       thinnerStroke: 'Trazo más fino',
       thickerStroke: 'Trazo más grueso',
+      alignPrev: 'Alineación anterior',
+      alignNext: 'Siguiente alineación',
       arrowNumberToggled: 'Número de flecha alternado',
       resizedUp: 'Redimensionado +10%',
       resizedDown: 'Redimensionado -10%',

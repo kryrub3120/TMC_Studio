@@ -3,7 +3,7 @@
  * Generates context-aware menu items for the tactical board.
  */
 
-import type { BoardElement } from '@tmc/core';
+import type { BoardElement, TextAlign } from '@tmc/core';
 import type { ContextMenuItem, TFunction } from '@tmc/ui';
 import { isPlayerElement, isZoneElement, isTextElement, isArrowElement, isBallElement, isEquipmentElement } from '@tmc/core';
 
@@ -31,6 +31,7 @@ interface ContextMenuHandlers {
   onCycleColor?: () => void;
   onChangePlayerColor?: () => void;
   onChangeTextColor?: () => void;
+  onSetTextAlign?: (align: TextAlign) => void;
   onResize?: () => void;
   onEditArrowNumber?: () => void;
   onRenumberArrows?: () => void;
@@ -199,9 +200,22 @@ export function getCanvasContextMenuItems(
   }
 
   if (isTextElement(element)) {
+    const currentAlign = element.textAlign ?? 'left';
+    const alignItem = (align: TextAlign, key: string, fallback: string, icon: string) => ({
+      label: label(key, fallback) + (currentAlign === align ? ' \u2713' : ''),
+      icon,
+      onClick: () => handlers.onSetTextAlign?.(align),
+      ...(align === 'left' ? { shortcut: 'Alt+\u2190/\u2192' } : {}),
+    });
     return [
       { label: label('editText', 'Edit text'), icon: 'edit', onClick: handlers.onEdit ?? (() => {}), shortcut: 'Enter' },
-      ...(handlers.onChangeTextColor ? [{ label: label('changeColor', 'Change color...'), icon: 'palette', onClick: handlers.onChangeTextColor }] : []),
+      ...(handlers.onChangeTextColor ? [{ label: label('changeColor', 'Change color...'), icon: 'palette', onClick: handlers.onChangeTextColor, shortcut: 'Alt+↑/↓' }] : []),
+      ...(handlers.onSetTextAlign ? [
+        alignItem('left', 'alignLeft', 'Align left', 'align-left'),
+        alignItem('center', 'alignCenter', 'Align center', 'align-center'),
+        alignItem('right', 'alignRight', 'Align right', 'align-right'),
+        alignItem('justify', 'alignJustify', 'Justify', 'align-justify'),
+      ] : []),
       ...layerItems,
       ...commonItems,
     ];

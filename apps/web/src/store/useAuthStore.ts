@@ -115,8 +115,26 @@ function cleanAuthCallbackUrl() {
 
 let authUnsubscribe: (() => void) | null = null;
 
-async function waitForOAuthSession() {
+async function waitForOAuthSession(options?: { timeoutMs?: number }) {
   if (!supabase) return null;
+
+  if (options?.timeoutMs) {
+    const deadline = Date.now() + options.timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 750));
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) return session;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          logger.debug('[Auth] waitForOAuthSession: AbortError (retrying)');
+          continue;
+        }
+        throw err;
+      }
+    }
+    return null;
+  }
 
   // Skip delay=0 — getSession at 0ms races supabase-js internal lock (locks.js)
   // after a just-completed PKCE exchange, producing "signal is aborted without reason".
@@ -687,15 +705,18 @@ export const useAuthStore = create<AuthState>()(
 
           const popupResult = waitForOAuthPopup(popup);
           popup.location.href = result.url;
-          await popupResult;
+
+          const session = await Promise.race([
+            waitForOAuthSession({ timeoutMs: 120000 }),
+            popupResult.then(() => waitForOAuthSession()),
+          ]);
+
           set((state) => ({
             authFlow: {
               ...state.authFlow,
               status: 'oauthCallbackReceived',
             },
           }));
-
-          const session = await waitForOAuthSession();
           if (!session?.user) {
             throw new Error('Google login finished, but no Supabase session was found');
           }

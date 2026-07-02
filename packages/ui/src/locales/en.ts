@@ -301,6 +301,10 @@ export const en = {
     cycleShape: 'Cycle shape',
     changeColor: 'Change color',
     editText: 'Edit text',
+    alignLeft: 'Align left',
+    alignCenter: 'Align center',
+    alignRight: 'Align right',
+    alignJustify: 'Justify',
     editArrowNumber: 'Edit arrow number',
     rotate: 'Rotate',
     bringToFront: 'Bring to front',
@@ -379,6 +383,9 @@ export const en = {
   },
   offline: {
     message: 'You are offline — changes will sync when back online',
+  },
+  textEdit: {
+    hint: 'Enter to save · Shift+Enter for a new line',
   },
   shortcutsHint: {
     press: 'Press',
@@ -1303,6 +1310,8 @@ export const en = {
       italic: 'Italic',
       thinnerStroke: 'Thinner stroke',
       thickerStroke: 'Thicker stroke',
+      alignPrev: 'Previous alignment',
+      alignNext: 'Next alignment',
       arrowNumberToggled: 'Arrow number toggled',
       resizedUp: 'Resized +10%',
       resizedDown: 'Resized -10%',

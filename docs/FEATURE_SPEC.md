@@ -533,9 +533,11 @@ When enabled via `Shift+N`, every newly created arrow automatically receives the
 
 **Inline editor:**
 - Positioned at text location
-- Multiline support
+- Multiline support (Shift+Enter = newline)
 - `Enter` to save (or click away)
 - `Escape` to cancel
+- Auto-resize width via mirror span
+- Auto-resize height via scrollHeight hook (`useAutosizeTextarea`)
 
 #### 1.6.2 Typography Controls
 
@@ -543,13 +545,30 @@ When enabled via `Shift+N`, every newly created arrow automatically receives the
 |---------|----------|
 | `↑` (text selected) | Increase font size +2 (max: 72) |
 | `↓` (text selected) | Decrease font size -2 (min: 8) |
+| `Shift++` (text selected) | Increase font size +2 (unified resize for all types: players/ball radius, equipment scale, zone W×H, text fontSize, arrow strokeWidth ±1, drawing strokeWidth ±2) |
+| `Shift+-` (text selected) | Decrease font size -2 (same unified resize model) |
 | `←` (text selected) | Toggle bold |
 | `→` (text selected) | Toggle italic |
-| `Shift+↑` (text selected) | Cycle background color |
+| `Cmd/Ctrl+B` (during edit) | Toggle bold (inline during text editing) |
+| `Cmd/Ctrl+I` (during edit) | Toggle italic (inline during text editing) |
+| `Shift+↑` (text selected) | Cycle background color (includes "no background" state) |
 | `Shift+↓` (text selected) | Remove background |
-| `Alt+↑/↓` | Cycle text color |
+| `Alt+↑/↓` | Cycle text color (now reachable — previously had dead branch; unified model shared with all element types) |
+| `Alt+←` (text selected) | Cycle text alignment left ← previous |
+| `Alt+→` (text selected) | Cycle text alignment right → next |
+
+**Alignment values:** `left`, `center`, `right`, `justify`
 
 **Background colors:** #000000, #ffffff, #ff0000, #00ff00, #3b82f6, #1f2937
+
+**Text chip visual (Variant B):**
+- Solid fill (opacity 1) with 2px contrasting border (`borderColor` auto-derived via `darkenHex(bgColor, 0.3)`)
+- Border color can be overridden per-element (`borderColor?`)
+- Radius: 8
+- Elevation shadow for depth
+- Auto-contrast text color (`getContrastInk`) — white or black based on background luminance
+- In print mode: fill and shadow removed, border remains (sanitized to black)
+- Chip can be manually widened via side Transformer handles (word-wrap at `boxWidth`)
 
 #### 1.6.3 Default Values
 
@@ -559,6 +578,10 @@ fontSize: 22
 fontFamily: 'Inter, system-ui, sans-serif'
 color: '#ffffff'
 backgroundColor: '#ef4444'
+borderColor: '#a32f2f'       // auto-derived from bgColor if unset
+borderWidth: 2
+textAlign: 'left'
+boxWidth: undefined           // undefined = no word-wrap, side handles set this
 bold: false
 italic: false
 ```

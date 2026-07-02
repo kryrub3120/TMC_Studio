@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import type { ArrowType, Position, PlayerElement as PlayerElementType, Team, ZoneShape } from '@tmc/core';
+import type { ArrowType, Position, PlayerElement as PlayerElementType, Team, ZoneShape, TextAlign } from '@tmc/core';
 import { isPlayerElement, isTextElement, isZoneElement, isArrowElement } from '@tmc/core';
 import { useTranslation, type CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
@@ -605,6 +605,12 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
         cycleSelectedColor(1);
         hideMenu();
         showToast(t('commands.toast.textColorChanged'));
+      },
+      onSetTextAlign: (align: TextAlign) => {
+        if (menuElementId) {
+          useBoardStore.getState().updateTextProperties(menuElementId, { textAlign: align });
+        }
+        hideMenu();
       },
       onEditArrowNumber: () => {
         // PR-ARROW-NUMBER: Simply toggle numbering via Smart Sequencing — no prompt
