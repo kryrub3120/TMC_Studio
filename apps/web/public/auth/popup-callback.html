@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>TMC Studio - Google login</title>
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    main { width: min(340px, calc(100vw - 32px)); text-align: center; }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 18px;
+      border-radius: 999px;
+      border: 4px solid rgba(255, 255, 255, .18);
+      border-top-color: #38bdf8;
+      animation: tmcSpin .8s linear infinite;
+    }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    p { margin: 0; color: #cbd5e1; line-height: 1.5; }
+    @keyframes tmcSpin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="spinner" id="spinner"></div>
+    <h1>TMC Studio</h1>
+    <p id="status">Finishing sign-in&hellip;</p>
+  </main>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var code = params.get('code');
+      var error = params.get('error_description') || params.get('error');
+      var message = {
+        type: 'tmc:auth-popup-result',
+        code: code || undefined,
+        error: code ? undefined : (error || 'Google login failed.'),
+      };
+
+      // Strip the one-time code from the URL / history right away.
+      try { window.history.replaceState(null, '', window.location.pathname); } catch (e) { /* no-op */ }
+
+      var delivered = false;
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(message, window.location.origin);
+          delivered = true;
+        }
+      } catch (e) { /* no-op */ }
+
+      window.setTimeout(function () {
+        try { window.close(); } catch (e) { /* no-op */ }
+        // If the browser refused to close the window, show a manual hint.
+        window.setTimeout(function () {
+          document.getElementById('spinner').style.display = 'none';
+          document.getElementById('status').textContent = delivered
+            ? 'You can close this window and return to TMC Studio.'
+            : 'Sign-in could not be completed here. Close this window and try again in TMC Studio.';
+        }, 400);
+      }, 150);
+    })();
+  </script>
+</body>
+</html>

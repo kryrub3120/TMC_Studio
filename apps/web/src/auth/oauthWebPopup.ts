@@ -1,11 +1,12 @@
 export const AUTH_POPUP_NAME = 'tmc-google-auth';
 export const AUTH_POPUP_MESSAGE = 'tmc:auth-popup-result';
+export const AUTH_POPUP_CALLBACK_PATH = '/auth/popup-callback.html';
 
 export type AuthPopupMessage = {
   type: typeof AUTH_POPUP_MESSAGE;
-  status: 'success' | 'error';
+  /** PKCE authorization code returned by the OAuth provider. */
+  code?: string;
   error?: string;
-  elapsed?: number;
 };
 
 function writeOAuthPopupShell(popup: Window) {
@@ -37,7 +38,6 @@ function writeOAuthPopupShell(popup: Window) {
         <style>@keyframes tmcSpin { to { transform: rotate(360deg); } }</style>
       </main>
     `;
-    popup.sessionStorage.setItem('tmc-oauth-popup', '1');
   } catch {
     // Some browsers restrict writing to the popup. The OAuth flow can continue.
   }
@@ -67,32 +67,60 @@ export function openOAuthPopup(): Window {
   return popup;
 }
 
-export function waitForOAuthPopup(popup: Window): Promise<AuthPopupMessage> {
+/**
+ * Waits for the static popup callback page to post the PKCE authorization
+ * code back to this (opener) window. The popup never touches Supabase or
+ * tokens — the code is exchanged for a session here, in the main window.
+ */
+export function waitForOAuthPopupCode(popup: Window): Promise<string> {
   return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
+    let settled = false;
+
+    const settle = (action: () => void) => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      try {
-        popup.close();
-      } catch {
-        // no-op
-      }
-      reject(new Error('Google login took too long. Please try again.'));
+      action();
+    };
+
+    const timeout = window.setTimeout(() => {
+      settle(() => {
+        try {
+          popup.close();
+        } catch {
+          // no-op
+        }
+        reject(new Error('Google login took too long. Please try again.'));
+      });
     }, 120000);
+
+    // Detect the user closing the popup. Grace period lets a message that
+    // was posted right before self-close still arrive.
+    const closedPoll = window.setInterval(() => {
+      if (!popup.closed) return;
+      window.clearInterval(closedPoll);
+      window.setTimeout(() => {
+        settle(() => reject(new Error('Google login window was closed before finishing.')));
+      }, 1500);
+    }, 400);
 
     const onMessage = (event: MessageEvent<AuthPopupMessage>) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== AUTH_POPUP_MESSAGE) return;
 
-      cleanup();
-      if (event.data.status === 'success') {
-        resolve(event.data);
-      } else {
-        reject(new Error(event.data.error ?? 'Google login failed.'));
-      }
+      const { code, error } = event.data;
+      settle(() => {
+        if (code) {
+          resolve(code);
+        } else {
+          reject(new Error(error ?? 'Google login failed.'));
+        }
+      });
     };
 
     const cleanup = () => {
       window.clearTimeout(timeout);
+      window.clearInterval(closedPoll);
       window.removeEventListener('message', onMessage);
     };
 

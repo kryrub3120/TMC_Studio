@@ -1,12 +1,27 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-07-02
+**Data:** 2026-07-04
 **Status:** ACTIVE, krotki wskaznik operacyjny  
 **Source of truth:** `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`
 
 ---
 
 ## Zakonczone sprinty
+
+### Sprint S-AUTH3.5 — Static Popup Callback (2026-07-04)
+
+**Status:** ✅ DONE (2026-07-04)
+**Cel:** Zastąpienie React SPA w popupie Google OAuth statycznym HTML, wymiana kodu PKCE w głównym oknie.
+
+Zrealizowane punkty:
+
+1. **Statyczna strona `/auth/popup-callback.html`** — nowy plik `apps/web/public/auth/popup-callback.html`. Wyciąga `?code=` z URL, czyści historię, wysyła `postMessage` do openera, zamyka się. Zero Reacta, zero Supabase.
+2. **`waitForOAuthPopupCode()` w `oauthWebPopup.ts`** — zwraca `Promise<string>` (PKCE code). Detekcja zamknięcia popupu przez użytkownika z 1.5s grace period.
+3. **Popup branch w `useAuthStore.ts`** — `exchangeCodeForSession(code)` w głównym oknie zamiast `waitForOAuthSession()` pollingu. Usunięto całą funkcję `waitForOAuthSession()` (−42 linie).
+4. **`AuthCallbackPage.tsx` odchudzona** — usunięto całą logikę popup/opener/postMessage/recovery screen (−160 linii). Obsługuje tylko `web-redirect`.
+5. **Netto −104 linie, typecheck czysty.**
+
+Dokumentacja: `docs/AUTH_FLOW.md` — pełny rewrite popup flow, sekwencje, checklista, historia zmian.
 
 ### Sprint TXT1–TXT6 — Label Editor Upgrade (Wariant B, Multiline, Align, Unified Shortcuts)
 

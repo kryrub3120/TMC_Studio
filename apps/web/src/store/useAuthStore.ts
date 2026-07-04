@@ -12,7 +12,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { track, EVENTS } from '../lib/analytics';
-import { openOAuthPopup, waitForOAuthPopup } from '../auth/oauthWebPopup';
+import { openOAuthPopup, waitForOAuthPopupCode, AUTH_POPUP_CALLBACK_PATH } from '../auth/oauthWebPopup';
 import { getDesktopAuthRedirectTo, waitForDesktopOAuthCode } from '../auth/oauthDesktopBridge';
 import { resolveGoogleOAuthSurface } from '../auth/oauthSurface';
 import { idleAuthFlow, type AuthFlowState } from '../auth/authFlow';
@@ -114,48 +114,6 @@ function cleanAuthCallbackUrl() {
 }
 
 let authUnsubscribe: (() => void) | null = null;
-
-async function waitForOAuthSession(options?: { timeoutMs?: number }) {
-  if (!supabase) return null;
-
-  if (options?.timeoutMs) {
-    const deadline = Date.now() + options.timeoutMs;
-    while (Date.now() < deadline) {
-      await new Promise((resolve) => window.setTimeout(resolve, 750));
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) return session;
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          logger.debug('[Auth] waitForOAuthSession: AbortError (retrying)');
-          continue;
-        }
-        throw err;
-      }
-    }
-    return null;
-  }
-
-  // Skip delay=0 — getSession at 0ms races supabase-js internal lock (locks.js)
-  // after a just-completed PKCE exchange, producing "signal is aborted without reason".
-  const delays = [150, 350, 700, 1200, 2000, 3000, 5000];
-  for (const delay of delays) {
-    await new Promise((resolve) => window.setTimeout(resolve, delay));
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) return session;
-    } catch (err) {
-      // AbortError from supabase-js internal lock — retry on next delay
-      if (err instanceof Error && err.name === 'AbortError') {
-        logger.debug('[Auth] waitForOAuthSession: AbortError (retrying)');
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  return null;
-}
 
 /**
  * B1.1/4 DRY: apply cloud preferences to the UI store.
@@ -695,7 +653,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           const result = await supabaseSignInWithGoogle({
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo: `${window.location.origin}${AUTH_POPUP_CALLBACK_PATH}`,
             skipBrowserRedirect: true,
           });
 
@@ -703,13 +661,11 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Google login URL was not returned by Supabase');
           }
 
-          const popupResult = waitForOAuthPopup(popup);
+          // The static callback page posts the PKCE authorization code back
+          // to this window; the popup itself never touches Supabase.
+          const codePromise = waitForOAuthPopupCode(popup);
           popup.location.href = result.url;
-
-          const session = await Promise.race([
-            waitForOAuthSession({ timeoutMs: 120000 }),
-            popupResult.then(() => waitForOAuthSession()),
-          ]);
+          const code = await codePromise;
 
           set((state) => ({
             authFlow: {
@@ -717,11 +673,17 @@ export const useAuthStore = create<AuthState>()(
               status: 'oauthCallbackReceived',
             },
           }));
-          if (!session?.user) {
+
+          // Exchange the code HERE, in the main window — single Supabase
+          // client, no cross-window navigator.locks contention, no polling.
+          if (!supabase) throw new Error('Supabase not configured');
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+          if (!data.session?.user) {
             throw new Error('Google login finished, but no Supabase session was found');
           }
 
-          await finishGoogleLogin(session.user);
+          await finishGoogleLogin(data.session.user);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Google sign in failed';
           logger.error('[Auth] Google sign in error:', error);

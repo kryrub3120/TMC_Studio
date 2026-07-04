@@ -1,22 +1,39 @@
 # TMC Studio — Authentication Flow
 
 > Kompletny opis mechanizmu logowania i zarządzania sesją w TMC Studio.
-> **Last Updated:** 2026-07-01
+> **Last Updated:** 2026-07-04
 
 ---
 
-## Status 2026-07-01 — Auth Flow V3 in progress
+## Status 2026-07-04 — Auth Flow V3: Static popup callback
 
-Auth Flow V3 rozdziela trzy powierzchnie Google OAuth. Dla pierwszego launchu aktywnym zakresem jest **WWW-only** opisany w `docs/WEB_LAUNCH_CHECKLIST.md`; desktop/Tauri zostaje jako later readiness.
+Auth Flow V3 rozdziela trzy powierzchnie Google OAuth. Wszystkie są w pełni operacyjne:
 
-1. **Web popup** — domyślny web flow. Popup nie może renderować `/board`; callback popupu może tylko wysłać wynik do parent window, zamknąć się albo pokazać recovery screen.
+1. **Web popup** — domyślny web flow. Popup przekierowuje do **statycznej strony** `/auth/popup-callback.html` (zero Reacta, zero Supabase). Strona wysyła `postMessage` z kodem PKCE do głównego okna i zamyka się. Wymiana kodu na sesję (`exchangeCodeForSession`) odbywa się w głównym oknie.
 2. **Web redirect** — fallback, gdy popup jest zablokowany albo wymuszony przez `VITE_AUTH_GOOGLE_SURFACE=redirect`.
 3. **Desktop deep link** — Tauri flow przez external browser i `tmcstudio://auth/callback?code=...`; główne okno wymienia PKCE code przez `supabase.auth.exchangeCodeForSession(code)`.
 
+### Kluczowa zmiana (2026-07-04): statyczny popup callback
+
+Przed tą zmianą popup Google OAuth ładował całe React SPA (`AuthCallbackPage.tsx`), wykonywał `getSession()` w popupie, `postMessage` do openera i zamykał się. To generowało problemy:
+- Duże opóźnienie (załadowanie Reacta w popupie)
+- Race condition między `getSession()` w popupie a listenerem w głównym oknie (`navigator.locks`)
+- Konieczność równoległego pollingu sesji (`waitForOAuthSession`) na wypadek zerwania komunikacji przez COOP
+
+Nowy flow:
+- Popup przekierowuje na **statyczny HTML** (`popup-callback.html`) — bez Reacta, bez Supabase SDK
+- Statyczna strona wyciąga `?code=` z URL, czyści go z historii, wysyła przez `postMessage` do openera i zamyka się
+- Główne okno otrzymuje kod → woła `exchangeCodeForSession(code)` → dostaje gotową sesję
+- Żadnego pollingu, żadnego cross-window lock contention, żadnego COOP hazardu
+
 Stan wdrożenia:
 
-- ✅ P0 regression guard: popup callback bez `window.opener` nie nawiguje do `/board`.
-- ✅ Web popup adapter: `apps/web/src/auth/oauthWebPopup.ts`.
+- ✅ Statyczna strona callback: `apps/web/public/auth/popup-callback.html`.
+- ✅ Web popup adapter (nowy): `apps/web/src/auth/oauthWebPopup.ts` — `waitForOAuthPopupCode()` z detekcją zamknięcia popupu.
+- ✅ Popup branch w `useAuthStore.ts` — `exchangeCodeForSession(code)` w głównym oknie.
+- ✅ `AuthCallbackPage.tsx` — odchudzona o całą logikę popup/opener (-160 linii), obsługuje tylko `web-redirect`.
+- ✅ `waitForOAuthSession()` — usunięty cały polling (-42 linie).
+- ✅ Netto -104 linie, typecheck czysty.
 - ✅ Surface resolver: `apps/web/src/auth/oauthSurface.ts`.
 - ✅ Desktop bridge scaffold: `apps/web/src/auth/oauthDesktopBridge.ts`.
 - ✅ Tauri deep-link + single-instance config scaffold.
@@ -29,10 +46,13 @@ Web launch checklist:
 1. `pnpm --filter @tmc/web typecheck`
 2. `pnpm --filter @tmc/web test`
 3. `pnpm --filter @tmc/web build`
-4. Supabase production settings:
+4. Supabase Dashboard → Authentication → URL Configuration:
    - Site URL: `https://tmcstudio.app`
-   - redirect URL: `https://tmcstudio.app/auth/callback`
-   - local redirect URL: `http://localhost:3000/auth/callback`
+   - Redirect URLs:
+     - `https://tmcstudio.app/auth/callback`
+     - `https://tmcstudio.app/auth/popup-callback.html`
+     - `http://localhost:3000/auth/callback`
+     - `http://localhost:3000/auth/popup-callback.html` (dev)
 5. Google OAuth / Supabase provider config akceptuje produkcyjny callback Supabase:
    - `https://pgacjczecyfnwsaadyvj.supabase.co/auth/v1/callback`
 6. Netlify production env zawiera:
@@ -44,10 +64,9 @@ Web launch checklist:
    - `/` landing,
    - `/board` app,
    - `/app` -> `/board` legacy redirect,
-   - Google success,
+   - Google success (popup mignie i zamknie się w ułamku sekundy),
    - Google cancel,
    - popup blocked -> redirect fallback,
-   - popup no opener -> recovery screen, bez `/board`,
    - email/password success.
 
 Desktop/Tauri later checklist:
@@ -62,8 +81,6 @@ Desktop/Tauri later checklist:
    - `tmcstudio://auth/callback?code=...` wraca do głównego okna,
    - główne okno loguje usera,
    - brak mini-okna z edytorem.
-
-Historyczne sekcje poniżej opisują V2 popup flow i powinny być traktowane jako tło implementacyjne, dopóki dokument nie zostanie w całości przepisany pod V3.
 
 ---
 
@@ -115,7 +132,9 @@ Historyczne sekcje poniżej opisują V2 popup flow i powinny być traktowane jak
 
 - **PKCE (Proof Key for Code Exchange)** — industry standard OAuth 2.0 flow, bezpieczniejszy od implicit grant.
 - **Popup zamiast redirectu** — użytkownik nie opuszcza aplikacji podczas logowania. Główna karta pozostaje w pełni interaktywna.
-- **PostMessage do komunikacji międzyokiennej** — popup po udanym PKCE wysyła `postMessage` do głównej karty i zamyka się.
+- **postMessage do komunikacji międzyokiennej** — statyczna strona callback wysyła `postMessage` z kodem PKCE do głównej karty i zamyka się.
+- **Wymiana kodu w głównym oknie** — `exchangeCodeForSession(code)` odbywa się w głównym oknie (single Supabase client, zero lock contention). Popup nigdy nie dotyka Supabase SDK.
+- **Statyczny HTML zamiast React SPA w popupie** — popup-callback.html waży ~2KB, ładuje się natychmiast, nie wymaga ładowania JS frameworka.
 - **Event-based init (non-blocking)** — `useAuthStore.initialize()` zwraca natychmiast, nie blokuje renderu UI.
 - **Singleton listenera `onAuthStateChange`** — zakładany raz, unika duplikatów i kaskadowych fetchy.
 
@@ -129,41 +148,62 @@ Supabase używa **PKCE (Proof Key for Code Exchange)** do OAuth. Przebieg:
 2. Supabase generuje `code_verifier` (losowy sekret) i `code_challenge` (hash verifiera).
 3. Przeglądarka przekierowuje do Google → użytkownik loguje się.
 4. Google redirectuje z powrotem na `redirectTo` z `?code=...` i `?state=...`.
-5. Supabase JS SDK na stronie callback odczytuje `?code=...`, łączy z zapisanym `code_verifier` i wymienia na session token.
-6. Sesja (access_token + refresh_token) zapisywana jest w localStorage pod kluczem `tmc-auth-token`.
+5. **Dla popupu:** statyczna strona `/auth/popup-callback.html` wyciąga `?code=` z URL, czyści go i wysyła przez `postMessage` do głównego okna. **Główne okno** woła `supabase.auth.exchangeCodeForSession(code)`, które łączy code z zapisanym `code_verifier` i wymienia na session token.
+6. **Dla redirect:** `AuthCallbackPage.tsx` wykonuje `supabase.auth.getSession()` (Supabase SDK automatycznie rozpoznaje `?code=` w URL i wymienia go przed zwróceniem sesji).
+7. Sesja (access_token + refresh_token) zapisywana jest w localStorage pod kluczem `tmc-auth-token`.
 
-**Krytyczna zasada:** `?code=...` jest **jednorazowy**. Wycięcie go z URL przed zakończeniem kroku 5 powoduje nieodwracalne przerwanie logowania. Dlatego `cleanAuthCallbackUrl()` jest wywoływane **dopiero po potwierdzonej sesji** (na `onAuthStateChange` SIGNED_IN).
+**Krytyczna zasada:** `?code=...` jest **jednorazowy**. W popup flow statyczna strona czyści go z URL natychmiast (przed postMessage), ponieważ `exchangeCodeForSession` odbywa się w głównym oknie i nie potrzebuje go w URL.
 
 ---
 
 ## 3. Google OAuth — Popup Flow
 
-### 3.1. Akcja: `signInWithGoogle()` w `useAuthStore`
+### 3.1. Architektura
+
+Popup Google OAuth używa **statycznej strony HTML** jako callback — nie ładuje Reacta ani Supabase SDK.
+
+```
+┌─────────────────────────────────────┐     ┌─────────────────────────────┐
+│  Główne okno (tmcstudio.app)        │     │  Popup OAuth (Google)       │
+│                                     │     │                             │
+│  useAuthStore.ts                    │     │  1. Google Consent Screen   │
+│    ├─ openOAuthPopup()              │     │  2. → redirect do Supabase  │
+│    ├─ waitForOAuthPopupCode(popup)  │     │  3. Supabase → redirect na  │
+│    │    └─ nasłuchuje postMessage   │     │     /auth/popup-callback..  │
+│    └─ exchangeCodeForSession(code)  │     │  4. Statyczny HTML:         │
+│         └─ sesja gotowa             │◄────┤     - wyciąga ?code=        │
+│                                     │     │     - czyści URL           │
+│                                     │     │     - postMessage → opener │
+│                                     │     │     - window.close()       │
+│                                     │     └─────────────────────────────┘
+└─────────────────────────────────────┘
+```
+
+### 3.2. Akcja: `signInWithGoogle()` w `useAuthStore`
 
 ```
 1. set({ isOAuthInProgress: true, isLoading: false })
-2. const result = await supabaseSignInWithGoogle()  // supabase.ts
+2. const result = await supabaseSignInWithGoogle({
+     redirectTo: `${origin}/auth/popup-callback.html`,
+     skipBrowserRedirect: true,
+   })
    → supabase zwraca { url } — Google Consent URL
 3. const popup = openOAuthPopup()
    → window.open('', 'tmc-google-auth', features)
    → writeOAuthPopupShell(popup)  // wstrzykuje HTML/loading spinner
 4. popup.location.href = result.url  // przekierowuje popup do Google
-5. await Promise.race([              // czeka na sesję zamiast samego postMessage
-      waitForOAuthSession({ timeoutMs: 120000 }),  // równoległy polling sesji
-      waitForOAuthPopup(popup).then(() => waitForOAuthSession()),  // postMessage → sesja
-    ])
+5. const code = await waitForOAuthPopupCode(popup)  // czeka na postMessage z kodem
    → timeout: 120s
-   → NIE sprawdza popup.closed (COOP blokuje odczyt w produkcji)
-   → nasłuchuje window 'message' event (postMessage z popupa)
-   → równoległy polling sesji co 750ms przez 120s — ratuje login, gdy COOP zerwie postMessage
-6. ✔ sesja znaleziona — kontynuuje
-7. getCurrentUser(session.user)      // pobiera profil z DB
+   → detekcja zamknięcia popupu przez użytkownika (interval co 400ms, grace period 1.5s)
+   → zwraca string (PKCE code), NIE sesję
+6. const session = await supabase.auth.exchangeCodeForSession(code)  // główne okno
+7. await finishGoogleLogin(session.user)
 8. set({ user, isAuthenticated: true, ... })
 9. loadPreferences() + fetchCloudProjects() + fetchCloudFolders()
 10. set({ isOAuthInProgress: false })
 ```
 
-### 3.2. Funkcja `openOAuthPopup()`
+### 3.3. Funkcja `openOAuthPopup()`
 
 ```typescript
 const width = 500;
@@ -175,33 +215,39 @@ const popup = window.open('', 'tmc-google-auth', features);
 ```
 
 - Wstrzykuje HTML z loading spinnerem i brandingiem TMC Studio (`writeOAuthPopupShell`).
-- Ustawia `sessionStorage.setItem('tmc-oauth-popup', '1')` — pozwala `AuthCallbackPage` wykryć, że działa w popupie.
+- **Nie ustawia już** `sessionStorage.setItem('tmc-oauth-popup', '1')` — popup nie potrzebuje tej flagi, bo nie trafia do `AuthCallbackPage`.
 
-### 3.3. Funkcja `waitForOAuthPopup()`
+### 3.4. Funkcja `waitForOAuthPopupCode(popup)`
 
-Zwraca Promise, który resolve'uje się gdy:
-- Popup wyśle `postMessage({ type: 'tmc:auth-popup-result', status: 'success', elapsed })`.
-- Reject przy: timeout 120s, błędzie z popupa.
+Zwraca `Promise<string>` (PKCE code), który:
+- **Resolve:** gdy popup wyśle `postMessage({ type: 'tmc:auth-popup-result', code: '...' })`.
+- **Reject:** timeout 120s.
+- **Reject:** użytkownik zamknie popup przed końcem (detekcja `popup.closed` z 1.5s grace period na spóźniony message).
 
-**Uwaga:** Nie polega na `popup.closed`. W produkcji `Cross-Origin-Opener-Policy` (COOP) blokuje odczyt `popup.closed` po przejściu okna przez domenę Google/Supabase — nasze stare `setInterval` uznało to za zamknięcie i przerywało login. Hotfix (2026-07-01) usunął polling `popup.closed`.
+Nie polega na `getSession()` w popupie — popup sam nie dotyka Supabase SDK. Jedyna komunikacja: `postMessage` z kodem PKCE.
 
-### 3.4. Dlaczego pollujemy sesję po postMessage (i równolegle)?
+### 3.5. Dlaczego to jest lepsze?
 
-`postMessage` oznacza, że popup zakończył PKCE i sesja powinna być dostępna. Ale w praktyce:
-- Supabase JS SDK na głównej karcie musi jeszcze zsynchronizować się z nową sesją (odczytać localStorage zapisany przez SDK w popupie, ale popup jest zamknięty).
-- `waitForOAuthSession()` polluje co 150-5000ms, aż `getSession()` zwróci użytkownika.
-- W praktyce sesja jest dostępna po 0-700ms od postMessage.
+| Aspekt | Stary flow (V2) | Nowy flow (V3) |
+|--------|-----------------|-----------------|
+| Callback | React SPA (`AuthCallbackPage.tsx`) | Statyczny HTML (~2KB) |
+| Wymiana kodu | W popupie (`getSession()`) | W głównym oknie (`exchangeCodeForSession`) |
+| Synchronizacja sesji | Polling `waitForOAuthSession()` (6-8 odpytań) | Natychmiastowa po `exchangeCodeForSession` |
+| COOP hazard | postMessage + polling jako fallback | Brak — kod wraca przez postMessage, sesja tworzona w openerze |
+| Lock contention | `navigator.locks` między popupem a openerem | Zero — jeden klient Supabase w openerze |
+| UI w popupie | Ładowanie całej app + recovery screen | Spinner, po sekundzie zamknięcie |
 
 ---
 
 ## 4. AuthCallbackPage — obsługa powrotu
 
+> **Uwaga:** `AuthCallbackPage` obsługuje **tylko** powierzchnię `web-redirect`. Popup flow używa statycznej strony `/auth/popup-callback.html` i nie trafia do tego komponentu.
+
 **Scenariusze:**
 
-| Scenariusz | Detekcja | Zachowanie |
-|---|---|---|
-| **Popup** | `window.name === 'tmc-google-auth'` lub `sessionStorage.getItem('tmc-oauth-popup')` | Wykonuje PKCE, wysyła `postMessage` do openera, zamyka okno |
-| **Fallback (redirect)** | Brak flag popupa | Wykonuje PKCE, `navigate('/board', { replace: true })` przez React Router |
+| Scenariusz | Zachowanie |
+|---|---|
+| **Redirect** | `supabase.auth.getSession()` (SDK rozpoznaje `?code=`), ustawia stan z metadanych sesji, `navigate('/board', { replace: true })` |
 
 ### Kod (uproszczony):
 
@@ -211,53 +257,35 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     let done = false;
-    const startedAt = performance.now();
-    const isPopup = window.name === 'tmc-google-auth' ||
-      window.sessionStorage.getItem('tmc-oauth-popup') === '1';
 
-    if (!isPopup) {
-      void import('../App');  // preload edytora w tle
-    }
+    // Warm the editor bundle while the PKCE exchange completes.
+    void import('../App');
 
-    const finish = (status, error?) => {
+    const finish = () => {
       if (done) return;
       done = true;
-
-      if (isPopup && window.opener && !window.opener.closed) {
-        window.opener.postMessage({ type: 'tmc:auth-popup-result', ... }, origin);
-        window.setTimeout(() => window.close(), 150);
-        return;
-      }
       navigate('/board', { replace: true });
     };
 
-    // Safety net: 10s timeout
-    const safety = setTimeout(() => finish('error', 'OAuth callback timed out'), 10000);
+    // Safety net: if exchange hangs, enter the app anyway.
+    const safety = setTimeout(finish, 10000);
 
     async function handleCallback() {
       const { data: { session }, error } = await supabase.auth.getSession();
-      const elapsed = Math.round(performance.now() - startedAt);
-
-      if (error || !session?.user) {
-        logger.error(`[Auth] OAuth callback failed after ${elapsed}ms`, error);
-        finish('error', 'No session');
-        return;
+      if (!error && session?.user) {
+        useAuthStore.setState({
+          user: {
+            id: session.user.id,
+            email: session.user.email!,
+            full_name: session.user.user_metadata?.full_name,
+            avatar_url: session.user.user_metadata?.avatar_url,
+            subscription_tier: 'free',
+          },
+          isAuthenticated: true,
+        });
       }
-
-      logger.log(`[Auth] OAuth callback completed in ${elapsed}ms`);
-
-      // Szybkie ustawienie sesji z metadata — pełny profil w tle
-      useAuthStore.setState({
-        user: {
-          id: session.user.id,
-          email: session.user.email!,
-          full_name: session.user.user_metadata?.full_name,
-          avatar_url: session.user.user_metadata?.avatar_url,
-          subscription_tier: 'free',  // listener zaktualizuje z DB
-        },
-        isAuthenticated: true,
-      });
-      finish('success');
+      clearTimeout(safety);
+      finish();
     }
 
     handleCallback();
@@ -265,11 +293,11 @@ export function AuthCallbackPage() {
 }
 ```
 
-### Log czasu callbacku
-
-`[Auth] OAuth callback completed in XXXms` — pojawia się w konsoli po zakończeniu PKCE. Pomaga diagnozować, gdzie leży wąskie gardło:
-- Jeśli > 5000ms — problem po stronie Google / Supabase PKCE.
-- Jeśli < 1000ms — nasz flow działa sprawnie.
+**Zmiany:**
+- Usunięto całą logikę popup/opener/postMessage (-160 linii).
+- Usunięto `popupRecovery` UI (recovery screen).
+- Usunięto parametr `error` z `finish()` — błędy nie blokują nawigacji do `/board`.
+- Nie ma już rozróżnienia między sukcesem a błędem OAuth — `getSession()` jest jedynym źródłem prawdy.
 
 ---
 
@@ -477,8 +505,10 @@ User próbuje się zalogować przed potwierdzeniem
 | Plik | Odpowiedzialność |
 |---|---|
 | `apps/web/src/lib/supabase.ts` | Klient Supabase, helpery auth (signIn, signOut, signInWithGoogle, getCurrentUser, getPreferences, onAuthStateChange, resetPasswordForEmail, resendConfirmationEmail) |
-| `apps/web/src/store/useAuthStore.ts` | Stan autha (Zustand + persist), maszyna stanów, initialize(), popup flow (openOAuthPopup, waitForOAuthPopup, waitForOAuthSession), fallback polling, sendResetLink, resendConfirmation |
-| `apps/web/src/pages/AuthCallbackPage.tsx` | Strona callback OAuth — wykonuje PKCE, wysyła postMessage (popup) lub navigate (redirect fallback) |
+| `apps/web/src/store/useAuthStore.ts` | Stan autha (Zustand + persist), maszyna stanów, initialize(), popup flow (openOAuthPopup, waitForOAuthPopupCode, exchangeCodeForSession), sendResetLink, resendConfirmation |
+| `apps/web/src/auth/oauthWebPopup.ts` | Helpery popup: `openOAuthPopup()`, `waitForOAuthPopupCode()`, `AUTH_POPUP_NAME`, `AUTH_POPUP_CALLBACK_PATH` |
+| `apps/web/public/auth/popup-callback.html` | Statyczna strona callback OAuth dla popupu — wyciąga `?code=` z URL, wysyła `postMessage` do openera, zamyka okno. Zero Reacta, zero Supabase. |
+| `apps/web/src/pages/AuthCallbackPage.tsx` | Strona callback OAuth dla powierzchni `web-redirect` — wykonuje `getSession()` i nawiguje do `/board` |
 | `apps/web/src/app/AppShell.tsx` | `GoogleAuthStatus` — nieblokujący toast "Logowanie przez Google..." gdy `isOAuthInProgress` |
 | `packages/ui/src/AuthModal.tsx` | Modal logowania — zamyka się od razu po starcie Google; forgot/resend confirmation UI |
 | `apps/web/src/lib/logger.ts` | Logger strukturalny z poziomami debug/log/error |
@@ -487,7 +517,7 @@ User próbuje się zalogować przed potwierdzeniem
 
 ## 11. Sekwencje przepływu
 
-### Sekwencja 1: Google Login (popup) — sukces
+### Sekwencja 1: Google Login (popup) — sukces (nowy V3 flow)
 
 ```
 User → klik "Zaloguj przez Google" w AuthModal
@@ -500,25 +530,29 @@ AppShell → pokazuje GoogleAuthStatus ("Logowanie przez Google...")
        │
        ▼
 useAuthStore.signInWithGoogle()
-  → supabase.auth.signInWithOAuth() → zwraca { url }
+  → supabase.auth.signInWithOAuth({
+       redirectTo: `${origin}/auth/popup-callback.html`,
+       skipBrowserRedirect: true,
+     }) → zwraca { url }
   → window.open('', 'tmc-google-auth', ...) → popup z loading spinnerem
   → popup.location.href = url → Google Consent Screen
        │
        ▼ (popup)
 User loguje się w Google
-  → Google redirects na /auth/callback?code=...&state=...
+  → Google redirects do Supabase auth callback
+  → Supabase redirects na /auth/popup-callback.html?code=xxx
        │
-       ▼ (popup)
-AuthCallbackPage wykrywa isPopup = true
-  → supabase.auth.getSession() → wymiana kodu na sesję (PKCE)
-  → log: [Auth] OAuth callback completed in XXXms
-  → window.opener.postMessage({ type: 'tmc:auth-popup-result', status: 'success' })
+       ▼ (popup — statyczny HTML, zero React)
+popup-callback.html:
+  → wyciąga ?code= z URL
+  → window.history.replaceState() — czyści URL
+  → window.opener.postMessage({ type: 'tmc:auth-popup-result', code: 'xxx' })
   → setTimeout(() => window.close(), 150)
        │
-       ▼ (główna karta)
-waitForOAuthPopup resolve → postMessage odebrany
-  → waitForOAuthSession() → polluje getSession()
-  → sesja znaleziona → getCurrentUser() → user profile
+       ▼ (główne okno)
+waitForOAuthPopupCode(popup) → resolve z kodem
+  → supabase.auth.exchangeCodeForSession(code) → gotowa sesja
+  → finishGoogleLogin(session.user)
   → set({ user, isAuthenticated: true })
   → loadPreferences(), prefetchProjects()
   → isOAuthInProgress = false
@@ -528,28 +562,24 @@ AppShell → GoogleAuthStatus znika
 TopBar → pokazuje awatar/email użytkownika
 ```
 
-### Sekwencja 2: Google Login — COOP zerwał komunikację lub użytkownik zamknął popup
+### Sekwencja 2: Google Login — użytkownik zamknął popup
 
 ```
-User → zamyka popup LUB popup przechodzi przez Google/Supabase (COOP zmienia origin)
+User → zamyka popup przed zakończeniem logowania
        │
        ▼
-waitForOAuthPopup → nie dostaje postMessage (COOP zerwał nasłuch)
-  → ale NIE przerywa — równoległy waitForOAuthSession({ timeoutMs: 120000 }) dalej działa
-       │
-       ▼ (co 750ms)
-Polling sesji → supabase.auth.getSession()
-  → sesja dostępna? → tak → resolve
-  → nie → kontynuuje do 120s
+waitForOAuthPopupCode:
+  → setInterval(co 400ms) wykrywa popup.closed === true
+  → czeka 1.5s (grace period na spóźniony postMessage)
+  → reject: "Google login window was closed before finishing."
        │
        ▼
-catch → log error, popup?.close()
-  → set({ isOAuthInProgress: false, error: '...' })
+catch → set({ isOAuthInProgress: false, error: '...' })
+  → GoogleAuthStatus znika
+  → AuthModal pokazuje błąd
 ```
 
-**COOP workaround (hotfix 2026-07-01):** Gdy przeglądarka przez `Cross-Origin-Opener-Policy` blokuje odczyt `popup.closed` i jednocześnie zerwie postMessage, stary kod (closed polling) uznał to za zamknięcie okna. Nowy kod używa `Promise.race()` — równolegle czeka na postMessage I na realną sesję Supabase przez 120s. Nawet jeśli popup zniknie z radaru, login może zakończyć się po wykryciu sesji.
-
-**Awaryjne ominięcie dla produkcji:** `VITE_AUTH_GOOGLE_SURFACE=redirect` w Netlify wymusi pełny redirect zamiast popupu, omijając problem COOP całkowicie.
+**Uwaga:** Nie ma już potrzeby omijania COOP — `exchangeCodeForSession` odbywa się w głównym oknie. Popup jedynie przekazuje kod i zamyka się, nie ma ryzyka zerwania komunikacji.
 
 ### Sekwencja 3: Session restore na starcie
 
@@ -579,7 +609,7 @@ authUnsubscribe null? → tak → zakładamy singleton listenera
 
 ### Sekwencja 4: Fallback polling (gdy listener nie zdąży)
 
-Gdy użytkownik wyląduje na `/auth/callback` z `?code=` (np. czysty redirect, bez popupa), listener `onAuthStateChange` może odpalić się z opóźnieniem. Fallback:
+Gdy użytkownik wyląduje na `/auth/callback` z `?code=` (redirect surface), listener `onAuthStateChange` może odpalić się z opóźnieniem. Fallback:
 
 ```typescript
 [400, 1000, 2000, 3500, 5000].forEach((delay) => {
@@ -604,8 +634,11 @@ Przed wypuszczeniem S-AUTH na produkcję wykonaj kolejno:
 
 ### Z.1 Supabase Dashboard — redirect allowlist
 Wejdź w Supabase Dashboard → Authentication → Settings → Redirect URLs.
-- [ ] `https://<twoja-domena>.app/auth/callback` (już istnieje dla OAuth — zweryfikuj)
-- [ ] `https://<twoja-domena>.app/auth/reset-password` (NOWY dla resetu hasła)
+- [ ] `https://<twoja-domena>.app/auth/callback` (redirect surface)
+- [ ] `https://<twoja-domena>.app/auth/popup-callback.html` (popup surface — NOWY!)
+- [ ] `https://<twoja-domena>.app/auth/reset-password` (reset hasła)
+- [ ] `http://localhost:3000/auth/callback` (dev redirect)
+- [ ] `http://localhost:3000/auth/popup-callback.html` (dev popup — NOWY!)
 - [ ] Opcjonalnie wildcard: `https://<twoja-domena>.app/**` (pokrywa wszystkie ścieżki)
 
 ### Z.2 SMTP / email delivery
@@ -649,5 +682,6 @@ Reset hasła i confirmation email wymagają działającego SMTP.
 
 | Data | Zmiana |
 |---|---|
+| 2026-07-04 | Rewrite popup flow na statyczny callback HTML (popup-callback.html). Usunięto waitForOAuthSession polling. AuthCallbackPage obsługuje tylko redirect. |
 | 2026-06-22 | Dodano sekcje 12 (Reset hasła), 13 (Email confirmation), Z (Przedprodukcyjna checklista) |
 | 2026-06-20 | Dokumentacja auth flow |

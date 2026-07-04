@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Statyczna strona popup callback (`/auth/popup-callback.html`)** — zamiast ładować React SPA w popupie Google OAuth, popup przekierowuje na statyczny HTML (~2KB), który wyciąga `?code=` z URL, czyści go z historii, wysyła `postMessage` do głównego okna i zamyka się. Zero Reacta, zero Supabase w popupie (`apps/web/public/auth/popup-callback.html`).
+- **`waitForOAuthPopupCode()`** — nowa funkcja w `oauthWebPopup.ts` zwracająca `Promise<string>` (PKCE code) zamiast `AuthPopupMessage`. Dodana detekcja zamknięcia popupu przez użytkownika z 1.5s grace period na spóźniony message.
+- **`exchangeCodeForSession(code)` w głównym oknie** — popup branch w `useAuthStore.ts` wymienia kod PKCE na sesję w głównym oknie zamiast w popupie. Eliminuje `navigator.locks` contention i konieczność pollingu sesji.
+
+### Changed
+- **AuthCallbackPage odchudzona o ~160 linii** — usunięto całą logikę popup/opener/postMessage/recovery screen. Komponent obsługuje już tylko powierzchnię `web-redirect`.
+- **`waitForOAuthSession()` usunięty (−42 linie)** — cały polling sesji (co 750ms przez 120s, fallback [150, 350, 700, ...]) zastąpiony bezpośrednim `exchangeCodeForSession(code)` w głównym oknie.
+- **Netto −104 linie, typecheck czysty**.
+- **Supabase Dashboard — wymagane nowe Redirect URLs** przed testem na main: `https://<domena>/auth/popup-callback.html` i `http://localhost:<port>/auth/popup-callback.html`.
+
+### Fixed
 - **Snap-to-grid w dragu: `snapEnabled` respektowane** — `moveElement()` w `@tmc/core` przyjmuje opcjonalny parametr `snap` (domyślnie `true`). Single drag i multi-drag czytają `useUIStore.snapEnabled`. Gdy snap OFF, elementy poruszają się pixel-freely. Dotyczy zawodników, piłki, stref, tekstu, sprzętu oraz strzałek (endpointy + curve) (`board.ts`, `useCanvasEventsController.ts`).
 - **Multi-drag dla grup** — przeciągnięcie dowolnego członka grupy przesuwa wszystkich członków grupy. Działa dla: grup zaznaczonych elementów (selekcja) oraz grup zdefiniowanych w `groups` w store. Strzałki w multi-drag przesuwają też punkt krzywizny (`curveControl`), zachowując kształt łuków (`useCanvasEventsController.ts`, `ArrowNode.tsx`).
 - **Renumber arrows z historią** — `renumberAllArrowsWithHistory()` w `elementsSlice` woła `renumberAllArrows()` + `pushHistory()`. Nowa pozycja "Renumber from 1" w menu kontekstowym strzałki (`elementsSlice.ts`, `canvasContextMenu.ts`).
