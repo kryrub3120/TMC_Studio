@@ -16,6 +16,8 @@ import * as devCloud from './devCloud';
 // Environment variables (Vite)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const shouldDetectSessionInUrl =
+  typeof window !== 'undefined' && window.location.pathname === '/auth/reset-password';
 
 // Validate environment
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -31,10 +33,10 @@ export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        // OAuth callback exchanges PKCE explicitly in AuthCallbackPage. Keeping
-        // this off prevents supabase-js from consuming the same one-time code
-        // concurrently during app initialization.
-        detectSessionInUrl: false,
+        // Google OAuth exchanges PKCE explicitly in AuthCallbackPage so app
+        // initialization cannot consume the same one-time code concurrently.
+        // Password reset keeps Supabase's built-in URL handling on its own route.
+        detectSessionInUrl: shouldDetectSessionInUrl,
         storageKey: 'tmc-auth-token',
         flowType: 'pkce', // PKCE flow — industry standard, more secure than implicit
       },
