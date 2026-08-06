@@ -920,35 +920,40 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
   }
   
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
+    (_event, session) => {
       if (!session?.user) {
         callback(null);
         return;
       }
-      try {
-        // Pass the session user so we don't make a redundant getUser() call.
-        const user = await getCurrentUser(session.user);
-        callback(user);
-      } catch (err) {
-        // Never leave the UI logged-out just because the profile fetch failed
-        // (network blip / AbortError during PKCE exchange). Fall back to the
-        // basic identity from the session so the app reflects the login now;
-        // the real subscription tier is refreshed on the next auth event/load.
-        logger.error('[Auth] onAuthStateChange handler failed - using session fallback:', err);
-        callback({
-          id: session.user.id,
-          email: session.user.email ?? '',
-          full_name:
-            session.user.user_metadata?.full_name ??
-            session.user.user_metadata?.name ??
-            undefined,
-          avatar_url:
-            session.user.user_metadata?.avatar_url ??
-            session.user.user_metadata?.picture ??
-            undefined,
-          subscription_tier: 'free',
-        });
-      }
+
+      // Supabase awaits async auth-state callbacks during PKCE exchange. Do not
+      // make the exchange wait for the profile query; hydrate it in the background.
+      void (async () => {
+        try {
+          // Pass the session user so we don't make a redundant getUser() call.
+          const user = await getCurrentUser(session.user);
+          callback(user);
+        } catch (err) {
+          // Never leave the UI logged-out just because the profile fetch failed
+          // (network blip / AbortError during PKCE exchange). Fall back to the
+          // basic identity from the session so the app reflects the login now;
+          // the real subscription tier is refreshed on the next auth event/load.
+          logger.error('[Auth] onAuthStateChange handler failed - using session fallback:', err);
+          callback({
+            id: session.user.id,
+            email: session.user.email ?? '',
+            full_name:
+              session.user.user_metadata?.full_name ??
+              session.user.user_metadata?.name ??
+              undefined,
+            avatar_url:
+              session.user.user_metadata?.avatar_url ??
+              session.user.user_metadata?.picture ??
+              undefined,
+            subscription_tier: 'free',
+          });
+        }
+      })();
     }
   );
   
