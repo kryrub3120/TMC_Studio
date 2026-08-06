@@ -94,16 +94,6 @@ export function waitForOAuthPopupCode(popup: Window): Promise<string> {
       });
     }, 120000);
 
-    // Detect the user closing the popup. Grace period lets a message that
-    // was posted right before self-close still arrive.
-    const closedPoll = window.setInterval(() => {
-      if (!popup.closed) return;
-      window.clearInterval(closedPoll);
-      window.setTimeout(() => {
-        settle(() => reject(new Error('Google login window was closed before finishing.')));
-      }, 1500);
-    }, 400);
-
     const onMessage = (event: MessageEvent<AuthPopupMessage>) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== AUTH_POPUP_MESSAGE) return;
@@ -120,7 +110,6 @@ export function waitForOAuthPopupCode(popup: Window): Promise<string> {
 
     const cleanup = () => {
       window.clearTimeout(timeout);
-      window.clearInterval(closedPoll);
       window.removeEventListener('message', onMessage);
     };
 

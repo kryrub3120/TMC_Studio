@@ -16,7 +16,7 @@
 Zrealizowane punkty:
 
 1. **Statyczna strona `/auth/popup-callback.html`** — nowy plik `apps/web/public/auth/popup-callback.html`. Wyciąga `?code=` z URL, czyści historię, wysyła `postMessage` do openera, zamyka się. Zero Reacta, zero Supabase.
-2. **`waitForOAuthPopupCode()` w `oauthWebPopup.ts`** — zwraca `Promise<string>` (PKCE code). Detekcja zamknięcia popupu przez użytkownika z 1.5s grace period.
+2. **`waitForOAuthPopupCode()` w `oauthWebPopup.ts`** — zwraca `Promise<string>` (PKCE code) przez `postMessage`, z timeoutem 120 s i bez odczytu `popup.closed`.
 3. **Popup branch w `useAuthStore.ts`** — `exchangeCodeForSession(code)` w głównym oknie zamiast `waitForOAuthSession()` pollingu. Usunięto całą funkcję `waitForOAuthSession()` (−42 linie).
 4. **`AuthCallbackPage.tsx` odchudzona** — usunięto całą logikę popup/opener/postMessage/recovery screen (−160 linii). Obsługuje tylko `web-redirect`.
 5. **Netto −104 linie, typecheck czysty.**

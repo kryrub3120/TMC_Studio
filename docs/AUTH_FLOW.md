@@ -29,7 +29,7 @@ Nowy flow:
 Stan wdrożenia:
 
 - ✅ Statyczna strona callback: `apps/web/public/auth/popup-callback.html`.
-- ✅ Web popup adapter (nowy): `apps/web/src/auth/oauthWebPopup.ts` — `waitForOAuthPopupCode()` z detekcją zamknięcia popupu.
+- ✅ Web popup adapter (nowy): `apps/web/src/auth/oauthWebPopup.ts` — `waitForOAuthPopupCode()` oparty o `postMessage` i timeout, bez odczytu `popup.closed`.
 - ✅ Popup branch w `useAuthStore.ts` — `exchangeCodeForSession(code)` w głównym oknie.
 - ✅ `AuthCallbackPage.tsx` — odchudzona o całą logikę popup/opener (-160 linii), obsługuje tylko `web-redirect`.
 - ✅ `waitForOAuthSession()` — usunięty cały polling (-42 linie).
@@ -194,7 +194,6 @@ Popup Google OAuth używa **statycznej strony HTML** jako callback — nie ładu
 4. popup.location.href = result.url  // przekierowuje popup do Google
 5. const code = await waitForOAuthPopupCode(popup)  // czeka na postMessage z kodem
    → timeout: 120s
-   → detekcja zamknięcia popupu przez użytkownika (interval co 400ms, grace period 1.5s)
    → zwraca string (PKCE code), NIE sesję
 6. const session = await supabase.auth.exchangeCodeForSession(code)  // główne okno
 7. await finishGoogleLogin(session.user)
@@ -222,7 +221,7 @@ const popup = window.open('', 'tmc-google-auth', features);
 Zwraca `Promise<string>` (PKCE code), który:
 - **Resolve:** gdy popup wyśle `postMessage({ type: 'tmc:auth-popup-result', code: '...' })`.
 - **Reject:** timeout 120s.
-- **Reject:** użytkownik zamknie popup przed końcem (detekcja `popup.closed` z 1.5s grace period na spóźniony message).
+- **Reject:** timeout 120 s lub komunikat błędu przesłany przez callback. Nie odczytuje `popup.closed`, ponieważ COOP czyni ten sygnał niewiarygodnym po przejściu przez Google/Supabase.
 
 Nie polega na `getSession()` w popupie — popup sam nie dotyka Supabase SDK. Jedyna komunikacja: `postMessage` z kodem PKCE.
 
@@ -569,9 +568,8 @@ User → zamyka popup przed zakończeniem logowania
        │
        ▼
 waitForOAuthPopupCode:
-  → setInterval(co 400ms) wykrywa popup.closed === true
-  → czeka 1.5s (grace period na spóźniony postMessage)
-  → reject: "Google login window was closed before finishing."
+  → czeka na postMessage z kodem PKCE lub błędem
+  → timeout po 120 s, bez odczytu popup.closed (COOP-safe)
        │
        ▼
 catch → set({ isOAuthInProgress: false, error: '...' })
@@ -579,7 +577,7 @@ catch → set({ isOAuthInProgress: false, error: '...' })
   → AuthModal pokazuje błąd
 ```
 
-**Uwaga:** Nie ma już potrzeby omijania COOP — `exchangeCodeForSession` odbywa się w głównym oknie. Popup jedynie przekazuje kod i zamyka się, nie ma ryzyka zerwania komunikacji.
+**Uwaga:** `exchangeCodeForSession` odbywa się w głównym oknie. Popup jedynie przekazuje kod i zamyka się; kod nie odczytuje `popup.closed`, bo COOP blokuje ten sygnał.
 
 ### Sekwencja 3: Session restore na starcie
 
