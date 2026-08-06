@@ -16,7 +16,7 @@
 
 [build.environment]
   # Node version
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   
   # pnpm version
   PNPM_VERSION = "9"
