@@ -25,7 +25,8 @@ export function AuthCallbackPage() {
       navigate('/board', { replace: true });
     };
 
-    // Safety net: if the PKCE exchange hangs, enter the app anyway.
+    // Safety net: if the PKCE exchange hangs, return to the app instead of
+    // trapping the user on the callback route.
     const safety = setTimeout(finish, 10000);
 
     async function handleCallback() {
@@ -36,8 +37,13 @@ export function AuthCallbackPage() {
       }
 
       try {
-        // Awaits initializePromise which includes the PKCE code exchange.
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const code = new URLSearchParams(window.location.search).get('code');
+        // Exchange this one-time PKCE code here, once. detectSessionInUrl is
+        // disabled on the shared client so initialization cannot race us.
+        const result = code
+          ? await supabase.auth.exchangeCodeForSession(code)
+          : await supabase.auth.getSession();
+        const { data: { session }, error } = result;
         const elapsed = Math.round(performance.now() - startedAt);
 
         if (done) return;

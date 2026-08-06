@@ -11,6 +11,5 @@ export function resolveGoogleOAuthSurface(): GoogleOAuthSurface {
   if (configured === 'popup') return 'web-popup';
   if (configured === 'desktop' && isTauriRuntime()) return 'desktop-deeplink';
 
-  return isTauriRuntime() ? 'desktop-deeplink' : 'web-popup';
+  return isTauriRuntime() ? 'desktop-deeplink' : 'web-redirect';
 }
-

@@ -31,7 +31,10 @@ export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
+        // OAuth callback exchanges PKCE explicitly in AuthCallbackPage. Keeping
+        // this off prevents supabase-js from consuming the same one-time code
+        // concurrently during app initialization.
+        detectSessionInUrl: false,
         storageKey: 'tmc-auth-token',
         flowType: 'pkce', // PKCE flow — industry standard, more secure than implicit
       },

@@ -15,8 +15,10 @@ Authentication scope for launch:
 
 - Google OAuth.
 - Email/password.
-- Web popup as the default Google flow (z COOP workaround — hotfix 2026-07-01).
-- Full-page redirect as fallback when popup opening fails.
+- Full-page redirect as the default Google flow. It exchanges PKCE code on
+  `/auth/callback` in the same browser context and avoids COOP popup issues.
+- Web popup is experimental only and must not be enabled in production without
+  dedicated cross-browser verification.
 
 ## Known Production Issue: COOP-breaking popup.closed
 
@@ -49,8 +51,7 @@ Set in Netlify Dashboard -> Site configuration -> Environment variables:
 
 - `VITE_SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=<production anon key>`
-- `VITE_AUTH_GOOGLE_SURFACE=popup`
-- `VITE_AUTH_GOOGLE_SURFACE=redirect` (awaryjne — omija COOP, patrz sekcja COOP-breaking powyżej)
+- `VITE_AUTH_GOOGLE_SURFACE=redirect`
 - `SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co`
 - `SUPABASE_SERVICE_ROLE_KEY=<production service role key>`
 - `VITE_STRIPE_PUBLISHABLE_KEY=<publishable key>`

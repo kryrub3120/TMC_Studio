@@ -6,8 +6,8 @@ describe('resolveGoogleOAuthSurface', () => {
     vi.unstubAllGlobals();
   });
 
-  it('uses web popup outside Tauri by default', () => {
-    expect(resolveGoogleOAuthSurface()).toBe('web-popup');
+  it('uses full-page redirect outside Tauri by default', () => {
+    expect(resolveGoogleOAuthSurface()).toBe('web-redirect');
   });
 
   it('uses desktop deep-link inside Tauri by default', () => {
@@ -16,4 +16,3 @@ describe('resolveGoogleOAuthSurface', () => {
     expect(resolveGoogleOAuthSurface()).toBe('desktop-deeplink');
   });
 });
-
