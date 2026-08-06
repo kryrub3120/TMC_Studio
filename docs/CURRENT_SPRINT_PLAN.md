@@ -1,17 +1,31 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-07-04
+**Data:** 2026-08-06
 **Status:** ACTIVE, krotki wskaznik operacyjny  
-**Source of truth:** `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md`
+**Source of truth:** `docs/INDEX.md` oraz dokumenty wskazane w jego sekcji Source of Truth.
 
 ---
 
 ## Zakonczone sprinty
 
+### Sprint S-AUTH4 - Same-tab redirect and PKCE reliability (2026-08-06)
+
+**Status:** DONE (2026-08-06)
+**Cel:** Ustabilizowanie produkcyjnego Google OAuth i usunięcie blokady testów feedbacku.
+
+1. Produkcyjny webowy default zmieniony na `VITE_AUTH_GOOGLE_SURFACE=redirect`.
+2. `/auth/callback` jawnie wykonuje `exchangeCodeForSession(code)`; automatyczny exchange SDK jest wyłączony poza trasą resetu hasła.
+3. `onAuthStateChange` ładuje profil poza callbackiem Supabase, więc odczyt z bazy nie opóźnia zakończenia PKCE.
+4. Popup pozostaje eksperymentalny; produkcja nie zależy od `popup.closed`, COOP ani `postMessage`.
+5. Runtime projektu, CI i Netlify ujednolicony na Node 22.
+6. Weryfikacja: typecheck, 131 testów i build zielone; Google OAuth potwierdzony na produkcji.
+
+Dokumentacja: `docs/AUTH_FLOW.md`, `docs/WEB_LAUNCH_CHECKLIST.md`.
+
 ### Sprint S-AUTH3.5 — Static Popup Callback (2026-07-04)
 
 **Status:** ✅ DONE (2026-07-04)
-**Cel:** Zastąpienie React SPA w popupie Google OAuth statycznym HTML, wymiana kodu PKCE w głównym oknie.
+**Cel historyczny:** Zastąpienie React SPA w popupie Google OAuth statycznym HTML, wymiana kodu PKCE w głównym oknie. Popup nie jest już domyślnym flow produkcyjnym; patrz S-AUTH4.
 
 Zrealizowane punkty:
 
@@ -21,7 +35,7 @@ Zrealizowane punkty:
 4. **`AuthCallbackPage.tsx` odchudzona** — usunięto całą logikę popup/opener/postMessage/recovery screen (−160 linii). Obsługuje tylko `web-redirect`.
 5. **Netto −104 linie, typecheck czysty.**
 
-Dokumentacja: `docs/AUTH_FLOW.md` — pełny rewrite popup flow, sekwencje, checklista, historia zmian.
+Dokumentacja: `docs/AUTH_FLOW.md` — historyczny wariant popup; aktualny flow produkcyjny opisuje S-AUTH4.
 
 ### Sprint TXT1–TXT6 — Label Editor Upgrade (Wariant B, Multiline, Align, Unified Shortcuts)
 

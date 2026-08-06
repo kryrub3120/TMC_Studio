@@ -408,36 +408,23 @@ interface SupabaseIntegration {
 }
 ```
 
-### Google OAuth Popup Flow
+### Google OAuth Flow
 
-Google logowanie otwiera się w osobnym popupie (500x680px) zamiast redirectować całą aplikację. Szczegółowy opis: `docs/AUTH_FLOW.md`.
+Produkcyjny webowy Google OAuth używa redirectu w tej samej karcie. Szczegółowy opis: `docs/AUTH_FLOW.md`.
 
 ```
-Główna karta                     Popup OAuth
+Ta sama karta                    Google / Supabase
     │                               │
-    │  window.open('tmc-google-auth')
-    │──────────────────────────────>│
-    │                               │  writeOAuthPopupShell()
-    │                               │  → loading spinner + branding
-    │                               │
-    │  popup.location.href = url    │
+    │  signInWithOAuth(redirectTo)   │
     │──────────────────────────────>│  → Google Consent Screen
     │                               │  → logowanie użytkownika
     │                               │
-    │                               │  ← Google redirect na /auth/callback
-    │                               │  → PKCE: code exchange
-    │                               │  → log: [Auth] OAuth callback in XXXms
-    │                               │
-    │  ← postMessage('tmc:auth-     │
-    │     popup-result', success)   │
-    │                               │  window.close()
-    │                               │
-    │  waitForOAuthSession()        │
-    │  → poll getSession() (0-5s)   │
-    │  → getCurrentUser()           │
-    │  → loadPreferences()          │
-    │  → isOAuthInProgress = false  │
-    │                               │
+    │  /auth/callback?code=...       │
+    │<──────────────────────────────│
+    │  exchangeCodeForSession(code)  │
+    │  → minimalny stan sesji        │
+    │  → navigate('/board')          │
+    │  → profil/preferencje w tle    │
 ```
 
 ### Stripe Integration

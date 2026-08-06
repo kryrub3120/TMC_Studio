@@ -20,20 +20,12 @@ Authentication scope for launch:
 - Web popup is experimental only and must not be enabled in production without
   dedicated cross-browser verification.
 
-## Known Production Issue: COOP-breaking popup.closed
+## Google OAuth Decision
 
-**Problem:** `Cross-Origin-Opener-Policy` (COOP) na produkcji blokuje odczyt `popup.closed` po przejściu okna przez Google/Supabase. Stary kod (pre-2026-07-01) uznał to za zamknięcie okna i przerywał login.
-
-**Hotfix (2026-07-01):**
-1. Usunięto polling `popup.closed` z `waitForOAuthPopup()`.
-2. Parent window używa `Promise.race()` — równolegle czeka na `postMessage` I na realną sesję Supabase przez 120s.
-3. Jeśli COOP zerwie komunikację, login kończy się po wykryciu sesji pollingiem.
-
-**Awaryjne ominięcie (Netlify env):**
-```env
-VITE_AUTH_GOOGLE_SURFACE=redirect
-```
-Wymusza pełny redirect zamiast popupu, omijając problem COOP całkowicie.
+Produkcja korzysta z `VITE_AUTH_GOOGLE_SURFACE=redirect`. Ten przepływ nie
+tworzy popupu i nie zależy od `postMessage` ani `popup.closed`, więc nie
+wchodzi w konflikt z Cross-Origin-Opener-Policy przeglądarki. Popup jest tylko
+eksperymentalnym wariantem do osobnych testów między przeglądarkami.
 
 ## Staging Decision
 
@@ -105,7 +97,7 @@ Manual production smoke after Netlify deploy:
 2. Click open board and verify URL is `/board`.
 3. Open `https://tmcstudio.app/app?checkout=success` and verify it redirects to `/board?checkout=success`.
 4. Sign in with Google.
-5. Cancel Google login and verify the app does not render inside the popup.
+5. Cancel Google login and verify the user returns to the app without a stuck loading state.
 6. Sign in with email/password.
 7. Sign out and sign in again.
 8. Start Stripe checkout from pricing and verify return URL is `/board?checkout=success`.

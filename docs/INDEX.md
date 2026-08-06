@@ -8,15 +8,15 @@ Ten katalog zawiera aktywne dokumenty potrzebne do prowadzenia prac nad produkte
 
 Czytaj w tej kolejnosci:
 
-1. `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md` - aktualny audyt, decyzje i plan sprintow do launchu.
-2. `docs/CURRENT_SPRINT_PLAN.md` - krotki wskaznik aktualnego sprintu.
-3. `tasks/NEXT_TASK.md` - najblizsze zadanie wykonawcze.
-4. `docs/FEATURE_SPEC.md` - aktualne zachowanie funkcji, w tym presety boiska.
-5. `docs/AUTH_FLOW.md` - mechanizm logowania Google OAuth (popup + PKCE).
-6. `docs/WEB_LAUNCH_CHECKLIST.md` - checklista web launchu (routing, env, pre-launch verification).
-7. `docs/SYSTEM_ARCHITECTURE.md` - architektura i granice warstw.
-8. `docs/ENTITLEMENTS.md` - plany, limity, gating.
-9. `docs/SITE_ARCHITECTURE.md`, `docs/WEBSITE_LAUNCH_PLAN.md`, `docs/STRIPE_TAX_SETUP.md` - marketing, legal, billing.
+1. `docs/CURRENT_SPRINT_PLAN.md` - krotki wskaznik aktualnego sprintu i ostatnie decyzje.
+2. `tasks/NEXT_TASK.md` - najblizsze zadanie wykonawcze.
+3. `docs/FEATURE_SPEC.md` - aktualne zachowanie funkcji, w tym presety boiska.
+4. `docs/AUTH_FLOW.md` - mechanizm logowania Google OAuth (same-tab redirect + PKCE).
+5. `docs/WEB_LAUNCH_CHECKLIST.md` - checklista web launchu (routing, env, pre-launch verification).
+6. `docs/SYSTEM_ARCHITECTURE.md` - architektura i granice warstw.
+7. `docs/ENTITLEMENTS.md` - plany, limity, gating.
+8. `docs/SITE_ARCHITECTURE.md`, `docs/WEBSITE_LAUNCH_PLAN.md`, `docs/STRIPE_TAX_SETUP.md` - marketing, legal, billing.
+9. `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md` - historyczny snapshot audytu; aktualne decyzje sa w dokumentach powyzej.
 
 Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa aktualny source of truth.
 
@@ -26,10 +26,10 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 
 | Dokument | Rola |
 |---|---|
-| `AUDYT_KOMPLEKSOWY_2026-06-18.md` | Glowny plan launchu: audyt, priorytety, sprinty, DoD |
+| `AUDYT_KOMPLEKSOWY_2026-06-18.md` | Historyczny snapshot audytu i pierwotnego planu launchu |
 | `CURRENT_SPRINT_PLAN.md` | Aktualny sprint i kolejnosc prac |
 | `tasks/NEXT_TASK.md` | Najblizsze zadanie operacyjne |
-| `AUTH_FLOW.md` | Mechanizm logowania Google OAuth (popup + PKCE, postMessage) |
+| `AUTH_FLOW.md` | Mechanizm logowania Google OAuth (same-tab redirect + PKCE) |
 | `WEB_LAUNCH_CHECKLIST.md` | Checklista web launchu: routing, env, pre-launch verification |
 | `FEATURE_SPEC.md` | Kanoniczna specyfikacja zachowania produktu; aktywne boiska: full / half / penalty-area |
 | `ANALYTICS_AND_QA_GATE.md` | Pomocniczy gate analityki i QA |

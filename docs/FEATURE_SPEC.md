@@ -1768,11 +1768,11 @@ The Help Sidebar exposes a tutorial restart action. Restarting clears the comple
 
 ### 15.1 Overview
 
-TMC Studio uses **Supabase Auth** with **PKCE OAuth 2.0** flow. Google login opens in a **popup window** so the main application stays interactive. Email/password login is also supported (Supabase GoTrue).
+TMC Studio uses **Supabase Auth** with the **PKCE OAuth 2.0** flow. Google login uses a full-page redirect in the same browser context; the application returns through `/auth/callback`. Email/password login is also supported (Supabase GoTrue).
 
 | Method | Flow | UX |
 |--------|------|----|
-| **Google OAuth** | Popup → PKCE → postMessage → session polling | Modal zamyka się od razu, nieblokujący status "Logowanie przez Google..." |
+| **Google OAuth** | Same-tab redirect → PKCE code exchange → session | Użytkownik wraca automatycznie na `/board` po potwierdzeniu w Google |
 | **Email/Password** | Supabase signIn → session restore | Standard form |
 
 ### 15.2 State Machine
@@ -1787,13 +1787,13 @@ TMC Studio uses **Supabase Auth** with **PKCE OAuth 2.0** flow. Google login ope
                   ┌─────────────┐
                   │  LOADING    │  ← isLoading = true
                   └──────┬──────┘
-                         │ success / OAuth popup
+                         │ email success / OAuth redirect
                          ▼
             ┌────────────────────────┐
-            │  OAUTH_IN_PROGRESS     │  ← isOAuthInProgress = true (tylko Google popup)
-            │  (popup otwarty)       │     AppShell pokazuje GoogleAuthStatus
+            │  OAUTH_REDIRECT        │  ← bieżąca karta jest na Google/Supabase
+            │  (poza aplikacją)      │
             └───────────┬────────────┘
-                        │ postMessage + session found
+                        │ PKCE callback + session found
                         ▼
                   ┌─────────────┐
                   │  LOGGED_IN  │  ← isAuthenticated = true, user != null
@@ -1807,27 +1807,18 @@ TMC Studio uses **Supabase Auth** with **PKCE OAuth 2.0** flow. Google login ope
                   └─────────────┘
 ```
 
-### 15.3 Google OAuth Popup Flow
+### 15.3 Google OAuth Flow
 
 **Trigger:** Kliknięcie "Zaloguj przez Google" w `AuthModal`.
 
-1. Modal zamyka się natychmiast.
-2. `isOAuthInProgress = true` → `AppShell` pokazuje `GoogleAuthStatus` (toast "Logowanie przez Google...").
-3. `window.open('', 'tmc-google-auth', ...)` otwiera popup 500×680px z loading spinnerem.
-4. Popup redirectuje do Google Consent Screen.
-5. Po zalogowaniu Google redirectuje popup na `/auth/callback?code=...&state=...`.
-6. `AuthCallbackPage` w popupie:
-   - Wykonuje PKCE (`supabase.auth.getSession()`).
-   - Loguje czas: `[Auth] OAuth callback completed in XXXms`.
-   - Wysyła `postMessage({ type: 'tmc:auth-popup-result', status: 'success' })` do głównej karty.
-   - Zamyka się po 150ms.
-7. Główna karta odbiera `postMessage` → `waitForOAuthPopup()` resolve.
-8. `waitForOAuthSession()` polluje `getSession()` (0-5000ms) → znajduje sesję.
-9. `getCurrentUser()` → pobiera profil z DB → `set({ user, isAuthenticated: true })`.
-10. Ładowanie preferencji + prefetch projektów/folderów.
-11. `isOAuthInProgress = false` → `GoogleAuthStatus` znika.
+1. `signInWithGoogle()` wybiera `web-redirect` jako domyślną powierzchnię webową.
+2. Supabase przekierowuje bieżącą kartę do Google z `redirectTo=/auth/callback`.
+3. Google i Supabase wracają na `/auth/callback?code=...&state=...`.
+4. `AuthCallbackPage` wywołuje `exchangeCodeForSession(code)` dokładnie raz.
+5. Callback ustawia podstawowy stan zalogowanego użytkownika i przechodzi na `/board`.
+6. `onAuthStateChange` pobiera profil, preferencje oraz dane aplikacji w tle, bez blokowania wymiany PKCE.
 
-**Timeout:** 120s. **Popup closed:** Natychmiastowy reject z błędem.
+Popup jest zachowany tylko jako wariant eksperymentalny (`VITE_AUTH_GOOGLE_SURFACE=popup`) i nie jest wspieranym flow produkcyjnym.
 
 ### 15.4 Email/Password Login
 
@@ -1841,7 +1832,7 @@ Standardowy formularz w `AuthModal` → `supabaseSignIn(email, password)` → `g
 2. DEV: mock session → skip Supabase.
 3. Supabase disabled → offline mode.
 4. Setup `onAuthStateChange` listener (singleton).
-5. If OAuth callback params in URL → fallback polling (400/1000/2000/3500/5000ms).
+5. On `/auth/callback` kod PKCE obsługuje `AuthCallbackPage`; wspólny klient nie robi automatycznego exchange.
 6. Else → `getSession()` → restore existing session or stay guest.
 
 ### 15.6 AuthCallbackPage
@@ -1849,11 +1840,10 @@ Standardowy formularz w `AuthModal` → `supabaseSignIn(email, password)` → `g
 | Role | Opis |
 |------|------|
 | Path | `/auth/callback` |
-| Popup detect | `window.name === 'tmc-google-auth'` lub `sessionStorage.getItem('tmc-oauth-popup')` |
-| Popup action | PKCE → `postMessage` → `window.close()` |
-| Fallback action | PKCE → `navigate('/board', { replace: true })` |
+| Scope | Pełnostroniczny callback dla `web-redirect` |
+| Action | PKCE `exchangeCodeForSession(code)` → `navigate('/board', { replace: true })` |
 | Safety net | 10s timeout → redirect |
-| Preload | `void import('../App')` — jeśli nie popup, preloaduje bundle edytora |
+| Preload | `void import('../App')` — preloaduje bundle edytora podczas wymiany PKCE |
 
 ### 15.7 URL Cleanup Policy
 
@@ -1866,7 +1856,7 @@ Standardowy formularz w `AuthModal` → `supabaseSignIn(email, password)` → `g
 
 | Stan | UI |
 |------|----|
-| `isOAuthInProgress` | `GoogleAuthStatus` toast (prawy górny róg, nieblokujący) |
+| Redirect OAuth | Użytkownik jest chwilowo na Google/Supabase, potem wraca do `/auth/callback` |
 | `isLoading` | Spinner w AuthModal podczas email/password |
 | `isAuthenticated = true` | TopBar pokazuje awatar/email, menu użytkownika |
 | `isAuthenticated = false` | TopBar pokazuje "Zaloguj się" |
@@ -1993,7 +1983,7 @@ Pending preferences are flushed atomically via `keepalive fetch` to `/rest/v1/rp
 
 - **No "Log Out" for guests** — `AccountMenu` renders as a single "Sign In" button when `plan === 'guest'`.
 - **Save triggers auth CTA** — guest pressing Cmd+S sees toast "Sign in to save projects — it's free" instead of "Saved locally".
-- **Google login** — auth modal closes immediately on click; OAuth popup flow continues in background.
+- **Google login** — aplikacja przechodzi do Google w tej samej karcie i automatycznie wraca po autoryzacji.
 
 ### 18.2 Account Menu (A3)
 

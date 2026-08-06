@@ -2,7 +2,7 @@
 
 **Data:** 2026-06-18  
 **Wersja aplikacji:** 0.7.0  
-**Status dokumentu:** ACTIVE SOURCE OF TRUTH dla prac do publicznego launchu  
+**Status dokumentu:** HISTORYCZNY SNAPSHOT (2026-08-06). Aktualne decyzje i kolejność dokumentów: `docs/INDEX.md`.
 **Cel:** doprowadzic aplikacje do bezpiecznego wydania rynkowego, bez dalszego rozdmuchiwania zakresu.
 
 ---
