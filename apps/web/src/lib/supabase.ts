@@ -97,6 +97,24 @@ export type UserPreferences = {
   };
 };
 
+const authLocaleSyncs = new Set<string>();
+
+function syncAuthenticatedUserLocale(user: SupabaseAuthUser): void {
+  if (!supabase) return;
+
+  const locale = getAuthEmailLocale();
+  const syncKey = `${user.id}:${locale}`;
+  if (user.user_metadata?.locale === locale || authLocaleSyncs.has(syncKey)) return;
+
+  authLocaleSyncs.add(syncKey);
+  void supabase.auth.updateUser({ data: { locale } }).then(({ error }) => {
+    if (error) {
+      authLocaleSyncs.delete(syncKey);
+      logger.warn('[Auth] Could not synchronize email locale:', error.message);
+    }
+  });
+}
+
 /** Get current authenticated user */
 export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promise<User | null> {
   if (!supabase) return null;
@@ -111,6 +129,8 @@ export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promis
     user = data.user;
   }
   if (!user) return null;
+
+  syncAuthenticatedUserLocale(user);
   
   // ALWAYS fetch fresh profile from database (not from JWT cache)
   // This ensures we get the latest subscription_tier after webhook updates
