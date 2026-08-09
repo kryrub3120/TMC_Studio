@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
+import { EVENTS, track } from '../lib/analytics';
 
 /**
  * Full-page OAuth callback — used only by the `web-redirect` surface.
@@ -11,6 +12,7 @@ import { logger } from '../lib/logger';
  */
 export function AuthCallbackPage() {
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let done = false;
@@ -25,14 +27,28 @@ export function AuthCallbackPage() {
       navigate('/board', { replace: true });
     };
 
-    // Safety net: if the PKCE exchange hangs, return to the app instead of
-    // trapping the user on the callback route.
-    const safety = setTimeout(finish, 10000);
+    const fail = (message: string) => {
+      if (done) return;
+      done = true;
+      setError(message);
+    };
+
+    const safety = setTimeout(() => {
+      fail('Logowanie trwało zbyt długo. Spróbuj ponownie.');
+    }, 10000);
 
     async function handleCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const providerError = params.get('error_description') || params.get('error');
+      if (providerError) {
+        clearTimeout(safety);
+        fail(providerError);
+        return;
+      }
+
       if (!supabase) {
         clearTimeout(safety);
-        finish();
+        fail('Logowanie nie jest obecnie dostępne.');
         return;
       }
 
@@ -50,6 +66,9 @@ export function AuthCallbackPage() {
 
         if (error || !session?.user) {
           logger.error(`[Auth] OAuth callback failed after ${elapsed}ms`, error);
+          clearTimeout(safety);
+          fail(error?.message || 'Nie udało się utworzyć sesji. Spróbuj ponownie.');
+          return;
         } else {
           // Use session metadata directly — skip extra DB round-trip.
           // onAuthStateChange in useAuthStore fetches the real profile later.
@@ -68,10 +87,14 @@ export function AuthCallbackPage() {
             teamId: null,
             isLoading: false,
           });
+          track(EVENTS.AUTH_SUCCESS, { method: 'google' });
           logger.debug(`[Auth] OAuth callback completed in ${elapsed}ms`);
         }
       } catch (err) {
         logger.error('[Auth] OAuth callback: unexpected error', err);
+        clearTimeout(safety);
+        fail(err instanceof Error ? err.message : 'Nie udało się zalogować. Spróbuj ponownie.');
+        return;
       }
 
       clearTimeout(safety);
@@ -85,6 +108,25 @@ export function AuthCallbackPage() {
       clearTimeout(safety);
     };
   }, [navigate]);
+
+  if (error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] p-4 text-white">
+        <section className="w-full max-w-md rounded-lg border border-red-400/30 bg-[#1a1a2e] p-6 shadow-2xl" role="alert">
+          <h1 className="text-xl font-semibold">Nie udało się zalogować</h1>
+          <p className="mt-2 text-sm text-gray-300">Login could not finish.</p>
+          <p className="mt-4 rounded-md bg-red-500/10 p-3 text-sm text-red-200">{error}</p>
+          <button
+            type="button"
+            onClick={() => navigate('/board', { replace: true })}
+            className="mt-5 w-full rounded-md bg-blue-600 px-4 py-2.5 font-medium hover:bg-blue-500"
+          >
+            Wróć do aplikacji
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <div style={{

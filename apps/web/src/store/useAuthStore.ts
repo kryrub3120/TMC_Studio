@@ -455,6 +455,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             authFlow: { ...idleAuthFlow, status: authUser ? 'done' : 'idle' },
           });
+          if (authUser) track(EVENTS.AUTH_SUCCESS, { method: 'email' });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Sign in failed';
 
@@ -568,6 +569,7 @@ export const useAuthStore = create<AuthState>()(
               },
             });
             logger.debug('[Auth] Google login applied for', user.email);
+            track(EVENTS.AUTH_SUCCESS, { method: 'google' });
 
             void (async () => {
               try {

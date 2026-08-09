@@ -67,8 +67,14 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(detectInitial);
+interface LanguageProviderProps {
+  children: React.ReactNode;
+  initialLanguage?: Language;
+  onLanguageChange?: (language: Language) => void;
+}
+
+export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, initialLanguage, onLanguageChange }) => {
+  const [language, setLanguageState] = useState<Language>(() => initialLanguage ?? detectInitial());
 
   useEffect(() => {
     if (typeof document !== 'undefined') document.documentElement.lang = language;
@@ -82,8 +88,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch {
         /* ignore */
       }
+      onLanguageChange?.(lang);
     }
-  }, []);
+  }, [onLanguageChange]);
 
   const t = useCallback<TFunction>((key, vars) => makeT(language)(key, vars), [language]);
 

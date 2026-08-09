@@ -41,11 +41,15 @@ interface ModalOrchestratorProps {
   pricingModalOpen: boolean;
   onClosePricingModal: () => void;
   onOpenAuthModal: () => void;
+  onAuthRequiredForPlan: (plan: 'free' | 'pro' | 'team', cycle: 'monthly' | 'yearly') => void;
   authIsPro: boolean;
   authIsAuthenticated: boolean;
   authUser: User | null;
   authAccessToken: string | null;
   pricingInitialCycle?: 'monthly' | 'yearly';
+  onPlanSelected?: (plan: 'free' | 'pro' | 'team', cycle: 'monthly' | 'yearly', isAuthenticated: boolean) => void;
+  onCheckoutStarted?: (plan: 'pro' | 'team', cycle: 'monthly' | 'yearly') => void;
+  onCheckoutFailed?: (plan: 'pro' | 'team', cycle: 'monthly' | 'yearly') => void;
   
   // Limit Reached Modal
   limitReachedModalOpen: boolean;
@@ -173,16 +177,20 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
       
       {/* Pricing Modal */}
       <PricingModal
+        key={props.pricingInitialCycle}
         isOpen={props.pricingModalOpen}
         onClose={props.onClosePricingModal}
         currentPlan={props.authIsPro ? 'pro' : 'free'}
         isAuthenticated={props.authIsAuthenticated}
-        onSignUp={() => {
+        onSignUp={(plan, cycle) => {
           props.onClosePricingModal();
-          props.onOpenAuthModal();
+          props.onAuthRequiredForPlan(plan, cycle);
         }}
         accessToken={props.authAccessToken}
         initialCycle={props.pricingInitialCycle}
+        onPlanSelected={props.onPlanSelected}
+        onCheckoutStarted={props.onCheckoutStarted}
+        onCheckoutFailed={props.onCheckoutFailed}
       />
       
       {/* Limit Reached Modal */}

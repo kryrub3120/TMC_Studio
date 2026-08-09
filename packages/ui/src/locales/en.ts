@@ -74,7 +74,7 @@ export const en = {
         "subtitle": "Team gives every coach their own workspace with shared billing — at a fraction of the cost of separate Pro subscriptions.",
         "fivePro": "5 × Pro subscriptions",
         "teamPlan": "Team plan",
-        "savings": "Save {{amount}}/yr",
+        "savings": "Save {{amount}}{{period}}",
         "cta": "Go Team"
     }
 },
@@ -887,7 +887,7 @@ export const en = {
         name: 'Team',
         price: '$29',
         period: '/month',
-        microcopy: 'Pro + invite your staff by email',
+        microcopy: 'Pro + invite your staff with a secure link',
         features: '5 team members|Shared billing|Individual workspaces|Everything in Pro',
         cta: 'Upgrade to Team',
       },
@@ -1005,7 +1005,7 @@ export const en = {
       unlimitedProjects: { question: 'Can I create unlimited projects?', answer: 'Unlimited projects and steps are available on the Pro plan. The Free plan allows 3 projects with 10 steps each.', cta: 'See Pro plans' },
       manageSubscription: { question: 'How do I manage my subscription?', answer: 'Click your avatar in the TopBar and select "Account & Billing". This opens the Stripe Customer Portal where you can update payment methods, view invoices, or change your plan.' },
       squadSlots: { question: 'How many squad players can I have?', answer: 'Free plan allows up to 5 squad players total. Pro and Club Premium unlock up to 25 players per team (100 total across 4 teams). Locked slots show a padlock icon.', cta: 'Upgrade for more slots' },
-      addMembers: { question: 'How do I add team members?', answer: 'As a Club Admin, open the Team panel in the Inspector (right sidebar). Click "Invite Member" and enter their email. They\'ll receive access to Club Premium features once they accept.', cta: 'Open Team panel' },
+      addMembers: { question: 'How do I add team members?', answer: 'Open the Team settings, enter the member\'s email, and create an invitation link. Share that link with them; they receive Team access after accepting it with the invited email address.', cta: 'Open Team panel' },
       manageBilling: { question: 'How do I manage Club Premium billing?', answer: 'Click your avatar → "Account & Billing" to open the Stripe Customer Portal. Here you can update payment methods, view invoices, and manage your Club Premium subscription.', cta: 'Open billing' },
       removeMember: { question: 'How do I remove a team member?', answer: 'Open the Team panel in Inspector. Find the member you want to remove and click the trash icon next to their name. Confirm to revoke their Club Premium access immediately.' },
       saveFailed: { question: 'My project didn\'t save. What do I do?', answer: 'Check your internet connection first. If you\'re online, try a manual save with ⌘S (Ctrl+S on Windows). The error icon in the save status bar is clickable — it retries the save automatically.', cta: 'Manual save' },
@@ -1088,7 +1088,7 @@ export const en = {
     numberPlaceholder: '#',
     cancel: 'Cancel',
     dragHint: 'Drag a player onto the pitch to place them',
-    collapsedSetup: 'Set up your squad in Settings →',
+    collapsedSetup: 'Set up your squad in Settings or',
     collapsedCount: '{{count}} in squad — tap the eye to show',
   },
   pitchPanel: {
@@ -1644,7 +1644,7 @@ export const en = {
           performance: { label: 'Performance', body: 'How fast pages load' },
           errors: { label: 'Error Tracking', body: 'Identifies technical issues' },
         },
-        analyticsNote: 'Note: We currently do not use analytics cookies, but may implement them in the future.',
+        analyticsNote: 'With your consent, we use privacy-focused Plausible analytics to measure product usage and errors. We do not build advertising profiles.',
       },
       thirdParty: {
         title: '4. Third-Party Cookies',
@@ -1677,6 +1677,7 @@ export const en = {
         impactTitle: '6.2 Impact of Blocking Cookies',
         important: 'Important:',
         impactBody: 'If you block essential cookies, you will not be able to sign in or use cloud features. Preference cookies can be blocked with minimal impact on functionality.',
+        changeConsent: 'Change analytics consent',
       },
       duration: {
         title: '7. Cookie Duration',
@@ -1719,8 +1720,6 @@ export const en = {
       vatBody: 'Tax ID/NIP: {{nip}}. Online payments are processed by Stripe.',
       responsibleTitle: 'Responsibility for content',
       responsibleBody: 'We work to keep information on the service accurate and up to date. User-created content remains the responsibility of its authors.',
-      odrTitle: 'ODR platform',
-      odrBody: 'The European Commission provides an online dispute resolution platform at:',
     },
     accessibility: {
       title: 'Accessibility',
@@ -1742,7 +1741,7 @@ export const en = {
     intro: {
       title: 'How it works',
       step1: '1. Create your club and give it a name.',
-      step2: '2. Invite coaches and staff by email - they join as members.',
+      step2: '2. Create a secure invitation link and share it with your staff.',
       step3: '3. Every member gets access to the club\'s shared projects.',
     },
     create: {
@@ -1770,13 +1769,14 @@ export const en = {
     invite: {
       title: 'Invite',
       emailPlaceholder: 'coach@example.com',
-      cta: 'Invite',
-      sending: 'Sending…',
+      cta: 'Create link',
+      sending: 'Creating…',
       pending: 'Pending invitations',
       copyLink: 'Copy invite link',
       linkCopied: 'Link copied!',
       revoke: 'Revoke',
       seatLimitReached: 'You have reached your seat limit for the Team plan. Remove a member or upgrade to invite more people.',
+      shareHint: 'The invitation link is copied automatically. Share it with this email address; no email is sent by TMC Studio yet.',
     },
     roles: {
       owner: 'Owner',
@@ -1846,6 +1846,11 @@ export const en = {
     pl: 'Polski',
     en: 'English',
     es: 'Español',
+  },
+  pageNotFound: {
+    title: 'Page not found',
+    description: 'This address does not exist or has been moved.',
+    cta: 'Open the board',
   },
 };
 

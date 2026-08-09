@@ -467,10 +467,16 @@ export function SettingsModal({
       />
 
       {/* Modal */}
-      <div data-tour="settings-modal" className="relative bg-surface rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[88vh] overflow-hidden border border-border flex flex-col">
+      <div
+        data-tour="settings-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+        className="relative bg-surface rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[88vh] overflow-hidden border border-border flex flex-col"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
-          <h2 className="text-xl font-bold text-text">{t('common.settings')}</h2>
+          <h2 id="settings-modal-title" className="text-xl font-bold text-text">{t('common.settings')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-surface2 rounded-lg transition-colors"

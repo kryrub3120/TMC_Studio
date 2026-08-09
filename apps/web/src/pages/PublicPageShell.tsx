@@ -1,6 +1,7 @@
 import { useEffect, useCallback, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { LanguageSwitcher, useTranslation } from '@tmc/ui';
+import { LocalizedLink as Link } from '../components/LocalizedLink';
 
 export const LEGAL_UPDATED_AT = 'June 16, 2026';
 

@@ -44,6 +44,8 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 | `.github/copilot-instructions.md` | Zasady techniczne i workflow |
 | `.github/agents/` | Definicje agentow |
 | `.github/skills/` | Skille uzywane przez MasterAutopilot |
+| `.github/skills/tmc-growth/` | Kontrolowany workflow SEO, contentu i analityki wzrostu |
+| `docs/GROWTH_ENGINE.md` | Aktualny klaster growth, lejek, eksperyment i bramka publikacji |
 
 ---
 

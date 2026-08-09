@@ -201,9 +201,11 @@ Nie zapisuj surowego toku rozumowania. Zapisuj decyzje, uzasadnienia, zalozenia,
 
 - Dev = lokalne srodowisko deweloperskie.
 - Prod = produkcja z prawdziwymi danymi.
-- NIGDY nie modyfikuj produkcji bez jawnego polecenia i zatwierdzonego planu.
+- Produkcje modyfikuj tylko po jawnym poleceniu wlasciciela w biezacej rozmowie
+  i po przejsciu opisanej w architekturze bramki produkcyjnej.
 - NIGDY nie modyfikuj `.env.production`.
-- NIGDY nie modyfikuj konfiguracji produkcyjnej bez jawnego polecenia.
+- Konfiguracje produkcyjna modyfikuj tylko w zakresie osobno wskazanym przez
+  wlasciciela. Zgoda na deploy nie jest zgoda na zmiane sekretow, bazy ani Stripe.
 
 ---
 

@@ -1,5 +1,6 @@
 import { useTranslation } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
+import { resetCookieConsent } from '../components/CookieConsentBanner';
 import {
   CONTACT_EMAILS,
   LEGAL_UPDATED_AT,
@@ -88,6 +89,13 @@ export function CookiePolicy() {
         </LegalList>
         <h3 className="font-semibold text-text">{t('legal.cookies.manage.impactTitle')}</h3>
         <p><strong>{t('legal.cookies.manage.important')}</strong> {t('legal.cookies.manage.impactBody')}</p>
+        <button
+          type="button"
+          onClick={resetCookieConsent}
+          className="mt-2 rounded-md border border-border bg-surface2 px-4 py-2 font-medium text-text transition-colors hover:border-accent hover:text-accent"
+        >
+          {t('legal.cookies.manage.changeConsent')}
+        </button>
       </LegalSection>
 
       <LegalSection title={t('legal.cookies.duration.title')}>

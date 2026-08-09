@@ -3,13 +3,12 @@
  *
  * Sets <title>, meta description, canonical and Open Graph / Twitter tags on
  * mount and whenever the title/description/path change (e.g. language switch).
- * No external dependency (no react-helmet). For full multilingual SEO with
- * hreflang we would need prerendering or per-locale URLs — see
- * docs/SEO_PERFORMANCE_NOTES.md.
+ * No external dependency (no react-helmet). Static equivalents are emitted by
+ * the prerender build; this hook keeps metadata correct after client navigation.
  */
 import { useEffect } from 'react';
-
-const BASE_URL = 'https://tmcstudio.app';
+import { useTranslation } from '@tmc/ui';
+import { getAlternates, localizePublicPath, SITE_URL, type PublicBasePath } from '../seo/publicSeo';
 
 function setMeta(selector: string, attr: 'name' | 'property', key: string, content: string) {
   let el = document.head.querySelector<HTMLMetaElement>(selector);
@@ -33,8 +32,10 @@ function setLink(rel: string, href: string) {
 
 export function useDocumentMeta(opts: { title: string; description: string; path?: string }) {
   const { title, description, path = '/' } = opts;
+  const { language } = useTranslation();
   useEffect(() => {
-    const url = `${BASE_URL}${path}`;
+    const localizedPath = localizePublicPath(path, language);
+    const url = `${SITE_URL}${localizedPath}`;
     document.title = title;
     setMeta('meta[name="description"]', 'name', 'description', description);
     setMeta('meta[property="og:title"]', 'property', 'og:title', title);
@@ -43,5 +44,14 @@ export function useDocumentMeta(opts: { title: string; description: string; path
     setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
     setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
     setLink('canonical', url);
-  }, [title, description, path]);
+
+    document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((node) => node.remove());
+    for (const [hreflang, href] of getAlternates(path as PublicBasePath)) {
+      const alternate = document.createElement('link');
+      alternate.rel = 'alternate';
+      alternate.hreflang = hreflang;
+      alternate.href = href;
+      document.head.appendChild(alternate);
+    }
+  }, [title, description, path, language]);
 }

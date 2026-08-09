@@ -29,19 +29,27 @@ export const STRIPE_PRICES = {
  * Map Stripe Price IDs to subscription tiers
  * Used by webhook to determine which tier to assign after payment
  */
-export const PRICE_TO_TIER: Record<string, 'pro' | 'team'> = {
-  // Pro plans
-  [STRIPE_PRICES.pro.monthly]: 'pro',
-  [STRIPE_PRICES.pro.yearly]: 'pro',
-  
-  // Team plans
-  [STRIPE_PRICES.team.monthly]: 'team',
-  [STRIPE_PRICES.team.yearly]: 'team',
+export type PaidTier = 'pro' | 'team';
+export type BillingCycle = 'monthly' | 'yearly';
+
+export const PRICE_DETAILS: Record<string, { tier: PaidTier; cycle: BillingCycle }> = {
+  [STRIPE_PRICES.pro.monthly]: { tier: 'pro', cycle: 'monthly' },
+  [STRIPE_PRICES.pro.yearly]: { tier: 'pro', cycle: 'yearly' },
+  [STRIPE_PRICES.team.monthly]: { tier: 'team', cycle: 'monthly' },
+  [STRIPE_PRICES.team.yearly]: { tier: 'team', cycle: 'yearly' },
 };
+
+export const PRICE_TO_TIER: Record<string, PaidTier> = Object.fromEntries(
+  Object.entries(PRICE_DETAILS).map(([priceId, details]) => [priceId, details.tier]),
+) as Record<string, PaidTier>;
 
 /**
  * Get tier from Price ID (with fallback to 'free' for safety)
  */
 export function getTierFromPriceId(priceId: string): 'free' | 'pro' | 'team' {
   return PRICE_TO_TIER[priceId] ?? 'free';
+}
+
+export function getBillingCycleFromPriceId(priceId: string): BillingCycle | null {
+  return PRICE_DETAILS[priceId]?.cycle ?? null;
 }

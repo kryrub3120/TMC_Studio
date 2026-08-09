@@ -12,16 +12,16 @@ Status implementacji warstwy prawnej po sprincie S4. ✅ = wdrożone w kodzie ·
 | `/terms` | 🟡 | Istnieje (`legal.terms`). Przegląd: subskrypcje/odnowienia, ograniczenie odpowiedzialności, prawo właściwe, dyrektywa o treściach cyfrowych. |
 | `/cookies` | 🟡 | Istnieje (`legal.cookies`). Spójne z banerem; uzupełnić realne nazwy/czas życia cookies po podpięciu analityki (S6). |
 | `/refunds` | ✅ | Nowa. Prawo odstąpienia 14 dni + zrzeczenie przy treści cyfrowej + anulowanie + zwroty. Treść do potwierdzenia przez prawnika. |
-| `/legal` (Impressum) | 🟡 | Nowa. **TODO: uzupełnić dane firmy** (nazwa, adres, VAT-UE, osoba odpowiedzialna) — placeholdery `[TODO: ...]`. Link ODR Komisji UE gotowy. |
+| `/legal` (Impressum) | 🟡 | Dane podmiotu, adres, KRS, NIP i REGON są uzupełnione. Wymaga przeglądu prawnika. Usunięto nieaktualny link do zamkniętej platformy ODR. |
 | `/accessibility` | ✅ | Nowa. Deklaracja WCAG 2.1 AA / EAA + kanał zgłoszeń. |
 | Baner cookie (opt-in) | ✅ | `CookieConsentBanner`: równorzędne Akceptuj/Odrzuć, brak pre-zaznaczeń, zapis w `localStorage` (`tmc-cookie-consent`), analityka OFF do zgody. |
 | Checkbox prawa odstąpienia w checkout | 🔴 | Do zrobienia w przepływie Stripe (`STRIPE_TAX_SETUP.md` §4 krok 5) — zgoda na natychmiastowe świadczenie + utrata prawa odstąpienia, zapis w metadanych. |
-| Wycofanie zgody na cookies | 🔴 | Dodać na `/cookies` przycisk „zmień ustawienia cookies" czyszczący zgodę (RODO: wycofanie równie łatwe jak udzielenie). |
+| Wycofanie zgody na cookies | ✅ | `/cookies` ma przycisk zmiany zgody, który usuwa zapis decyzji i ponownie otwiera baner. |
 
 ## Co MUSI zrobić człowiek (nie agent)
 
 1. **Prawnik**: przegląd treści `/privacy`, `/terms`, `/refunds` w 3 językach przed publikacją.
-2. **Dane firmy**: wypełnić placeholdery w `/legal` (Impressum) i numer VAT.
+2. **Dane firmy**: potwierdzić z prawnikiem aktualność danych w `/legal` i sposób prezentacji numeru VAT-UE.
 3. **Procesory danych**: potwierdzić aktualną listę i DPA (Supabase, Netlify, Stripe, Google OAuth).
 4. **Audyt WCAG** (S5): zweryfikować realny stan dostępności stron sprzedażowych.
 

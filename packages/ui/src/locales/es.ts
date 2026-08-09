@@ -76,7 +76,7 @@ export const es: Dictionary = {
         "subtitle": "Team ofrece a cada entrenador su propio espacio de trabajo con facturación compartida — por una fracción del costo de suscripciones Pro separadas.",
         "fivePro": "5 × suscripciones Pro",
         "teamPlan": "Plan Team",
-        "savings": "Ahorra {{amount}}/año",
+        "savings": "Ahorra {{amount}}{{period}}",
         "cta": "Elegir Team"
     }
 },
@@ -734,7 +734,7 @@ export const es: Dictionary = {
         name: 'Team',
         price: '$29',
         period: '/mes',
-        microcopy: 'Pro + invita a tu staff por email',
+        microcopy: 'Pro + invita a tu staff con un enlace seguro',
         features: '5 miembros de equipo|Facturación compartida|Espacios de trabajo individuales|Todo lo de Pro',
         cta: 'Actualizar a Team',
       },
@@ -852,7 +852,7 @@ export const es: Dictionary = {
       unlimitedProjects: { question: '¿Puedo crear proyectos ilimitados?', answer: 'Los proyectos y pasos ilimitados están disponibles en el plan Pro. El plan gratuito permite 3 proyectos con 10 pasos cada uno.', cta: 'Ver planes Pro' },
       manageSubscription: { question: '¿Cómo gestiono mi suscripción?', answer: 'Haz clic en tu avatar en la TopBar y selecciona "Cuenta y facturación". Se abrirá el Portal de Clientes de Stripe donde puedes actualizar métodos de pago, ver facturas o cambiar tu plan.' },
       squadSlots: { question: '¿Cuántos jugadores puedo tener en mi plantilla?', answer: 'El plan gratuito permite hasta 5 jugadores en plantilla. Pro y Club Premium desbloquean hasta 25 jugadores por equipo (100 en total en 4 equipos). Las plazas bloqueadas muestran un candado.', cta: 'Actualizar para más plazas' },
-      addMembers: { question: '¿Cómo añado miembros al equipo?', answer: 'Como Club Admin, abre el panel de Equipo en el Inspector (panel derecho). Haz clic en "Invitar miembro" e introduce su email. Una vez acepten, tendrán acceso a las funciones de Club Premium.', cta: 'Abrir panel de equipo' },
+      addMembers: { question: '¿Cómo añado miembros al equipo?', answer: 'Abre los ajustes de Team, introduce el email y crea un enlace de invitación. Compártelo con esa persona; obtendrá acceso cuando lo acepte con la cuenta indicada.', cta: 'Abrir panel de equipo' },
       manageBilling: { question: '¿Cómo gestiono la facturación de Club Premium?', answer: 'Haz clic en tu avatar → "Cuenta y facturación" para abrir el Portal de Clientes de Stripe. Aquí puedes actualizar métodos de pago, ver facturas y gestionar tu suscripción.', cta: 'Abrir facturación' },
       removeMember: { question: '¿Cómo elimino un miembro del equipo?', answer: 'Abre el panel de Equipo en el Inspector. Busca el miembro que quieres eliminar y haz clic en el icono de papelera junto a su nombre. Confirma para revocar su acceso a Club Premium inmediatamente.' },
       saveFailed: { question: 'Mi proyecto no se guardó. ¿Qué hago?', answer: 'Primero verifica tu conexión a Internet. Si estás online, prueba un guardado manual con ⌘S (Ctrl+S en Windows). El icono de error en la barra de estado es cliqueable — reintenta el guardado automáticamente.', cta: 'Guardado manual' },
@@ -935,7 +935,7 @@ export const es: Dictionary = {
     numberPlaceholder: '#',
     cancel: 'Cancelar',
     dragHint: 'Arrastra un jugador al campo para colocarlo',
-    collapsedSetup: 'Configura tu plantilla en Ajustes →',
+    collapsedSetup: 'Configura tu plantilla en Ajustes o',
     collapsedCount: '{{count}} en plantilla — toca el ojo para mostrar',
   },
   pitchPanel: {
@@ -1491,7 +1491,7 @@ export const es: Dictionary = {
           performance: { label: 'Rendimiento', body: 'Qué tan rápido cargan las páginas' },
           errors: { label: 'Seguimiento de errores', body: 'Identifica problemas técnicos' },
         },
-        analyticsNote: 'Nota: actualmente no usamos cookies analíticas, pero podríamos implementarlas en el futuro.',
+        analyticsNote: 'Con tu consentimiento, usamos Plausible, una analítica centrada en la privacidad, para medir el uso del producto y los errores. No creamos perfiles publicitarios.',
       },
       thirdParty: {
         title: '4. Cookies de terceros',
@@ -1524,6 +1524,7 @@ export const es: Dictionary = {
         impactTitle: '6.2 Impacto de bloquear cookies',
         important: 'Importante:',
         impactBody: 'Si bloqueas cookies esenciales, no podrás iniciar sesión ni usar funciones en la nube. Las cookies de preferencias pueden bloquearse con un impacto mínimo en la funcionalidad.',
+        changeConsent: 'Cambiar el consentimiento de analítica',
       },
       duration: {
         title: '7. Duración de las cookies',
@@ -1566,8 +1567,6 @@ export const es: Dictionary = {
       vatBody: 'NIP/ID fiscal: {{nip}}. Los pagos online son procesados por Stripe.',
       responsibleTitle: 'Responsabilidad sobre contenidos',
       responsibleBody: 'Trabajamos para mantener la información del servicio precisa y actualizada. El contenido creado por usuarios sigue siendo responsabilidad de sus autores.',
-      odrTitle: 'Plataforma ODR',
-      odrBody: 'La Comisión Europea ofrece una plataforma de resolución de litigios online en:',
     },
     accessibility: {
       title: 'Accesibilidad',
@@ -1589,7 +1588,7 @@ export const es: Dictionary = {
     intro: {
       title: 'Cómo funciona',
       step1: '1. Crea tu club y dale un nombre.',
-      step2: '2. Invita a entrenadores y personal por email - se unen como miembros.',
+      step2: '2. Crea un enlace de invitación seguro y compártelo con tu personal.',
       step3: '3. Cada miembro tiene acceso a los proyectos compartidos del club.',
     },
     create: {
@@ -1617,13 +1616,14 @@ export const es: Dictionary = {
     invite: {
       title: 'Invitar',
       emailPlaceholder: 'entrenador@ejemplo.com',
-      cta: 'Invitar',
-      sending: 'Enviando…',
+      cta: 'Crear enlace',
+      sending: 'Creando…',
       pending: 'Invitaciones pendientes',
       copyLink: 'Copiar enlace',
       linkCopied: '¡Enlace copiado!',
       revoke: 'Revocar',
       seatLimitReached: 'Has alcanzado el límite de plazas del plan Team. Elimina un miembro o mejora tu plan para invitar a más personas.',
+      shareHint: 'El enlace se copia automáticamente. Compártelo con este correo; TMC Studio todavía no envía el email.',
     },
     roles: {
       owner: 'Propietario',
@@ -1693,5 +1693,10 @@ export const es: Dictionary = {
     pl: 'Polski',
     en: 'English',
     es: 'Español',
+  },
+  pageNotFound: {
+    title: 'Página no encontrada',
+    description: 'Esta dirección no existe o se ha movido.',
+    cta: 'Abrir la pizarra',
   },
 };

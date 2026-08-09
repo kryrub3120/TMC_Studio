@@ -9,14 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Statyczna strona popup callback (`/auth/popup-callback.html`)** — zachowana dla eksperymentalnej powierzchni popup. Pobiera kod PKCE, przekazuje go do okna głównego i nie ładuje React SPA.
+- **Prerender publicznych stron** — build generuje 24 indeksowalne dokumenty HTML dla EN/PL/ES, współdzieląc istniejące komponenty React.
+- **`tmc-growth` v0.1** — projektowy skill z regułami prawdy produktowej, SEO, contentu, metryk i publikacji oraz wykonywalnym audytem builda.
+- **SEO regression coverage** — testy routingu locale i walidator title, description, canonical, hreflang, H1, języka dokumentu, surowej treści, social image, SPA noindex i 404.
+- **Pierwszy klaster growth** — 6 stron produktowych i 6 edytowalnych szablonów formacji w EN/PL/ES, z wizualnym podglądem i linkowaniem wewnętrznym.
+- **Mierzalne wejścia z contentu** — eventy `content_view` i `content_open_board`; szablony otwierają tablicę z wybraną jedenastką.
 
 ### Changed
 - **Google OAuth na webie** — produkcyjnym domyślnym flow jest `web-redirect` (`VITE_AUTH_GOOGLE_SURFACE=redirect`), a nie popup.
 - **PKCE callback** — `AuthCallbackPage` wymienia jednorazowy `code` przez `exchangeCodeForSession(code)`. Automatyczny `detectSessionInUrl` działa tylko na trasie resetu hasła.
 - **Ładowanie profilu po logowaniu** — `onAuthStateChange` hydratuje profil, preferencje i dane w tle; callback PKCE nie czeka na dodatkowe zapytanie do bazy.
 - **Node.js runtime** — lokalne środowisko, CI i Netlify zostały ujednolicone na Node 22 (`.nvmrc`: `22.15.0`).
+- **Publiczny routing językowy** — EN pozostaje bez prefiksu, PL używa `/pl/`, ES `/es/`; przełącznik języka zachowuje odpowiadającą stronę.
+- **Sitemap i social metadata** — sitemap powstaje z rejestru tras podczas builda, `/download` został usunięty z indeksu, a OG używa PNG 1200×630.
+- **Bundle landing page** — `jsPDF` i encoder GIF pozostają lazy chunkami edytora i nie są preloadowane na publicznym wejściu.
 
 ### Fixed
+- **Healthcheck środowiska Netlify** — `/api/health` rozpoznaje gwarantowany w runtime kanoniczny `URL`, dzięki czemu produkcja nie jest błędnie oznaczana jako development.
+- **Soft 404 i wspólny canonical SPA** — nieznane ścieżki zwracają 404, a każda prerenderowana strona ma własny self-canonical i wzajemny zestaw hreflang.
 - **Google OAuth i COOP** — produkcyjny login nie zależy od `popup.closed` ani komunikacji między oknami, co usuwa zrywanie logowania przez politykę Cross-Origin-Opener-Policy.
 - **Snap-to-grid w dragu: `snapEnabled` respektowane** — `moveElement()` w `@tmc/core` przyjmuje opcjonalny parametr `snap` (domyślnie `true`). Single drag i multi-drag czytają `useUIStore.snapEnabled`. Gdy snap OFF, elementy poruszają się pixel-freely. Dotyczy zawodników, piłki, stref, tekstu, sprzętu oraz strzałek (endpointy + curve) (`board.ts`, `useCanvasEventsController.ts`).
 - **Multi-drag dla grup** — przeciągnięcie dowolnego członka grupy przesuwa wszystkich członków grupy. Działa dla: grup zaznaczonych elementów (selekcja) oraz grup zdefiniowanych w `groups` w store. Strzałki w multi-drag przesuwają też punkt krzywizny (`curveControl`), zachowując kształt łuków (`useCanvasEventsController.ts`, `ArrowNode.tsx`).

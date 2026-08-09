@@ -490,13 +490,13 @@ Ta sama karta                    Google / Supabase
 | Stripe | **TEST mode only** (`pk_test_*` / `sk_test_*`) |
 | Netlify Functions | `netlify dev` → `http://localhost:8888` |
 
-### Production (Netlify) — ⛔ DO NOT MODIFY (agents)
+### Production (Netlify) — deploy tylko po jawnej akceptacji
 
 | Aspect | Configuration |
 |--------|--------------|
 | Build command | `corepack enable && pnpm install --prod=false && pnpm run build` |
 | Publish dir | `apps/web/dist` |
-| Node / pnpm | Node 20 / pnpm 9 |
+| Node / pnpm | Node 22.15.0 / pnpm 9 |
 | Env vars | Set in **Netlify Dashboard** → Site Settings → Environment Variables (NOT in repo) |
 | Supabase (hosted) | `euxauavanukyfofhkrqp` (linked project) |
 | Functions | `netlify/functions/` |
@@ -593,13 +593,25 @@ Enforced by `commitlint.config.js` (`@commitlint/config-conventional`).
 - Branch naming: `feature/<short-kebab-desc>` for new work, `fix/<short-kebab-desc>` for bug fixes.
 
 #### R-PROD — Production Protection
-- ❌ **NEVER generate, run, or suggest commands that modify the production environment.** This includes (non-exhaustive):
-  - `netlify deploy`, `netlify deploy --prod`, any Netlify CLI write/deploy command.
+- ✅ Agent moze wykonac deploy Netlify tylko po jawnym poleceniu wlasciciela w
+  biezacej rozmowie i po spelnieniu bramki produkcyjnej ponizej.
+- ✅ Dozwolona komenda deployu: `netlify deploy --prod --context production`.
+- ❌ Zgoda na deploy Netlify nie obejmuje innych zmian produkcyjnych:
   - `pnpm supabase:push`, `supabase db push`, `supabase link` against the **hosted/remote** Supabase project.
   - Any command using **LIVE** Stripe keys (`pk_live_*` / `sk_live_*`) or production webhook secrets.
   - Editing/printing real secrets, or writing to Netlify Dashboard env vars.
-- ✅ **ALL work and migrations happen LOCALLY ONLY:** `supabase start`, local migrations, Stripe **TEST mode**, `localhost`.
-- If a task seems to require a production action → **STOP and ask the user to perform it manually.**
+- ❌ Nigdy nie wykonuj deployu automatycznie, cyklicznie ani na podstawie
+  domyslnej zgody z poprzedniego zadania.
+
+**Bramka produkcyjna Netlify:**
+
+1. Praca odbywa sie poza `main`.
+2. Build produkcyjny, testy krytyczne i audyt routingu sa zielone.
+3. Agent zna docelowy projekt z `netlify status`.
+4. Build uzywa `--context production`; nie wolno wysylac lokalnego DEV `dist`
+   przez `--no-build`.
+5. Po deployu agent sprawdza statusy HTTP, publiczne meta, `/board`, 404 oraz
+   krytyczny flow objety zmiana.
 
 #### R-MVP — Simplicity First (No Over-Engineering)
 - ✅ Implement the **simplest working solution** that satisfies the requirement.
@@ -669,9 +681,21 @@ Source of truth: this document, `docs/ARCHITECTURE_OVERVIEW.md`, and `docs/IMPLE
 
 ---
 
-## 12. ⚡ Quick Commands (Cheatsheet)
+## 12. Public Web Rendering and SEO
 
-> ✅ = safe for agents (local). ⛔ = production action, requires manual user execution.
+- `/board`, `/auth/*` i `/invite` korzystaja z client-rendered `spa.html` z `noindex,nofollow`.
+- Publiczne strony sa prerenderowane z istniejacych komponentow React przez `entry-server.tsx`; nie istnieje osobny landing w drugim frameworku.
+- `apps/web/src/seo/publicSeo.ts` jest jednym zrodlem tras locale, canonicali, hreflang i manifestu sitemap.
+- EN ma adresy bez prefiksu, PL uzywa `/pl/`, ES `/es/`. Publiczne adresy maja koncowy slash.
+- `apps/web/scripts/prerender.mjs` generuje 60 plikow HTML, `sitemap.xml`, `spa.html` i `404.html` po standardowym buildzie Vite.
+- `apps/web/src/seo/growthContent.ts` zawiera 6 stron produktowych i 6 realnych szablonow formacji w EN/PL/ES.
+- Wejscie z szablonu przez `?source=...&formation=...` laduje preset w store, wysyla event lejka i usuwa parametry z adresu.
+- Netlify zwraca prawdziwy status 404 dla nieznanych adresow zamiast uniwersalnego SPA fallback.
+- Po zmianach uruchom `.github/skills/tmc-growth/scripts/audit-public-pages.mjs apps/web/dist`.
+
+## 13. ⚡ Quick Commands (Cheatsheet)
+
+> ✅ = dozwolone lokalnie. 🔐 = wymaga jawnej zgody wlasciciela i bramki R-PROD. ⛔ = zabronione bez osobnej zgody dotyczacej wskazanej uslugi.
 
 | Command | Purpose | Safe? |
 |---------|---------|-------|
@@ -688,4 +712,4 @@ Source of truth: this document, `docs/ARCHITECTURE_OVERVIEW.md`, and `docs/IMPLE
 | `netlify dev` | Local Netlify + functions (`:8888`) | ✅ |
 | `stripe listen --forward-to localhost:8888/.netlify/functions/stripe-webhook` | Local webhook testing (TEST mode) | ✅ |
 | `pnpm supabase:push` / `supabase db push` | Push migrations to **remote** DB | ⛔ |
-| `netlify deploy --prod` | Deploy to production | ⛔ |
+| `netlify deploy --prod --context production` | Deploy Netlify po bramce R-PROD | 🔐 |

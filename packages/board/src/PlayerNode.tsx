@@ -668,8 +668,10 @@ const PlayerNodeComponent: React.FC<PlayerNodeProps> = ({
         );
         const textX = -pillW / 2 + LBL_PAD_X;
 
+        const shapeBottom = player.shape === 'triangle' ? (r + 2) / 2 : r;
+
         return (
-          <Group y={r + 6} listening={false}>
+          <Group y={shapeBottom + 4} listening={false}>
             <Rect
               x={-pillW / 2}
               y={0}

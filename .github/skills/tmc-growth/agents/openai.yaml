@@ -1,0 +1,4 @@
+interface:
+  display_name: "TMC Growth"
+  short_description: "Audytuje i rozwija SEO oraz growth TMC Studio"
+  default_prompt: "Użyj skilla tmc-growth, aby przygotować bezpieczny, mierzalny krok wzrostu TMC Studio."

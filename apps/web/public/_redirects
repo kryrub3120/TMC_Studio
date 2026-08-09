@@ -1,2 +1,8 @@
-# SPA fallback — all routes serve index.html
-/*    /index.html   200
+# Only interactive application routes use the noindex SPA shell.
+/app                  /spa.html   200
+/board                /spa.html   200
+/board/*              /spa.html   200
+/invite               /spa.html   200
+/auth/*               /spa.html   200
+/download             /board      301
+/*                    /404.html   404

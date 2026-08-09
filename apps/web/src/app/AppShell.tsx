@@ -20,6 +20,41 @@ import { useBillingController, useProjectsController, useSettingsController, use
 import { createOrganization as createOrganizationApi } from '../lib/organizations';
 import { BoardPage } from './board/BoardPage';
 import { ModalOrchestrator } from './orchestrators/ModalOrchestrator';
+import { getFormationIds } from '@tmc/presets';
+
+const PENDING_UPGRADE_KEY = 'tmc-pending-upgrade';
+
+type PendingUpgrade = {
+  plan: 'pro' | 'team';
+  cycle: 'monthly' | 'yearly';
+};
+
+function savePendingUpgrade(pending: PendingUpgrade): void {
+  sessionStorage.setItem(PENDING_UPGRADE_KEY, JSON.stringify(pending));
+}
+
+function takePendingUpgrade(): PendingUpgrade | null {
+  const raw = sessionStorage.getItem(PENDING_UPGRADE_KEY);
+  if (!raw) return null;
+
+  sessionStorage.removeItem(PENDING_UPGRADE_KEY);
+  try {
+    const parsed = JSON.parse(raw) as Partial<PendingUpgrade>;
+    if (
+      (parsed.plan === 'pro' || parsed.plan === 'team') &&
+      (parsed.cycle === 'monthly' || parsed.cycle === 'yearly')
+    ) {
+      return parsed as PendingUpgrade;
+    }
+  } catch {
+    // Ignore stale or malformed session data.
+  }
+  return null;
+}
+
+function clearPendingUpgrade(): void {
+  sessionStorage.removeItem(PENDING_UPGRADE_KEY);
+}
 
 function GoogleAuthStatus({ title, description }: { title: string; description: string }) {
   return (
@@ -155,6 +190,22 @@ export function AppShell() {
 
   // Controllers
   const billingController = useBillingController();
+  const { openPricingModal } = billingController;
+
+  useEffect(() => {
+    if (!authIsAuthenticated) return;
+
+    const pending = takePendingUpgrade();
+    if (!pending) return;
+
+    openPricingModal(pending.cycle);
+    track(EVENTS.PLAN_SELECTED, {
+      plan: pending.plan,
+      cycle: pending.cycle,
+      isAuthenticated: true,
+      resumedAfterAuth: true,
+    });
+  }, [authIsAuthenticated, openPricingModal]);
 
   // S6: editor mount — start time-to-first-export timer + funnel event.
   useEffect(() => {
@@ -212,6 +263,7 @@ export function AppShell() {
       }
     },
     onCancelled: () => {
+      track(EVENTS.CHECKOUT_CANCELLED);
       showToast(t('appToast.checkoutCancelled'));
     },
   });
@@ -219,16 +271,32 @@ export function AppShell() {
   // Purchase intent from the public /pricing page. `/board?upgrade=pro|team&cycle=yearly`
   // opens the pricing modal directly so visitors land on checkout, not a
   // blank board. Runs once on mount, then strips the param from the URL.
-  const [pricingUpgradeCycle, setPricingUpgradeCycle] = useState<'monthly' | 'yearly'>('monthly');
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const upgrade = params.get('upgrade');
     const cycle = params.get('cycle');
+    const source = params.get('source');
+    const formation = params.get('formation');
+
+    if (source) {
+      if (formation && getFormationIds().includes(formation)) {
+        useBoardStore.getState().applyFormation(formation, 'home');
+      }
+      track(EVENTS.CONTENT_OPEN_BOARD, {
+        source,
+        formation: formation && getFormationIds().includes(formation) ? formation : undefined,
+      });
+      params.delete('source');
+      params.delete('formation');
+    }
+
     if (upgrade === 'pro' || upgrade === 'team') {
-      setPricingUpgradeCycle(cycle === 'yearly' ? 'yearly' : 'monthly');
-      billingController.openPricingModal();
+      billingController.openPricingModal(cycle === 'yearly' ? 'yearly' : 'monthly');
       params.delete('upgrade');
       params.delete('cycle');
+    }
+
+    if (source || upgrade === 'pro' || upgrade === 'team') {
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
@@ -368,6 +436,7 @@ export function AppShell() {
         authModalOpen={authModalOpen}
         onCloseAuthModal={() => {
           setAuthModalOpen(false);
+          clearPendingUpgrade();
           clearAuthError();
         }}
         onSignIn={async (email, password) => {
@@ -404,11 +473,28 @@ export function AppShell() {
         pricingModalOpen={billingController.pricingModalOpen}
         onClosePricingModal={() => billingController.closePricingModal()}
         onOpenAuthModal={() => setAuthModalOpen(true)}
+        onAuthRequiredForPlan={(plan, cycle) => {
+          if (plan === 'pro' || plan === 'team') {
+            savePendingUpgrade({ plan, cycle });
+          } else {
+            clearPendingUpgrade();
+          }
+          setAuthModalOpen(true);
+        }}
         authIsPro={authIsPro}
         authIsAuthenticated={authIsAuthenticated}
         authUser={authUser}
         authAccessToken={authAccessToken}
-        pricingInitialCycle={pricingUpgradeCycle}
+        pricingInitialCycle={billingController.pricingCycle}
+        onPlanSelected={(plan, cycle, isAuthenticated) => {
+          track(EVENTS.PLAN_SELECTED, { plan, cycle, isAuthenticated });
+        }}
+        onCheckoutStarted={(plan, cycle) => {
+          track(EVENTS.CHECKOUT_STARTED, { plan, cycle });
+        }}
+        onCheckoutFailed={(plan, cycle) => {
+          track(EVENTS.CHECKOUT_FAILED, { plan, cycle });
+        }}
 
         // Limit Reached Modal
         limitReachedModalOpen={limitReachedModalOpen}

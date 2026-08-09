@@ -7,7 +7,7 @@
  * the app produces — no placeholder graphics.
  */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { LocalizedLink as Link } from '../components/LocalizedLink';
 import { useTranslation, LanguageSwitcher, DISPLAY_PRICES } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
@@ -324,15 +324,14 @@ function Pillar({ icon, title, desc }: { icon: string; title: string; desc: stri
 /* ---------- Main page ---------- */
 
 export function LandingPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   usePublicDarkTheme();
   useDocumentMeta({ title: t('seo.landing.title'), description: t('seo.landing.description'), path: '/' });
   useEffect(() => { track(EVENTS.LANDING_VIEW); }, []);
 
   const [openFaq, setOpenFaq] = useState<string | null>(null);
 
-  useEffect(() => {
-    const faqData = {
+  const structuredData = {
       '@context': 'https://schema.org',
       '@graph': [
         {
@@ -350,7 +349,7 @@ export function LandingPage() {
             priceCurrency: 'USD',
           },
           description: t('seo.landing.description'),
-          url: 'https://tmcstudio.app/',
+          url: language === 'en' ? 'https://tmcstudio.app/' : `https://tmcstudio.app/${language}/`,
         },
         {
           '@type': 'FAQPage',
@@ -361,14 +360,7 @@ export function LandingPage() {
           })),
         },
       ],
-    };
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.id = 'tmc-structured-data';
-    script.textContent = JSON.stringify(faqData);
-    document.head.appendChild(script);
-    return () => { document.head.querySelector('#tmc-structured-data')?.remove(); };
-  }, [t]);
+  };
 
   const CtaPrimary = () => (
     <Link to="/board" className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-6 py-3 text-base font-semibold text-bg transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20">
@@ -384,6 +376,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-bg font-sans text-text">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-modal focus:rounded focus:bg-surface focus:px-3 focus:py-2">
         {t('landing.hero.ctaPrimary')}
       </a>

@@ -2,13 +2,13 @@
  * E2E: Pricing & Checkout flow.
  *
  * HARD ASSERTIONS:
- * - Modal [role="dialog"] MUST be visible after /app?upgrade=pro&cycle=yearly
- * - Modal MUST display yearly price (/rok, /yr, or $9$ or similar yearly indicator)
+ * - Modal [role="dialog"] MUST be visible after /board?upgrade=pro&cycle=yearly
+ * - Modal MUST display the exact yearly Pro price
  * - Public pricing page renders with plan matrix
  * - No soft-guards: critical assertions never under `if (visible)`
  */
 
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Pricing & Checkout Flow', () => {
   test('public pricing page renders with plan cards', async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe('Pricing & Checkout Flow', () => {
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
   });
 
-  test('pricing page has CTA that links to /app', async ({ page }) => {
+  test('pricing page has paid CTA that preserves plan and billing cycle', async ({ page }) => {
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
@@ -37,14 +37,45 @@ test.describe('Pricing & Checkout Flow', () => {
       await page.waitForTimeout(500);
     }
 
-    const proCta = page.locator('a[href*="/app"]').first();
+    await page.getByRole('button', { name: /yearly|rocznie/i }).click();
+    const proCta = page.locator('a[href="/board?upgrade=pro&cycle=yearly"]');
     await expect(proCta).toBeVisible({ timeout: 5000 });
-    const href = await proCta.getAttribute('href');
-    expect(href).toContain('/app');
   });
 
-  test('/app?upgrade=pro&cycle=yearly opens pricing modal with yearly price', async ({ page }) => {
-    await page.goto('/app?upgrade=pro&cycle=yearly');
+  test('Team savings use the selected billing period', async ({ page }) => {
+    await page.goto('/pricing');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText(/Save \$16\/mo|Oszczędzasz \$16\/mies|Ahorra \$16\/mes/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /yearly|rocznie|anual/i }).click();
+    await expect(page.getByText(/Save \$160\/yr|Oszczędzasz \$160\/rok|Ahorra \$160\/año/i)).toBeVisible();
+  });
+
+  test('legal notice does not advertise the discontinued ODR platform', async ({ page }) => {
+    await page.goto('/legal');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText(/ODR platform|Platforma ODR|Plataforma ODR/i)).toHaveCount(0);
+    await expect(page.locator('a[href*="ec.europa.eu/consumers/odr"]')).toHaveCount(0);
+  });
+
+  test('cookie consent can be withdrawn from the cookie policy', async ({ page }) => {
+    await page.goto('/cookies');
+    await page.waitForLoadState('networkidle');
+
+    const accept = page.getByRole('button', { name: /Accept all|Akceptuj wszystkie|Aceptar todas/i });
+    if (await accept.isVisible()) await accept.click();
+
+    await page.getByRole('button', {
+      name: /Change analytics consent|Zmień zgodę na analitykę|Cambiar el consentimiento/i,
+    }).click();
+
+    await expect(page.getByRole('region', { name: /Cookie consent|Zgoda na cookies|Consentimiento/i })).toBeVisible();
+  });
+
+  test('/board?upgrade=pro&cycle=yearly opens pricing modal with yearly price', async ({ page }) => {
+    await page.goto('/board?upgrade=pro&cycle=yearly');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -61,26 +92,17 @@ test.describe('Pricing & Checkout Flow', () => {
       await skipBtn.click({ force: true }).catch(() => {});
       await page.waitForTimeout(500);
     }
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog).toContainText('$90');
+    await expect(dialog).toContainText(/\/yr|\/rok/i);
 
-    // HARD ASSERT: pricing modal renders with heading including "Choose" / "Wybierz"
-    // PricingModal from @tmc/ui uses h2 + "fixed inset-0 z-50" wrapper (no role="dialog")
-    await expect(page.locator('#root')).toContainText(/choose|wybierz/i, { timeout: 10000 });
+    await dialog.getByRole('button', { name: /Upgrade to Pro|Przejdź na Pro|Mejorar a Pro/i }).click();
+    await expect(page.getByRole('heading', { name: /Continue for free|Kontynuuj za darmo|Continuar gratis/i })).toBeVisible();
+    await expect.poll(async () => page.evaluate(() => sessionStorage.getItem('tmc-pending-upgrade'))).toContain('"plan":"pro"');
+    await expect.poll(async () => page.evaluate(() => sessionStorage.getItem('tmc-pending-upgrade'))).toContain('"cycle":"yearly"');
 
-    // HARD ASSERT: yearly cycle is shown — page must contain yearly price signal
-    const bodyText = await page.locator('body').innerText();
-    const hasYearlyIndicator =
-      bodyText.includes('/yr') ||
-      bodyText.includes('yearly') ||
-      bodyText.includes('Yearly') ||
-      bodyText.includes('Annual') ||
-      bodyText.includes('annual') ||
-      bodyText.includes('Save');
-
-    expect(hasYearlyIndicator).toBe(true);
-
-    // Close the modal
+    // Close auth and return to the board.
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
 

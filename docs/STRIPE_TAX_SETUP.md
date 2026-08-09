@@ -1,6 +1,6 @@
 # TMC Studio — Sprzedaż międzynarodowa: analiza krajów i konfiguracja Stripe
 
-_Utworzono: 2026-06-15 · Status: instrukcja wdrożeniowa dla agenta · Decyzja: Stripe + Stripe Tax (nie MoR)_
+_Utworzono: 2026-06-15 · Aktualizacja: 2026-08-06 · Status: integracja Checkout gotowa, konfiguracja Dashboard i podatkowa oczekuje na potwierdzenie · Decyzja: Stripe + Stripe Tax (nie MoR)_
 
 > **To nie jest porada podatkowa.** Konfigurację techniczną może wykonać agent, ale **rejestrację VAT OSS, progi i deklaracje musi potwierdzić księgowy/doradca podatkowy.** Stripe Tax *liczy i pobiera* podatek oraz przygotowuje dane do deklaracji — ale **deklaracje składamy my**.
 
@@ -126,11 +126,12 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 4. Plan **Free** i **Guest** nie mają ceny w Stripe — to logika entitlements w aplikacji.
 
 ### Krok 5 — Checkout / Billing
-1. Włącz **automatic tax** w Checkout/Payment Links/Billing.
-2. Włącz **wymóg adresu rozliczeniowego** (billing address) — bez niego Stripe nie policzy VAT.
-3. Włącz **collect Tax ID** → walidacja VAT-UE (VIES) → automatyczny reverse charge dla B2B.
-4. Włącz **Customer Portal** (Settings → Billing → Customer portal): anulowanie, zmiana planu, pobieranie faktur — wspiera „łatwe anulowanie" wymagane przez UE.
-5. Dodaj **pole zgody konsumenta na natychmiastowe świadczenie + utratę prawa odstąpienia** (custom field / checkbox w Checkout lub na własnej stronie checkout przed redirectem) — wymóg prawa odstąpienia (patrz `SITE_ARCHITECTURE.md` §4.4). Zapisz zgodę w metadanych transakcji.
+1. [x] Integracja Checkout wysyła `automatic_tax.enabled = true`.
+2. [x] Integracja Checkout wymaga pełnego adresu rozliczeniowego.
+3. [x] Integracja Checkout włącza `tax_id_collection`; dla istniejącego Customer zapisuje nazwę i adres.
+4. [ ] Potwierdź w Stripe Dashboard aktywację Stripe Tax, origin, kategorię produktu i rzeczywiste rejestracje podatkowe.
+5. Włącz **Customer Portal** (Settings → Billing → Customer portal): anulowanie, zmiana planu, pobieranie faktur — wspiera „łatwe anulowanie" wymagane przez UE.
+6. Dodaj **pole zgody konsumenta na natychmiastowe świadczenie + utratę prawa odstąpienia** (custom field / checkbox w Checkout lub na własnej stronie checkout przed redirectem) — wymóg prawa odstąpienia (patrz `SITE_ARCHITECTURE.md` §4.4). Zapisz zgodę w metadanych transakcji.
 
 ### Krok 6 — Faktury (Invoicing)
 1. Włącz **automatyczne faktury** dla subskrypcji.

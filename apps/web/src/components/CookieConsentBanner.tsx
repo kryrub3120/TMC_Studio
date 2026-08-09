@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from '@tmc/ui';
 
 const STORAGE_KEY = 'tmc-cookie-consent';
+const RESET_EVENT = 'tmc-cookie-consent-reset';
 
 export type CookieConsent = { analytics: boolean; ts: string };
 
@@ -22,12 +23,25 @@ export function getCookieConsent(): CookieConsent | null {
   }
 }
 
+export function resetCookieConsent(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore storage errors */
+  }
+  window.dispatchEvent(new Event(RESET_EVENT));
+}
+
 export function CookieConsentBanner() {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (getCookieConsent() === null) setVisible(true);
+
+    const showBanner = () => setVisible(true);
+    window.addEventListener(RESET_EVENT, showBanner);
+    return () => window.removeEventListener(RESET_EVENT, showBanner);
   }, []);
 
   const decide = (analytics: boolean) => {

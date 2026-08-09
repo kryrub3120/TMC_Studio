@@ -17,7 +17,11 @@ import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from './_rateLimit';
 import { getCorsHeaders, handlePreflight } from './_cors';
 import { verifyAuth, AuthError } from './_auth';
-import { STRIPE_PRICES, getTierFromPriceId } from './_stripeConfig';
+import {
+  STRIPE_PRICES,
+  getBillingCycleFromPriceId,
+  getTierFromPriceId,
+} from './_stripeConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-12-15.clover',
@@ -187,7 +191,14 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
 
     // ── Determine tier from priceId ──────────────────────────────
     const tier = getTierFromPriceId(priceId);
-    const billingCycle = priceId.includes('yearly') ? 'yearly' : 'monthly';
+    const billingCycle = getBillingCycleFromPriceId(priceId);
+    if (!billingCycle) {
+      return {
+        statusCode: 400,
+        ...corsHeaders,
+        body: JSON.stringify({ error: 'Invalid price ID' }),
+      };
+    }
 
     // ── Build session params ─────────────────────────────────────
     // NOTE: client_reference_id is set from AUTH, not from body.
@@ -204,12 +215,20 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       success_url: successUrl,
       cancel_url: cancelUrl,
       allow_promotion_codes: true,
-      billing_address_collection: 'auto',
+      automatic_tax: { enabled: true },
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
       // CRITICAL: client_reference_id = auth user ID (for webhook)
       client_reference_id: authUser.id,
       // Use existing Stripe customer if available
       ...(profile?.stripe_customer_id
-        ? { customer: profile.stripe_customer_id }
+        ? {
+            customer: profile.stripe_customer_id,
+            customer_update: {
+              address: 'auto',
+              name: 'auto',
+            },
+          }
         : { customer_email: authUser.email || undefined }),
       subscription_data: {
         metadata: {

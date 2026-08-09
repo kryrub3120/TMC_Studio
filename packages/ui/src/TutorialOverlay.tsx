@@ -580,6 +580,18 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
   return (
     <div className="fixed inset-0 z-tutorial pointer-events-none">
+      <button
+        type="button"
+        onClick={handleSkip}
+        data-testid="tutorial-skip"
+        className="pointer-events-auto absolute right-4 top-4 z-10 flex items-center gap-2 rounded-md border border-white/20 bg-surface px-3 py-2 text-sm font-semibold text-text shadow-xl transition-colors hover:border-accent hover:bg-surface2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        aria-label={t('tutorial.skip')}
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+        {t('tutorial.skip')}
+      </button>
       {targetRect ? (
         <>
           {/* Scrim with a punched-out highlight + glowing accent ring */}
@@ -651,17 +663,10 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
                   {t(`${stepKey}.eyebrow`)}
                 </div>
-                <div className="mt-1 text-[11px] font-medium text-muted">
-                  {t('tutorial.step', { current: currentStep.id, total: steps.length })}
-                </div>
               </div>
-              <button
-                onClick={handleSkip}
-                className="rounded-md px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:bg-surface2 hover:text-text"
-                aria-label={t('tutorial.skip')}
-              >
-                {t('tutorial.skip')}
-              </button>
+              <span className="text-xs font-medium text-muted">
+                {t('tutorial.step', { current: currentStep.id, total: steps.length })}
+              </span>
             </div>
             <div className="flex gap-1">
               {steps.map((s, idx) => (

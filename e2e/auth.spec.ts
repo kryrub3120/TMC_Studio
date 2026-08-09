@@ -9,10 +9,10 @@
  * NOTE: Uses force:true clicks because modals/overlays may intercept clicks.
  */
 
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Authentication — Dev Login Flow', () => {
-  test('OAuth popup callback without opener never renders the app shell', async ({ page }) => {
+  test('OAuth callback error is shown and lets the user return to the app', async ({ page }) => {
     await page.addInitScript(() => {
       window.name = 'tmc-google-auth';
       window.localStorage.setItem('tmc-language', 'en');
@@ -22,10 +22,12 @@ test.describe('Authentication — Dev Login Flow', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1200);
 
-    await expect(page).not.toHaveURL(/\/board/);
+    await expect(page).toHaveURL(/\/auth\/callback/);
     await expect(page.getByText('Login could not finish')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: 'Close window' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign In' })).toHaveCount(0);
+    await expect(page.getByText('Simulated')).toBeVisible();
+    await page.getByRole('button', { name: 'Wróć do aplikacji' }).click();
+    await expect(page).toHaveURL(/\/board$/);
+    await expect(page.locator('#root')).toBeVisible();
   });
 
   test('guest can see the app without authentication', async ({ page }) => {

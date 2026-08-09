@@ -117,8 +117,15 @@ export function useOrganization(): OrganizationPanelProps {
 
   const handleInvite = useCallback(async (email: string) => {
     if (!organization) throw new Error('No organization');
-    await inviteMemberApi(organization.id, email);
+    const invitation = await inviteMemberApi(organization.id, email);
     await refresh();
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: 'member' as const,
+      token: invitation.token,
+      status: invitation.status,
+    };
   }, [organization, refresh]);
 
   const handleRevokeInvitation = useCallback(async (invitationId: string) => {

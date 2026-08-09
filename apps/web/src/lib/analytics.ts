@@ -25,9 +25,18 @@ export const EVENTS = {
   FIRST_EXPORT: 'first_export',
   EXPORT: 'export',
   SIGNUP: 'signup',
+  AUTH_SUCCESS: 'auth_success',
   LIMIT_HIT: 'limit_hit',
   PRICING_VIEW: 'pricing_view',
+  PLAN_SELECTED: 'plan_selected',
+  CHECKOUT_STARTED: 'checkout_started',
+  CHECKOUT_FAILED: 'checkout_failed',
+  CHECKOUT_CANCELLED: 'checkout_cancelled',
+  BILLING_PORTAL_OPENED: 'billing_portal_opened',
+  BILLING_PORTAL_FAILED: 'billing_portal_failed',
   UPGRADE: 'upgrade',
+  CONTENT_VIEW: 'content_view',
+  CONTENT_OPEN_BOARD: 'content_open_board',
 } as const;
 
 type ExportType = 'png' | 'jpg' | 'gif' | 'pdf' | 'svg';

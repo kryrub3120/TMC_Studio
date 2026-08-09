@@ -76,7 +76,7 @@ export const pl: Dictionary = {
         "subtitle": "Team daje każdemu trenerowi osobny obszar roboczy ze wspólnymi fakturami — za ułamek kosztu osobnych subskrypcji Pro.",
         "fivePro": "5 × subskrypcji Pro",
         "teamPlan": "Plan Team",
-        "savings": "Oszczędzasz {{amount}}/rok",
+        "savings": "Oszczędzasz {{amount}}{{period}}",
         "cta": "Wybierz Team"
     }
 },
@@ -734,7 +734,7 @@ export const pl: Dictionary = {
         name: 'Team',
         price: '$29',
         period: '/miesiąc',
-        microcopy: 'Pro + zaproś sztab przez email',
+        microcopy: 'Pro + zaproś sztab bezpiecznym linkiem',
         features: '5 członków zespołu|Wspólne rozliczenie|Indywidualne przestrzenie pracy|Wszystko z Pro',
         cta: 'Przejdź na Team',
       },
@@ -852,7 +852,7 @@ export const pl: Dictionary = {
       unlimitedProjects: { question: 'Czy mogę tworzyć nielimitowane projekty?', answer: 'Nielimitowane projekty i kroki są dostępne w planie Pro. Darmowy plan pozwala na 3 projekty po 10 kroków każdy.', cta: 'Zobacz plany Pro' },
       manageSubscription: { question: 'Jak zarządzać subskrypcją?', answer: 'Kliknij swój awatar w TopBar i wybierz "Konto i płatności". Otworzy się Stripe Customer Portal, gdzie możesz zaktualizować metodę płatności, zobaczyć faktury lub zmienić plan.' },
       squadSlots: { question: 'Ilu zawodników mogę mieć w kadrze?', answer: 'Darmowy plan pozwala na 5 zawodników w kadrze. Pro i Club Premium odblokowują do 25 zawodników na drużynę (100 łącznie w 4 drużynach). Zablokowane sloty mają ikonę kłódki.', cta: 'Przejdź na wyższy plan' },
-      addMembers: { question: 'Jak dodać członków drużyny?', answer: 'Jako Club Admin otwórz panel Drużyny w Inspektorze (prawy panel). Kliknij "Zaproś członka" i wpisz jego email. Po zaakceptowaniu zyska dostęp do funkcji Club Premium.', cta: 'Otwórz panel drużyny' },
+      addMembers: { question: 'Jak dodać członków drużyny?', answer: 'Otwórz ustawienia Team, wpisz email członka i utwórz link zaproszenia. Udostępnij mu link; dostęp otrzyma po zaakceptowaniu zaproszenia na wskazanym koncie.', cta: 'Otwórz panel drużyny' },
       manageBilling: { question: 'Jak zarządzać płatnościami Club Premium?', answer: 'Kliknij awatar → "Konto i płatności", aby otworzyć Stripe Customer Portal. Możesz tam zaktualizować metodę płatności, zobaczyć faktury i zarządzać subskrypcją Club Premium.', cta: 'Otwórz płatności' },
       removeMember: { question: 'Jak usunąć członka drużyny?', answer: 'Otwórz panel Drużyny w Inspektorze. Znajdź członka, którego chcesz usunąć, i kliknij ikonę kosza obok jego nazwy. Potwierdź, aby natychmiast cofnąć jego dostęp do Club Premium.' },
       saveFailed: { question: 'Projekt się nie zapisał. Co robić?', answer: 'Najpierw sprawdź połączenie z internetem. Jeśli jesteś online, spróbuj ręcznie zapisać ⌘S (Ctrl+S w Windows). Ikona błędu w pasku statusu jest klikalna — ponawia próbę zapisu automatycznie.', cta: 'Zapisz ręcznie' },
@@ -935,7 +935,7 @@ export const pl: Dictionary = {
     numberPlaceholder: '#',
     cancel: 'Anuluj',
     dragHint: 'Przeciągnij zawodnika na boisko, aby go ustawić',
-    collapsedSetup: 'Skonfiguruj kadrę w Ustawieniach →',
+    collapsedSetup: 'Skonfiguruj kadrę w Ustawieniach albo',
     collapsedCount: '{{count}} w kadrze — kliknij oko, aby pokazać',
   },
   pitchPanel: {
@@ -1491,7 +1491,7 @@ export const pl: Dictionary = {
           performance: { label: 'Wydajność', body: 'Jak szybko ładują się strony' },
           errors: { label: 'Śledzenie błędów', body: 'Identyfikuje problemy techniczne' },
         },
-        analyticsNote: 'Uwaga: obecnie nie używamy analitycznych plików cookie, ale możemy wdrożyć je w przyszłości.',
+        analyticsNote: 'Za Twoją zgodą używamy dbającej o prywatność analityki Plausible do pomiaru użycia produktu i błędów. Nie tworzymy profili reklamowych.',
       },
       thirdParty: {
         title: '4. Pliki cookie stron trzecich',
@@ -1524,6 +1524,7 @@ export const pl: Dictionary = {
         impactTitle: '6.2 Skutki blokowania plików cookie',
         important: 'Ważne:',
         impactBody: 'Jeśli zablokujesz niezbędne pliki cookie, nie będzie można się zalogować ani korzystać z funkcji chmurowych. Pliki cookie preferencji można blokować z minimalnym wpływem na działanie aplikacji.',
+        changeConsent: 'Zmień zgodę na analitykę',
       },
       duration: {
         title: '7. Czas przechowywania plików cookie',
@@ -1566,8 +1567,6 @@ export const pl: Dictionary = {
       vatBody: 'Numer NIP: {{nip}}. Płatności online są przetwarzane przez Stripe.',
       responsibleTitle: 'Odpowiedzialność za treści',
       responsibleBody: 'Dokładamy starań, aby informacje w serwisie były aktualne i rzetelne. Treści tworzone przez użytkowników pozostają odpowiedzialnością ich autorów.',
-      odrTitle: 'Platforma ODR',
-      odrBody: 'Komisja Europejska udostępnia platformę internetowego rozstrzygania sporów pod adresem:',
     },
     accessibility: {
       title: 'Dostępność',
@@ -1589,7 +1588,7 @@ export const pl: Dictionary = {
     intro: {
       title: 'Jak to działa',
       step1: '1. Utwórz swój klub i nadaj mu nazwę.',
-      step2: '2. Zaproś trenerów i sztab przez email - dołączą jako członkowie.',
+      step2: '2. Utwórz bezpieczny link zaproszenia i udostępnij go członkowi sztabu.',
       step3: '3. Każdy członek ma dostęp do wspólnych projektów klubu.',
     },
     create: {
@@ -1617,13 +1616,14 @@ export const pl: Dictionary = {
     invite: {
       title: 'Zaproszenia',
       emailPlaceholder: 'trener@przyklad.pl',
-      cta: 'Zaproś',
-      sending: 'Wysyłanie…',
+      cta: 'Utwórz link',
+      sending: 'Tworzenie…',
       pending: 'Oczekujące zaproszenia',
       copyLink: 'Skopiuj link',
       linkCopied: 'Link skopiowany!',
       revoke: 'Anuluj',
       seatLimitReached: 'Osiągnięto limit miejsc w planie Team. Usuń członka albo zwiększ plan, aby zaprosić kolejne osoby.',
+      shareHint: 'Link zaproszenia skopiuje się automatycznie. Wyślij go na podany adres; TMC Studio nie wysyła jeszcze maila.',
     },
     roles: {
       owner: 'Właściciel',
@@ -1693,5 +1693,10 @@ export const pl: Dictionary = {
     pl: 'Polski',
     en: 'English',
     es: 'Español',
+  },
+  pageNotFound: {
+    title: 'Nie znaleziono strony',
+    description: 'Ten adres nie istnieje albo został przeniesiony.',
+    cta: 'Otwórz tablicę',
   },
 };

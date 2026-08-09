@@ -58,6 +58,7 @@ interface CanvasEventsController {
   handleStageMouseDown: (pos: Position, clickedOnInteractive: boolean) => void;
   handleStageMouseMove: (pos: Position) => void;
   handleStageMouseUp: () => void;
+  cancelMarquee: () => void;
 }
 
 /**
@@ -87,6 +88,8 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
   // Marquee selection state
   const [marqueeStart, setMarqueeStart] = useState<Position | null>(null);
   const [marqueeEnd, setMarqueeEnd] = useState<Position | null>(null);
+  const marqueeStartRef = useRef<Position | null>(null);
+  const marqueeEndRef = useRef<Position | null>(null);
   
   // Multi-drag state
   const multiDragRef = useRef<{
@@ -270,6 +273,8 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
     (pos: Position, clickedOnInteractive: boolean) => {
       // Only start marquee if no tool active and clicked on empty space
       if (!activeTool && !clickedOnInteractive) {
+        marqueeStartRef.current = pos;
+        marqueeEndRef.current = pos;
         setMarqueeStart(pos);
         setMarqueeEnd(pos);
       }
@@ -287,12 +292,20 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
       useBoardStore.getState().setCursorPosition(pos);
 
       // Update marquee selection
-      if (marqueeStart) {
+      if (marqueeStartRef.current) {
+        marqueeEndRef.current = pos;
         setMarqueeEnd(pos);
       }
     },
-    [marqueeStart]
+    []
   );
+
+  const cancelMarquee = useCallback(() => {
+    marqueeStartRef.current = null;
+    marqueeEndRef.current = null;
+    setMarqueeStart(null);
+    setMarqueeEnd(null);
+  }, []);
 
   /**
    * Handle stage mouse up
@@ -302,13 +315,14 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
   const handleStageMouseUp = useCallback(
     () => {
       // Finish marquee selection
-      if (marqueeStart && marqueeEnd) {
-        cmdRegistry.board.selection.selectInRect(marqueeStart, marqueeEnd);
-        setMarqueeStart(null);
-        setMarqueeEnd(null);
+      const start = marqueeStartRef.current;
+      const end = marqueeEndRef.current;
+      if (start && end) {
+        cmdRegistry.board.selection.selectInRect(start, end);
       }
+      cancelMarquee();
     },
-    [marqueeStart, marqueeEnd, cmdRegistry]
+    [cancelMarquee, cmdRegistry]
   );
 
   return {
@@ -321,5 +335,6 @@ export function useCanvasEventsController(options: UseCanvasEventsOptions): Canv
     handleStageMouseDown,
     handleStageMouseMove,
     handleStageMouseUp,
+    cancelMarquee,
   };
 }

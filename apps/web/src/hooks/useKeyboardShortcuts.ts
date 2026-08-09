@@ -715,10 +715,13 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
           
           if (isPrintFriendly) {
             // Toggle back to grass theme AND disable print mode
-            const grassTheme = PITCH_THEMES['grass'];
+            const { primaryColor, stripeColor, lineColor, showStripes } = PITCH_THEMES.grass;
             updatePitchSettings({
               theme: 'grass',
-              ...grassTheme,
+              primaryColor,
+              stripeColor,
+              lineColor,
+              showStripes,
             });
             if (isPrintMode) {
               togglePrintMode();

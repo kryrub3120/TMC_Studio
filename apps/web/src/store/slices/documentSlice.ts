@@ -711,7 +711,8 @@ export const createDocumentSlice: StateCreator<
       state.saveDocument();
       
       let cloudSuccess = true;
-      if (isSupabaseEnabled()) {
+      const { useAuthStore } = await import('../useAuthStore');
+      if (isSupabaseEnabled() && useAuthStore.getState().isAuthenticated) {
         try {
           const ok = await state.saveToCloud();
           if (!ok) {
@@ -770,7 +771,8 @@ export const createDocumentSlice: StateCreator<
       state.saveDocument();
       
       let cloudSuccess = true;
-      if (isSupabaseEnabled()) {
+      const { useAuthStore } = await import('../useAuthStore');
+      if (isSupabaseEnabled() && useAuthStore.getState().isAuthenticated) {
         try {
           const ok = await state.saveToCloud();
           if (!ok) {

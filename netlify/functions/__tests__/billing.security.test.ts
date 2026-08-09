@@ -415,6 +415,7 @@ describe('Checkout Security (create-checkout.ts)', () => {
     expect(callArgs.client_reference_id).not.toBe('user-hacker');
     expect(callArgs.customer).toBe('cus_mocked_456');
     expect(callArgs.customer).not.toBe('cus_hacker');
+    expect(callArgs.customer_update).toEqual({ address: 'auto', name: 'auto' });
     // customer_email should NOT be set since we returned a customer ID
     expect(callArgs.customer_email).toBeUndefined();
   });
@@ -450,6 +451,22 @@ describe('Checkout Security (create-checkout.ts)', () => {
     const callArgs = mockCreate.mock.lastCall[0];
     expect(callArgs.customer_email).toBe('test@example.com');
     expect(callArgs.client_reference_id).toBe('user-123');
+    expect(callArgs.customer_update).toBeUndefined();
+  });
+
+  it('enables automatic tax, billing address, and tax ID collection', async () => {
+    const stripeModule = await import('stripe');
+    const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;
+    mockCreate.mockClear();
+    mockCreate.mockResolvedValue({ id: 'cs_test_tax', url: 'https://checkout.stripe.com/test' });
+
+    const res = await handler(makeEvent({}), {} as any);
+    expect(res.statusCode).toBe(200);
+
+    const callArgs = mockCreate.mock.lastCall[0];
+    expect(callArgs.automatic_tax).toEqual({ enabled: true });
+    expect(callArgs.billing_address_collection).toBe('required');
+    expect(callArgs.tax_id_collection).toEqual({ enabled: true });
   });
 
   it('includes metadata with user_id, plan, billing_cycle', async () => {
@@ -467,6 +484,28 @@ describe('Checkout Security (create-checkout.ts)', () => {
     expect(callArgs.subscription_data.metadata.plan).toBe('pro');
     expect(callArgs.subscription_data.metadata.billing_cycle).toBe('monthly');
     expect(callArgs.subscription_data.metadata.source).toBe('tmc-studio-web');
+  });
+
+  it('maps a yearly price to yearly subscription metadata', async () => {
+    const stripeModule = await import('stripe');
+    const stripeConfig = await import('../_stripeConfig');
+    const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;
+    mockCreate.mockClear();
+    mockCreate.mockResolvedValue({ id: 'cs_test_yearly', url: 'https://checkout.stripe.com/test' });
+
+    const event = makeEvent({
+      body: {
+        priceId: stripeConfig.STRIPE_PRICES.team.yearly,
+        successUrl: '/board?checkout=success',
+        cancelUrl: '/board?checkout=cancelled',
+      },
+    });
+    const res = await handler(event, {} as any);
+    expect(res.statusCode).toBe(200);
+
+    const callArgs = mockCreate.mock.lastCall[0];
+    expect(callArgs.subscription_data.metadata.plan).toBe('team');
+    expect(callArgs.subscription_data.metadata.billing_cycle).toBe('yearly');
   });
 
   it('returns 429 after too many requests', async () => {
@@ -655,11 +694,11 @@ describe('Stripe Config Consistency', () => {
     }
   });
 
-  it('PricingModal has matching price IDs', async () => {
+  it('shared UI pricing config has matching price IDs', async () => {
     const fs = await import('fs');
     const path = await import('path');
 
-    const pricingPath = path.resolve(__dirname, '../../../packages/ui/src/PricingModal.tsx');
+    const pricingPath = path.resolve(__dirname, '../../../packages/ui/src/pricingConfig.ts');
     const backendPath = path.resolve(__dirname, '../_stripeConfig.ts');
 
     const pricingContent = fs.readFileSync(pricingPath, 'utf-8');
@@ -696,9 +735,11 @@ describe('Stripe Config Consistency', () => {
     for (const id of allIds) {
       const tier = backend.getTierFromPriceId(id);
       expect(tier).not.toBe('free');
+      expect(backend.getBillingCycleFromPriceId(id)).not.toBeNull();
     }
 
     // Unknown ID returns 'free'
     expect(backend.getTierFromPriceId('price_unknown')).toBe('free');
+    expect(backend.getBillingCycleFromPriceId('price_unknown')).toBeNull();
   });
 });

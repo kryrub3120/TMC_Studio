@@ -166,10 +166,13 @@ export function PitchPanel({
     }
   };
   const handleThemeSelect = (theme: PitchTheme) => {
-    const themeColors = PITCH_THEMES[theme];
+    const { primaryColor, stripeColor, lineColor, showStripes } = PITCH_THEMES[theme];
     onUpdatePitch({
       theme,
-      ...themeColors,
+      primaryColor,
+      stripeColor,
+      lineColor,
+      showStripes,
     });
   };
 
@@ -180,10 +183,10 @@ export function PitchPanel({
   const handleWithoutLinesToggle = () => {
     if (allLinesHidden) {
       // Turn lines ON
-      onUpdatePitch({ lines: DEFAULT_LINE_SETTINGS, view: 'full' });
+      onUpdatePitch({ lines: DEFAULT_LINE_SETTINGS });
     } else {
       // Turn lines OFF
-      onUpdatePitch({ lines: PLAIN_PITCH_LINES, view: 'full' });
+      onUpdatePitch({ lines: PLAIN_PITCH_LINES });
     }
   };
 

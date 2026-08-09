@@ -982,6 +982,7 @@ export function ProjectsDrawer({
           </div>
         )}
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {/* Folders Tree Section — always visible (search auto-expands matching paths) */}
         {isAuthenticated && (
           <div className="border-b border-border">
@@ -1123,11 +1124,10 @@ export function ProjectsDrawer({
           </div>
         )}
 
-        {/* Spacer to push footer down when tree is short */}
-        <div className="flex-1" />
+        </div>
 
         {/* Footer - Cloud sync status */}
-        <div className="p-4 border-t border-border">
+        <div className="shrink-0 p-4 border-t border-border">
           {isAuthenticated ? (
             <div className="flex items-center gap-2 text-xs text-muted">
               <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

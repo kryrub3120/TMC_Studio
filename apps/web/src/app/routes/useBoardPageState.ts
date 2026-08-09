@@ -67,7 +67,9 @@ export function useBoardPageState(props: BoardPageProps) {
   useEffect(() => {
     const stored = localStorage.getItem('tmc-ui-settings');
     const hasPreference = stored?.includes('inspectorOpen');
-    if (!hasPreference) {
+    if (window.innerWidth < 1280) {
+      setInspectorOpen(false);
+    } else if (!hasPreference) {
       const shouldBeOpen = window.innerWidth >= 1280;
       setInspectorOpen(shouldBeOpen);
     }

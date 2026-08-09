@@ -76,6 +76,7 @@ export interface BoardCanvasSectionProps {
   onStageMouseDown: (e: any) => void;
   onStageMouseMove: (e: any) => void;
   onStageMouseUp: () => void;
+  onViewportPanStart?: () => void;
   onStageDblClick?: (e: any) => void;
   onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => void;
   onElementSelect: (id: string, addToSelection: boolean) => void;
@@ -151,6 +152,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     onStageMouseDown,
     onStageMouseMove,
     onStageMouseUp,
+    onViewportPanStart,
     onStageDblClick,
     onContextMenu,
     onElementSelect,
@@ -207,11 +209,11 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
           MAX_FIT_UPSCALE,
         );
         if (newFitZoom > 0) {
-          // Read FRESH current zoom via ref (never stale closure)
+          // fitZoom already scales the board to the available container. Keep
+          // user zoom independent so the two factors are never applied twice.
           const curZoom = zoomRef.current;
-          // Raw comparison: if current zoom is too big for new container, clamp it
-          if (curZoom > newFitZoom) {
-            useUIStore.getState().setZoom(newFitZoom);
+          if (curZoom > 1) {
+            useUIStore.getState().setZoom(1);
             const newPanX = (cw - canvasWidth * newFitZoom) / 2;
             const newPanY = (ch - canvasHeight * newFitZoom) / 2;
             setPanOffset({ x: newPanX, y: newPanY });
@@ -321,6 +323,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     if (spaceHeld) {
       if (useUIStore.getState().viewportLocked) return;
       isPanningRef.current = true;
+      onViewportPanStart?.();
       panStartRef.current = { x: e.clientX, y: e.clientY };
       panOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -330,15 +333,16 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     }
 
     // Natural panning: candidate when zoomed in enough (> 1.1 threshold to avoid accidental pan at fit)
-    const curEffZoom = effectiveZoom;
-    if (curEffZoom > 1.1 && !useUIStore.getState().viewportLocked && canStartNaturalPan(e)) {
+    // fitZoom may be > 1 on large screens even though the user never zoomed.
+    // Natural panning is only appropriate after an explicit user zoom.
+    if (zoom > 1.05 && !useUIStore.getState().viewportLocked && canStartNaturalPan(e)) {
       isNaturalPanCandidateRef.current = true;
       isNaturalPanRef.current = false;
       setShowGrabCursor(false);
       naturalPanStartRef.current = { x: e.clientX, y: e.clientY };
       naturalPanOffsetStartRef.current = { x: panOffset.x, y: panOffset.y };
     }
-  }, [spaceHeld, panOffset, effectiveZoom, canStartNaturalPan]);
+  }, [spaceHeld, panOffset, zoom, canStartNaturalPan, onViewportPanStart]);
 
   const handleContainerPointerMove = useCallback((e: React.PointerEvent) => {
     // Space+drag panning
@@ -363,6 +367,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
         isNaturalPanCandidateRef.current = false;
         isNaturalPanRef.current = true;
         setShowGrabCursor(true);
+        onViewportPanStart?.();
         // Capture pointer so Konva doesn't interfere
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       }
@@ -375,7 +380,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
       const clamped = clampPan(naturalPanOffsetStartRef.current.x + dx, naturalPanOffsetStartRef.current.y + dy);
       setPanOffset(clamped);
     }
-  }, [clampPan]);
+  }, [clampPan, onViewportPanStart]);
 
   const handleContainerPointerUp = useCallback((e: React.PointerEvent) => {
     // Space+drag panning
@@ -569,7 +574,7 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   const toolCursor = activeTool && activeTool !== 'select'
     ? (activeTool === 'text' ? 'cursor-text' : 'cursor-crosshair')
     : '';
-  const hasNaturalPan = effectiveZoom > 1.1 && !spaceHeld;
+  const hasNaturalPan = zoom > 1.05 && !spaceHeld;
   const cursorClass = spaceHeld
     ? (isPanningRef.current ? 'cursor-grabbing' : 'cursor-grab')
     : showGrabCursor
@@ -581,6 +586,15 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
   return (
     <div
       ref={containerRef}
+      data-testid="board-viewport"
+      data-pitch-view={pitchSettings.view}
+      data-element-count={elements.length}
+      data-home-player-count={elements.filter((element) => isPlayerElement(element) && element.team === 'home').length}
+      data-selected-count={selectedIds.length}
+      data-user-zoom={zoom.toFixed(3)}
+      data-pan-x={panOffset.x.toFixed(2)}
+      data-pan-y={panOffset.y.toFixed(2)}
+      data-marquee-active={marqueeStart !== null ? 'true' : 'false'}
       className={`absolute inset-0 overflow-hidden flex items-center justify-center shadow-canvas rounded-[20px] border border-border/50 ${isPrintMode ? 'bg-white' : 'bg-surface/50 backdrop-blur-sm'} ${cursorClass}`}
       style={{ touchAction: 'manipulation' }}
       onPointerDown={handleContainerPointerDown}

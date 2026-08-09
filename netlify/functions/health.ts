@@ -8,12 +8,18 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 
+export function resolveEnvironment(): 'production' | 'development' {
+  return process.env.URL === 'https://tmcstudio.app'
+    ? 'production'
+    : 'development';
+}
+
 const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   const response = {
     status: 'ok',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
+    environment: resolveEnvironment(),
     functions: {
       health: true,
       stripeWebhook: !!process.env.STRIPE_SECRET_KEY,

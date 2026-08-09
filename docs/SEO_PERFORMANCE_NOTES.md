@@ -1,38 +1,55 @@
-# SEO & Performance — Notes (S5)
+# SEO i wydajność publicznej strony
 
-_Utworzono: 2026-06-15 · Uzupełnia `WEBSITE_LAUNCH_PLAN.md` §4.3–4.4_
+_Zaktualizowano: 2026-08-07_
 
-## Co wdrożono (S5)
+## Aktualna architektura
 
-| Element | Status | Gdzie |
-|---|---|---|
-| Per-page `<title>` + meta description | ✅ | `hooks/useDocumentMeta.ts` (landing, pricing), klucze `seo.*` w 3 językach |
-| Canonical + OG/Twitter (per strona) | ✅ | `useDocumentMeta` aktualizuje `og:title/description/url`, `canonical` |
-| OG bazowe + `og:site_name`/`og:locale` + `twitter:image` | ✅ | `apps/web/index.html` |
-| JSON-LD `SoftwareApplication` | ✅ | statycznie w `index.html` |
-| `sitemap.xml` (wszystkie strony publiczne) | ✅ | `apps/web/public/sitemap.xml` |
-| `robots.txt` (+ `Disallow: /board`, `/invite`) ✅ | edytor i zaproszenia poza indeksem |
+- Edytor pozostaje SPA pod `/board` i nie jest indeksowany.
+- Strony publiczne są renderowane statycznie podczas `pnpm --filter @tmc/web build`.
+- EN używa adresów bez prefiksu, PL `/pl/`, ES `/es/`.
+- Canonical, hreflang, routing i sitemap powstają z rejestru `apps/web/src/seo/publicSeo.ts`.
+- Build tworzy 60 wersji HTML: 8 stron bazowych i 12 stron growth razy 3 języki.
+- `spa.html` jest osobnym dokumentem `noindex,nofollow` dla edytora, auth i zaproszeń.
+- Nieznane adresy są kierowane do `404.html` ze statusem HTTP 404 przez Netlify.
 
-## Ważne ograniczenie: wielojęzyczne SEO (hreflang)
+## Źródła implementacji
 
-Obecna warstwa i18n jest **client-side** i serwuje wszystkie języki **pod tym samym URL-em** (wybór wg `navigator.language` / localStorage / przełącznika). To świadoma decyzja produktowa (EN domyślny, reszta wg lokalizacji), ale ma konsekwencję SEO:
+| Element | Lokalizacja |
+|---|---|
+| Rejestr tras i meta | `apps/web/src/seo/publicSeo.ts` |
+| Trasy React | `apps/web/src/app/PublicRoutes.tsx` |
+| SSR entry | `apps/web/src/entry-server.tsx` |
+| Generator HTML i sitemap | `apps/web/scripts/prerender.mjs` |
+| Redirecty i statusy | `netlify.toml`, `apps/web/public/_redirects` |
+| Audyt builda | `.github/skills/tmc-growth/scripts/audit-public-pages.mjs` |
 
-- Crawler **bez JS** widzi statyczne meta z `index.html` (EN). Crawler **z JS** (Google) wykona `useDocumentMeta` i zobaczy język wykryty dla jego ustawień.
-- **`hreflang` nie ma zastosowania**, dopóki nie istnieją osobne URL-e per język — nie ma alternatywnych adresów do wskazania.
+`apps/web/public/sitemap.xml` nie jest plikiem źródłowym. Sitemap jest generowana do `apps/web/dist/sitemap.xml`, dzięki czemu nie może rozjechać się z routingiem.
 
-### Follow-up, jeśli chcemy indeksować PL/ES osobno
-Potrzebny **prerender per język na osobnych URL-ach** (np. `/`, `/es`, `/pl` lub `?lang=`), wtedy dokładamy `hreflang` + `x-default`. To większe zadanie (vite prerender / SSG dla stron marketingowych) — rekomendowane do osobnego sprintu, gdy ruch organiczny ES/PL będzie priorytetem. Na launch EN jako język indeksowany jest wystarczający.
+## Kontrola jakości
 
-## Budżet wydajności (do pilnowania)
+Po zmianie publicznych stron uruchom:
 
-- **LCP < 2,0 s** na `/` i `/pricing`.
-- Edytor (Konva) jest **lazy-loaded** — landing nie ładuje jego bundla (S1). ✅
-- Hero: docelowo animacja jako **WebM/MP4 < 1,5 MB** (dziś placeholder). Nie używać ciężkiego GIF-a.
-- Fonty: Inter z Google Fonts z `preconnect` — rozważyć self-host / `font-display: swap` (jest `&display=swap`). OK.
-- Galerie/obrazy: lazy-load (`loading="lazy"`) gdy dojdą realne assety (S2).
+```bash
+source "$HOME/.nvm/nvm.sh" && nvm use --silent
+pnpm --filter @tmc/web build
+node .github/skills/tmc-growth/scripts/audit-public-pages.mjs apps/web/dist
+```
 
-## Do weryfikacji w S6 (QA gate)
-- Lighthouse **perf + a11y ≥ 90** na `/` i `/pricing`.
-- Brak „surowych" kluczy i18n (fallback EN działa).
-- Podgląd OG (debugger social) dla `/` i `/pricing`.
-- FAQ structured data (`FAQPage`) — opcjonalnie dołożyć, jeśli zdecydujemy (musi odpowiadać widocznej treści i językowi).
+Audyt wymaga dla każdego adresu: unikalnego title i description, self-canonical, kompletu EN/PL/ES/x-default, jednego H1, zgodnego `html[lang]`, treści w surowym HTML i obrazu social PNG.
+
+## Budżet wydajności
+
+- Landing nie może preloadować `jsPDF`, GIF encoderów, Konva ani kodu edytora.
+- Obraz social ma format PNG 1200x630.
+- Docelowy LCP publicznych stron: poniżej 2,5 s na 75 percentylu danych rzeczywistych.
+- Po podłączeniu Search Console i danych terenowych raportuj Core Web Vitals osobno dla mobile i desktop.
+
+## Aktualny klaster contentowy
+
+- 6 stron produktowych o wysokiej intencji.
+- 6 stron szablonów opartych na realnych presetach `@tmc/presets`.
+- CTA szablonu otwiera `/board` i ładuje wybraną jedenastkę gospodarzy.
+- Eventy `content_view` i `content_open_board` mierzą stronę, język, typ oraz formację.
+- Źródło treści: `apps/web/src/seo/growthContent.ts`; widok: `apps/web/src/pages/GrowthPage.tsx`.
+
+Następny zakres powstaje dopiero po weryfikacji danych z tego klastra. Nie tworzyć stron ćwiczeń na podstawie pustych rekordów seed ani stron porównawczych bez ręcznego testu konkurenta.

@@ -98,7 +98,7 @@ export const SHORTCUT_MAP: ShortcutEntry[] = [
   { id: 'toggle-vision', key: 'V', description: 'Enable Vision (selected)', category: 'edit', context: 'selection' },
   { id: 'orientation-handles', key: 'Shift+V', description: 'Toggle Player Orientation Handles', category: 'edit', context: 'global' },
   { id: 'reset-orientation', key: 'Alt+0', description: 'Reset Player Orientation', category: 'edit', context: 'selection' },
-  { id: 'cycle-pitch-view', key: 'W', description: 'Cycle Pitch View', category: 'view', context: 'global' },
+  { id: 'print-mode', key: 'W', description: 'Print Friendly Mode', category: 'view', context: 'global' },
 
   // ===== EDIT =====
   { id: 'copy', key: '⌘C', description: 'Copy', category: 'edit', context: 'selection' },
@@ -119,7 +119,6 @@ export const SHORTCUT_MAP: ShortcutEntry[] = [
   { id: 'toggle-inspector', key: 'I', description: 'Toggle Inspector', category: 'view', context: 'global' },
   { id: 'toggle-orientation', key: 'O', description: 'Toggle Pitch Orientation', category: 'view', context: 'global' },
   { id: 'open-projects', key: '⌘P', description: 'Open Projects', category: 'view', context: 'global' },
-  { id: 'print-mode', key: 'Shift+W', description: 'Print Friendly Mode', category: 'view', context: 'global' },
   { id: 'toggle-grid', key: 'G', description: 'Toggle Grid', category: 'view', context: 'global' },
   { id: 'zoom-in', key: '+', description: 'Zoom In', category: 'view', context: 'global' },
   { id: 'zoom-out', key: '-', description: 'Zoom Out', category: 'view', context: 'global' },

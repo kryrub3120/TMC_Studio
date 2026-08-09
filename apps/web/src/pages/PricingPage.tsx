@@ -7,7 +7,7 @@
  * to start sign-in + Stripe Checkout — we don't duplicate checkout logic here.
  */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { LocalizedLink as Link } from '../components/LocalizedLink';
 import { useTranslation, LanguageSwitcher, DISPLAY_PRICES, SAVE_PERCENT } from '@tmc/ui';
 import type { Cycle } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
@@ -23,9 +23,7 @@ export function PricingPage() {
   useDocumentMeta({ title: t('seo.pricing.title'), description: t('seo.pricing.description'), path: '/pricing' });
   useEffect(() => { track(EVENTS.PRICING_VIEW); }, []);
 
-  // Structured data: FAQPage for billing questions
-  useEffect(() => {
-    const faqData = {
+  const structuredData = {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
       mainEntity: [
@@ -34,14 +32,7 @@ export function PricingPage() {
         { '@type': 'Question', name: t('pricingPage.faq.q3'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a3') } },
         { '@type': 'Question', name: t('pricingPage.faq.q4'), acceptedAnswer: { '@type': 'Answer', text: t('pricingPage.faq.a4') } },
       ],
-    };
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.id = 'tmc-faq-structured-data';
-    script.textContent = JSON.stringify(faqData);
-    document.head.appendChild(script);
-    return () => { document.head.querySelector('#tmc-faq-structured-data')?.remove(); };
-  }, [t]);
+  };
 
   const [cycle, setCycle] = useState<Cycle>('monthly');
 
@@ -70,6 +61,7 @@ export function PricingPage() {
 
   return (
     <div className="min-h-screen bg-bg font-sans text-text">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       {/* Header */}
       <header className="sticky top-0 z-topbar border-b border-border bg-bg/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
@@ -208,6 +200,9 @@ export function PricingPage() {
               <p className="mt-1 text-xs font-medium text-accent">
                 {t('pricingPage.teamCalc.savings', {
                   amount: cycle === 'yearly' ? '$160' : '$16',
+                  period: cycle === 'yearly'
+                    ? t('pricingPage.plans.perYear')
+                    : t('pricingPage.plans.perMonth'),
                 })}
               </p>
             </div>

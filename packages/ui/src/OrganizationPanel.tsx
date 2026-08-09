@@ -49,7 +49,7 @@ export interface OrganizationPanelProps {
   isLoading?: boolean;
   error?: string | null;
   onCreateOrganization: (name: string) => Promise<void>;
-  onInvite: (email: string) => Promise<void>;
+  onInvite: (email: string) => Promise<InvitationView>;
   onRevokeInvitation: (invitationId: string) => Promise<void>;
   onRemoveMember: (memberId: string) => Promise<void>;
   /** Owner-only: hand the 'owner' role to another existing member. */
@@ -229,7 +229,13 @@ export function OrganizationPanel({
     setLocalError(null);
     setIsInviting(true);
     try {
-      await onInvite(email);
+      const invitation = await onInvite(email);
+      try {
+        await navigator.clipboard.writeText(getInviteLink(invitation.token));
+        setCopiedToken(invitation.token);
+      } catch {
+        // The pending invitation remains available below with a Copy link action.
+      }
       setInviteEmail('');
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : t('organizationPanel.errors.inviteFailed'));
@@ -403,17 +409,20 @@ export function OrganizationPanel({
               {t('organizationPanel.invite.seatLimitReached')}
             </div>
           ) : (
-            <div className="flex gap-2">
-              <input
-                type="email"
-                className={inputClass}
-                placeholder={t('organizationPanel.invite.emailPlaceholder')}
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-              <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim()} variant="primary" size="sm">
-                {isInviting ? t('organizationPanel.invite.sending') : t('organizationPanel.invite.cta')}
-              </Button>
+            <div>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  className={inputClass}
+                  placeholder={t('organizationPanel.invite.emailPlaceholder')}
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+                <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim()} variant="primary" size="sm">
+                  {isInviting ? t('organizationPanel.invite.sending') : t('organizationPanel.invite.cta')}
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted">{t('organizationPanel.invite.shareHint')}</p>
             </div>
           )}
 

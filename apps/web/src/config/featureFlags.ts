@@ -33,9 +33,9 @@ function parseFlag(value: string | boolean | undefined): boolean {
  * keep working normally — animation logic stays dormant (no playback loop,
  * interpolation is a no-op while `isPlaying` is false).
  *
- * Enable locally via `.env.local`:
- *   VITE_ANIMATION_ENABLED=true
+ * Animation is a released product capability and defaults to enabled.
+ * Set `VITE_ANIMATION_ENABLED=false` only as an emergency kill switch.
  */
-export const ANIMATION_ENABLED: boolean = parseFlag(
-  import.meta.env.VITE_ANIMATION_ENABLED,
-);
+export const ANIMATION_ENABLED: boolean = import.meta.env.VITE_ANIMATION_ENABLED === undefined
+  ? true
+  : parseFlag(import.meta.env.VITE_ANIMATION_ENABLED);

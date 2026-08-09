@@ -42,12 +42,6 @@ export function LegalNoticePage() {
         <p>{t('legal.legalNotice.responsibleBody')}</p>
       </LegalSection>
 
-      <LegalSection title={t('legal.legalNotice.odrTitle')}>
-        <p>
-          {t('legal.legalNotice.odrBody')}{' '}
-          <LegalLink href="https://ec.europa.eu/consumers/odr">https://ec.europa.eu/consumers/odr</LegalLink>
-        </p>
-      </LegalSection>
     </PublicPageShell>
   );
 }

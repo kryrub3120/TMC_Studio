@@ -14,3 +14,5 @@ export { LegalNoticePage } from './LegalNoticePage';
 export { AccessibilityPage } from './AccessibilityPage';
 export { AuthCallbackPage } from './AuthCallbackPage';
 export { ResetPasswordPage } from './ResetPasswordPage';
+export { NotFoundPage } from './NotFoundPage';
+export { GrowthPage } from './GrowthPage';

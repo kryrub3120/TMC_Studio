@@ -2,7 +2,7 @@
  * Pricing Modal - Subscription plans with Stripe checkout
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from './i18n.js';
 import { STRIPE_PRICES, SAVE_PERCENT } from './pricingConfig.js';
 import type { Cycle } from './pricingConfig.js';
@@ -12,11 +12,14 @@ interface PricingModalProps {
   onClose: () => void;
   currentPlan: 'guest' | 'free' | 'pro' | 'team';
   isAuthenticated: boolean;
-  onSignUp: () => void;
+  onSignUp: (plan: 'free' | 'pro' | 'team', cycle: Cycle) => void;
   /** Supabase access token for Authorization header in checkout requests */
   accessToken?: string | null;
   /** Initial billing cycle (from /pricing page link). Defaults to 'monthly'. */
   initialCycle?: Cycle;
+  onPlanSelected?: (plan: 'free' | 'pro' | 'team', cycle: Cycle, isAuthenticated: boolean) => void;
+  onCheckoutStarted?: (plan: 'pro' | 'team', cycle: Cycle) => void;
+  onCheckoutFailed?: (plan: 'pro' | 'team', cycle: Cycle) => void;
 }
 
 interface Plan {
@@ -76,33 +79,46 @@ export function PricingModal({
   onSignUp,
   accessToken,
   initialCycle,
+  onPlanSelected,
+  onCheckoutStarted,
+  onCheckoutFailed,
 }: PricingModalProps) {
   const { t } = useTranslation();
   const [cycle, setCycle] = useState<Cycle>(initialCycle ?? 'monthly');
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setCycle(initialCycle ?? 'monthly');
+    }
+  }, [initialCycle, isOpen]);
+
   if (!isOpen) return null;
 
   const plans = getPlans(cycle, t);
 
   const handleSelectPlan = async (plan: Plan) => {
+    const planId = plan.id as 'free' | 'pro' | 'team';
+    onPlanSelected?.(planId, cycle, isAuthenticated);
+
     // Free plan: Sign up for guests, no-op for existing Free users
     if (plan.id === 'free') {
       if (!isAuthenticated) {
-        onSignUp();
+        onSignUp('free', cycle);
       }
       return;
     }
 
     // Pro/Team plan: Sign up if guest, otherwise start checkout
     if (!isAuthenticated) {
-      onSignUp();
+      onSignUp(planId as 'pro' | 'team', cycle);
       return;
     }
 
     setIsLoading(plan.id);
     setError(null);
+    onCheckoutStarted?.(planId as 'pro' | 'team', cycle);
 
     try {
       // Build checkout request with ONLY trusted fields.
@@ -147,6 +163,7 @@ export function PricingModal({
         throw new Error(t('pricing.checkoutFailed'));
       }
     } catch (err) {
+      onCheckoutFailed?.(planId as 'pro' | 'team', cycle);
       setError(err instanceof Error ? err.message : t('pricing.genericError'));
     } finally {
       setIsLoading(null);
@@ -162,11 +179,16 @@ export function PricingModal({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-4xl bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden">
+      <div
+        className="relative w-full max-w-4xl bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pricing-modal-title"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-2xl font-bold text-text">{t('pricing.title')}</h2>
+            <h2 id="pricing-modal-title" className="text-2xl font-bold text-text">{t('pricing.title')}</h2>
             <p className="text-muted mt-1">
               {t('pricing.subtitle')}
             </p>
@@ -228,11 +250,11 @@ export function PricingModal({
           <div className="grid md:grid-cols-3 gap-6">
             {plans.map((plan) => {
               const planKey = plan.id as 'free' | 'pro' | 'team';
-              const planName = t(`pricing.plans.${planKey}.name`);
-              const planPrice = t(`pricing.plans.${planKey}.price`);
-              const planPeriod = t(`pricing.plans.${planKey}.period`);
-              const planMicrocopy = t(`pricing.plans.${planKey}.microcopy`);
-              const planFeatures = t(`pricing.plans.${planKey}.features`).split('|');
+              const planName = plan.name;
+              const planPrice = plan.price;
+              const planPeriod = plan.period;
+              const planMicrocopy = plan.microcopy;
+              const planFeatures = plan.features;
               const isCurrent = currentPlan === plan.id;
               const isHighlighted = plan.highlighted;
               

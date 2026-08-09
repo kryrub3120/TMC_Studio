@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --mode development",
     "dev:local": "vite --mode development",
-    "build": "tsc && BROWSERSLIST_IGNORE_OLD_DATA=true vite build",
+    "build": "tsc && BROWSERSLIST_IGNORE_OLD_DATA=true vite build && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node scripts/prerender.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext ts,tsx",

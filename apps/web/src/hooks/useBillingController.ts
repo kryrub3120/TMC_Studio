@@ -15,6 +15,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from '@tmc/ui';
 import { useUIStore } from '../store/useUIStore';
 import { supabase } from '../lib/supabase';
+import { EVENTS, track } from '../lib/analytics';
 
 export interface UseBillingControllerParams {
   // No params needed - all internal
@@ -23,12 +24,13 @@ export interface UseBillingControllerParams {
 export interface BillingController {
   // Modal state
   pricingModalOpen: boolean;
+  pricingCycle: 'monthly' | 'yearly';
   upgradeSuccessModalOpen: boolean;
   subscriptionActivating: boolean;
   upgradedTier: 'pro' | 'team';
   
   // Actions
-  openPricingModal: () => void;
+  openPricingModal: (cycle?: 'monthly' | 'yearly') => void;
   closePricingModal: () => void;
   openUpgradeSuccessModal: (tier: 'pro' | 'team', activating?: boolean) => void;
   closeUpgradeSuccessModal: () => void;
@@ -42,6 +44,7 @@ export interface BillingController {
 export function useBillingController(_params?: UseBillingControllerParams): BillingController {
   const { t } = useTranslation();
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [pricingCycle, setPricingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [upgradeSuccessModalOpen, setUpgradeSuccessModalOpen] = useState(false);
   const [subscriptionActivating, setSubscriptionActivating] = useState(false);
   const [upgradedTier, setUpgradedTier] = useState<'pro' | 'team'>('pro');
@@ -51,7 +54,8 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
   /**
    * Open pricing modal
    */
-  const openPricingModal = useCallback(() => {
+  const openPricingModal = useCallback((cycle: 'monthly' | 'yearly' = 'monthly') => {
+    setPricingCycle(cycle);
     setPricingModalOpen(true);
   }, []);
   
@@ -89,6 +93,8 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
         return;
       }
 
+      track(EVENTS.BILLING_PORTAL_OPENED);
+
       const response = await fetch('/.netlify/functions/create-portal-session', {
         method: 'POST',
         headers: {
@@ -102,6 +108,7 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
       if (!response.ok) throw new Error(data.error || 'Failed to open billing portal');
       if (data.url) window.location.href = data.url;
     } catch (error) {
+      track(EVENTS.BILLING_PORTAL_FAILED);
       logger.error('Billing portal error:', error);
       showToast(t('billingToast.portalFailed'));
     }
@@ -110,6 +117,7 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
   return {
     // Modal state
     pricingModalOpen,
+    pricingCycle,
     upgradeSuccessModalOpen,
     subscriptionActivating,
     upgradedTier,

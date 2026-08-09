@@ -1,12 +1,34 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 const envDir = path.resolve(__dirname, '../../');
 
-export default defineConfig({
-  plugins: [react()],
+const spaPreviewRoutes = ['/app', '/board', '/invite', '/auth/callback', '/auth/reset-password'];
+
+const previewRouting = (): Plugin => ({
+  name: 'tmc-preview-routing',
+  configurePreviewServer(server) {
+    server.middlewares.use((request, _response, next) => {
+      const url = new URL(request.url ?? '/', 'http://localhost');
+      const isSpaRoute = spaPreviewRoutes.includes(url.pathname) || url.pathname.startsWith('/board/');
+
+      if (isSpaRoute) {
+        request.url = `/spa.html${url.search}`;
+      }
+
+      next();
+    });
+  },
+});
+
+export default defineConfig(({ isSsrBuild }) => ({
+  plugins: [react(), previewRouting()],
   envDir,
+  ssr: {
+    // Keep one shared i18n context instance while rendering workspace packages.
+    noExternal: ['@tmc/ui', '@tmc/core'],
+  },
   // Load env files (.env, .env.local, ...) from the monorepo root so that a
   // single source of truth controls the environment. The root `.env.local`
   // points at the DEV Supabase project; production builds (Netlify) inject
@@ -18,7 +40,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
-    rollupOptions: {
+    rollupOptions: isSsrBuild ? undefined : {
       output: {
         manualChunks: {
           // Split React into separate vendor chunk
@@ -27,10 +49,7 @@ export default defineConfig({
           'vendor-konva': ['konva', 'react-konva'],
           // Split Zustand state management
           'vendor-zustand': ['zustand'],
-          // Split PDF generation (large library)
-          'vendor-jspdf': ['jspdf'],
-          // Split GIF encoding (rarely used)
-          'vendor-gif': ['gifenc'],
+          // PDF and GIF stay lazy through their dynamic editor imports.
         },
       },
     },
@@ -43,4 +62,4 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
   },
-});
+}));

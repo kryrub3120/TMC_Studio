@@ -172,6 +172,11 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
     }
   };
 
+  const openQuickAdd = () => {
+    if (!visible) onToggle();
+    setShowAddForm(true);
+  };
+
   const getTeamTotal = (team: Team) => squad.filter((p) => p.team === team).length;
 
   /** Check if this player index (across all teams) falls within the free limit */
@@ -295,7 +300,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
               <>
                 {onQuickAddPlayer ? (
                   <button
-                    onClick={() => setShowAddForm(true)}
+                    onClick={openQuickAdd}
                     className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-md border border-dashed border-accent/50 bg-accent/5 hover:bg-accent/10 hover:border-accent transition-all duration-fast min-w-0 shrink-0 animate-fade-in"
                     title={t('squadBench.addFirstPlayer')}
                     aria-label={t('squadBench.addFirstPlayer')}
@@ -320,7 +325,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
                 return (
                   <button
                     key={`add-${i}`}
-                    onClick={() => setShowAddForm(true)}
+                    onClick={openQuickAdd}
                     className="flex items-center justify-center w-8 h-8 rounded-md border border-dashed border-border hover:border-accent/50 hover:bg-surface2/50 transition-all duration-fast shrink-0 animate-fade-in"
                     style={{ animationDelay: `${(teamPlayers.length + i) * 30}ms`, animationFillMode: 'backwards' }}
                     title={t('squadBench.addPlayer')}
@@ -341,7 +346,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
           <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onOpenSettings}
-            className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface2 text-muted hover:border-accent/50 hover:text-text transition-colors"
             title={t('squadBench.editor')}
             aria-label={t('squadBench.editRoster')}
           >
@@ -374,14 +379,23 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
       ) : (
         /* Collapsed — thin hint row + actions */
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-muted italic flex items-center gap-1">
+          <div className="flex min-w-0 items-center gap-2 text-[11px] text-muted">
             <span className="font-semibold not-italic uppercase tracking-wider text-[10px] text-muted">{t('squadBench.title')}</span>
-            {isEmpty ? t('squadBench.collapsedSetup') : t('squadBench.collapsedCount', { count: squad.length })}
-          </p>
+            <span className="truncate">{isEmpty ? t('squadBench.collapsedSetup') : t('squadBench.collapsedCount', { count: squad.length })}</span>
+            {isEmpty && onQuickAddPlayer && (
+              <button
+                type="button"
+                onClick={openQuickAdd}
+                className="shrink-0 rounded-md bg-accent px-2.5 py-1.5 font-medium text-[#062016] hover:bg-accent-hover transition-colors"
+              >
+                {t('squadBench.addFirstPlayer')}
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onOpenSettings}
-            className="p-1 rounded hover:bg-surface2 text-muted hover:text-text transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface2 text-muted hover:border-accent/50 hover:text-text transition-colors"
             title={t('squadBench.editor')}
             aria-label={t('squadBench.editRoster')}
           >
@@ -416,13 +430,13 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
       {/* Quick-add form (shared) */}
       {visible && showAddForm && onQuickAddPlayer && (
         <div className="mt-2 p-2 rounded-lg border border-accent/30 bg-accent/5 animate-fade-in">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="text"
               value={addName}
               onChange={(e) => setAddName(e.target.value)}
               placeholder={t('squadBench.namePlaceholder')}
-              className="flex-1 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
+              className="min-w-[140px] flex-1 px-2 py-1.5 text-xs bg-surface border border-border rounded-md text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent"
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') setShowAddForm(false); }}
             />

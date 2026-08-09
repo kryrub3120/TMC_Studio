@@ -12,7 +12,7 @@ export interface ExportOptions {
   stepDuration?: number;
 }
 
-export type ExportFormat = 'png' | 'png-all' | 'jpg' | 'pdf' | 'gif';
+export type ExportFormat = 'png' | 'png-all' | 'jpg' | 'pdf' | 'gif' | 'svg';
 
 /**
  * Export single frame as PNG

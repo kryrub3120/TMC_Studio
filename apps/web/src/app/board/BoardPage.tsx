@@ -322,6 +322,7 @@ export function BoardPage(props: BoardPageProps) {
             case 'jpg': state.exportController.exportJPG(); break;
             case 'pdf': state.exportController.exportPDF(); break;
             case 'gif': state.exportController.exportGIF(); break;
+            case 'svg': state.exportController.exportSVG(); break;
           }
         }}
         onToggleFocus={state.toggleFocusMode}
@@ -435,6 +436,7 @@ export function BoardPage(props: BoardPageProps) {
             onStageMouseDown={stageHandlers.handleStageMouseDown}
             onStageMouseMove={stageHandlers.handleStageMouseMove}
             onStageMouseUp={stageHandlers.handleStageMouseUp}
+            onViewportPanStart={state.canvasEventsController.cancelMarquee}
             onStageDblClick={stageHandlers.handleStageDblClick}
             onContextMenu={contextMenuHandler}
             onElementSelect={handlers.handleElementSelect}
@@ -513,7 +515,7 @@ export function BoardPage(props: BoardPageProps) {
             onRestartTutorial={handleRestartTutorial}
             plan={state.plan}
             onOpenPricing={props.onOpenPricingModal}
-            onOpenTeamPanel={() => {} /* TODO: gdy TeamPanel istnieje */}
+            onOpenTeamPanel={() => props.onOpenSettingsModal('club')}
             onOpenSettings={props.onOpenSettingsModal}
             onOpenAuthModal={props.onOpenAuthModal}
           />

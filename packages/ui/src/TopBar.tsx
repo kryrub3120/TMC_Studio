@@ -10,7 +10,7 @@ import { useTranslation } from './i18n.js';
 import { LanguageSwitcher } from './LanguageSwitcher.js';
 
 export type PlanType = 'guest' | 'free' | 'pro';
-export type ExportFormat = 'png' | 'png-all' | 'jpg' | 'pdf' | 'gif';
+export type ExportFormat = 'png' | 'png-all' | 'jpg' | 'pdf' | 'gif' | 'svg';
 
 export interface TopBarProps {
   projectName: string;
@@ -108,6 +108,13 @@ const HelpIcon: React.FC<{ className?: string }> = ({ className }) => (
     <circle cx="12" cy="12" r="10" />
     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
     <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const SettingsIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05-2.83 2.83-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21h-4v-.05A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.05.05-2.83-2.83.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3v-4h.05A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.05-.05 2.83-2.83.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3h4v.05A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.05-.05 2.83 2.83-.05.05A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21v4h-.05A1.7 1.7 0 0 0 19.4 15Z" />
   </svg>
 );
 
@@ -331,7 +338,7 @@ const ToolMenuButton: React.FC<{
     title={title}
   >
     {icon}
-    <span className="hidden lg:inline">{label}</span>
+    <span className="hidden 2xl:inline">{label}</span>
   </button>
 );
 
@@ -537,6 +544,7 @@ const PitchMenu: React.FC<{
                 return (
                   <button
                     key={board.id}
+                    data-board-id={board.id}
                     onClick={() => { onSelectBoard(board); setIsOpen(false); }}
                     className={`group relative flex flex-col items-center gap-1 rounded-md px-1.5 py-2 transition-colors ${
                       active ? 'bg-accent/15 ring-1 ring-accent text-text' : 'hover:bg-surface2 text-muted'
@@ -781,6 +789,7 @@ const ExportMenu: React.FC<{
     { format: 'jpg', labelKey: 'topbar.exportJpgCurrent', shortcut: '' },
     { format: 'pdf', labelKey: 'topbar.exportPdfAll', shortcut: '⇧⌘P', pro: true },
     { format: 'gif', labelKey: 'topbar.exportGif', shortcut: '⇧⌘G', pro: true },
+    { format: 'svg', labelKey: 'commands.export-svg', shortcut: '' },
   ];
 
   return (
@@ -832,6 +841,11 @@ const ExportMenu: React.FC<{
                           <line x1="16" y1="13" x2="8" y2="13" />
                           <line x1="16" y1="17" x2="8" y2="17" />
                           <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                      ) : item.format === 'svg' ? (
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7l-4-4h-2" />
+                          <path d="m9 10-3 2 3 2M15 10l3 2-3 2M13 9l-2 6" />
                         </svg>
                       ) : (
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -927,12 +941,14 @@ const AccountMenu: React.FC<{
     return (
       <button
         onClick={onOpenAccount}
-        className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
+        className="flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
+        title={t('topbar.signIn')}
+        aria-label={t('topbar.signIn')}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
-        {t('topbar.signIn')}
+        <span className="hidden sm:inline">{t('topbar.signIn')}</span>
       </button>
     );
   }
@@ -1168,7 +1184,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   return (
     <header className="h-12 px-2 sm:px-4 flex items-center justify-between bg-surface border-b border-border z-topbar">
       {/* Left: Logo + Project */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0 max-w-[40%] sm:max-w-none">
+      <div className="flex min-w-0 max-w-[42%] shrink items-center gap-2 sm:max-w-[38%] sm:gap-3 xl:max-w-none">
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center">
@@ -1183,7 +1199,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="w-px h-5 bg-border hidden sm:block" />
 
         {/* Project name + saved status */}
-        <div data-tour="projects" className="flex items-center gap-2 px-2 py-1 -mx-2">
+        <div data-tour="projects" className="flex min-w-0 items-center gap-2 px-2 py-1 -mx-2">
           {/* Folder icon - click opens Projects drawer */}
           <button
             onClick={onOpenProjects}
@@ -1204,7 +1220,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleSave}
               onKeyDown={handleKeyDown}
-              className="text-text text-sm font-medium bg-surface2 border border-accent rounded px-2 py-0.5 w-[180px] outline-none"
+              className="w-[100px] rounded border border-accent bg-surface2 px-2 py-0.5 text-sm font-medium text-text outline-none sm:w-[180px]"
               placeholder={t('topbar.projectName')}
             />
           ) : (
@@ -1213,7 +1229,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 setEditValue(projectName);
                 setIsEditing(true);
               }}
-              className="text-text text-sm font-medium truncate max-w-[200px] hover:text-accent transition-colors cursor-text"
+              className="max-w-[90px] truncate text-sm font-medium text-text transition-colors hover:text-accent cursor-text sm:max-w-[150px] xl:max-w-[200px]"
               title={t('topbar.clickRename')}
             >
               {projectName}
@@ -1222,11 +1238,11 @@ export const TopBar: React.FC<TopBarProps> = ({
           
           {/* Save status indicator (PR-L5-MINI) */}
           {!isOnline ? (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">
+            <span className="hidden text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 sm:inline-flex">
               {t('topbar.offline')}
             </span>
           ) : isSyncing ? (
-            <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+            <div className="hidden items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 sm:flex">
               <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -1235,7 +1251,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             </div>
           ) : (
             <span
-              className={`text-xs px-1.5 py-0.5 rounded ${
+              className={`hidden text-xs px-1.5 py-0.5 rounded sm:inline-flex ${
                 isSaved
                   ? 'bg-accent/10 text-accent'
                   : 'bg-orange-500/10 text-orange-500'
@@ -1247,7 +1263,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           
           {/* Step info badge */}
           {stepInfo && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">
+            <span className="hidden text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium lg:inline-flex">
               {stepInfo}
             </span>
           )}
@@ -1255,13 +1271,13 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-auto overflow-visible">
+      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-0.5 sm:gap-1">
         {/* Command Palette Trigger */}
         <button
           data-tour="shortcuts"
           onClick={onOpenPalette}
           className="
-            flex items-center gap-2 px-3 py-1.5 rounded-md
+            hidden md:flex items-center gap-2 px-2 py-1.5 rounded-md
             bg-surface2 border border-border
             text-muted text-sm
             hover:border-accent/50 hover:text-text
@@ -1272,41 +1288,55 @@ export const TopBar: React.FC<TopBarProps> = ({
           <span className="hidden sm:inline">{cmdKey}+K</span>
         </button>
 
-        <div className="w-px h-5 bg-border mx-1" />
+        <div className="hidden h-5 w-px bg-border mx-1 md:block" />
 
         <PlayersMenu onAddPlayer={onAddPlayer} onOpenSquadSettings={onOpenSquadSettings} tutorialMenu={tutorialMenu} />
         <ArrowsMenu onSelectArrowTool={onSelectArrowTool} tutorialMenu={tutorialMenu} />
-        <ZonesMenu onSelectZoneTool={onSelectZoneTool} />
-        <EquipmentMenu onAddEquipment={onAddEquipment} onAddBall={onAddBall} tutorialMenu={tutorialMenu} />
-        <PitchMenu onSelectBoard={onSelectBoard} activeBoardId={activeBoardId} tutorialMenu={tutorialMenu} />
+        <div className="hidden sm:block"><ZonesMenu onSelectZoneTool={onSelectZoneTool} /></div>
+        <div className="hidden sm:block"><EquipmentMenu onAddEquipment={onAddEquipment} onAddBall={onAddBall} tutorialMenu={tutorialMenu} /></div>
+        <div className="hidden md:block"><PitchMenu onSelectBoard={onSelectBoard} activeBoardId={activeBoardId} tutorialMenu={tutorialMenu} /></div>
 
         {/* Export dropdown */}
         <ExportMenu onExport={onExport} plan={plan} tutorialMenu={tutorialMenu} />
 
         {/* Focus Mode */}
-        <IconButton onClick={onToggleFocus} title={`${t('topbar.focusMode')} (F)`} active={focusMode}>
-          <FocusIcon className="w-4 h-4" />
-        </IconButton>
+        <div className="hidden lg:block">
+          <IconButton onClick={onToggleFocus} title={`${t('topbar.focusMode')} (F)`} active={focusMode}>
+            <FocusIcon className="w-4 h-4" />
+          </IconButton>
+        </div>
 
         {/* Theme Toggle */}
-        <IconButton
-          onClick={onToggleTheme}
-          title={theme === 'light' ? t('topbar.themeToDark') : t('topbar.themeToLight')}
-        >
-          {theme === 'light' ? (
-            <MoonIcon className="w-4 h-4" />
-          ) : (
-            <SunIcon className="w-4 h-4" />
-          )}
-        </IconButton>
+        <div className="hidden md:block">
+          <IconButton
+            onClick={onToggleTheme}
+            title={theme === 'light' ? t('topbar.themeToDark') : t('topbar.themeToLight')}
+          >
+            {theme === 'light' ? (
+              <MoonIcon className="w-4 h-4" />
+            ) : (
+              <SunIcon className="w-4 h-4" />
+            )}
+          </IconButton>
+        </div>
+
+        {onOpenSettings && (
+          <div className="hidden md:block">
+            <IconButton onClick={onOpenSettings} title={t('common.settings')}>
+              <SettingsIcon className="w-4 h-4" />
+            </IconButton>
+          </div>
+        )}
 
         {/* Language */}
-        <LanguageSwitcher />
+        <div className="hidden lg:block"><LanguageSwitcher /></div>
 
         {/* Help */}
-        <IconButton onClick={onOpenHelp} title={`${t('topbar.help')} (?)`} dataTour="help">
-          <HelpIcon className="w-4 h-4" />
-        </IconButton>
+        <div className="hidden xl:block">
+          <IconButton onClick={onOpenHelp} title={`${t('topbar.help')} (?)`} dataTour="help">
+            <HelpIcon className="w-4 h-4" />
+          </IconButton>
+        </div>
 
         {/* Inspector Toggle - only visible on <xl */}
         {onToggleInspector && (
@@ -1319,7 +1349,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
         )}
 
-        <div className="w-px h-5 bg-border mx-1" />
+        <div className="hidden h-5 w-px bg-border mx-1 sm:block" />
 
         {/* Account Menu */}
         <AccountMenu
