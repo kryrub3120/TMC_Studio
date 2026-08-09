@@ -1,7 +1,7 @@
 # TMC Studio - Authentication Flow
 
 > Aktualny opis logowania, sesji i konfiguracji produkcyjnej.
-> **Last updated:** 2026-08-06
+> **Last updated:** 2026-08-09
 
 ## Status
 
@@ -57,6 +57,13 @@ wiec wymiana PKCE nie jest blokowana przez dodatkowe zapytanie do bazy.
 | Email i haslo | `signInWithPassword` -> listener sesji aktualizuje store |
 | Reset hasla | Link prowadzi na `/auth/reset-password`; SDK obsluguje URL tej trasy |
 | Rejestracja i potwierdzenie emaila | Supabase Auth oraz linki emailowe zgodne z allowlista redirectow |
+
+Przy rejestracji aplikacja zapisuje w metadanych uzytkownika `locale` (`pl`,
+`en` albo `es`). Redirect potwierdzenia i resetu hasla zawiera ten sam jezyk,
+dlatego ekran po kliknieciu linku oraz tresc wiadomosci pozostaja spojne.
+
+Szablony Auth znajduja sie w `supabase/templates/`. Ich wdrozenie oraz transport
+SMTP przez Postmark opisuje `docs/EMAIL_DELIVERY_AND_TEMPLATES.md`.
 
 ## Konfiguracja
 

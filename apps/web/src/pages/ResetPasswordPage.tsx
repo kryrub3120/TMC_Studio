@@ -7,13 +7,13 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from '@tmc/ui';
+import { translate, useTranslation, type Language } from '@tmc/ui';
 import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, setLanguage } = useTranslation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +22,18 @@ export function ResetPasswordPage() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    const lang = new URLSearchParams(window.location.search).get('lang');
+    if (lang === 'en' || lang === 'pl' || lang === 'es') setLanguage(lang as Language);
+  }, [setLanguage]);
+
+  useEffect(() => {
+    const requestedLanguage = new URLSearchParams(window.location.search).get('lang');
+    const linkLanguage: Language =
+      requestedLanguage === 'pl' || requestedLanguage === 'es' ? requestedLanguage : 'en';
+    const linkT = (key: string) => translate(key, undefined, linkLanguage);
+
     if (!supabase) {
-      setError(t('auth.authNotConfigured'));
+      setError(linkT('auth.authNotConfigured'));
       return;
     }
 
@@ -47,12 +57,12 @@ export function ResetPasswordPage() {
         setTimeout(() => {
           if (!done) {
             done = true;
-            setError(t('auth.resetPasswordInvalid'));
+            setError(linkT('auth.resetPasswordInvalid'));
           }
         }, 4000);
       }
     });
-  }, [t]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -12,6 +12,7 @@ import type { BoardDocument } from '@tmc/core';
 // devCloud.ts and the isDevCloudActive() guards below.
 import { isDevCloudActive } from './devCloud';
 import * as devCloud from './devCloud';
+import { buildLocalizedAuthUrl, getAuthEmailLocale } from '../auth/authEmailLocale';
 
 // Environment variables (Vite)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -169,13 +170,15 @@ export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promis
 /** Sign up with email and password */
 export async function signUp(email: string, password: string, fullName?: string) {
   if (!supabase) throw new Error('Supabase not configured');
+
+  const locale = getAuthEmailLocale();
   
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName },
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      data: { full_name: fullName, locale },
+      emailRedirectTo: buildLocalizedAuthUrl('/auth/callback'),
     },
   });
   
@@ -283,7 +286,7 @@ export async function resetPasswordForEmail(email: string) {
   if (!supabase) throw new Error('Supabase not configured');
 
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/reset-password`,
+    redirectTo: buildLocalizedAuthUrl('/auth/reset-password'),
   });
 
   if (error) throw error;
@@ -297,6 +300,9 @@ export async function resendConfirmationEmail(email: string) {
   const { data, error } = await supabase.auth.resend({
     type: 'signup',
     email,
+    options: {
+      emailRedirectTo: buildLocalizedAuthUrl('/auth/callback'),
+    },
   });
 
   if (error) throw error;

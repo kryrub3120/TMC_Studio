@@ -67,6 +67,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMessage(null);
   }, []);
 
+  const clearCredentials = useCallback(() => {
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setFullName('');
+    setLocalError(null);
+  }, []);
+
   const handleModeChange = (newMode: AuthMode) => {
     setMode(newMode);
     resetForm();
@@ -106,13 +114,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       } else if (mode === 'register') {
         await onSignUp(email, password, fullName || undefined);
         setSuccessMessage(t('auth.verifyEmail'));
-        resetForm();
+        clearCredentials();
         setMode('login');
       } else if (mode === 'forgot') {
         if (onSendResetLink) {
           await onSendResetLink(email);
           setSuccessMessage(t('auth.resetEmailSent'));
-          resetForm();
+          clearCredentials();
           setMode('login');
         }
       }

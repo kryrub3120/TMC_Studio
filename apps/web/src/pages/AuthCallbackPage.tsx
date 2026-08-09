@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { logger } from '../lib/logger';
 import { EVENTS, track } from '../lib/analytics';
+import { translate, useTranslation, type Language } from '@tmc/ui';
 
 /**
  * Full-page OAuth callback — used only by the `web-redirect` surface.
@@ -12,11 +13,21 @@ import { EVENTS, track } from '../lib/analytics';
  */
 export function AuthCallbackPage() {
   const navigate = useNavigate();
+  const { t, setLanguage } = useTranslation();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const lang = new URLSearchParams(window.location.search).get('lang');
+    if (lang === 'en' || lang === 'pl' || lang === 'es') setLanguage(lang as Language);
+  }, [setLanguage]);
 
   useEffect(() => {
     let done = false;
     const startedAt = performance.now();
+    const requestedLanguage = new URLSearchParams(window.location.search).get('lang');
+    const callbackLanguage: Language =
+      requestedLanguage === 'pl' || requestedLanguage === 'es' ? requestedLanguage : 'en';
+    const callbackT = (key: string) => translate(key, undefined, callbackLanguage);
 
     // Warm the editor bundle while the PKCE exchange completes.
     void import('../App');
@@ -34,7 +45,7 @@ export function AuthCallbackPage() {
     };
 
     const safety = setTimeout(() => {
-      fail('Logowanie trwało zbyt długo. Spróbuj ponownie.');
+      fail(callbackT('auth.callbackTimeout'));
     }, 10000);
 
     async function handleCallback() {
@@ -48,7 +59,7 @@ export function AuthCallbackPage() {
 
       if (!supabase) {
         clearTimeout(safety);
-        fail('Logowanie nie jest obecnie dostępne.');
+        fail(callbackT('auth.callbackUnavailable'));
         return;
       }
 
@@ -67,7 +78,7 @@ export function AuthCallbackPage() {
         if (error || !session?.user) {
           logger.error(`[Auth] OAuth callback failed after ${elapsed}ms`, error);
           clearTimeout(safety);
-          fail(error?.message || 'Nie udało się utworzyć sesji. Spróbuj ponownie.');
+          fail(error?.message || callbackT('auth.callbackSessionFailed'));
           return;
         } else {
           // Use session metadata directly — skip extra DB round-trip.
@@ -93,7 +104,7 @@ export function AuthCallbackPage() {
       } catch (err) {
         logger.error('[Auth] OAuth callback: unexpected error', err);
         clearTimeout(safety);
-        fail(err instanceof Error ? err.message : 'Nie udało się zalogować. Spróbuj ponownie.');
+        fail(err instanceof Error ? err.message : callbackT('auth.callbackFailed'));
         return;
       }
 
@@ -113,15 +124,15 @@ export function AuthCallbackPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] p-4 text-white">
         <section className="w-full max-w-md rounded-lg border border-red-400/30 bg-[#1a1a2e] p-6 shadow-2xl" role="alert">
-          <h1 className="text-xl font-semibold">Nie udało się zalogować</h1>
-          <p className="mt-2 text-sm text-gray-300">Login could not finish.</p>
+          <h1 className="text-xl font-semibold">{t('auth.callbackErrorTitle')}</h1>
+          <p className="mt-2 text-sm text-gray-300">{t('auth.callbackErrorDescription')}</p>
           <p className="mt-4 rounded-md bg-red-500/10 p-3 text-sm text-red-200">{error}</p>
           <button
             type="button"
             onClick={() => navigate('/board', { replace: true })}
             className="mt-5 w-full rounded-md bg-blue-600 px-4 py-2.5 font-medium hover:bg-blue-500"
           >
-            Wróć do aplikacji
+            {t('auth.callbackBack')}
           </button>
         </section>
       </main>
@@ -139,7 +150,7 @@ export function AuthCallbackPage() {
       fontFamily: 'sans-serif',
       fontSize: '16px',
     }}>
-      Logowanie...
+      {t('auth.callbackLoading')}
     </div>
   );
 }
