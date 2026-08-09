@@ -149,16 +149,15 @@ Stan wejsciowy:
 3. Gate lokalny: 139 testow web, 40 billing i 36 E2E przechodzi.
 4. Stripe produkcyjny pozostaje celowo w test mode do czasu potwierdzenia
    danych prawnych, podatkow, katalogu LIVE i testu webhooka.
-5. Integracja Sentry error-only jest gotowa w kodzie; aktywacja wymaga
-   `VITE_SENTRY_DSN` i ponownego deployu.
+5. Sentry error-only jest aktywne w produkcji; kontrolowany test ingestion
+   zakonczyl sie HTTP 200 bez naruszen CSP.
 
 Najblizsza kolejnosc:
 
-1. Aktywacja Sentry i kontrolowany test zdarzenia.
-2. Konfiguracja Stripe LIVE w Dashboard wedlug `docs/STRIPE_TAX_SETUP.md`.
-3. End-to-end zakup LIVE o minimalnej wartosci i refund.
-4. Beta 10-20 osob z pomiarem aktywacji, eksportu, bledow i checkoutu.
-5. Naprawa tylko problemow P0/P1 przed publicznym ruchem sprzedazowym.
+1. Konfiguracja Stripe LIVE w Dashboard wedlug `docs/STRIPE_TAX_SETUP.md`.
+2. End-to-end zakup LIVE o minimalnej wartosci i refund.
+3. Beta 10-20 osob z pomiarem aktywacji, eksportu, bledow i checkoutu.
+4. Naprawa tylko problemow P0/P1 przed publicznym ruchem sprzedazowym.
 
 ### Sprint UX-C - Editor Viewport, Pan i Squad Bench
 

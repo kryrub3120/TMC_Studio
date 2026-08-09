@@ -1,5 +1,9 @@
 # TMC Studio - Error Monitoring
 
+**Status:** ACTIVE in production (2026-08-09)
+**Environment:** `production`
+**Release:** `9f136c4`
+
 ## Scope
 
 The web application supports optional Sentry error monitoring. The integration
@@ -29,6 +33,11 @@ embeds these values into the browser bundle at build time.
    build, never in the live editor flow.
 4. Confirm the event appears in Sentry with the correct environment and URL.
 5. Remove the controlled exception and deploy again.
+
+Production verification completed on 2026-08-09 without adding a persistent
+test exception to the application. The SDK loaded once, CSP reported no
+violations, and the Sentry envelope endpoint returned HTTP 200. The production
+CSP permits only the exact ingest host assigned to the TMC Studio project.
 
 ## Follow-up
 

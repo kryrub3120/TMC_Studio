@@ -18,23 +18,18 @@ bezpieczny billing LIVE i mierzalna bete.
 - SEO: 60 prerenderowanych stron EN/PL/ES, sitemap wdrozony i zgloszony.
 - Quality gate: 139 web tests, 40 billing tests, 36 Playwright E2E.
 - Stripe: TEST mode, bez realnych obciazen.
-- Monitoring: implementacja error-only gotowa; brak produkcyjnego DSN.
+- Monitoring: Sentry error-only aktywne w produkcji; ingestion zweryfikowane.
 
 ## Kolejnosc wykonania
 
-1. Utworzyc lub wybrac projekt Sentry dla web production.
-2. Ustawic w Netlify `VITE_SENTRY_DSN` i
-   `VITE_SENTRY_ENVIRONMENT=production`, przebudowac oraz wdrozyc.
-3. Wyslac jedno kontrolowane zdarzenie z deploy preview i potwierdzic je w
-   Sentry; usunac kod testowy przed produkcja.
-4. Potwierdzic dane sprzedawcy i decyzje podatkowe z
+1. Potwierdzic dane sprzedawcy i decyzje podatkowe z
    `docs/STRIPE_TAX_SETUP.md`.
-5. Skonfigurowac katalog produktow/cen, Tax, Customer Portal i webhook LIVE.
-6. Podmienic komplet kluczy Stripe atomowo: publishable, secret, webhook oraz
+2. Skonfigurowac katalog produktow/cen, Tax, Customer Portal i webhook LIVE.
+3. Podmienic komplet kluczy Stripe atomowo: publishable, secret, webhook oraz
    price IDs. Nie mieszac kluczy TEST i LIVE.
-7. Wykonac minimalny zakup LIVE, potwierdzic entitlement, fakture, portal,
+4. Wykonac minimalny zakup LIVE, potwierdzic entitlement, fakture, portal,
    anulowanie i refund.
-8. Zaprosic 10-20 testerow; przez pierwsze 7 dni codziennie przegladac bledy,
+5. Zaprosic 10-20 testerow; przez pierwsze 7 dni codziennie przegladac bledy,
    aktywacje, eksporty i rozpoczecia checkoutu.
 
 ## Bramka publicznego ruchu
@@ -47,6 +42,5 @@ bezpieczny billing LIVE i mierzalna bete.
 
 ## Potrzebne od wlasciciela
 
-- Publiczny browser DSN projektu Sentry.
 - Potwierdzenie danych prawnych podmiotu i decyzji VAT/OSS z ksiegowym.
 - Akceptacja momentu wykonania pierwszej realnej platnosci i refundu.
