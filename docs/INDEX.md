@@ -16,7 +16,8 @@ Czytaj w tej kolejnosci:
 6. `docs/SYSTEM_ARCHITECTURE.md` - architektura i granice warstw.
 7. `docs/ENTITLEMENTS.md` - plany, limity, gating.
 8. `docs/SITE_ARCHITECTURE.md`, `docs/WEBSITE_LAUNCH_PLAN.md`, `docs/STRIPE_TAX_SETUP.md` - marketing, legal, billing.
-9. `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md` - historyczny snapshot audytu; aktualne decyzje sa w dokumentach powyzej.
+9. `docs/ERROR_MONITORING.md` - konfiguracja raportowania bledow produkcyjnych.
+10. `docs/AUDYT_KOMPLEKSOWY_2026-06-18.md` - historyczny snapshot audytu; aktualne decyzje sa w dokumentach powyzej.
 
 Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa aktualny source of truth.
 
@@ -70,6 +71,7 @@ Jesli dokument w archiwum mowi cos sprzecznego z powyzszymi plikami, wygrywa akt
 | `SITE_ARCHITECTURE.md` | Mapa stron i zgodnosc UE |
 | `WEBSITE_LAUNCH_PLAN.md` | Pozycjonowanie i blueprint strony |
 | `STRIPE_TAX_SETUP.md` | Stripe Tax / VAT |
+| `ERROR_MONITORING.md` | Sentry error monitoring i zmienne produkcyjne |
 | `EU_COMPLIANCE_CHECKLIST.md` | Checklist compliance |
 | `SEO_PERFORMANCE_NOTES.md` | Notatki SEO/performance |
 

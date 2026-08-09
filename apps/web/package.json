@@ -18,6 +18,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@sentry/react": "^10.69.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tmc/board": "workspace:*",
     "@tmc/core": "workspace:*",

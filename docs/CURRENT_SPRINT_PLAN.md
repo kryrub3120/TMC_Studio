@@ -1,6 +1,6 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-08-06
+**Data:** 2026-08-09
 **Status:** ACTIVE, krotki wskaznik operacyjny  
 **Source of truth:** `docs/INDEX.md` oraz dokumenty wskazane w jego sekcji Source of Truth.
 
@@ -132,9 +132,37 @@ Evidence:
 
 ## Aktualny sprint
 
-### Sprint UX-C — Editor Viewport, Pan i Squad Bench
+### Sprint LAUNCH-1 - Monitoring, Stripe LIVE readiness i beta
 
-**Status:** 🟢 READY (2026-06-29)  
+**Status:** ACTIVE (2026-08-09)
+**Source of truth:** `tasks/NEXT_TASK.md`, `docs/WEB_LAUNCH_CHECKLIST.md`,
+`docs/ERROR_MONITORING.md`, `docs/STRIPE_TAX_SETUP.md`
+
+Cel: zatrzymac rozwoj funkcji niezbednych dopiero po starcie, uruchomic sygnaly
+o bledach produkcyjnych, przygotowac bezpieczne przelaczenie Stripe z TEST na
+LIVE i zaprosic pierwsza kontrolowana grupe testerow.
+
+Stan wejsciowy:
+
+1. Produkcja `https://tmcstudio.app` dziala z Google OAuth redirect + PKCE.
+2. Publiczna warstwa SEO obejmuje 60 prerenderowanych stron EN/PL/ES.
+3. Gate lokalny: 139 testow web, 40 billing i 36 E2E przechodzi.
+4. Stripe produkcyjny pozostaje celowo w test mode do czasu potwierdzenia
+   danych prawnych, podatkow, katalogu LIVE i testu webhooka.
+5. Integracja Sentry error-only jest gotowa w kodzie; aktywacja wymaga
+   `VITE_SENTRY_DSN` i ponownego deployu.
+
+Najblizsza kolejnosc:
+
+1. Aktywacja Sentry i kontrolowany test zdarzenia.
+2. Konfiguracja Stripe LIVE w Dashboard wedlug `docs/STRIPE_TAX_SETUP.md`.
+3. End-to-end zakup LIVE o minimalnej wartosci i refund.
+4. Beta 10-20 osob z pomiarem aktywacji, eksportu, bledow i checkoutu.
+5. Naprawa tylko problemow P0/P1 przed publicznym ruchem sprzedazowym.
+
+### Sprint UX-C - Editor Viewport, Pan i Squad Bench
+
+**Status:** DONE / RELEASED (2026-08-08)
 **Source of truth:** `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`
 
 Cel: tablica ma byc glownym, duzym i wygodnym obszarem pracy na laptopach; po powiekszeniu ma dac sie naturalnie przesuwac; Squad Bench ma startowac ukryty i zapamietywac preferencje; overlaye nie moga nachodzic na siebie.
@@ -149,6 +177,8 @@ Zakres:
 6. Manual QA na viewportach laptopowych.
 
 DoD i manual QA matrix sa w `tasks/UX_EDITOR_VIEWPORT_BENCH_2026-06-29.md`.
+Regresje pan/marquee, white mode, presetow boiska, Squad Bench, ustawien i
+responsywnego topbara sa pokryte aktualnym zestawem Playwright.
 
 ---
 

@@ -49,6 +49,8 @@ Set in Netlify Dashboard -> Site configuration -> Environment variables:
 - `VITE_STRIPE_PUBLISHABLE_KEY=<publishable key>`
 - `STRIPE_SECRET_KEY=<secret key>`
 - `STRIPE_WEBHOOK_SECRET=<webhook secret>`
+- `VITE_SENTRY_DSN=<public browser DSN>` (recommended before inviting testers)
+- `VITE_SENTRY_ENVIRONMENT=production`
 
 Netlify build command and publish directory are defined in `netlify.toml`.
 
@@ -102,6 +104,7 @@ Manual production smoke after Netlify deploy:
 7. Sign out and sign in again.
 8. Start Stripe checkout from pricing and verify return URL is `/board?checkout=success`.
 9. Open billing portal and verify return URL is `/board?portal=return`.
+10. Confirm a controlled deploy-preview exception reaches the production Sentry project.
 
 ## Not Required For Web Launch
 
