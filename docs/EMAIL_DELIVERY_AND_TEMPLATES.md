@@ -13,20 +13,24 @@
 - Product and team messages sent outside Supabase Auth should use the Postmark
   API from a server-side Netlify Function. Never expose a Postmark server token
   in Vite or browser code.
+- Organization invitations use the authenticated
+  `send-organization-invite` Netlify Function and the Postmark API. The function
+  verifies the owner role, active Team plan, five-seat limit and duplicate
+  invitations before creating and sending a single-use token.
 
 ## Templates in the repository
 
-| Event | File |
-|---|---|
-| Account confirmation | `supabase/templates/confirmation.html` |
-| Password recovery | `supabase/templates/recovery.html` |
-| Supabase user invite | `supabase/templates/invite.html` |
-| Magic link | `supabase/templates/magic-link.html` |
-| Email change | `supabase/templates/email-change.html` |
-| Reauthentication | `supabase/templates/reauthentication.html` |
-| Password changed alert | `supabase/templates/password-changed.html` |
-| Email changed alert | `supabase/templates/email-changed.html` |
-| Sign-in method linked | `supabase/templates/identity-linked.html` |
+| Event                  | File                                        |
+| ---------------------- | ------------------------------------------- |
+| Account confirmation   | `supabase/templates/confirmation.html`      |
+| Password recovery      | `supabase/templates/recovery.html`          |
+| Supabase user invite   | `supabase/templates/invite.html`            |
+| Magic link             | `supabase/templates/magic-link.html`        |
+| Email change           | `supabase/templates/email-change.html`      |
+| Reauthentication       | `supabase/templates/reauthentication.html`  |
+| Password changed alert | `supabase/templates/password-changed.html`  |
+| Email changed alert    | `supabase/templates/email-changed.html`     |
+| Sign-in method linked  | `supabase/templates/identity-linked.html`   |
 | Sign-in method removed | `supabase/templates/identity-unlinked.html` |
 
 Local Supabase uses these files through `supabase/config.toml`. Local email
@@ -42,10 +46,15 @@ transactional stream. The `tacticsmadeclear.store` sending domain has verified
 DKIM and custom Return-Path records. DMARC starts in monitoring mode (`p=none`).
 
 Open and link tracking are disabled for this server. Rewritten confirmation URLs
-   can invalidate Supabase links.
+can invalidate Supabase links.
 
 A dedicated SMTP token is used instead of the broader Server API token. It is
 stored only in Supabase's encrypted SMTP configuration and never in the repo.
+
+The Postmark Server API token for organization invitations is stored as the
+Netlify production secret `POSTMARK_SERVER_TOKEN`. It must never use a
+`VITE_` prefix. Delivery failures remove the newly created pending invitation;
+logs contain the invitation and Postmark message IDs, never message bodies.
 
 ### Supabase Auth
 
@@ -83,11 +92,17 @@ Run each case in PL, EN and ES using inboxes that are not existing users:
 7. Confirm that an expired or reused link shows a localized error.
 8. Check mobile Gmail, desktop Gmail and Outlook rendering.
 
-## Known remaining gap
+## Organization invitation test matrix
 
-Organization invitations currently create an invitation token and copyable link
-but do not send email. Implement this separately as an authenticated Netlify
-Function using the Postmark API after the sending domain and server token are
-verified. The function must validate the caller's organization role, use a
-single-use invitation token, rate-limit requests and log delivery IDs without
-storing message bodies.
+1. As a Team owner with a free seat, invite a new PL, EN and ES address.
+2. Confirm the localized email arrives and opens `/invite?token=...&lang=...`.
+3. Sign in with the invited address, accept once and confirm club membership.
+4. Confirm a second acceptance fails and the invitation is marked accepted.
+5. Confirm members, Free/Pro users, duplicate addresses and a full five-seat
+   club cannot create invitations.
+6. Revoke a pending invitation and confirm its link can no longer be accepted.
+7. Simulate a Postmark failure and confirm no pending invitation remains.
+
+The current IP limiter is per Netlify function instance. This is sufficient for
+the launch volume; replace it with a distributed limiter if invitation abuse or
+horizontal scale makes instance-local counters inadequate.

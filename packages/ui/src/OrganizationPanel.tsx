@@ -88,6 +88,7 @@ export function OrganizationPanel({
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [inviteSentEmail, setInviteSentEmail] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   // Owner-leaves-club flow: either transfer ownership to another member,
@@ -227,18 +228,19 @@ export function OrganizationPanel({
     const email = inviteEmail.trim().toLowerCase();
     if (!email) return;
     setLocalError(null);
+    setInviteSentEmail(null);
     setIsInviting(true);
     try {
-      const invitation = await onInvite(email);
-      try {
-        await navigator.clipboard.writeText(getInviteLink(invitation.token));
-        setCopiedToken(invitation.token);
-      } catch {
-        // The pending invitation remains available below with a Copy link action.
-      }
+      await onInvite(email);
+      setInviteSentEmail(email);
       setInviteEmail('');
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : t('organizationPanel.errors.inviteFailed'));
+      const message = err instanceof Error ? err.message : '';
+      setLocalError(
+        message.startsWith('organizationPanel.errors.')
+          ? t(message)
+          : message || t('organizationPanel.errors.inviteFailed')
+      );
     } finally {
       setIsInviting(false);
     }
@@ -416,13 +418,21 @@ export function OrganizationPanel({
                   className={inputClass}
                   placeholder={t('organizationPanel.invite.emailPlaceholder')}
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onChange={(e) => {
+                    setInviteEmail(e.target.value);
+                    setInviteSentEmail(null);
+                  }}
                 />
                 <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim()} variant="primary" size="sm">
                   {isInviting ? t('organizationPanel.invite.sending') : t('organizationPanel.invite.cta')}
                 </Button>
               </div>
               <p className="mt-2 text-xs text-muted">{t('organizationPanel.invite.shareHint')}</p>
+              {inviteSentEmail && (
+                <p className="mt-2 text-xs text-accent" role="status">
+                  {t('organizationPanel.invite.sent', { email: inviteSentEmail })}
+                </p>
+              )}
             </div>
           )}
 

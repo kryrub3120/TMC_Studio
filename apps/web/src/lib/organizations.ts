@@ -11,6 +11,7 @@ import { logger } from './logger';
 import { supabase } from './supabase';
 import { isDevCloudActive } from './devCloud';
 import * as devCloud from './devCloud';
+import { getAuthEmailLocale } from '../auth/authEmailLocale';
 
 // =====================================================
 // TYPES
@@ -235,10 +236,9 @@ export async function getInvitations(organizationId: string): Promise<Invitation
 }
 
 /**
- * Create an invitation for an email address. Returns the invitation,
- * including its token so the UI can build a shareable accept link
- * (`/invite?token=...`). No email is sent by this function — the caller
- * is responsible for sharing the link (copy-to-clipboard, etc.).
+ * Create and email an invitation through the authenticated Netlify Function.
+ * The server verifies the Team plan, owner role and seat limit before creating
+ * the token. If Postmark delivery fails, the pending invitation is rolled back.
  */
 export async function inviteMember(
   organizationId: string,
@@ -250,29 +250,22 @@ export async function inviteMember(
   if (isDevCloudActive()) return devCloud.createOrgInvitation(organizationId, normalizedEmail); // DEV-ONLY
   if (!supabase) throw new Error('Supabase not configured');
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('organizationPanel.errors.notAuthenticated');
 
-  const { data, error } = await supabase
-    .from('invitations')
-    .insert({
-      organization_id: organizationId,
-      email: normalizedEmail,
-      role: 'member',
-      invited_by: user.id,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    // Unique constraint on (organization_id, email) WHERE status = 'pending'
-    if (error.code === '23505') {
-      throw new Error('There is already a pending invitation for this email');
-    }
-    throw error;
+  const response = await fetch('/api/send-organization-invite', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ organizationId, email: normalizedEmail, locale: getAuthEmailLocale() }),
+  });
+  const result = await response.json() as { invitation?: Invitation; error?: string; code?: string };
+  if (!response.ok || !result.invitation) {
+    throw new Error(result.code ? `organizationPanel.errors.${result.code}` : result.error || 'organizationPanel.errors.inviteFailed');
   }
-
-  return data as Invitation;
+  return result.invitation;
 }
 
 /** Revoke a pending invitation. Requires owner/admin role (enforced by RLS). */

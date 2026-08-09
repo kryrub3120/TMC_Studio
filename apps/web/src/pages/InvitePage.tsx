@@ -9,16 +9,21 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { useTranslation } from '@tmc/ui';
+import { useTranslation, type Language } from '@tmc/ui';
 import { useAuthStore } from '../store/useAuthStore';
 import { getInvitationByToken, acceptInvitation, type InvitationPreview } from '../lib/organizations';
 
 type ViewState = 'loading' | 'not-found' | 'expired' | 'ready' | 'wrong-account' | 'accepted' | 'error';
 
 export function InvitePage() {
-  const { t } = useTranslation();
+  const { t, setLanguage } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
+
+  useEffect(() => {
+    const lang = searchParams.get('lang');
+    if (lang === 'en' || lang === 'pl' || lang === 'es') setLanguage(lang as Language);
+  }, [searchParams, setLanguage]);
 
   const authUser = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
