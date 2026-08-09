@@ -1,6 +1,6 @@
 # TMC Studio — Sprzedaż międzynarodowa: analiza krajów i konfiguracja Stripe
 
-_Utworzono: 2026-06-15 · Aktualizacja: 2026-08-06 · Status: integracja Checkout gotowa, konfiguracja Dashboard i podatkowa oczekuje na potwierdzenie · Decyzja: Stripe + Stripe Tax (nie MoR)_
+_Utworzono: 2026-06-15 · Aktualizacja: 2026-08-09 · Status: Stripe Tax i Poland domestic aktywne; OSS oczekuje na decyzję księgową · Decyzja: Stripe + Stripe Tax (nie MoR)_
 
 > **To nie jest porada podatkowa.** Konfigurację techniczną może wykonać agent, ale **rejestrację VAT OSS, progi i deklaracje musi potwierdzić księgowy/doradca podatkowy.** Stripe Tax *liczy i pobiera* podatek oraz przygotowuje dane do deklaracji — ale **deklaracje składamy my**.
 
@@ -129,7 +129,7 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 1. [x] Integracja Checkout wysyła `automatic_tax.enabled = true`.
 2. [x] Integracja Checkout wymaga pełnego adresu rozliczeniowego.
 3. [x] Integracja Checkout włącza `tax_id_collection`; dla istniejącego Customer zapisuje nazwę i adres.
-4. [ ] Potwierdź w Stripe Dashboard aktywację Stripe Tax, origin, kategorię produktu i rzeczywiste rejestracje podatkowe.
+4. [x] Stripe Tax aktywne: origin PL, ceny tax-inclusive, kategoria `Electronically Supplied Services`, rejestracja Poland domestic i stawka 23% (2026-08-09).
 5. Włącz **Customer Portal** (Settings → Billing → Customer portal): anulowanie, zmiana planu, pobieranie faktur — wspiera „łatwe anulowanie" wymagane przez UE.
 6. Dodaj **pole zgody konsumenta na natychmiastowe świadczenie + utratę prawa odstąpienia** (custom field / checkbox w Checkout lub na własnej stronie checkout przed redirectem) — wymóg prawa odstąpienia (patrz `SITE_ARCHITECTURE.md` §4.4). Zapisz zgodę w metadanych transakcji.
 
@@ -163,13 +163,14 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 
 ## 6. Checklist dla agenta (kolejność)
 
-- [ ] Potwierdzić kraj rejestracji firmy (zał. §0) — **z księgowym**
-- [ ] Dane prawne firmy w Stripe + waluta domyślna
-- [ ] Włączyć Stripe Tax (origin PL, kategoria SaaS, monitoring progów)
-- [ ] Rejestracja Poland domestic; OSS Union scheme wg decyzji księgowego
+- [x] Potwierdzony podmiot PL: SPORTPREDICTOR SP. Z O.O., czynny podatnik VAT
+- [x] Dane prawne firmy i publiczna marka TMC Studio w Stripe
+- [x] Stripe Tax: origin PL, kategoria usług elektronicznych, ceny brutto i monitoring progów
+- [x] Rejestracja Poland domestic, VAT 23% od 2026-08-09
+- [ ] OSS Union scheme wyłącznie po potwierdzeniu faktycznej rejestracji/decyzji księgowego
 - [ ] Produkty Pro + Team, ceny mies./rok, **tax behavior = inclusive**, waluty EUR/PLN/USD/GBP, tax code SaaS
 - [ ] Checkout: automatic tax, billing address, collect + validate VAT ID (reverse charge)
-- [ ] Customer Portal (anulowanie, faktury, zmiana planu)
+- [x] Customer Portal: faktury, dane klienta i VAT ID, płatności, anulowanie na koniec okresu, linki prawne i powrót do aplikacji
 - [ ] Checkbox zgody na świadczenie + utrata prawa odstąpienia, zapis w metadanych
 - [ ] Automatyczne faktury z numeracją i danymi VAT
 - [ ] Webhooki → Supabase `subscriptionTier`, mapowanie price→plan, obsługa payment_failed

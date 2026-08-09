@@ -17,15 +17,16 @@ bezpieczny billing LIVE i mierzalna bete.
 - Google OAuth: produkcyjny redirect + PKCE potwierdzony.
 - SEO: 60 prerenderowanych stron EN/PL/ES, sitemap wdrozony i zgloszony.
 - Quality gate: 139 web tests, 40 billing tests, 36 Playwright E2E.
-- Stripe: TEST mode, bez realnych obciazen.
+- Stripe: konfiguracja LIVE aktywna (produkty, ceny, Tax, Portal, webhook i
+  komplet sekretow Netlify); pozostaje kontrolowany zakup E2E i refund.
 - Monitoring: Sentry error-only aktywne w produkcji; ingestion zweryfikowane.
 
 ## Kolejnosc wykonania
 
-1. Potwierdzic dane sprzedawcy i decyzje podatkowe z
-   `docs/STRIPE_TAX_SETUP.md`.
-2. Skonfigurowac katalog produktow/cen, Tax, Customer Portal i webhook LIVE.
-3. Podmienic komplet kluczy Stripe atomowo: publishable, secret, webhook oraz
+1. [x] Potwierdzic dane sprzedawcy i decyzje podatkowe z
+   `docs/STRIPE_TAX_SETUP.md` (Poland domestic aktywne; OSS nieaktywne).
+2. [x] Skonfigurowac katalog produktow/cen, Tax, Customer Portal i webhook LIVE.
+3. [x] Podmienic komplet kluczy Stripe atomowo: publishable, secret, webhook oraz
    price IDs. Nie mieszac kluczy TEST i LIVE.
 4. Wykonac minimalny zakup LIVE, potwierdzic entitlement, fakture, portal,
    anulowanie i refund.

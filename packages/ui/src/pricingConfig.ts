@@ -5,8 +5,7 @@
  *   - Display prices (PricingPage, PricingModal)
  *   - Stripe Price IDs (must mirror netlify/functions/_stripeConfig.ts)
  *
- * STATUS: All prices are in TEST mode.
- * Before going LIVE, replace Price IDs with live IDs from Stripe Dashboard.
+ * STATUS: LIVE prices configured for the production Stripe account.
  */
 
 export type Cycle = 'monthly' | 'yearly';
@@ -19,12 +18,12 @@ export type Cycle = 'monthly' | 'yearly';
  */
 export const STRIPE_PRICES = {
   pro: {
-    monthly: 'price_1Sr4E7ANogcZdSR3Dwu2aPbV', // $9/mo
-    yearly: 'price_1Sr4JVANogcZdSR3locOvXlL',  // $90/yr
+    monthly: 'price_1SnQvaANogcZdSR39JL60iCS', // $9/mo
+    yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',  // $90/yr
   },
   team: {
-    monthly: 'price_1Sr4MEANogcZdSR3nM2fRLT8', // $29/mo
-    yearly: 'price_1Sr4DaANogcZdSR3OCEudUHk',  // $290/yr
+    monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc', // $29/mo
+    yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',  // $290/yr
   },
 } as const;
 

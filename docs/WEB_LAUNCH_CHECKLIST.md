@@ -7,6 +7,8 @@
 **Supabase production project:** `https://pgacjczecyfnwsaadyvj.supabase.co`  
 **Hosting:** Netlify  
 
+**Payments:** Stripe LIVE rollout in progress (2026-08-09); Poland domestic VAT 23% active, OSS not enabled without separate confirmation.
+
 ## Scope
 
 First launch is web-only. Tauri desktop OAuth/deep-link work stays in the repo as later readiness work, but it is not required to ship the public website.
