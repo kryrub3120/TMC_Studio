@@ -1713,6 +1713,7 @@ Dla Pro/Team — wszystkie opcje dostępne.
 
 **Exercise**
 - Opens in a dedicated Exercise Workspace rather than the tactical board.
+- The persistent workspace header exposes explicit Board and Library navigation, editable project naming, save status, Settings, Account and Help without hiding core account controls.
 - The workspace contains a live graphic preview, a visual source-graphic gallery with thumbnails and a deliberate `Edit graphic on board` action.
 - Can be created from the current Graphic or attach/refresh from any Graphic in the user's library.
 - Copying a Graphic copies its steps, board, team, pitch and orientation settings, so the Exercise survives deletion or later edits of the source.
@@ -1720,12 +1721,13 @@ Dla Pro/Team — wszystkie opcje dostępne.
 
 **Session plan**
 - Opens in a dedicated Session Workspace modelled on a professional training-session document.
+- The session name is an always-visible editable field and persists through the standard project rename flow.
 - Stores date, microcycle day, venue, start time, staff, objectives, workload values, microcycle/mesocycle and player count.
 - Stores an ordered list of Exercise references with a stable name snapshot.
 - Each item has a graphic preview, independently editable duration and full coaching notes.
 - Exercises can be moved up/down or removed; total duration is calculated from the agenda.
 - The document includes position-based squad groups, a staff-responsibility matrix, equipment/space organization and lineup notes.
-- `Print / PDF` uses a print-specific A4-friendly layout.
+- `Download PDF` creates a named PDF file directly in the browser; `Print` is a separate action using the print-specific layout.
 - Changes use the standard debounced cloud autosave and survive reload.
 
 **Guidance**
@@ -1735,6 +1737,7 @@ Dla Pro/Team — wszystkie opcje dostępne.
 
 **Library UX**
 - The project library is a near-full-screen responsive workspace (up to 1280 px), not a narrow metadata drawer.
+- It opens below the persistent 56 px workspace/top bar, preserving access to Board navigation, account and settings; its own header also includes a labelled `Back` action.
 - Graphic, Exercise and Session are navigation tabs. Clicking a type never creates an item; creation is a separate `New project` action for the active tab.
 - Recently opened/edited projects appear first as visual cards; on mobile they use a compact horizontal strip.
 - Every Graphic and Exercise card renders a pitch preview from its stored board document even when no thumbnail file exists. Session cards render exercise mosaics or a compact agenda preview.

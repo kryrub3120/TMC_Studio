@@ -58,6 +58,7 @@ test.describe("Coaching library workflow", () => {
   test("opens dedicated exercise and session editors and persists a complete plan", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     const openLibrary = async () => {
       const workspaceButton = page.getByRole("button", { name: "Biblioteka" });
       if (await workspaceButton.isVisible().catch(() => false))
@@ -92,6 +93,7 @@ test.describe("Coaching library workflow", () => {
       page.getByRole("heading", { name: "Stwórz kompletne ćwiczenie" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Zaczynamy" }).click();
+
     await expect(page.getByTestId("exercise-graphic-picker")).toBeVisible();
     await expect(page.getByTestId("exercise-graphic-option").first()).toHaveAttribute("aria-pressed", "true");
 
@@ -152,6 +154,13 @@ test.describe("Coaching library workflow", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Zaczynamy" }).click();
 
+    const sessionName = page.getByLabel("Nazwa konspektu").first();
+    await sessionName.fill("MD +2 — wysoki pressing");
+    await sessionName.press("Enter");
+    await expect(page.getByRole("button", { name: "Pobierz PDF" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Drukuj" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Wróć do tablicy" })).toBeVisible();
+
     await page.getByLabel("Data").fill("2026-08-12");
     await page.getByLabel("Dzień mikrocyklu").fill("MD +2");
     await page.getByLabel("Miejsce").fill("Siechnice");
@@ -182,9 +191,25 @@ test.describe("Coaching library workflow", () => {
     await page.getByLabel("Sprzęt i przygotowanie").fill("Bramki, piłki, GPS.");
     await page.waitForTimeout(2300);
 
+    await page.evaluate(() => {
+      window.print = () => {
+        document.documentElement.dataset.printCalled = "true";
+      };
+    });
+    await page.getByRole("button", { name: "Drukuj" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-print-called", "true");
+
+    const downloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+    await page.getByRole("button", { name: "Pobierz PDF" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("MD-2-wysoki-pressing.pdf");
+
     await page.reload();
     await page.waitForLoadState("networkidle");
     await expect(page.getByTestId("session-workspace")).toBeVisible();
+    await expect(page.getByLabel("Nazwa konspektu").first()).toHaveValue(
+      "MD +2 — wysoki pressing",
+    );
     await expect(page.getByLabel("Miejsce")).toHaveValue("Siechnice");
     await expect(page.locator("article")).toHaveCount(2);
     await expect(
@@ -208,6 +233,15 @@ test.describe("Coaching library workflow", () => {
       workspaceDimensions.clientWidth,
     );
     await openLibrary();
+    const workspaceHeader = page.getByTestId("session-workspace").locator("header");
+    await expect(workspaceHeader).toBeVisible();
+    const panelTop = await page.locator('[data-tour="projects-panel"]').evaluate(
+      (element) => element.getBoundingClientRect().top,
+    );
+    const headerBottom = await workspaceHeader.evaluate(
+      (element) => element.getBoundingClientRect().bottom,
+    );
+    expect(panelTop).toBeGreaterThanOrEqual(headerBottom - 1);
     const drawerDimensions = await page
       .locator('[data-tour="projects-panel"]')
       .evaluate((element) => ({
@@ -218,5 +252,7 @@ test.describe("Coaching library workflow", () => {
       drawerDimensions.clientWidth,
     );
     await expect(page.getByTestId("recent-projects")).toBeVisible();
+    await page.getByRole("button", { name: "Wróć", exact: true }).click();
+    await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
   });
 });

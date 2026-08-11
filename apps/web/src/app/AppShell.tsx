@@ -415,6 +415,20 @@ export function AppShell() {
     exerciseDetails: document.exerciseDetails,
     sessionPlanDetails: document.sessionPlanDetails,
   };
+  const workspaceUserInitials = (authUser?.full_name || authUser?.email || 'TMC')
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+
+  const handleOpenDrawingBoard = async () => {
+    const graphic = [...projectItems]
+      .filter((project) => (project.projectType ?? 'graphic') === 'graphic')
+      .sort((a, b) => new Date(b.lastOpenedAt ?? b.updatedAt).getTime() - new Date(a.lastOpenedAt ?? a.updatedAt).getTime())[0];
+    if (graphic) await handleSelectProject(graphic.id);
+    else await handleCreateProject('graphic');
+  };
 
   // Club Welcome Modal trigger: show once for first-time Club Premium admins
   // that haven't seen the welcome flow yet AND have a team
@@ -453,7 +467,20 @@ export function AppShell() {
           projects={projectItems}
           saveStatus={projectSaveStatus}
           onOpenProjects={handleOpenProjectsDrawer}
+          onBackToBoard={() => setBoardEditorOverride(true)}
+          onOpenSettings={() => {
+            setSettingsInitialTab('preferences');
+            setSettingsModalOpen(true);
+          }}
+          onOpenAccount={() => {
+            if (!authIsAuthenticated) setAuthModalOpen(true);
+            else {
+              setSettingsInitialTab('profile');
+              setSettingsModalOpen(true);
+            }
+          }}
           onRename={handleRenameProject}
+          userInitials={workspaceUserInitials}
           onUpdate={(exerciseDetails, description) => {
             void projectsController.updateCurrentProjectMetadata({ exerciseDetails, description });
           }}
@@ -468,7 +495,20 @@ export function AppShell() {
           projects={projectItems}
           saveStatus={projectSaveStatus}
           onOpenProjects={handleOpenProjectsDrawer}
+          onBackToBoard={() => void handleOpenDrawingBoard()}
+          onOpenSettings={() => {
+            setSettingsInitialTab('preferences');
+            setSettingsModalOpen(true);
+          }}
+          onOpenAccount={() => {
+            if (!authIsAuthenticated) setAuthModalOpen(true);
+            else {
+              setSettingsInitialTab('profile');
+              setSettingsModalOpen(true);
+            }
+          }}
           onRename={handleRenameProject}
+          userInitials={workspaceUserInitials}
           onUpdate={(sessionPlanDetails, description) => {
             void projectsController.updateCurrentProjectMetadata({ sessionPlanDetails, description });
           }}

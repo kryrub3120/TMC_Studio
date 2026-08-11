@@ -2359,12 +2359,20 @@ export function ProjectsDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-0 backdrop-blur-sm sm:p-3">
+    <div className="fixed inset-x-0 bottom-0 top-14 z-50 flex items-center justify-center bg-black/60 p-0 backdrop-blur-sm sm:p-3">
       <div
         data-tour="projects-panel"
-        className="relative flex h-full w-full min-w-0 flex-col overflow-hidden border-border bg-bg shadow-2xl sm:h-[calc(100dvh-24px)] sm:max-w-[1280px] sm:rounded-md sm:border"
+        className="relative flex h-full w-full min-w-0 flex-col overflow-hidden border-border bg-bg shadow-2xl sm:max-w-[1280px] sm:rounded-md sm:border"
       >
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-3 sm:px-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-accent"
+          >
+            <span aria-hidden="true">←</span>
+            <span>{t("projects.back")}</span>
+          </button>
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-text sm:text-lg">
             {t("projects.title")}
           </h2>

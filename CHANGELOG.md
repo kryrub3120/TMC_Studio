@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Nawigacja workspace i eksport konspektu** — edytory ćwiczeń i konspektów mają stałe przyciski powrotu do tablicy i biblioteki, dostęp do ustawień/konta, wyraźną edycję nazwy sesji oraz osobne akcje pobrania PDF i drukowania.
 - **Profil trenerski** — w Ustawieniach → Drużyny można zapisać nazwę i logo klubu oraz predefiniowany sztab. Dane synchronizują się z preferencjami konta i są używane w konspektach oraz wydruku.
 - **Podglądy projektów** — grafiki i ćwiczenia renderują miniaturę bezpośrednio z dokumentu planszy, a konspekty pokazują mozaikę ćwiczeń lub skróconą agendę.
 - **Statyczna strona popup callback (`/auth/popup-callback.html`)** — zachowana dla eksperymentalnej powierzchni popup. Pobiera kod PKCE, przekazuje go do okna głównego i nie ładuje React SPA.
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mierzalne wejścia z contentu** — eventy `content_view` i `content_open_board`; szablony otwierają tablicę z wybraną jedenastką.
 
 ### Changed
+- **Biblioteka z zachowanym topbarem** — pełnoekranowy panel zaczyna się pod głównym nagłówkiem, dzięki czemu nie zasłania nawigacji ani konta; dostał też opisany przycisk `Wróć`.
 - **Biblioteka projektów** — przebudowana na responsywny widok do 1280 px z ostatnimi projektami u góry, kartami z podglądem, uproszczonym panelem folderów i mobilnym paskiem ostatnich elementów.
 - **Tworzenie projektów** — Grafika, Ćwiczenie i Konspekt są teraz zakładkami nawigacji; osobny przycisk `Nowy projekt` tworzy element aktywnego typu.
 - **Edytor ćwiczenia i konspekt** — wybór grafiki oraz lista ćwiczeń używają podglądów wizualnych zamiast samych nazw.

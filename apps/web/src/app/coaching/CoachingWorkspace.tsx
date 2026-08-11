@@ -15,7 +15,11 @@ interface WorkspaceBaseProps {
   projects: ProjectItem[];
   saveStatus?: SaveStatus;
   onOpenProjects: () => void;
+  onBackToBoard: () => void;
+  onOpenSettings: () => void;
+  onOpenAccount: () => void;
   onRename: (name: string) => void;
+  userInitials?: string;
 }
 
 interface ExerciseWorkspaceProps extends WorkspaceBaseProps {
@@ -33,10 +37,21 @@ function WorkspaceHeader({
   project,
   saveStatus,
   onOpenProjects,
+  onBackToBoard,
+  onOpenSettings,
+  onOpenAccount,
   onRename,
   onHelp,
+  nameLabel,
+  boardLabel,
+  userInitials,
   actions,
-}: WorkspaceBaseProps & { onHelp: () => void; actions?: React.ReactNode }) {
+}: WorkspaceBaseProps & {
+  onHelp: () => void;
+  nameLabel: string;
+  boardLabel: string;
+  actions?: React.ReactNode;
+}) {
   const { t } = useTranslation();
   const [name, setName] = useState(project.name);
 
@@ -49,26 +64,36 @@ function WorkspaceHeader({
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-3 sm:px-5 print:hidden">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface px-2 sm:px-4 print:hidden">
+      <button
+        type="button"
+        onClick={onBackToBoard}
+        className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-accent"
+      >
+        <span aria-hidden="true">←</span>
+        <span>{boardLabel}</span>
+      </button>
       <button
         type="button"
         onClick={onOpenProjects}
-        aria-label={t("coaching.library")}
-        className="flex h-9 items-center gap-2 rounded-md border border-border bg-surface2 px-3 text-sm font-medium text-text hover:border-accent"
+        className="flex h-9 shrink-0 items-center rounded-md border border-border px-3 text-sm font-medium text-muted hover:border-accent hover:text-text"
       >
-        <span aria-hidden="true">←</span>
-        <span className="hidden sm:inline">{t("coaching.library")}</span>
+        {t("coaching.library")}
       </button>
-      <input
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        onBlur={commitName}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-        }}
-        className="min-w-0 max-w-xl flex-1 bg-transparent text-base font-semibold text-text outline-none focus:ring-0"
-        aria-label={t("coaching.projectName")}
-      />
+      <div className="hidden min-w-0 flex-1 items-center gap-2 lg:flex">
+        <span className="hidden shrink-0 text-xs font-medium text-muted lg:inline">{nameLabel}</span>
+        <span aria-hidden="true" className="text-sm text-muted">✎</span>
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onBlur={commitName}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          className="h-9 min-w-0 max-w-xl flex-1 rounded-md border border-border bg-bg px-3 text-sm font-semibold text-text outline-none focus:border-accent"
+          aria-label={nameLabel}
+        />
+      </div>
       <span
         className={`hidden text-xs sm:block ${saveStatus === "error" ? "text-red-400" : "text-muted"}`}
       >
@@ -79,6 +104,24 @@ function WorkspaceHeader({
             : t("coaching.saved")}
       </span>
       {actions}
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        aria-label={t("common.settings")}
+        title={t("common.settings")}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-lg text-muted hover:border-accent hover:text-text"
+      >
+        ⚙
+      </button>
+      <button
+        type="button"
+        onClick={onOpenAccount}
+        aria-label={t("settings.account")}
+        title={t("settings.account")}
+        className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-md bg-accent/15 px-2 text-xs font-bold text-accent hover:bg-accent/25"
+      >
+        {userInitials || "TM"}
+      </button>
       <button
         type="button"
         onClick={onHelp}
@@ -245,10 +288,14 @@ export function ExerciseWorkspace({
   projects,
   saveStatus,
   onOpenProjects,
+  onBackToBoard,
+  onOpenSettings,
+  onOpenAccount,
   onRename,
   onUpdate,
   onAttachGraphic,
   onEditBoard,
+  userInitials,
 }: ExerciseWorkspaceProps) {
   const { t } = useTranslation();
   const [showGuide, setShowGuide] = useState(false);
@@ -294,15 +341,21 @@ export function ExerciseWorkspace({
         projects={projects}
         saveStatus={saveStatus}
         onOpenProjects={onOpenProjects}
+        onBackToBoard={onBackToBoard}
+        onOpenSettings={onOpenSettings}
+        onOpenAccount={onOpenAccount}
         onRename={onRename}
         onHelp={() => setShowGuide(true)}
+        nameLabel={t("coaching.exercise.nameLabel")}
+        boardLabel={t("coaching.backToBoard")}
+        userInitials={userInitials}
         actions={
           <button
             type="button"
             onClick={onEditBoard}
-            className="hidden h-9 rounded-md bg-accent px-4 text-sm font-semibold text-bg sm:block"
+            className="hidden h-9 rounded-md bg-accent px-4 text-sm font-semibold text-bg lg:block"
           >
-            {t("coaching.exercise.editGraphic")}
+            {t("coaching.exercise.drawOnBoard")}
           </button>
         }
       />
@@ -449,13 +502,21 @@ export function SessionWorkspace({
   projects,
   saveStatus,
   onOpenProjects,
+  onBackToBoard,
+  onOpenSettings,
+  onOpenAccount,
   onRename,
   onUpdate,
   coachingProfile,
+  userInitials,
 }: SessionWorkspaceProps) {
   const { t } = useTranslation();
   const [showGuide, setShowGuide] = useState(false);
   const [exerciseQuery, setExerciseQuery] = useState("");
+  const [sessionName, setSessionName] = useState(project.name);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
   const details: SessionPlanDetails = {
     ...DEFAULT_SESSION_PLAN_DETAILS,
     ...project.sessionPlanDetails,
@@ -469,6 +530,14 @@ export function SessionWorkspace({
     () => projects.filter((item) => item.projectType === "exercise"),
     [projects],
   );
+
+  useEffect(() => setSessionName(project.name), [project.name]);
+
+  const commitSessionName = () => {
+    const next = sessionName.trim();
+    if (!next) setSessionName(project.name);
+    else if (next !== project.name) onRename(next);
+  };
   const filteredExercises = exercises.filter((item) =>
     item.name.toLowerCase().includes(exerciseQuery.toLowerCase()),
   );
@@ -530,6 +599,66 @@ export function SessionWorkspace({
     setShowGuide(false);
   };
 
+  const downloadPdf = async () => {
+    if (!pdfContentRef.current || isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    setPdfError(false);
+
+    const source = pdfContentRef.current;
+    const clone = source.cloneNode(true) as HTMLDivElement;
+    const sourceFields = source.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
+    const cloneFields = clone.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
+    sourceFields.forEach((field, index) => {
+      const clonedField = cloneFields[index];
+      if (!clonedField) return;
+      clonedField.value = field.value;
+      if (clonedField instanceof HTMLTextAreaElement) clonedField.textContent = field.value;
+    });
+
+    clone.querySelectorAll("button, [data-pdf-hide]").forEach((element) => element.remove());
+    Object.assign(clone.style, {
+      position: "fixed",
+      left: "-100000px",
+      top: "0",
+      width: "1200px",
+      maxWidth: "none",
+      background: "#ffffff",
+      color: "#0b1220",
+      padding: "24px",
+      zIndex: "-1",
+    });
+    clone.style.setProperty("--color-bg", "#f6f8fc");
+    clone.style.setProperty("--color-surface", "#ffffff");
+    clone.style.setProperty("--color-surface2", "#f1f4fa");
+    clone.style.setProperty("--color-border", "#aab6c8");
+    clone.style.setProperty("--color-text", "#0b1220");
+    clone.style.setProperty("--color-muted", "#516079");
+    document.body.appendChild(clone);
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      await pdf.html(clone, {
+        margin: [24, 24, 24, 24],
+        autoPaging: "text",
+        width: 547,
+        windowWidth: 1200,
+        html2canvas: {
+          backgroundColor: "#ffffff",
+          scale: 0.8,
+          useCORS: true,
+        },
+      });
+      const filename = sessionName.trim().replace(/[^a-z0-9ąćęłńóśźż_-]+/gi, "-").replace(/^-+|-+$/g, "") || "konspekt";
+      pdf.save(`${filename}.pdf`);
+    } catch {
+      setPdfError(true);
+    } finally {
+      clone.remove();
+      setIsDownloadingPdf(false);
+    }
+  };
+
   return (
     <div
       className="flex h-dvh min-h-0 flex-col bg-bg text-text"
@@ -541,22 +670,19 @@ export function SessionWorkspace({
         projects={projects}
         saveStatus={saveStatus}
         onOpenProjects={onOpenProjects}
+        onBackToBoard={onBackToBoard}
+        onOpenSettings={onOpenSettings}
+        onOpenAccount={onOpenAccount}
         onRename={onRename}
         onHelp={() => setShowGuide(true)}
-        actions={
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="hidden h-9 rounded-md bg-accent px-4 text-sm font-semibold text-bg sm:block"
-          >
-            {t("coaching.session.exportPdf")}
-          </button>
-        }
+        nameLabel={t("coaching.session.nameLabel")}
+        boardLabel={t("coaching.backToBoard")}
+        userInitials={userInitials}
       />
 
       <main className="min-h-0 flex-1 overflow-y-auto print:overflow-visible">
-        <div className="mx-auto max-w-[1500px] px-3 py-5 sm:px-6 print:max-w-none print:p-0">
-          <div className="mb-5 flex items-end justify-between gap-4 print:mb-3">
+        <div ref={pdfContentRef} className="mx-auto max-w-[1500px] px-3 py-5 sm:px-6 print:max-w-none print:p-0">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between print:mb-3">
             <div className="flex min-w-0 items-center gap-3">
               {coachingProfile?.logoDataUrl && (
                 <img src={coachingProfile.logoDataUrl} alt="" className="h-12 w-12 shrink-0 object-contain print:h-14 print:w-14" />
@@ -565,21 +691,48 @@ export function SessionWorkspace({
               <p className="text-xs font-semibold uppercase text-accent print:text-black">
                 {t("coaching.session.eyebrow")}
               </p>
-              <h1 className="mt-1 text-2xl font-semibold print:text-black">
-                {project.name}
-              </h1>
+              <input
+                value={sessionName}
+                onChange={(event) => setSessionName(event.target.value)}
+                onBlur={commitSessionName}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                }}
+                aria-label={t("coaching.session.nameLabel")}
+                className="mt-1 h-11 w-full min-w-0 max-w-2xl rounded-md border border-border bg-surface px-3 text-xl font-semibold text-text outline-none focus:border-accent print:border-0 print:bg-white print:px-0 print:text-black"
+              />
               {coachingProfile?.clubName && <p className="mt-1 truncate text-xs text-muted print:text-black">{coachingProfile.clubName}</p>}
               </div>
             </div>
-            <div className="text-right">
+            <div className="flex shrink-0 items-end gap-2 print:block print:text-right">
+              <div className="mr-2 text-right">
               <p className="text-xs text-muted print:text-black">
                 {t("coaching.session.totalTime")}
               </p>
               <p className="text-2xl font-semibold text-accent print:text-black">
                 {totalDuration} min
               </p>
+              </div>
+              <button
+                type="button"
+                data-pdf-hide
+                onClick={() => void downloadPdf()}
+                disabled={isDownloadingPdf}
+                className="h-10 rounded-md bg-accent px-4 text-sm font-semibold text-bg disabled:opacity-50 print:hidden"
+              >
+                {isDownloadingPdf ? t("coaching.session.downloadingPdf") : t("coaching.session.downloadPdf")}
+              </button>
+              <button
+                type="button"
+                data-pdf-hide
+                onClick={() => window.print()}
+                className="h-10 rounded-md border border-border bg-surface px-4 text-sm font-semibold text-text hover:border-accent print:hidden"
+              >
+                {t("coaching.session.print")}
+              </button>
             </div>
           </div>
+          {pdfError && <p className="mb-4 text-sm text-red-400 print:hidden">{t("coaching.session.pdfError")}</p>}
 
           <section className="border-y border-border bg-surface py-4 print:border-black print:bg-white">
             <div className="grid gap-3 px-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -682,7 +835,7 @@ export function SessionWorkspace({
           </section>
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] print:mt-3 print:block">
-            <aside className="border border-border bg-surface p-4 print:hidden">
+            <aside data-pdf-hide className="border border-border bg-surface p-4 print:hidden">
               <h2 className="font-semibold">
                 {t("coaching.session.exerciseLibrary")}
               </h2>
