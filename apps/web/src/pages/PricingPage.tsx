@@ -36,6 +36,12 @@ export function PricingPage() {
 
   const [cycle, setCycle] = useState<Cycle>('monthly');
   const displayPrices = getDisplayPrices(language);
+  const fiveProPrice = language === 'pl'
+    ? (cycle === 'yearly' ? '1450 PLN' : '145 PLN')
+    : (cycle === 'yearly' ? '$450' : '$45');
+  const teamSavings = language === 'pl'
+    ? (cycle === 'yearly' ? '460 PLN' : '46 PLN')
+    : (cycle === 'yearly' ? '$160' : '$16');
 
   const num = (v: number | 'unlimited') =>
     v === 'unlimited' ? t('pricingPage.matrix.unlimited') : String(v);
@@ -182,8 +188,8 @@ export function PricingPage() {
             <div className="rounded-lg border border-border bg-surface2 p-5 text-center">
               <p className="text-sm text-muted">{t('pricingPage.teamCalc.fivePro')}</p>
               <p className="mt-1 text-2xl font-bold text-text">
-                {cycle === 'yearly' ? '$450' : '$45'}
-                <span className="text-base font-normal text-muted">{cycle === 'yearly' ? '/yr' : '/mo'}</span>
+                {fiveProPrice}
+                <span className="text-base font-normal text-muted">{cycle === 'yearly' ? t('pricingPage.plans.perYear') : t('pricingPage.plans.perMonth')}</span>
               </p>
               <p className="mt-1 text-xs text-muted">5 × {t(`pricingPage.plans.${cycle === 'yearly' ? 'perYear' : 'perMonth'}`)}</p>
             </div>
@@ -196,11 +202,11 @@ export function PricingPage() {
               <p className="text-sm font-semibold text-accent">{t('pricingPage.teamCalc.teamPlan')}</p>
               <p className="mt-1 text-2xl font-bold text-text">
                 {displayPrices.team[cycle]}
-                <span className="text-base font-normal text-muted">{cycle === 'yearly' ? '/yr' : '/mo'}</span>
+                <span className="text-base font-normal text-muted">{cycle === 'yearly' ? t('pricingPage.plans.perYear') : t('pricingPage.plans.perMonth')}</span>
               </p>
               <p className="mt-1 text-xs font-medium text-accent">
                 {t('pricingPage.teamCalc.savings', {
-                  amount: cycle === 'yearly' ? '$160' : '$16',
+                  amount: teamSavings,
                   period: cycle === 'yearly'
                     ? t('pricingPage.plans.perYear')
                     : t('pricingPage.plans.perMonth'),

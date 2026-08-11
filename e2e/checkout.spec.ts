@@ -32,6 +32,13 @@ test.describe('Pricing & Checkout Flow', () => {
 
     await expect(page.getByText('29 PLN', { exact: true })).toBeVisible();
     await expect(page.getByText('99 PLN', { exact: true })).toBeVisible();
+    await expect(page.getByText('145 PLN', { exact: false })).toBeVisible();
+    await expect(page.getByText('Oszczędzasz 46 PLN/mies.')).toBeVisible();
+
+    await page.getByRole('button', { name: /Rocznie/ }).click();
+    await expect(page.getByText('290 PLN', { exact: true })).toBeVisible();
+    await expect(page.getByText('990 PLN', { exact: true })).toBeVisible();
+    await expect(page.getByText('Oszczędzasz 460 PLN/rok')).toBeVisible();
   });
 
   test('pricing page has paid CTA that preserves plan and billing cycle', async ({ page }) => {
