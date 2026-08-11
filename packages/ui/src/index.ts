@@ -106,7 +106,7 @@ export type { Cycle } from './pricingConfig.js';
 export { SquadBench } from './SquadBench.js';
 export type { SquadBenchProps } from './SquadBench.js';
 export type { SquadPlayer } from '@tmc/core';
-export { ProjectsDrawer } from './ProjectsDrawer.js';
+export { ProjectsDrawer, ProjectPreview } from './ProjectsDrawer.js';
 export type { ProjectItem, FolderItem } from './ProjectsDrawer.js';
 export { ContextMenu } from './ContextMenu.js';
 export type { ContextMenuItem } from './ContextMenu.js';

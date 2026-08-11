@@ -82,6 +82,31 @@ test.describe('Settings persistence', () => {
     await expect(page.getByTestId('team-home-primary-toggle')).toHaveAttribute('aria-label', /#00ff00/i);
   });
 
+  test('club identity and staff presets survive reload', async ({ page }) => {
+    await openSettings(page, /Drużyny|Teams|Equipos/i);
+    await page.getByTestId('coaching-club-name').fill('TMC Academy Wrocław');
+    await page.getByTestId('coaching-club-logo-input').setInputFiles({
+      name: 'club.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+    });
+    await expect(page.getByTestId('coaching-club-logo-preview')).toBeVisible();
+    await page.getByTestId('coaching-staff-name').fill('Marek Nowak');
+    await page.getByTestId('coaching-staff-role').fill('Asystent');
+    await page.getByTestId('coaching-staff-add').click();
+    await expect(page.getByText('Marek Nowak', { exact: true })).toBeVisible();
+    await closeSettings(page);
+    await page.waitForTimeout(2300);
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await openSettings(page, /Drużyny|Teams|Equipos/i);
+    await expect(page.getByTestId('coaching-club-name')).toHaveValue('TMC Academy Wrocław');
+    await expect(page.getByTestId('coaching-club-logo-preview')).toBeVisible();
+    await expect(page.getByText('Marek Nowak', { exact: true })).toBeVisible();
+    await expect(page.getByText('Asystent', { exact: true })).toBeVisible();
+  });
+
   test('single and bulk squad edits survive reload', async ({ page }) => {
     await openSettings(page, /Skład|Squad|Plantilla/i);
     await page.getByTestId('squad-name-input').fill('Jan Kowalski');

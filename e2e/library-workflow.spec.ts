@@ -83,6 +83,7 @@ test.describe("Coaching library workflow", () => {
 
     await openLibrary();
     await expect(page.getByTestId("recent-projects")).toBeVisible();
+    await page.getByTestId("library-type-exercise").click();
     await page.getByTestId("create-exercise-project").click();
     await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
     await expect(page.getByTestId("exercise-workspace")).toBeVisible();
@@ -91,6 +92,8 @@ test.describe("Coaching library workflow", () => {
       page.getByRole("heading", { name: "Stwórz kompletne ćwiczenie" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Zaczynamy" }).click();
+    await expect(page.getByTestId("exercise-graphic-picker")).toBeVisible();
+    await expect(page.getByTestId("exercise-graphic-option").first()).toHaveAttribute("aria-pressed", "true");
 
     const copiedElementTypes = await page.evaluate(() => {
       const document = JSON.parse(
@@ -128,6 +131,7 @@ test.describe("Coaching library workflow", () => {
       .getAttribute("data-project-id");
 
     await openLibrary();
+    await page.getByTestId("library-type-exercise").click();
     await page.getByTestId("create-exercise-project").click();
     await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
     await expect(page.getByTestId("exercise-workspace")).toBeVisible();
@@ -138,6 +142,7 @@ test.describe("Coaching library workflow", () => {
     await page.getByLabel("Czas (min)").fill("10");
 
     await openLibrary();
+    await page.getByTestId("library-type-session").click();
     await page.getByTestId("create-session-project").click();
     await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
     await expect(page.getByTestId("session-workspace")).toBeVisible();

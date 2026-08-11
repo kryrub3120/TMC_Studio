@@ -8,7 +8,7 @@ import { Toggle, SettingRow, SegmentedControl, Slider } from './primitives.js';
 import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset, LineupPreset } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset, LineupPreset, CoachingProfile } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { OrganizationPanel, type OrganizationPanelProps } from './OrganizationPanel.js';
 import { FaqSearch } from './FaqSearch.js';
@@ -156,6 +156,8 @@ interface SettingsModalProps {
   // Board document settings (moved here from the inspector)
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
+  coachingProfile?: CoachingProfile;
+  onUpdateCoachingProfile?: (profile: CoachingProfile) => void;
   pitchSettings?: PitchSettings;
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
   onSelectBoard?: (board: PitchBoardPreset) => void;
@@ -216,6 +218,8 @@ export function SettingsModal({
   onApplyLineupPreset,
   teamSettings,
   onUpdateTeam,
+  coachingProfile,
+  onUpdateCoachingProfile,
   pitchSettings,
   onUpdatePitch,
   onSelectBoard,
@@ -261,6 +265,8 @@ export function SettingsModal({
   const [squadNumber, setSquadNumber] = useState('');
   const [squadTeam, setSquadTeam] = useState<Team>('home');
   const [squadGoalkeeper, setSquadGoalkeeper] = useState(false);
+  const [staffName, setStaffName] = useState('');
+  const [staffRole, setStaffRole] = useState('');
   const [showBulkSquad, setShowBulkSquad] = useState(false);
   const [bulkSquad, setBulkSquad] = useState('');
   const [bulkSquadError, setBulkSquadError] = useState<string | null>(null);
@@ -297,6 +303,32 @@ export function SettingsModal({
         ? t('settings.bulkSkippedLines', { lines: parsed.invalidLines.join(', ') })
         : null,
     );
+  };
+
+  const updateCoachingProfile = (patch: Partial<CoachingProfile>) => {
+    if (!coachingProfile || !onUpdateCoachingProfile) return;
+    onUpdateCoachingProfile({ ...coachingProfile, ...patch });
+  };
+
+  const addStaffPreset = () => {
+    const name = staffName.trim();
+    if (!name || !coachingProfile) return;
+    updateCoachingProfile({
+      staff: [...coachingProfile.staff, {
+        id: globalThis.crypto?.randomUUID?.() ?? `staff-${Date.now()}`,
+        name,
+        role: staffRole.trim(),
+      }],
+    });
+    setStaffName('');
+    setStaffRole('');
+  };
+
+  const loadClubLogo = (file?: File) => {
+    if (!file || !file.type.startsWith('image/') || file.size > 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => updateCoachingProfile({ logoDataUrl: typeof reader.result === 'string' ? reader.result : undefined });
+    reader.readAsDataURL(file);
   };
 
   const currentPlan: Plan = !user
@@ -1436,9 +1468,83 @@ export function SettingsModal({
 
           {/* Teams Tab */}
           {activeTab === 'teams' && teamSettings && onUpdateTeam && (
-            <div>
-              <h3 className="text-lg font-semibold text-text mb-4">{t('settings.teams')}</h3>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-text">{t('settings.coachingProfile')}</h3>
+                <p className="mt-1 text-sm text-muted">{t('settings.coachingProfileHint')}</p>
+              </div>
+
+              {coachingProfile && onUpdateCoachingProfile && (
+                <div className="space-y-5 border-y border-border py-5">
+                  <div className="grid gap-4 sm:grid-cols-[112px_minmax(0,1fr)]">
+                    <div>
+                      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-border bg-surface2">
+                        {coachingProfile.logoDataUrl ? (
+                          <img src={coachingProfile.logoDataUrl} alt="" data-testid="coaching-club-logo-preview" className="h-full w-full object-contain p-2" />
+                        ) : (
+                          <span className="text-xs text-muted">{t('settings.clubLogo')}</span>
+                        )}
+                      </div>
+                      <label className="mt-2 block cursor-pointer text-center text-xs font-medium text-accent hover:underline">
+                        {t('settings.changeLogo')}
+                        <input type="file" accept="image/png,image/jpeg,image/webp" data-testid="coaching-club-logo-input" className="sr-only" onChange={(event) => loadClubLogo(event.target.files?.[0])} />
+                      </label>
+                    </div>
+                    <label className="block self-center">
+                      <span className="mb-1.5 block text-xs font-medium text-muted">{t('settings.clubName')}</span>
+                      <input
+                        data-testid="coaching-club-name"
+                        value={coachingProfile.clubName}
+                        onChange={(event) => updateCoachingProfile({ clubName: event.target.value })}
+                        placeholder={t('settings.clubNamePlaceholder')}
+                        className="h-11 w-full rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent"
+                      />
+                      <p className="mt-2 text-xs text-muted">{t('settings.logoHint')}</p>
+                    </label>
+                  </div>
+
+                  <div>
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-text">{t('settings.staffPresets')}</h4>
+                        <p className="mt-0.5 text-xs text-muted">{t('settings.staffPresetsHint')}</p>
+                      </div>
+                      <span className="text-xs text-muted">{coachingProfile.staff.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {coachingProfile.staff.map((member) => (
+                        <div key={member.id} className="flex items-center gap-3 border-b border-border/70 py-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
+                            {member.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-text">{member.name}</p>
+                            <p className="truncate text-xs text-muted">{member.role || t('settings.staffRoleFallback')}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => updateCoachingProfile({ staff: coachingProfile.staff.filter((item) => item.id !== member.id) })}
+                            className="h-8 w-8 text-lg text-muted hover:text-red-400"
+                            aria-label={t('settings.removeStaff', { name: member.name })}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                      <input data-testid="coaching-staff-name" value={staffName} onChange={(event) => setStaffName(event.target.value)} placeholder={t('settings.staffName')} className="h-10 rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      <input data-testid="coaching-staff-role" value={staffRole} onChange={(event) => setStaffRole(event.target.value)} placeholder={t('settings.staffRole')} className="h-10 rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      <button type="button" data-testid="coaching-staff-add" onClick={addStaffPreset} disabled={!staffName.trim()} className="h-10 rounded-md bg-accent px-4 text-sm font-semibold text-bg disabled:opacity-40">{t('settings.addStaff')}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h3 className="mb-4 text-lg font-semibold text-text">{t('settings.teamColors')}</h3>
               <TeamsPanel teamSettings={teamSettings} onUpdateTeam={onUpdateTeam} />
+              </div>
             </div>
           )}
 

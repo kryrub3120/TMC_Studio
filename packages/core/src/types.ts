@@ -632,6 +632,23 @@ export interface SessionStaffAssignment {
   exerciseResponsibilities: string[];
 }
 
+export interface StaffPreset {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface CoachingProfile {
+  clubName: string;
+  logoDataUrl?: string;
+  staff: StaffPreset[];
+}
+
+export const DEFAULT_COACHING_PROFILE: CoachingProfile = {
+  clubName: '',
+  staff: [],
+};
+
 export interface SessionPlanDetails {
   date: string;
   microcycleDay: string;

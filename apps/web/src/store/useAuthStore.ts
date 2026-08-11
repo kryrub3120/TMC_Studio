@@ -154,6 +154,7 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
       equipmentDefaults: local.equipmentDefaults,
       squadBenchVisible: local.squadBenchVisible,
       shortcutOverrides: local.shortcutOverrides,
+      coachingProfile: local.coachingProfile,
       bottomBar: { height: local.bottomBarHeight, collapsed: local.bottomBarCollapsed },
       inspector: { width: local.inspectorWidth },
     }).catch(() => {});
@@ -192,6 +193,7 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
   if (cloudPrefs.equipmentDefaults) useUIStore.setState({ equipmentDefaults: { ...useUIStore.getState().equipmentDefaults, ...cloudPrefs.equipmentDefaults } });
   if (cloudPrefs.squadBenchVisible !== undefined) useUIStore.setState({ squadBenchVisible: cloudPrefs.squadBenchVisible });
   if (cloudPrefs.shortcutOverrides) useUIStore.setState({ shortcutOverrides: cloudPrefs.shortcutOverrides });
+  if (cloudPrefs.coachingProfile) useUIStore.setState({ coachingProfile: cloudPrefs.coachingProfile });
   if (cloudPrefs.bottomBar) {
     useUIStore.setState({
       bottomBarHeight: cloudPrefs.bottomBar.height,

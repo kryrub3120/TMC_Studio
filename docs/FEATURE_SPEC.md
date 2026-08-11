@@ -1713,7 +1713,7 @@ Dla Pro/Team — wszystkie opcje dostępne.
 
 **Exercise**
 - Opens in a dedicated Exercise Workspace rather than the tactical board.
-- The workspace contains a graphic preview, source-graphic picker and a deliberate `Edit graphic on board` action.
+- The workspace contains a live graphic preview, a visual source-graphic gallery with thumbnails and a deliberate `Edit graphic on board` action.
 - Can be created from the current Graphic or attach/refresh from any Graphic in the user's library.
 - Copying a Graphic copies its steps, board, team, pitch and orientation settings, so the Exercise survives deletion or later edits of the source.
 - Stores source graphic id/name, duration, player count, category/phase, objective, content, organization, coaching points, progression/regressions and equipment.
@@ -1734,9 +1734,17 @@ Dla Pro/Team — wszystkie opcje dostępne.
 - The global first-run tutorial opens the real Projects drawer and explains the same library workflow.
 
 **Library UX**
-- The project library is a wide responsive workspace (up to 960 px), not a narrow metadata drawer.
-- The six most recently opened/edited projects appear first as visual cards.
-- Type creation, filters, working search/sort controls and the folder tree remain available below the recent section.
+- The project library is a near-full-screen responsive workspace (up to 1280 px), not a narrow metadata drawer.
+- Graphic, Exercise and Session are navigation tabs. Clicking a type never creates an item; creation is a separate `New project` action for the active tab.
+- Recently opened/edited projects appear first as visual cards; on mobile they use a compact horizontal strip.
+- Every Graphic and Exercise card renders a pitch preview from its stored board document even when no thumbnail file exists. Session cards render exercise mosaics or a compact agenda preview.
+- Search, sorting and folder navigation remain visible without pushing recent projects below a deep folder tree. Projects can still be dragged into a folder.
+
+**Coaching profile**
+- Settings → Teams stores a reusable club name, club logo and staff presets in the user's cloud-synced preferences.
+- Club identity is shown in the Session Workspace and in print/PDF output.
+- Staff presets can be toggled into a session plan with one click; the resulting staff list remains editable per session.
+- Logo uploads accept PNG, JPG and WebP files up to 1 MB and persist as part of the profile preferences.
 
 ### 13.3 Autosave Rules
 

@@ -19,7 +19,7 @@ import {
   type SettingsTab,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer, ProjectType, LineupPreset, ExerciseDetails, SessionPlanDetails } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer, ProjectType, LineupPreset, ExerciseDetails, SessionPlanDetails, CoachingProfile } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -145,6 +145,8 @@ interface ModalOrchestratorProps {
   // Board settings (Teams / Pitch — moved from the inspector)
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
+  coachingProfile?: CoachingProfile;
+  onUpdateCoachingProfile?: (profile: CoachingProfile) => void;
   pitchSettings?: PitchSettings;
   onUpdatePitch?: (settings: Partial<PitchSettings>) => void;
   onSelectBoard?: (board: PitchBoardPreset) => void;
@@ -320,6 +322,8 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onApplyLineupPreset={props.onApplyLineupPreset}
         teamSettings={props.teamSettings}
         onUpdateTeam={props.onUpdateTeam}
+        coachingProfile={props.coachingProfile}
+        onUpdateCoachingProfile={props.onUpdateCoachingProfile}
         pitchSettings={props.pitchSettings}
         onUpdatePitch={props.onUpdatePitch}
         onSelectBoard={props.onSelectBoard}

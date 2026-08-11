@@ -84,6 +84,7 @@ export type UserPreferences = {
   gridSize?: number;
   squadBenchVisible?: boolean;
   shortcutOverrides?: Record<string, string>;
+  coachingProfile?: import('@tmc/core').CoachingProfile;
   arrowDefaults?: {
     strokeWidth?: Record<string, number>;
     color?: Record<string, string>;

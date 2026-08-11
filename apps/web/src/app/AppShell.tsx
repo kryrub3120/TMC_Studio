@@ -145,6 +145,8 @@ export function AppShell() {
   const removeSquadPlayer = useBoardStore((s) => s.removeSquadPlayer);
   const squadBenchVisible = useUIStore((s) => s.squadBenchVisible);
   const setSquadBenchVisible = useUIStore((s) => s.setSquadBenchVisible);
+  const coachingProfile = useUIStore((s) => s.coachingProfile);
+  const setCoachingProfile = useUIStore((s) => s.setCoachingProfile);
   const updateTeamSettings = useBoardStore((s) => s.updateTeamSettings);
   const updatePitchSettings = useBoardStore((s) => s.updatePitchSettings);
   const applyPitchBoard = useBoardStore((s) => s.applyPitchBoard);
@@ -379,6 +381,7 @@ export function AppShell() {
     name: p.name,
     updatedAt: projectDocument.updatedAt ?? p.updated_at,
     thumbnailUrl: p.thumbnail_url ?? undefined,
+    document: projectDocument,
     isCloud: true,
     saveStatus: cloudProjectId === p.id ? projectSaveStatus : undefined,
     folderId: p.folder_id ?? undefined,
@@ -399,6 +402,7 @@ export function AppShell() {
     name: document.name,
     updatedAt: document.updatedAt,
     thumbnailUrl: activeCloudProject?.thumbnail_url ?? undefined,
+    document,
     isCloud: Boolean(cloudProjectId),
     saveStatus: projectSaveStatus,
     folderId: activeCloudProject?.folder_id ?? undefined,
@@ -468,6 +472,7 @@ export function AppShell() {
           onUpdate={(sessionPlanDetails, description) => {
             void projectsController.updateCurrentProjectMetadata({ sessionPlanDetails, description });
           }}
+          coachingProfile={coachingProfile}
         />
       ) : (
       <>
@@ -698,6 +703,8 @@ export function AppShell() {
         // Board settings (Teams / Pitch — moved from inspector)
         teamSettings={document.teamSettings ?? DEFAULT_TEAM_SETTINGS}
         onUpdateTeam={updateTeamSettings}
+        coachingProfile={coachingProfile}
+        onUpdateCoachingProfile={setCoachingProfile}
         pitchSettings={document.pitchSettings ?? DEFAULT_PITCH_SETTINGS}
         onUpdatePitch={updatePitchSettings}
         onSelectBoard={handleSelectBoard}

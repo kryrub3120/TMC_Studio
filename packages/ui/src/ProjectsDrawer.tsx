@@ -13,6 +13,7 @@ import {
   type ExerciseDetails,
   type ProjectType,
   type SessionPlanDetails,
+  type BoardDocument,
 } from "@tmc/core";
 
 export interface ProjectItem {
@@ -20,6 +21,7 @@ export interface ProjectItem {
   name: string;
   updatedAt: string;
   thumbnailUrl?: string;
+  document?: BoardDocument;
   isCloud: boolean;
   isFavorite?: boolean;
   isPinned?: boolean;
@@ -32,6 +34,87 @@ export interface ProjectItem {
   folderId?: string | null;
   /** Save status: 'saved' | 'saving' | 'unsaved' | 'error' | undefined */
   saveStatus?: "saved" | "saving" | "unsaved" | "error";
+}
+
+export function ProjectPreview({ project, projects = [], className = "" }: { project: ProjectItem; projects?: ProjectItem[]; className?: string }) {
+  const sourceProject = project.projectType === "exercise" && project.exerciseDetails?.sourceGraphicProjectId
+    ? projects.find((item) => item.id === project.exerciseDetails?.sourceGraphicProjectId)
+    : undefined;
+  const previewProject = sourceProject ?? project;
+
+  if (previewProject.thumbnailUrl) {
+    return <img src={previewProject.thumbnailUrl} alt="" className={`h-full w-full object-cover ${className}`} />;
+  }
+
+  if (project.projectType === "session") {
+    const sessionSources = (project.sessionPlanDetails?.exercises ?? [])
+      .map((item) => projects.find((candidate) => candidate.id === item.projectId))
+      .filter((item): item is ProjectItem => Boolean(item))
+      .slice(0, 4);
+    if (sessionSources.length === 0) {
+      const sessionItems = project.sessionPlanDetails?.exercises ?? [];
+      return (
+        <div className={`flex h-full w-full flex-col bg-surface2 p-4 ${className}`}>
+          <span className="text-[10px] font-semibold uppercase text-accent">{project.name}</span>
+          <span className="mt-3 h-px bg-border" />
+          <div className="mt-3 flex flex-1 flex-col gap-2">
+            {(sessionItems.length ? sessionItems.slice(0, 4) : [null, null, null]).map((item, index) => (
+              <span key={item?.id ?? index} className="flex items-center gap-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-accent/15 text-[9px] font-semibold text-accent">{index + 1}</span>
+                <span className="h-1.5 min-w-0 flex-1 rounded bg-muted/25" />
+                {item && <span className="text-[9px] text-muted">{item.durationMinutes} min</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={`grid h-full w-full grid-cols-2 gap-px bg-border ${className}`}>
+        {(sessionSources.length ? sessionSources : [project]).map((item, index) => (
+          <div key={`${item.id}-${index}`} className="min-h-0 overflow-hidden bg-surface2">
+            {item === project ? (
+              <div className="flex h-full flex-col justify-center gap-2 px-4">
+                <span className="h-1.5 w-3/4 rounded bg-muted/30" />
+                <span className="h-1.5 w-full rounded bg-muted/20" />
+                <span className="h-1.5 w-2/3 rounded bg-muted/20" />
+              </div>
+            ) : <ProjectPreview project={item} projects={projects} />}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const document = previewProject.document;
+  const elements = document?.steps?.[0]?.elements ?? [];
+  const width = document?.pitchConfig?.width ?? 1050;
+  const height = document?.pitchConfig?.height ?? 680;
+
+  return (
+    <div className={`relative h-full w-full overflow-hidden bg-[#218b45] ${className}`} aria-hidden="true">
+      <div className="absolute inset-[7%] border border-white/75" />
+      <div className="absolute bottom-[7%] left-1/2 top-[7%] w-px bg-white/70" />
+      <div className="absolute left-1/2 top-1/2 aspect-square w-[15%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70" />
+      <div className="absolute bottom-[24%] left-[7%] top-[24%] w-[15%] border border-l-0 border-white/70" />
+      <div className="absolute bottom-[24%] right-[7%] top-[24%] w-[15%] border border-r-0 border-white/70" />
+      {elements.slice(0, 36).map((element) => {
+        const item = element as typeof element & { position?: { x: number; y: number }; startPoint?: { x: number; y: number }; team?: string; fill?: string; color?: string };
+        const position = item.position ?? item.startPoint;
+        if (!position) return null;
+        const isBall = item.type === "ball";
+        const color = isBall ? "#f8fafc" : item.team === "away" ? "#2f70ef" : item.team === "team3" ? "#f4c542" : item.fill ?? item.color ?? "#ef4444";
+        return (
+          <span
+            key={item.id}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/30 shadow-sm"
+            style={{ left: `${Math.max(2, Math.min(98, (position.x / width) * 100))}%`, top: `${Math.max(2, Math.min(98, (position.y / height) * 100))}%`, width: isBall ? 5 : 7, height: isBall ? 5 : 7, backgroundColor: color }}
+          />
+        );
+      })}
+    </div>
+  );
+
 }
 
 export interface FolderItem {
@@ -1194,7 +1277,7 @@ export function ProjectsDrawer({
     );
   };
 
-  return (
+  if (showLegacyComposer) return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
       <div
@@ -2205,6 +2288,305 @@ export function ProjectsDrawer({
           background: var(--color-accent, #3b82f6);
         }
       `}</style>
+    </div>
+  );
+
+  const activeCreateType: ProjectType =
+    typeFilter === "all" ? "graphic" : typeFilter;
+  const visibleProjects = selectedFolderId
+    ? projectsByFolder.get(selectedFolderId) ?? []
+    : sortProjects(searchFilteredProjects, sortBy);
+  const visibleRecentProjects = recentProjects.filter((project) =>
+    typeFilter === "all"
+      ? true
+      : (project.projectType ?? "graphic") === typeFilter,
+  );
+
+  const renderProjectCard = (project: ProjectItem, compact = false) => {
+    const type = project.projectType ?? "graphic";
+    const duration =
+      type === "exercise"
+        ? project.exerciseDetails?.durationMinutes
+        : type === "session"
+          ? project.sessionPlanDetails?.exercises.reduce(
+              (sum, item) => sum + item.durationMinutes,
+              0,
+            )
+          : undefined;
+
+    return (
+      <article
+        key={`${compact ? "recent" : "library"}-${project.id}`}
+        draggable={onMoveToFolder !== undefined}
+        onDragStart={(event) => handleProjectDragStart(event, project.id)}
+        onDragEnd={handleProjectDragEnd}
+        onContextMenu={(event) => handleProjectContextMenu(event, project)}
+        className={`group relative min-w-0 overflow-hidden rounded-md border bg-surface transition-colors hover:border-accent ${compact ? "w-[240px] shrink-0 sm:w-auto" : ""} ${currentProjectId === project.id ? "border-accent" : "border-border"}`}
+      >
+        <button
+          type="button"
+          onClick={() => onSelectProject(project.id)}
+          className="block w-full text-left"
+        >
+          <span className={`block overflow-hidden border-b border-border bg-bg ${compact ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
+            <ProjectPreview project={project} projects={projects} />
+          </span>
+          <span className="block px-3 py-2.5">
+            <span className="block truncate pr-7 text-sm font-semibold text-text">
+              {project.name}
+            </span>
+            <span className="mt-1 flex items-center gap-2 text-[11px] text-muted">
+              <span className="font-semibold uppercase text-accent">
+                {t(`projects.type.${type}`)}
+              </span>
+              {duration ? <span>{duration} min</span> : null}
+              <span className="ml-auto truncate">
+                {formatDate(project.lastOpenedAt ?? project.updatedAt)}
+              </span>
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(event) => handleProjectContextMenu(event, project)}
+          className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded text-lg text-muted hover:bg-surface2 hover:text-text"
+          aria-label={t("projects.projectActions", { name: project.name })}
+        >
+          ···
+        </button>
+      </article>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-0 backdrop-blur-sm sm:p-3">
+      <div
+        data-tour="projects-panel"
+        className="relative flex h-full w-full min-w-0 flex-col overflow-hidden border-border bg-bg shadow-2xl sm:h-[calc(100dvh-24px)] sm:max-w-[1280px] sm:rounded-md sm:border"
+      >
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-3 sm:px-5">
+          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-text sm:text-lg">
+            {t("projects.title")}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setLibraryTutorialStep(0)}
+            className="hidden h-9 px-2 text-sm font-medium text-accent hover:text-text sm:block"
+            data-testid="library-tutorial-open"
+          >
+            {t("projects.tutorial.help")}
+          </button>
+          {isAuthenticated && onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-lg text-muted hover:border-accent hover:text-text"
+              title={t("projects.refresh")}
+              aria-label={t("projects.refresh")}
+            >
+              ↻
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center text-2xl text-muted hover:text-text"
+            aria-label={t("projects.close")}
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="shrink-0 border-b border-border bg-surface px-3 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-bg p-1" aria-label={t("projects.filterByType")}>
+              {(["all", "graphic", "exercise", "session"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  data-testid={`library-type-${type}`}
+                  onClick={() => {
+                    setTypeFilter(type);
+                    setSelectedFolderId(null);
+                  }}
+                  className={`h-8 shrink-0 rounded px-3 text-xs font-medium transition-colors sm:px-4 sm:text-sm ${typeFilter === type ? "bg-surface2 text-text" : "text-muted hover:text-text"}`}
+                >
+                  {t(`projects.type.${type}`)}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              data-testid={`create-${activeCreateType}-project`}
+              onClick={() => void createLibraryProject(
+                activeCreateType,
+                activeCreateType === "exercise" && (currentProject?.projectType ?? "graphic") === "graphic"
+                  ? currentProject?.id
+                  : undefined,
+              )}
+              disabled={Boolean(creatingType)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-lg font-semibold text-bg disabled:opacity-50 sm:w-auto sm:px-5 sm:text-sm"
+              aria-label={t("projects.newProject")}
+            >
+              <span aria-hidden="true">+</span>
+              <span className="hidden sm:inline">&nbsp;{creatingType ? t("projects.saving") : t("projects.newProject")}</span>
+            </button>
+          </div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px]">
+            <label className="relative block min-w-0">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">⌕</span>
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={t("projects.search")}
+                className="h-10 w-full rounded-md border border-border bg-bg pl-9 pr-3 text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+              />
+            </label>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as SortOption)}
+              className="h-10 rounded-md border border-border bg-bg px-3 text-sm text-text outline-none focus:border-accent"
+              aria-label={t("projects.sortBy")}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {t(`projects.sort.${option.value === "name-asc" ? "nameAsc" : option.value === "name-desc" ? "nameDesc" : option.value === "last-opened" ? "lastOpened" : option.value}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 md:grid-cols-[210px_minmax(0,1fr)]">
+          <aside className="hidden min-h-0 border-r border-border bg-surface md:flex md:flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <button
+                type="button"
+                onClick={() => setSelectedFolderId(null)}
+                onDragOver={handleAllProjectsDragOver}
+                onDrop={(event) => handleFolderDrop(event, null)}
+                className={`flex h-10 w-full items-center justify-between rounded-md px-3 text-left text-sm ${selectedFolderId === null ? "bg-accent/15 font-semibold text-accent" : "text-text hover:bg-surface2"}`}
+              >
+                <span>{t("projects.allProjects")}</span>
+                <span className="text-xs text-muted">{searchFilteredProjects.length}</span>
+              </button>
+              <div className="my-3 flex items-center justify-between px-3">
+                <span className="text-[11px] font-semibold uppercase text-muted">{t("projects.folders")}</span>
+                {onCreateFolder && (
+                  <button type="button" onClick={() => onCreateFolder(null)} className="h-7 w-7 text-lg text-muted hover:text-accent" title={t("projects.newFolder")} aria-label={t("projects.newFolder")}>+</button>
+                )}
+              </div>
+              <div className="space-y-1">
+                {foldersWithCount
+                  .slice()
+                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name))
+                  .map((folder) => {
+                    const isSelected = selectedFolderId === folder.id;
+                    const isDropTarget = dropIndicator?.targetId === folder.id;
+                    return (
+                      <button
+                        key={folder.id}
+                        type="button"
+                        onClick={() => setSelectedFolderId(folder.id)}
+                        onContextMenu={(event) => handleFolderContextMenu(event, folder)}
+                        onDragOver={(event) => handleFolderDragOver(event, folder.id)}
+                        onDragLeave={handleFolderDragLeave}
+                        onDrop={(event) => handleFolderDrop(event, folder.id)}
+                        className={`flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm ${isSelected ? "bg-surface2 text-text" : "text-muted hover:bg-surface2 hover:text-text"} ${isDropTarget ? "ring-1 ring-accent" : ""}`}
+                        style={{ paddingLeft: folder.parentId ? 28 : 12 }}
+                      >
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: folder.color }} />
+                        <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                        <span className="text-[11px]">{folder.projectCount}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+            <div className="border-t border-border px-4 py-3 text-xs text-muted">
+              {isAuthenticated ? t("projects.cloudSync") : <button type="button" onClick={onSignIn} className="font-medium text-accent">{t("projects.signIn")}</button>}
+            </div>
+          </aside>
+
+          <main className="min-h-0 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="aspect-[16/12] animate-pulse rounded-md bg-surface" />)}
+              </div>
+            ) : !isAuthenticated ? (
+              <div className="flex min-h-72 flex-col items-center justify-center text-center">
+                <p className="text-sm text-muted">{t("projects.signInSync")}</p>
+                <button type="button" onClick={onSignIn} className="mt-4 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg">{t("projects.signIn")}</button>
+              </div>
+            ) : (
+              <>
+                {!selectedFolderId && !searchQuery && visibleRecentProjects.length > 0 && (
+                  <section className="mb-7" data-testid="recent-projects">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-text">{t("projects.recentProjects")}</h3>
+                      <span className="text-xs text-muted">{visibleRecentProjects.length}</span>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 xl:grid-cols-4">
+                      {visibleRecentProjects.slice(0, 4).map((project) => renderProjectCard(project, true))}
+                    </div>
+                  </section>
+                )}
+                <section>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="truncate text-sm font-semibold text-text">
+                      {selectedFolderId ? foldersWithCount.find((folder) => folder.id === selectedFolderId)?.name : t(`projects.type.${typeFilter}`)}
+                    </h3>
+                    <span className="shrink-0 text-xs text-muted">{t("projects.results", { count: visibleProjects.length })}</span>
+                  </div>
+                  {visibleProjects.length ? (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {visibleProjects.map((project) => renderProjectCard(project))}
+                    </div>
+                  ) : (
+                    <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed border-border px-5 text-center">
+                      <p className="text-sm font-medium text-text">{t("projects.noProjectsYet")}</p>
+                      <button type="button" onClick={() => void createLibraryProject(activeCreateType)} className="mt-3 text-sm font-semibold text-accent">+ {t("projects.createProject")}</button>
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
+          </main>
+        </div>
+
+        {libraryTutorialStep !== null && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/65 p-4" data-testid="library-tutorial">
+            <div className="w-full max-w-md rounded-md border border-border bg-surface shadow-2xl">
+              <div className="border-b border-border p-5">
+                <p className="text-xs font-semibold uppercase text-accent">{t("projects.tutorial.step", { current: libraryTutorialStep + 1 })}</p>
+                <h3 className="mt-2 text-xl font-semibold text-text">{t(`projects.tutorial.items.${libraryTutorialStep}.title`)}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{t(`projects.tutorial.items.${libraryTutorialStep}.body`)}</p>
+              </div>
+              <div className="flex justify-between p-4">
+                <button type="button" onClick={() => setLibraryTutorialStep(null)} className="px-3 py-2 text-sm text-muted">{t("projects.tutorial.close")}</button>
+                <div className="flex gap-2">
+                  {libraryTutorialStep > 0 && <button type="button" onClick={() => setLibraryTutorialStep((step) => Math.max(0, (step ?? 0) - 1))} className="rounded-md border border-border px-3 py-2 text-sm text-text">{t("projects.tutorial.back")}</button>}
+                  <button type="button" onClick={() => libraryTutorialStep === 2 ? setLibraryTutorialStep(null) : setLibraryTutorialStep((step) => Math.min(2, (step ?? 0) + 1))} className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg">{libraryTutorialStep === 2 ? t("projects.tutorial.done") : t("projects.tutorial.next")}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={() => setContextMenu(null)} />}
+      {deleteConfirmId && (
+        <ConfirmModal
+          isOpen
+          title={t("projects.deleteTitle")}
+          description={t("projects.deleteDescription", { name: projects.find((project) => project.id === deleteConfirmId)?.name ?? "" })}
+          confirmLabel={t("projects.delete")}
+          cancelLabel={t("confirm.cancel")}
+          danger
+          onConfirm={() => { onDeleteProject(deleteConfirmId); setDeleteConfirmId(null); }}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
+      )}
     </div>
   );
 }

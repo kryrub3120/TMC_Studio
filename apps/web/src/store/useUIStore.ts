@@ -7,8 +7,8 @@ import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, BallDefaults, TextDefaults, EquipmentDefaults, EquipmentType } from '@tmc/core';
-import { DEFAULT_ARROW_DEFAULTS, DEFAULT_ZONE_DEFAULTS, DEFAULT_BALL_DEFAULTS, DEFAULT_TEXT_DEFAULTS, DEFAULT_EQUIPMENT_DEFAULTS } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, BallDefaults, TextDefaults, EquipmentDefaults, EquipmentType, CoachingProfile } from '@tmc/core';
+import { DEFAULT_ARROW_DEFAULTS, DEFAULT_ZONE_DEFAULTS, DEFAULT_BALL_DEFAULTS, DEFAULT_TEXT_DEFAULTS, DEFAULT_EQUIPMENT_DEFAULTS, DEFAULT_COACHING_PROFILE } from '@tmc/core';
 import { updatePreferences, isSupabaseEnabled } from '../lib/supabase';
 
 /** Active tool types */
@@ -185,6 +185,9 @@ interface UIState {
   // Squad Bench visibility (persisted user preference, not document state)
   squadBenchVisible: boolean;
 
+  // Club identity and reusable staff, available to every signed-in coach.
+  coachingProfile: CoachingProfile;
+
   // Actions - Theme
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -286,6 +289,7 @@ interface UIState {
   // Actions - Squad Bench visibility
   toggleSquadBenchVisible: () => void;
   setSquadBenchVisible: (visible: boolean) => void;
+  setCoachingProfile: (profile: CoachingProfile) => void;
   
   // Breakpoint
   breakpoint: Breakpoint;
@@ -454,6 +458,7 @@ export const useUIStore = create<UIState>()(
       clubWelcomeSeen: false,
       shortcutOverrides: {},
       squadBenchVisible: false,
+      coachingProfile: DEFAULT_COACHING_PROFILE,
       breakpoint: typeof window !== 'undefined' ? getBreakpoint(window.innerWidth) : 'xl',
 
       // Theme actions
@@ -757,6 +762,10 @@ export const useUIStore = create<UIState>()(
         set({ squadBenchVisible: visible });
         queueSync({ squadBenchVisible: visible });
       },
+      setCoachingProfile: (profile) => {
+        set({ coachingProfile: profile });
+        queueSync({ coachingProfile: profile });
+      },
       
       setBreakpoint: (bp) => set({ breakpoint: bp }),
       
@@ -808,6 +817,7 @@ export const useUIStore = create<UIState>()(
         tutorialCompleted: state.tutorialCompleted, // Sprint F
         clubWelcomeSeen: state.clubWelcomeSeen, // Sprint H3
         squadBenchVisible: state.squadBenchVisible, // UX-C
+        coachingProfile: state.coachingProfile,
         shortcutOverrides: state.shortcutOverrides,
         bottomBarHeight: state.bottomBarHeight,
         bottomBarCollapsed: state.bottomBarCollapsed,

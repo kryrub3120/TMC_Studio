@@ -4,8 +4,9 @@ import {
   DEFAULT_SESSION_PLAN_DETAILS,
   type ExerciseDetails,
   type SessionPlanDetails,
+  type CoachingProfile,
 } from "@tmc/core";
-import { useTranslation, type ProjectItem } from "@tmc/ui";
+import { ProjectPreview, useTranslation, type ProjectItem } from "@tmc/ui";
 
 type SaveStatus = "idle" | "saving" | "saved" | "unsaved" | "offline" | "error";
 
@@ -25,6 +26,7 @@ interface ExerciseWorkspaceProps extends WorkspaceBaseProps {
 
 interface SessionWorkspaceProps extends WorkspaceBaseProps {
   onUpdate: (details: SessionPlanDetails, description?: string) => void;
+  coachingProfile?: CoachingProfile;
 }
 
 function WorkspaceHeader({
@@ -215,19 +217,17 @@ function TextArea({
 
 function GraphicPreview({
   project,
+  projects,
   emptyLabel,
 }: {
   project?: ProjectItem;
+  projects: ProjectItem[];
   emptyLabel: string;
 }) {
   return (
-    <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-md border border-border bg-bg">
-      {project?.thumbnailUrl ? (
-        <img
-          src={project.thumbnailUrl}
-          alt={project.name}
-          className="h-full w-full object-contain"
-        />
+    <div className="relative flex aspect-[16/10] min-h-[240px] items-center justify-center overflow-hidden rounded-md border border-border bg-bg">
+      {project ? (
+        <ProjectPreview project={project} projects={projects} />
       ) : (
         <div className="px-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface2 text-2xl text-muted">
@@ -328,25 +328,14 @@ export function ExerciseWorkspace({
               </button>
             </div>
             <GraphicPreview
-              project={source}
+              project={source ?? project}
+              projects={projects}
               emptyLabel={t("coaching.exercise.noGraphic")}
             />
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <select
-                value={details.sourceGraphicProjectId ?? ""}
-                onChange={(event) =>
-                  event.target.value && onAttachGraphic(event.target.value)
-                }
-                className="h-10 min-w-0 flex-1 rounded-md border border-border bg-surface px-3 text-sm text-text outline-none focus:border-accent"
-                aria-label={t("coaching.exercise.chooseGraphic")}
-              >
-                <option value="">{t("coaching.exercise.chooseGraphic")}</option>
-                {graphics.map((graphic) => (
-                  <option key={graphic.id} value={graphic.id}>
-                    {graphic.name}
-                  </option>
-                ))}
-              </select>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-muted">
+                {t("coaching.exercise.chooseGraphic")}
+              </p>
               <button
                 type="button"
                 onClick={onEditBoard}
@@ -354,6 +343,38 @@ export function ExerciseWorkspace({
               >
                 {t("coaching.exercise.openBoard")}
               </button>
+            </div>
+            <div
+              className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"
+              aria-label={t("coaching.exercise.chooseGraphic")}
+              data-testid="exercise-graphic-picker"
+            >
+              {graphics.map((graphic) => {
+                const isSelected = graphic.id === details.sourceGraphicProjectId;
+                return (
+                  <button
+                    key={graphic.id}
+                    type="button"
+                    data-testid="exercise-graphic-option"
+                    onClick={() => onAttachGraphic(graphic.id)}
+                    className={`overflow-hidden rounded-md border bg-surface text-left transition-colors ${isSelected ? "border-accent ring-1 ring-accent" : "border-border hover:border-muted"}`}
+                    aria-pressed={isSelected}
+                    aria-label={graphic.name}
+                  >
+                    <span className="block aspect-[16/10] overflow-hidden bg-bg">
+                      <ProjectPreview project={graphic} projects={projects} />
+                    </span>
+                    <span className="block truncate px-2.5 py-2 text-xs font-medium text-text">
+                      {graphic.name}
+                    </span>
+                  </button>
+                );
+              })}
+              {graphics.length === 0 && (
+                <p className="col-span-full rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
+                  {t("coaching.exercise.noGraphic")}
+                </p>
+              )}
             </div>
           </section>
 
@@ -430,6 +451,7 @@ export function SessionWorkspace({
   onOpenProjects,
   onRename,
   onUpdate,
+  coachingProfile,
 }: SessionWorkspaceProps) {
   const { t } = useTranslation();
   const [showGuide, setShowGuide] = useState(false);
@@ -454,14 +476,6 @@ export function SessionWorkspace({
     (sum, item) => sum + item.durationMinutes,
     0,
   );
-  const exerciseThumbnail = (exercise?: ProjectItem) => {
-    if (!exercise) return undefined;
-    if (exercise.thumbnailUrl) return exercise.thumbnailUrl;
-    return projects.find(
-      (item) => item.id === exercise.exerciseDetails?.sourceGraphicProjectId,
-    )?.thumbnailUrl;
-  };
-
   useEffect(() => {
     if (localStorage.getItem("tmc-session-guide-seen") !== "1")
       setShowGuide(true);
@@ -543,13 +557,19 @@ export function SessionWorkspace({
       <main className="min-h-0 flex-1 overflow-y-auto print:overflow-visible">
         <div className="mx-auto max-w-[1500px] px-3 py-5 sm:px-6 print:max-w-none print:p-0">
           <div className="mb-5 flex items-end justify-between gap-4 print:mb-3">
-            <div>
+            <div className="flex min-w-0 items-center gap-3">
+              {coachingProfile?.logoDataUrl && (
+                <img src={coachingProfile.logoDataUrl} alt="" className="h-12 w-12 shrink-0 object-contain print:h-14 print:w-14" />
+              )}
+              <div className="min-w-0">
               <p className="text-xs font-semibold uppercase text-accent print:text-black">
                 {t("coaching.session.eyebrow")}
               </p>
               <h1 className="mt-1 text-2xl font-semibold print:text-black">
                 {project.name}
               </h1>
+              {coachingProfile?.clubName && <p className="mt-1 truncate text-xs text-muted print:text-black">{coachingProfile.clubName}</p>}
+              </div>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted print:text-black">
@@ -586,12 +606,33 @@ export function SessionWorkspace({
                 value={details.startTime}
                 onChange={(value) => update({ startTime: value })}
               />
-              <Field
-                label={t("coaching.session.staff")}
-                value={details.staff}
-                onChange={(value) => update({ staff: value })}
-                placeholder="MH, KR, PC"
-              />
+              <div>
+                <Field
+                  label={t("coaching.session.staff")}
+                  value={details.staff}
+                  onChange={(value) => update({ staff: value })}
+                  placeholder="MH, KR, PC"
+                />
+                {coachingProfile?.staff.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1 print:hidden">
+                    {coachingProfile.staff.map((member) => (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => {
+                          const current = detailsRef.current.staff.split(',').map((name) => name.trim()).filter(Boolean);
+                          const exists = current.includes(member.name);
+                          update({ staff: (exists ? current.filter((name) => name !== member.name) : [...current, member.name]).join(', ') });
+                        }}
+                        className={`rounded-full border px-2 py-1 text-[10px] font-medium ${details.staff.includes(member.name) ? "border-accent bg-accent/15 text-accent" : "border-border text-muted hover:border-accent"}`}
+                        title={member.role}
+                      >
+                        {member.name}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </section>
 
@@ -663,15 +704,7 @@ export function SessionWorkspace({
                     className="flex w-full items-center gap-3 rounded-md border border-border bg-bg p-2 text-left hover:border-accent"
                   >
                     <span className="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-surface2 text-muted">
-                      {exerciseThumbnail(exercise) ? (
-                        <img
-                          src={exerciseThumbnail(exercise)}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        "▧"
-                      )}
+                      <ProjectPreview project={exercise} projects={projects} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">
@@ -779,13 +812,9 @@ export function SessionWorkspace({
                           </div>
                         </div>
                         <div className="grid min-h-[210px] sm:grid-cols-[44%_56%] print:grid-cols-[44%_56%]">
-                          <div className="border-b border-border bg-bg sm:border-b-0 sm:border-r print:border-b-0 print:border-r print:border-black print:bg-white">
-                            {exerciseThumbnail(source) ? (
-                              <img
-                                src={exerciseThumbnail(source)}
-                                alt={source?.name ?? ""}
-                                className="h-full min-h-[180px] w-full object-contain"
-                              />
+                          <div className="min-h-[180px] overflow-hidden border-b border-border bg-bg sm:border-b-0 sm:border-r print:border-b-0 print:border-r print:border-black print:bg-white">
+                            {source ? (
+                              <ProjectPreview project={source} projects={projects} />
                             ) : (
                               <div className="flex h-full min-h-[180px] items-center justify-center text-2xl text-muted">
                                 ▧

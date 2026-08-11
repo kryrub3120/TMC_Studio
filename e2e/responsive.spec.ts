@@ -46,8 +46,9 @@ test.describe('Board responsive shell', () => {
     const drawer = page.locator('[data-tour="projects-panel"]');
     await expect(drawer).toBeVisible();
     await expect(drawer.getByTestId('create-graphic-project')).toBeVisible();
-    await expect(drawer.getByTestId('create-exercise-project')).toBeVisible();
-    await expect(drawer.getByTestId('create-session-project')).toBeVisible();
+    await expect(drawer.getByTestId('library-type-graphic')).toBeVisible();
+    await expect(drawer.getByTestId('library-type-exercise')).toBeVisible();
+    await expect(drawer.getByTestId('library-type-session')).toBeVisible();
     const dimensions = await drawer.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
   });
@@ -87,11 +88,13 @@ test.describe('Board responsive shell', () => {
 
     for (let count = 0; count < 3; count += 1) {
       await openLibrary();
+      await page.getByTestId('library-type-exercise').click();
       await page.getByTestId('create-exercise-project').click();
       await page.waitForTimeout(200);
     }
 
     await openLibrary();
+    await page.getByTestId('library-type-exercise').click();
     await page.getByTestId('create-exercise-project').click();
     await expect(page.getByRole('heading', { name: /Osiągnięto limit planu Free|Free plan limit reached|Límite del plan Free/i })).toBeVisible();
   });
