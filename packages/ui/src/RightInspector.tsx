@@ -116,6 +116,26 @@ const DEFAULT_INSPECTOR_WIDTH = 340;
 const MIN_INSPECTOR_WIDTH = 220;
 const MAX_INSPECTOR_WIDTH = 480;
 
+const SetAsDefaultButton: React.FC<{ onClick: () => void; testId: string }> = ({ onClick, testId }) => {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      className="mt-2 w-full flex items-center justify-center gap-2 px-2 py-1.5 text-xs font-medium rounded-md border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-colors"
+      title={t('inspector.setAsDefaultHint')}
+      aria-label={t('inspector.setAsDefault')}
+    >
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      </svg>
+      {t('inspector.setAsDefault')}
+    </button>
+  );
+};
+
 /** Icons */
 const CollapseIcon: React.FC<{ className?: string; collapsed?: boolean }> = ({ className, collapsed }) => (
   <svg className={`${className} transition-transform ${collapsed ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -617,17 +637,10 @@ const PropsTab: React.FC<{
                 >
                   {t('inspector.arrow.hideHeads')}
                 </button>
-                {onSetArrowDefault && (
-                  <button
-                    onClick={onSetArrowDefault}
-                    className="shrink-0 px-2 py-1.5 rounded-md border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-colors"
-                    title={t('inspector.setAsDefaultHint')}
-                    aria-label={t('inspector.setAsDefault')}
-                  >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                  </button>
-                )}
               </div>
+              {onSetArrowDefault && (
+                <SetAsDefaultButton onClick={onSetArrowDefault} testId="set-arrow-default" />
+              )}
             </Section>
           </>
         )}
@@ -686,14 +699,7 @@ const PropsTab: React.FC<{
               control={<Toggle checked={!!el.showCorners} onChange={() => onUpdateElement?.({ showCorners: !el.showCorners })} ariaLabel={t('inspector.zone.corners')} />}
             />
             {onSetZoneDefault && (
-              <button
-                onClick={onSetZoneDefault}
-                className="mt-2 w-full flex items-center justify-center gap-2 px-2 py-1.5 text-xs font-medium rounded-md border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-colors"
-                title={t('inspector.setAsDefaultHint')}
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                {t('inspector.setAsDefault')}
-              </button>
+              <SetAsDefaultButton onClick={onSetZoneDefault} testId="set-zone-default" />
             )}
           </Section>
         )}

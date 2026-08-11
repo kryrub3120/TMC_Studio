@@ -228,6 +228,27 @@ test.describe('Tactical Board — Guest Golden Path', () => {
     await expect(viewport).toHaveAttribute('data-element-count', '3');
   });
 
+  test('arrow and zone inspectors expose a visible set-as-default action', async ({ page }) => {
+    const viewport = page.getByTestId('board-viewport');
+    await clearBoard(page);
+
+    await page.keyboard.press('a');
+    await dragOnPitch(page);
+    await expect(viewport).toHaveAttribute('data-element-count', '1');
+    await page.getByRole('button', { name: /Otwórz panel inspektora|Open inspector panel|Abrir panel del inspector/i }).click();
+    await expect(page.getByTestId('set-arrow-default')).toBeVisible();
+    await expect(page.getByTestId('set-arrow-default')).toContainText(/Ustaw jako domyślne|Set as default|Fijar como predeterminado/i);
+
+    await page.getByTestId('set-arrow-default').click();
+    await expect(page.getByText(/Zapisano jako domyślne|Saved as default|Guardado como predeterminado/i)).toBeVisible();
+
+    await page.keyboard.press('z');
+    await dragOnPitch(page, { x: 0.68, y: 0.16 });
+    await expect(viewport).toHaveAttribute('data-element-count', '2');
+    await expect(page.getByTestId('set-zone-default')).toBeVisible();
+    await expect(page.getByTestId('set-zone-default')).toContainText(/Ustaw jako domyślne|Set as default|Fijar como predeterminado/i);
+  });
+
   test('undo and redo restore board element changes', async ({ page }) => {
     const viewport = page.getByTestId('board-viewport');
     await clearBoard(page);
