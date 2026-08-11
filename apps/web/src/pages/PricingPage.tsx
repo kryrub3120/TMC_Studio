@@ -8,7 +8,7 @@
  */
 import { useState, useEffect } from 'react';
 import { LocalizedLink as Link } from '../components/LocalizedLink';
-import { useTranslation, LanguageSwitcher, DISPLAY_PRICES, SAVE_PERCENT } from '@tmc/ui';
+import { useTranslation, LanguageSwitcher, getDisplayPrices, SAVE_PERCENT } from '@tmc/ui';
 import type { Cycle } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
@@ -18,7 +18,7 @@ import { usePublicDarkTheme, PublicFooter } from './PublicPageShell';
 const PLANS: Plan[] = ['guest', 'free', 'pro', 'team'];
 
 export function PricingPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   usePublicDarkTheme();
   useDocumentMeta({ title: t('seo.pricing.title'), description: t('seo.pricing.description'), path: '/pricing' });
   useEffect(() => { track(EVENTS.PRICING_VIEW); }, []);
@@ -35,6 +35,7 @@ export function PricingPage() {
   };
 
   const [cycle, setCycle] = useState<Cycle>('monthly');
+  const displayPrices = getDisplayPrices(language);
 
   const num = (v: number | 'unlimited') =>
     v === 'unlimited' ? t('pricingPage.matrix.unlimited') : String(v);
@@ -55,8 +56,8 @@ export function PricingPage() {
   const planMeta: Record<Plan, { name: string; tagline: string; price: string; period: string; cta: string }> = {
     guest: { name: t('pricingPage.plans.guestName'), tagline: t('pricingPage.plans.guestTagline'), price: t('pricingPage.plans.free'), period: '', cta: t('pricingPage.plans.guestCta') },
     free: { name: t('pricingPage.plans.freeName'), tagline: t('pricingPage.plans.freeTagline'), price: t('pricingPage.plans.free'), period: '', cta: t('pricingPage.plans.freeCta') },
-    pro: { name: t('pricingPage.plans.proName'), tagline: t('pricingPage.plans.proTagline'), price: DISPLAY_PRICES.pro[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.proCta') },
-    team: { name: t('pricingPage.plans.teamName'), tagline: t('pricingPage.plans.teamTagline'), price: DISPLAY_PRICES.team[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.teamCta') },
+    pro: { name: t('pricingPage.plans.proName'), tagline: t('pricingPage.plans.proTagline'), price: displayPrices.pro[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.proCta') },
+    team: { name: t('pricingPage.plans.teamName'), tagline: t('pricingPage.plans.teamTagline'), price: displayPrices.team[cycle], period: cycle === 'monthly' ? t('pricingPage.plans.perMonth') : t('pricingPage.plans.perYear'), cta: t('pricingPage.plans.teamCta') },
   };
 
   return (
@@ -194,7 +195,7 @@ export function PricingPage() {
             <div className="rounded-lg border-2 border-accent bg-accent/5 p-5 text-center">
               <p className="text-sm font-semibold text-accent">{t('pricingPage.teamCalc.teamPlan')}</p>
               <p className="mt-1 text-2xl font-bold text-text">
-                {cycle === 'yearly' ? '$290' : '$29'}
+                {displayPrices.team[cycle]}
                 <span className="text-base font-normal text-muted">{cycle === 'yearly' ? '/yr' : '/mo'}</span>
               </p>
               <p className="mt-1 text-xs font-medium text-accent">

@@ -19,13 +19,10 @@ test.describe('Authentication — Dev Login Flow', () => {
     });
 
     await page.goto('/auth/callback?error=access_denied&error_description=Simulated');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1200);
-
     await expect(page).toHaveURL(/\/auth\/callback/);
-    await expect(page.getByText('Login could not finish')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Sign-in failed' })).toBeVisible();
     await expect(page.getByText('Simulated')).toBeVisible();
-    await page.getByRole('button', { name: 'Wróć do aplikacji' }).click();
+    await page.getByRole('button', { name: 'Back to TMC Studio' }).click();
     await expect(page).toHaveURL(/\/board$/);
     await expect(page.locator('#root')).toBeVisible();
   });

@@ -1,6 +1,6 @@
 # TMC Studio — kolejny etap przed launch
 
-_Stan na 2026-06-17. Wszystkie 15 migracji na produkcji, Local = Remote._
+_Stan na 2026-08-11. Wszystkie migracje produkcyjne są zsynchronizowane._
 
 ---
 
@@ -96,11 +96,16 @@ To nie jest sprawa migracji, tylko zmiennej środowiskowej na hostingu
 
 **Zrealizowane:** strona `/pricing` i modal in-app przekazują wybrany cykl.
 Checkout ma osobne LIVE Price ID dla Pro/Team w wariantach miesiecznych i
-rocznych ($9/$90 oraz $29/$290), a webhook mapuje oba cykle na prawidlowy plan.
+rocznych. Nowe ceny wielowalutowe to Pro 29/290 PLN lub 9/90 USD oraz Team
+99/990 PLN lub 29/290 USD. Webhook zachowuje mapowanie poprzednich Price ID dla
+istniejacych subskrypcji.
 
 **LIVE zweryfikowane 2026-08-11:** zakup Pro B2C PL, VAT inclusive, 3D Secure,
 webhook, aktywacja Pro, Customer Portal i faktura. Dodatkowo naprawiono modal
 aktywacji, dodano wymagana zgode regulaminowa EN/PL/ES i prawna stopke faktury.
+Wlaczono maile Stripe o wygasajacych kartach i nieudanych platnosciach oraz
+hostowany link do potwierdzenia 3D Secure. Webhook potrafi ponownie przejac
+zdarzenie zakonczone bledem albo pozostawione przez przerwana funkcje.
 
 ---
 
@@ -122,7 +127,7 @@ Sprawdziłem wszystkie 189 inline `<svg>` w `apps` + `packages`:
 
 ---
 
-## 4. Weryfikacja tej sesji
+## 4. Weryfikacja historyczna
 
 - TypeScript: **OK** dla `apps/web`, `packages/ui`, `packages/board`.
 - `git diff --check`: czysto.

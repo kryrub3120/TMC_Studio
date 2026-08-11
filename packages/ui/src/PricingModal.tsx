@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from './i18n.js';
-import { STRIPE_PRICES, SAVE_PERCENT } from './pricingConfig.js';
+import { STRIPE_PRICES, SAVE_PERCENT, getDisplayPrices } from './pricingConfig.js';
 import type { Cycle } from './pricingConfig.js';
 
 interface PricingModalProps {
@@ -34,7 +34,8 @@ interface Plan {
   cta: string;
 }
 
-function getPlans(cycle: Cycle, t: (key: string) => string): Plan[] {
+function getPlans(cycle: Cycle, language: string, t: (key: string) => string): Plan[] {
+  const prices = getDisplayPrices(language);
   return [
     {
       id: 'free',
@@ -49,7 +50,7 @@ function getPlans(cycle: Cycle, t: (key: string) => string): Plan[] {
     {
       id: 'pro',
       name: t('pricing.plans.pro.name'),
-      price: cycle === 'yearly' ? '$90' : '$9',
+      price: prices.pro[cycle],
       priceId: cycle === 'yearly' ? STRIPE_PRICES.pro.yearly : STRIPE_PRICES.pro.monthly,
       period: cycle === 'yearly' ? t('pricing.billing.perYear') : t('pricing.billing.perMonth'),
       microcopy: t('pricing.plans.pro.microcopy'),
@@ -60,7 +61,7 @@ function getPlans(cycle: Cycle, t: (key: string) => string): Plan[] {
     {
       id: 'team',
       name: t('pricing.plans.team.name'),
-      price: cycle === 'yearly' ? '$290' : '$29',
+      price: prices.team[cycle],
       priceId: cycle === 'yearly' ? STRIPE_PRICES.team.yearly : STRIPE_PRICES.team.monthly,
       period: cycle === 'yearly' ? t('pricing.billing.perYear') : t('pricing.billing.perMonth'),
       microcopy: t('pricing.plans.team.microcopy'),
@@ -96,7 +97,7 @@ export function PricingModal({
 
   if (!isOpen) return null;
 
-  const plans = getPlans(cycle, t);
+  const plans = getPlans(cycle, language, t);
 
   const handleSelectPlan = async (plan: Plan) => {
     const planId = plan.id as 'free' | 'pro' | 'team';

@@ -90,7 +90,16 @@ export { UserMenu } from './UserMenu.js';
 export { PricingModal } from './PricingModal.js';
 
 // Pricing config (shared source of truth)
-export { STRIPE_PRICES, DISPLAY_PRICES, SAVE_PERCENT, ANNUAL_SAVINGS, getSavingsText } from './pricingConfig.js';
+export {
+  STRIPE_PRICES,
+  LEGACY_STRIPE_PRICES,
+  DISPLAY_PRICES,
+  DISPLAY_PRICES_PLN,
+  SAVE_PERCENT,
+  ANNUAL_SAVINGS,
+  getDisplayPrices,
+  getSavingsText,
+} from './pricingConfig.js';
 export type { Cycle } from './pricingConfig.js';
 
 // Squad Bench

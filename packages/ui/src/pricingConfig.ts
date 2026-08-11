@@ -18,12 +18,23 @@ export type Cycle = 'monthly' | 'yearly';
  */
 export const STRIPE_PRICES = {
   pro: {
-    monthly: 'price_1SnQvaANogcZdSR39JL60iCS', // $9/mo
-    yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',  // $90/yr
+    monthly: 'price_1U3JbYANogcZdSR3J6Nvw41T', // PLN 29 / $9 per month
+    yearly: 'price_1U3JblANogcZdSR3PsBkwsqJ',  // PLN 290 / $90 per year
   },
   team: {
-    monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc', // $29/mo
-    yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',  // $290/yr
+    monthly: 'price_1U3JadANogcZdSR3opimMNnN', // PLN 99 / $29 per month
+    yearly: 'price_1U3Jb7ANogcZdSR32Kqr5Jx5',  // PLN 990 / $290 per year
+  },
+} as const;
+
+export const LEGACY_STRIPE_PRICES = {
+  pro: {
+    monthly: 'price_1SnQvaANogcZdSR39JL60iCS',
+    yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',
+  },
+  team: {
+    monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc',
+    yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',
   },
 } as const;
 
@@ -35,6 +46,15 @@ export const DISPLAY_PRICES: Record<'pro' | 'team', Record<Cycle, string>> = {
   pro: { monthly: '$9', yearly: '$90' },
   team: { monthly: '$29', yearly: '$290' },
 };
+
+export const DISPLAY_PRICES_PLN: Record<'pro' | 'team', Record<Cycle, string>> = {
+  pro: { monthly: '29 PLN', yearly: '290 PLN' },
+  team: { monthly: '99 PLN', yearly: '990 PLN' },
+};
+
+export function getDisplayPrices(language: string) {
+  return language === 'pl' ? DISPLAY_PRICES_PLN : DISPLAY_PRICES;
+}
 
 /**
  * Annual savings calculation.

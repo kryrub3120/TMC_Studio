@@ -1,6 +1,6 @@
 # TMC Studio - Current Sprint Plan
 
-**Data:** 2026-08-09
+**Data:** 2026-08-11
 **Status:** ACTIVE, krotki wskaznik operacyjny  
 **Source of truth:** `docs/INDEX.md` oraz dokumenty wskazane w jego sekcji Source of Truth.
 
@@ -152,6 +152,14 @@ Stan wejsciowy:
    faktura i Customer Portal zostaly zweryfikowane 2026-08-11.
 5. Sentry error-only jest aktywne w produkcji; kontrolowany test ingestion
    zakonczyl sie HTTP 200 bez naruszen CSP.
+6. Utworzono ceny LIVE PLN+USD: Pro 29/290 PLN lub 9/90 USD, Team 99/990 PLN
+   lub 29/290 USD. Polskie strony prezentuja PLN, pozostale wersje USD.
+7. Stripe wysyla maile o nieudanych platnosciach i wygasajacych kartach oraz
+   hostowany link do potwierdzenia 3D Secure. Po wyczerpaniu prob anuluje
+   subskrypcje; webhook obniza plan dopiero dla `canceled`/`unpaid`.
+8. Idempotencja webhooka odzyskuje zdarzenia `error` i osierocone
+   `processing`; aktywne i zakonczone zdarzenia pozostaja chronione przed
+   podwojnym przetworzeniem.
 
 Najblizsza kolejnosc:
 

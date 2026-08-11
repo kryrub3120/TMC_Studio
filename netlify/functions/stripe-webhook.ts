@@ -12,7 +12,7 @@
  * - invoice.payment_failed → Payment issue
  * 
  * Features:
- * - Idempotency (INSERT-first pattern prevents duplicate processing)
+ * - Idempotency (INSERT-first claim with safe retry recovery)
  * - client_reference_id for reliable user lookup
  * - Audit trail in stripe_webhook_events table
  */
@@ -43,6 +43,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
  * Returns { claimed: false } if event was already processed (duplicate)
  * Throws on unexpected database errors
  */
+const STALE_PROCESSING_MS = 5 * 60 * 1000;
+
 async function claimEvent(eventId: string, eventType: string): Promise<{ claimed: boolean }> {
   const { error } = await supabase
     .from('stripe_webhook_events')
@@ -61,7 +63,54 @@ async function claimEvent(eventId: string, eventType: string): Promise<{ claimed
                       error.code === '23505'; // PostgreSQL unique violation code
 
   if (isDuplicate) {
-    console.log(`Event ${eventId} already processing/processed (duplicate)`);
+    const { data: existing, error: lookupError } = await supabase
+      .from('stripe_webhook_events')
+      .select('status, created_at')
+      .eq('event_id', eventId)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw lookupError;
+    }
+
+    const processingStartedAt = existing?.created_at
+      ? new Date(existing.created_at).getTime()
+      : Number.NaN;
+    const isStaleProcessing = existing?.status === 'processing' &&
+      Number.isFinite(processingStartedAt) &&
+      Date.now() - processingStartedAt >= STALE_PROCESSING_MS;
+    const canRetry = existing?.status === 'error' || isStaleProcessing;
+
+    if (!existing || !canRetry) {
+      console.log(`Event ${eventId} already processing/processed (duplicate)`);
+      return { claimed: false };
+    }
+
+    const retryStartedAt = new Date().toISOString();
+    const { data: reclaimed, error: reclaimError } = await supabase
+      .from('stripe_webhook_events')
+      .update({
+        status: 'processing',
+        error_message: null,
+        processed_at: null,
+        created_at: retryStartedAt,
+      })
+      .eq('event_id', eventId)
+      .eq('status', existing.status)
+      .eq('created_at', existing.created_at)
+      .select('event_id')
+      .maybeSingle();
+
+    if (reclaimError) {
+      throw reclaimError;
+    }
+
+    if (reclaimed) {
+      console.log(`Reclaimed ${existing.status} event ${eventId} for retry`);
+      return { claimed: true };
+    }
+
+    console.log(`Event ${eventId} was claimed by another retry`);
     return { claimed: false };
   }
 
@@ -578,4 +627,4 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
   }
 };
 
-export { handler };
+export { claimEvent, handler };

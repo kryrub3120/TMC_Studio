@@ -11,17 +11,28 @@
 /**
  * Stripe Price IDs for subscriptions
  *
- * Retrieved from Stripe Dashboard on 2026-08-09
+ * Retrieved from Stripe Dashboard on 2026-08-11
  * Mode: LIVE
  */
 export const STRIPE_PRICES = {
   pro: {
-    monthly: 'price_1SnQvaANogcZdSR39JL60iCS', // $9.00 USD/month
-    yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',  // $90.00 USD/year
+    monthly: 'price_1U3JbYANogcZdSR3J6Nvw41T', // PLN 29 / $9 per month
+    yearly: 'price_1U3JblANogcZdSR3PsBkwsqJ',  // PLN 290 / $90 per year
   },
   team: {
-    monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc', // $29.00 USD/month
-    yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',  // $290.00 USD/year
+    monthly: 'price_1U3JadANogcZdSR3opimMNnN', // PLN 99 / $29 per month
+    yearly: 'price_1U3Jb7ANogcZdSR32Kqr5Jx5',  // PLN 990 / $290 per year
+  },
+} as const;
+
+export const LEGACY_STRIPE_PRICES = {
+  pro: {
+    monthly: 'price_1SnQvaANogcZdSR39JL60iCS',
+    yearly: 'price_1SnQvaANogcZdSR3f6Pv3xZ8',
+  },
+  team: {
+    monthly: 'price_1SnQvzANogcZdSR3BiUrQvqc',
+    yearly: 'price_1SnQwfANogcZdSR3Kdp2j8FB',
   },
 } as const;
 
@@ -37,6 +48,10 @@ export const PRICE_TO_TIER: Record<string, 'free' | 'pro' | 'team'> = {
   // Team plans
   [STRIPE_PRICES.team.monthly]: 'team',
   [STRIPE_PRICES.team.yearly]: 'team',
+  [LEGACY_STRIPE_PRICES.pro.monthly]: 'pro',
+  [LEGACY_STRIPE_PRICES.pro.yearly]: 'pro',
+  [LEGACY_STRIPE_PRICES.team.monthly]: 'team',
+  [LEGACY_STRIPE_PRICES.team.yearly]: 'team',
 } as const;
 
 /**

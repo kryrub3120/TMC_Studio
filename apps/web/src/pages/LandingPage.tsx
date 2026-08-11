@@ -8,7 +8,7 @@
  */
 import { useState, useEffect } from 'react';
 import { LocalizedLink as Link } from '../components/LocalizedLink';
-import { useTranslation, LanguageSwitcher, DISPLAY_PRICES } from '@tmc/ui';
+import { useTranslation, LanguageSwitcher, getDisplayPrices } from '@tmc/ui';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { track, EVENTS } from '../lib/analytics';
 import { usePublicDarkTheme, PublicFooter } from './PublicPageShell';
@@ -325,6 +325,11 @@ function Pillar({ icon, title, desc }: { icon: string; title: string; desc: stri
 
 export function LandingPage() {
   const { t, language } = useTranslation();
+  const displayPrices = getDisplayPrices(language);
+  const structuredPriceCurrency = language === 'pl' ? 'PLN' : 'USD';
+  const structuredMonthlyPrices = language === 'pl'
+    ? { pro: '29', team: '99' }
+    : { pro: '9', team: '29' };
   usePublicDarkTheme();
   useDocumentMeta({ title: t('seo.landing.title'), description: t('seo.landing.description'), path: '/' });
   useEffect(() => { track(EVENTS.LANDING_VIEW); }, []);
@@ -342,11 +347,11 @@ export function LandingPage() {
           offers: {
             '@type': 'AggregateOffer',
             offer: [
-              { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
-              { '@type': 'Offer', name: 'Pro', price: '9', priceCurrency: 'USD' },
-              { '@type': 'Offer', name: 'Team', price: '29', priceCurrency: 'USD' },
+              { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: structuredPriceCurrency },
+              { '@type': 'Offer', name: 'Pro', price: structuredMonthlyPrices.pro, priceCurrency: structuredPriceCurrency },
+              { '@type': 'Offer', name: 'Team', price: structuredMonthlyPrices.team, priceCurrency: structuredPriceCurrency },
             ],
-            priceCurrency: 'USD',
+            priceCurrency: structuredPriceCurrency,
           },
           description: t('seo.landing.description'),
           url: language === 'en' ? 'https://tmcstudio.app/' : `https://tmcstudio.app/${language}/`,
@@ -581,10 +586,10 @@ export function LandingPage() {
                 </span>
                 <h3 className="text-xl font-semibold text-text">{t('pricingPage.plans.proName')}</h3>
                 <div className="mt-3 flex items-end gap-1">
-                  <span className="text-3xl font-bold text-text">{DISPLAY_PRICES.pro.monthly}</span>
+                  <span className="text-3xl font-bold text-text">{displayPrices.pro.monthly}</span>
                   <span className="pb-1 text-sm text-muted">{t('pricingPage.plans.perMonth')}</span>
                 </div>
-                <p className="mt-1 text-xs text-accent">{t('pricingPage.billing.yearlyHint')} — {DISPLAY_PRICES.pro.yearly}/yr</p>
+                <p className="mt-1 text-xs text-accent">{t('pricingPage.billing.yearlyHint')} — {displayPrices.pro.yearly}/yr</p>
                 <ul className="mt-4 space-y-2 text-sm text-muted" role="list">
                   {String(t('pricing.plans.pro.features')).split('|').map((f) => (
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>
@@ -597,10 +602,10 @@ export function LandingPage() {
               <div className="rounded-2xl border border-border bg-surface p-6 text-left">
                 <h3 className="text-xl font-semibold text-text">{t('pricingPage.plans.teamName')}</h3>
                 <div className="mt-3 flex items-end gap-1">
-                  <span className="text-3xl font-bold text-text">{DISPLAY_PRICES.team.monthly}</span>
+                  <span className="text-3xl font-bold text-text">{displayPrices.team.monthly}</span>
                   <span className="pb-1 text-sm text-muted">{t('pricingPage.plans.perMonth')}</span>
                 </div>
-                <p className="mt-1 text-xs text-muted">{t('pricingPage.billing.yearlyHint')} — {DISPLAY_PRICES.team.yearly}/yr</p>
+                <p className="mt-1 text-xs text-muted">{t('pricingPage.billing.yearlyHint')} — {displayPrices.team.yearly}/yr</p>
                 <ul className="mt-4 space-y-2 text-sm text-muted" role="list">
                   {String(t('pricing.plans.team.features')).split('|').map((f) => (
                     <li key={f} className="flex items-center gap-2"><I d={ICONS.check} className="h-4 w-4 text-accent" /> {f}</li>

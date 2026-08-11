@@ -1,6 +1,6 @@
 # TMC Studio — Sprzedaż międzynarodowa: analiza krajów i konfiguracja Stripe
 
-_Utworzono: 2026-06-15 · Aktualizacja: 2026-08-09 · Status: Stripe Tax i Poland domestic aktywne; OSS oczekuje na decyzję księgową · Decyzja: Stripe + Stripe Tax (nie MoR)_
+_Utworzono: 2026-06-15 · Aktualizacja: 2026-08-11 · Status: Stripe Tax i Poland domestic aktywne; OSS oczekuje na decyzję księgową · Decyzja: Stripe + Stripe Tax (nie MoR)_
 
 > **To nie jest porada podatkowa.** Konfigurację techniczną może wykonać agent, ale **rejestrację VAT OSS, progi i deklaracje musi potwierdzić księgowy/doradca podatkowy.** Stripe Tax *liczy i pobiera* podatek oraz przygotowuje dane do deklaracji — ale **deklaracje składamy my**.
 
@@ -132,6 +132,7 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 4. [x] Stripe Tax aktywne: origin PL, ceny tax-inclusive, kategoria `Electronically Supplied Services`, rejestracja Poland domestic i stawka 23% (2026-08-09).
 5. [x] **Customer Portal**: anulowanie, metoda płatności, dane klienta i pobieranie faktur zweryfikowane LIVE 2026-08-11.
 6. [x] **Zgoda konsumenta**: wymagany checkbox Stripe Checkout w EN/PL/ES obejmuje natychmiastowe rozpoczęcie świadczenia i utratę prawa odstąpienia. Stripe zapisuje akceptację Terms; sesja i subskrypcja zawierają wersję tekstu zgody w metadata.
+7. [x] **Odzyskiwanie płatności**: aktywne maile o nieudanej płatności i wygasającej karcie, hostowany link 3DS oraz anulowanie subskrypcji po wyczerpaniu prób.
 
 ### Krok 6 — Faktury (Invoicing)
 1. [x] Automatyczna faktura dla subskrypcji wygenerowana i dostępna w Portalu.
@@ -142,7 +143,10 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 1. Skonfiguruj **webhooki** Stripe → endpoint aplikacji: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`.
 2. Na podstawie zdarzeń ustawiaj `subscriptionTier` użytkownika w Supabase (`free` / `pro` / `team`) — spójnie z `derivePlan()` w `entitlements.ts`.
 3. Mapuj `price ID` → plan (Pro/Team) w configu.
-4. Obsłuż **grace period** i `payment_failed` (downgrade do Free po nieudanej płatności).
+4. [x] `past_due` zachowuje płatny dostęp podczas prób odzyskania płatności;
+   downgrade do Free następuje po statusie `canceled` lub `unpaid`.
+5. [x] Ponowienia webhooka odzyskują zdarzenia oznaczone `error` i osierocone
+   `processing`, zachowując blokadę równoległego przetwarzania.
 
 ### Krok 8 — Testy
 1. Tryb **test mode**: zakup jako konsument PL (VAT 23% w cenie), konsument DE (19%), konsument ES (21%).
@@ -168,13 +172,13 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 - [x] Stripe Tax: origin PL, kategoria usług elektronicznych, ceny brutto i monitoring progów
 - [x] Rejestracja Poland domestic, VAT 23% od 2026-08-09
 - [ ] OSS Union scheme wyłącznie po potwierdzeniu faktycznej rejestracji/decyzji księgowego
-- [ ] Produkty Pro + Team, ceny mies./rok, **tax behavior = inclusive**, waluty EUR/PLN/USD/GBP, tax code SaaS
+- [~] Produkty Pro + Team, ceny mies./rok, **tax behavior = inclusive**, tax code SaaS. LIVE PLN+USD gotowe; EUR/GBP pozostaja na kolejny etap lokalizacji cen.
 - [ ] Checkout: automatic tax, billing address, collect + validate VAT ID (reverse charge)
 - [x] Customer Portal: faktury, dane klienta i VAT ID, płatności, anulowanie na koniec okresu, linki prawne i powrót do aplikacji
 - [x] Checkbox zgody na świadczenie + utrata prawa odstąpienia, zapis w Stripe i metadanych
 - [x] Automatyczna faktura, numeracja i stopka z danymi prawnymi sprzedawcy
 - [x] Webhook zakupowy → Supabase `subscriptionTier`; mapowanie LIVE price→plan
-- [ ] Symulacja `payment_failed` i potwierdzenie downgrade po przejściu subskrypcji do `unpaid`
+- [~] Polityka `payment_failed`, maile i logika `unpaid` skonfigurowane oraz pokryte testami jednostkowymi; pozostaje symulacja zdarzenia Stripe end-to-end bez obciazenia.
 - [ ] Testy: B2C DE/ES, B2B reverse charge i anulowanie na koniec okresu
 - [x] Test LIVE B2C PL: VAT, 3D Secure, faktura, webhook, aktywacja Pro i Portal
 

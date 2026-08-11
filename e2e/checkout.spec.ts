@@ -27,6 +27,13 @@ test.describe('Pricing & Checkout Flow', () => {
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
   });
 
+  test('Polish pricing page presents the agreed PLN prices', async ({ page }) => {
+    await page.goto('/pl/pricing');
+
+    await expect(page.getByText('29 PLN', { exact: true })).toBeVisible();
+    await expect(page.getByText('99 PLN', { exact: true })).toBeVisible();
+  });
+
   test('pricing page has paid CTA that preserves plan and billing cycle', async ({ page }) => {
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');

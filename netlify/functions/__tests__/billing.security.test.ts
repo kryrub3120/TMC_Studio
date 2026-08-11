@@ -247,7 +247,7 @@ describe('Checkout Security (create-checkout.ts)', () => {
   let handler: typeof import('../create-checkout').handler;
   const validOrigin = 'https://tmcstudio.app';
   const validToken = 'Bearer valid-supabase-token';
-  const validPriceId = 'price_1SnQvaANogcZdSR39JL60iCS'; // pro monthly LIVE
+  const validPriceId = 'price_1U3JbYANogcZdSR3J6Nvw41T'; // pro monthly LIVE
 
   beforeEach(async () => {
     vi.resetModules();
