@@ -56,6 +56,11 @@ Netlify production secret `POSTMARK_SERVER_TOKEN`. It must never use a
 `VITE_` prefix. Delivery failures remove the newly created pending invitation;
 logs contain the invitation and Postmark message IDs, never message bodies.
 
+Netlify Functions that verify Supabase sessions also require the server-side
+`SUPABASE_ANON_KEY`. The browser-facing `VITE_SUPABASE_ANON_KEY` is not visible
+to the Functions runtime and does not replace it. Both values may contain the
+same Supabase anon key, but their scopes are intentionally separate.
+
 ### Supabase Auth
 
 Custom SMTP points to Postmark (`smtp.postmarkapp.com`, TLS, port 587) with the
