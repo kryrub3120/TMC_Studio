@@ -1,106 +1,217 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-test.describe('Coaching library workflow', () => {
+test.describe("Coaching library workflow", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('tmc-cookie-consent', JSON.stringify({ analytics: false, ts: 'e2e' }));
-      localStorage.setItem('tmc-language', 'pl');
-      localStorage.setItem('tmc-studio-dev-cloud-user', 'dev-library-workflow');
-      localStorage.setItem('tmc-auth', JSON.stringify({
-        state: {
-          isInitialized: true,
-          isMockUser: true,
-          isAuthenticated: true,
-          isPro: true,
-          isTeam: false,
-          user: { id: 'dev-library-workflow', email: 'library@tmcstudio.test', full_name: 'Library Coach', subscription_tier: 'pro' },
-        },
-        version: 0,
-      }));
-      localStorage.setItem('tmc-ui-settings', JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }));
+      localStorage.setItem(
+        "tmc-cookie-consent",
+        JSON.stringify({ analytics: false, ts: "e2e" }),
+      );
+      localStorage.setItem("tmc-language", "pl");
+      localStorage.setItem(
+        "tmc-studio-dev-cloud-user",
+        "dev-library-workflow-v2",
+      );
+      if (sessionStorage.getItem("tmc-library-test-initialized") !== "1") {
+        localStorage.removeItem(
+          "tmc-studio-dev-cloud-projects-dev-library-workflow-v2",
+        );
+        localStorage.removeItem(
+          "tmc-studio-dev-cloud-folders-dev-library-workflow-v2",
+        );
+        localStorage.removeItem("tmc-studio-board");
+        sessionStorage.setItem("tmc-library-test-initialized", "1");
+      }
+      localStorage.setItem(
+        "tmc-auth",
+        JSON.stringify({
+          state: {
+            isInitialized: true,
+            isMockUser: true,
+            isAuthenticated: true,
+            isPro: true,
+            isTeam: false,
+            user: {
+              id: "dev-library-workflow-v2",
+              email: "library@tmcstudio.test",
+              full_name: "Library Coach",
+              subscription_tier: "pro",
+            },
+          },
+          version: 0,
+        }),
+      );
+      localStorage.setItem(
+        "tmc-ui-settings",
+        JSON.stringify({
+          state: { tutorialCompleted: true, clubWelcomeSeen: true },
+          version: 0,
+        }),
+      );
+      localStorage.setItem("tmc-exercise-guide-seen", "1");
+      localStorage.setItem("tmc-session-guide-seen", "1");
     });
-    await page.goto('/board');
-    await page.waitForLoadState('networkidle');
+    await page.goto("/board");
+    await page.waitForLoadState("networkidle");
   });
 
-  test('creates exercises from graphics and assembles a persistent session plan', async ({ page }) => {
-    const openProjects = async () => {
-      await page.locator('[data-tour="projects"] button').first().click();
+  test("opens dedicated exercise and session editors and persists a complete plan", async ({
+    page,
+  }) => {
+    const openLibrary = async () => {
+      const workspaceButton = page.getByRole("button", { name: "Biblioteka" });
+      if (await workspaceButton.isVisible().catch(() => false))
+        await workspaceButton.click();
+      else await page.locator('[data-tour="projects"] button').first().click();
       await expect(page.locator('[data-tour="projects-panel"]')).toBeVisible();
     };
 
-    await openProjects();
+    await openLibrary();
+    await page.getByTestId("library-tutorial-open").click();
+    const libraryGuide = page.getByTestId("library-tutorial");
+    await expect(libraryGuide).toContainText("Narysuj grafikę");
+    await libraryGuide.getByRole("button", { name: "Dalej" }).click();
+    await expect(libraryGuide).toContainText("Zbuduj ćwiczenie");
+    await libraryGuide.getByRole("button", { name: "Dalej" }).click();
+    await expect(libraryGuide).toContainText("Ułóż konspekt");
+    await libraryGuide.getByRole("button", { name: "Gotowe" }).click();
 
-    await page.getByTestId('library-tutorial-open').click();
-    const tutorial = page.getByTestId('library-tutorial');
-    await expect(tutorial).toContainText('Narysuj grafikę');
-    await tutorial.getByRole('button', { name: 'Dalej' }).click();
-    await expect(tutorial).toContainText('Zbuduj ćwiczenie');
-    await tutorial.getByRole('button', { name: 'Dalej' }).click();
-    await expect(tutorial).toContainText('Ułóż konspekt');
-    await tutorial.getByRole('button', { name: 'Gotowe' }).click();
-
-    await page.getByTestId('create-graphic-project').click();
-    await page.keyboard.press('b');
+    await page.getByTestId("create-graphic-project").click();
+    await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
+    await page.keyboard.press("b");
     await page.waitForTimeout(2300);
 
-    await openProjects();
-    await page.getByTestId('create-exercise-from-graphic').click();
+    await openLibrary();
+    await expect(page.getByTestId("recent-projects")).toBeVisible();
+    await page.getByTestId("create-exercise-project").click();
+    await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
+    await expect(page.getByTestId("exercise-workspace")).toBeVisible();
+    await page.getByRole("button", { name: "Szybki przewodnik" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Stwórz kompletne ćwiczenie" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Zaczynamy" }).click();
+
     const copiedElementTypes = await page.evaluate(() => {
-      const document = JSON.parse(localStorage.getItem('tmc-studio-board') ?? '{}');
-      return document.steps?.[0]?.elements?.map((element: { type: string }) => element.type) ?? [];
+      const document = JSON.parse(
+        localStorage.getItem("tmc-studio-board") ?? "{}",
+      );
+      return (
+        document.steps?.[0]?.elements?.map(
+          (element: { type: string }) => element.type,
+        ) ?? []
+      );
     });
-    expect(copiedElementTypes).toContain('ball');
-    await openProjects();
+    expect(copiedElementTypes).toContain("ball");
 
-    await expect(page.getByTestId('exercise-editor')).toBeVisible();
-    await expect(page.getByTestId('exercise-editor')).toContainText('Używana grafika: Untitled Board');
-    await page.getByTestId('project-description').fill('Gra pozycyjna 4v4 z zawodnikami neutralnymi');
-    await page.getByTestId('exercise-duration').fill('20');
-    await page.getByTestId('exercise-players').fill('8 + 2 neutralnych');
-    await page.getByTestId('exercise-organization').fill('Pole 30x25 m, dwa zespoły po czterech.');
-    await page.getByTestId('exercise-coaching-points').fill('Skanowanie przed przyjęciem i szybka zmiana strony.');
+    await page.getByLabel("Czas (min)").fill("20");
+    await page.getByLabel("Liczba zawodników").fill("8 + 2 neutralnych");
+    await page.getByLabel("Kategoria / faza").fill("Gra pozycyjna");
+    await page
+      .getByLabel("Cel treningowy")
+      .fill("Skanowanie i zmiana centrum gry");
+    await page
+      .getByLabel("Treść ćwiczenia")
+      .fill("Gra 4v4 z dwoma neutralnymi. Punkt po zmianie strony.");
+    await page
+      .getByLabel("Organizacja")
+      .fill("Pole 30x25 m, dwa zespoły po czterech.");
+    await page
+      .getByLabel("Kluczowe wskazówki")
+      .fill("Skanowanie przed przyjęciem.");
+    await page
+      .getByLabel("Progresja / regresja")
+      .fill("Maksymalnie dwa kontakty.");
+    await page.getByLabel("Sprzęt").fill("8 stożków, piłki, znaczniki.");
+    const firstExerciseId = await page
+      .getByTestId("exercise-workspace")
+      .getAttribute("data-project-id");
 
-    await page.getByTestId('create-exercise-project').click();
-    await openProjects();
-    await page.getByTestId('exercise-graphic-select').selectOption({ label: 'Untitled Board' });
-    await page.getByTestId('attach-graphic').click();
-    await expect(page.getByTestId('exercise-editor')).toContainText('Używana grafika: Untitled Board');
-    await page.getByTestId('exercise-duration').fill('10');
+    await openLibrary();
+    await page.getByTestId("create-exercise-project").click();
+    await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
+    await expect(page.getByTestId("exercise-workspace")).toBeVisible();
+    await expect(page.getByTestId("exercise-workspace")).not.toHaveAttribute(
+      "data-project-id",
+      firstExerciseId ?? "",
+    );
+    await page.getByLabel("Czas (min)").fill("10");
 
-    await page.getByTestId('create-session-project').click();
-    await openProjects();
-    await expect(page.getByTestId('session-editor')).toBeVisible();
+    await openLibrary();
+    await page.getByTestId("create-session-project").click();
+    await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
+    await expect(page.getByTestId("session-workspace")).toBeVisible();
+    await page.getByRole("button", { name: "Szybki przewodnik" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Zbuduj konspekt treningowy" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Zaczynamy" }).click();
 
-    const exerciseSelect = page.getByTestId('session-exercise-select');
-    await exerciseSelect.selectOption({ label: 'Ćwiczenie — Untitled Board' });
-    await page.getByTestId('add-exercise-to-session').click();
-    await exerciseSelect.selectOption({ label: 'Nowe ćwiczenie' });
-    await page.getByTestId('add-exercise-to-session').click();
+    await page.getByLabel("Data").fill("2026-08-12");
+    await page.getByLabel("Dzień mikrocyklu").fill("MD +2");
+    await page.getByLabel("Miejsce").fill("Siechnice");
+    await page.getByLabel("Godzina").fill("10:00");
+    await page.getByLabel("Sztab").fill("MH, MHA, KR");
+    await page
+      .getByLabel("Cele jednostki")
+      .fill("Obrona wysoka i budowanie gry.");
 
-    await expect(page.getByTestId('session-exercise-item')).toHaveCount(2);
-    await expect(page.getByTestId('session-editor')).toContainText('Łącznie: 30 min');
-    await page.getByTestId('session-exercise-item').first().getByTitle('Przenieś niżej').click();
-    await expect(page.getByTestId('session-exercise-item').first()).toContainText('Nowe ćwiczenie');
-    await page.getByPlaceholder('Notatka do tego ćwiczenia').first().fill('Rozgrzewka z piłką.');
+    const exerciseButtons = page.getByRole("complementary").getByRole("button");
+    await exerciseButtons.first().click();
+    await exerciseButtons.nth(1).click();
+    await expect(page.locator("article")).toHaveCount(2);
+    await expect(
+      page.getByText("30 min", { exact: true }).first(),
+    ).toBeVisible();
+    await page
+      .getByPlaceholder("Treść, zasady, warianty i wskazówki…")
+      .first()
+      .fill("Rozgrzewka z piłką.");
+
+    await page.getByRole("button", { name: /Dodaj grupę pozycyjną/ }).click();
+    await page
+      .getByPlaceholder("Jeden zawodnik w wierszu")
+      .fill("Nowak\nKowalski");
+    await page.getByRole("button", { name: /Dodaj członka sztabu/ }).click();
+    await page.locator("tbody input").first().fill("KR");
+    await page.getByLabel("Sprzęt i przygotowanie").fill("Bramki, piłki, GPS.");
     await page.waitForTimeout(2300);
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
-    await openProjects();
-    await page.getByText('Nowy konspekt', { exact: true }).last().click();
-    await openProjects();
-    await expect(page.getByTestId('session-exercise-item')).toHaveCount(2);
-    await expect(page.getByTestId('session-editor')).toContainText('Łącznie: 30 min');
-    await expect(page.getByTestId('session-exercise-item').first()).toContainText('Nowe ćwiczenie');
-    await expect(page.getByPlaceholder('Notatka do tego ćwiczenia').first()).toHaveValue('Rozgrzewka z piłką.');
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByTestId("session-workspace")).toBeVisible();
+    await expect(page.getByLabel("Miejsce")).toHaveValue("Siechnice");
+    await expect(page.locator("article")).toHaveCount(2);
+    await expect(
+      page.getByPlaceholder("Treść, zasady, warianty i wskazówki…").first(),
+    ).toHaveValue("Rozgrzewka z piłką.");
+    await expect(page.getByPlaceholder("Jeden zawodnik w wierszu")).toHaveValue(
+      "Nowak\nKowalski",
+    );
+    await expect(page.getByLabel("Sprzęt i przygotowanie")).toHaveValue(
+      "Bramki, piłki, GPS.",
+    );
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const drawerDimensions = await page.locator('[data-tour="projects-panel"]').evaluate((element) => ({
-      clientWidth: element.clientWidth,
-      scrollWidth: element.scrollWidth,
-    }));
-    expect(drawerDimensions.scrollWidth).toBeLessThanOrEqual(drawerDimensions.clientWidth);
-    await expect(page.getByTestId('session-editor')).toBeVisible();
+    const workspaceDimensions = await page
+      .getByTestId("session-workspace")
+      .evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+    expect(workspaceDimensions.scrollWidth).toBeLessThanOrEqual(
+      workspaceDimensions.clientWidth,
+    );
+    await openLibrary();
+    const drawerDimensions = await page
+      .locator('[data-tour="projects-panel"]')
+      .evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+    expect(drawerDimensions.scrollWidth).toBeLessThanOrEqual(
+      drawerDimensions.clientWidth,
+    );
+    await expect(page.getByTestId("recent-projects")).toBeVisible();
   });
 });

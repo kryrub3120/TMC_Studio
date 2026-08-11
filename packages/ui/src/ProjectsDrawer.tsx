@@ -3,17 +3,17 @@
  * Slide-out panel for listing, creating, and managing projects
  */
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ContextMenu, ContextMenuItem } from './ContextMenu';
-import { ConfirmModal } from './ConfirmModal';
-import { useTranslation } from './i18n.js';
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { ContextMenu, ContextMenuItem } from "./ContextMenu";
+import { ConfirmModal } from "./ConfirmModal";
+import { useTranslation } from "./i18n.js";
 import {
   DEFAULT_EXERCISE_DETAILS,
   DEFAULT_SESSION_PLAN_DETAILS,
   type ExerciseDetails,
   type ProjectType,
   type SessionPlanDetails,
-} from '@tmc/core';
+} from "@tmc/core";
 
 export interface ProjectItem {
   id: string;
@@ -31,7 +31,7 @@ export interface ProjectItem {
   tags?: string[];
   folderId?: string | null;
   /** Save status: 'saved' | 'saving' | 'unsaved' | 'error' | undefined */
-  saveStatus?: 'saved' | 'saving' | 'unsaved' | 'error';
+  saveStatus?: "saved" | "saving" | "unsaved" | "error";
 }
 
 export interface FolderItem {
@@ -112,10 +112,14 @@ function buildFolderTree(folders: FolderItem[]): FolderItem[] {
  * Check if candidateAncestorId is an ancestor of folderId in the tree.
  * Used to prevent dropping a folder into its own subtree.
  */
-function isDescendantOf(folders: FolderItem[], folderId: string, candidateAncestorId: string): boolean {
+function isDescendantOf(
+  folders: FolderItem[],
+  folderId: string,
+  candidateAncestorId: string,
+): boolean {
   const map = new Map<string, FolderItem>();
   for (const f of folders) map.set(f.id, f);
-  
+
   let current = map.get(folderId);
   const visited = new Set<string>();
   while (current) {
@@ -133,37 +137,52 @@ function isDescendantOf(folders: FolderItem[], folderId: string, candidateAncest
 function computeSortOrder(siblings: FolderItem[], insertIndex: number): number {
   if (siblings.length === 0) return 1000;
   if (insertIndex <= 0) return (siblings[0].sortOrder ?? 0) - 1000;
-  if (insertIndex >= siblings.length) return (siblings[siblings.length - 1].sortOrder ?? 0) + 1000;
+  if (insertIndex >= siblings.length)
+    return (siblings[siblings.length - 1].sortOrder ?? 0) + 1000;
   const before = siblings[insertIndex - 1].sortOrder ?? 0;
   const after = siblings[insertIndex].sortOrder ?? 0;
   return (before + after) / 2;
 }
 
-type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'favorites' | 'last-opened';
+type SortOption =
+  | "recent"
+  | "name-asc"
+  | "name-desc"
+  | "favorites"
+  | "last-opened";
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'recent', label: 'Recent' },
-  { value: 'name-asc', label: 'Name (A-Z)' },
-  { value: 'name-desc', label: 'Name (Z-A)' },
-  { value: 'favorites', label: 'Favorites first' },
-  { value: 'last-opened', label: 'Last opened' },
+  { value: "recent", label: "Recent" },
+  { value: "name-asc", label: "Name (A-Z)" },
+  { value: "name-desc", label: "Name (Z-A)" },
+  { value: "favorites", label: "Favorites first" },
+  { value: "last-opened", label: "Last opened" },
 ];
 
 function sortProjects(list: ProjectItem[], sort: SortOption): ProjectItem[] {
   return [...list].sort((a, b) => {
     switch (sort) {
-      case 'name-asc': return a.name.localeCompare(b.name);
-      case 'name-desc': return b.name.localeCompare(a.name);
-      case 'favorites': {
+      case "name-asc":
+        return a.name.localeCompare(b.name);
+      case "name-desc":
+        return b.name.localeCompare(a.name);
+      case "favorites": {
         if (a.isFavorite && !b.isFavorite) return -1;
         if (!a.isFavorite && b.isFavorite) return 1;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        return (
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
       }
-      case 'last-opened':
-        return new Date(b.lastOpenedAt ?? 0).getTime() - new Date(a.lastOpenedAt ?? 0).getTime();
-      case 'recent':
+      case "last-opened":
+        return (
+          new Date(b.lastOpenedAt ?? 0).getTime() -
+          new Date(a.lastOpenedAt ?? 0).getTime()
+        );
+      case "recent":
       default:
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        return (
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
     }
   });
 }
@@ -177,7 +196,10 @@ interface ProjectsDrawerProps {
   isAuthenticated: boolean;
   isLoading: boolean;
   onSelectProject: (id: string) => void;
-  onCreateProject: (type?: ProjectType, sourceGraphicProjectId?: string) => void;
+  onCreateProject: (
+    type?: ProjectType,
+    sourceGraphicProjectId?: string,
+  ) => void;
   onDeleteProject: (id: string) => void;
   onDuplicateProject: (id: string) => void;
   onCreateFolder?: (parentFolderId?: string | null) => void;
@@ -189,10 +211,19 @@ interface ProjectsDrawerProps {
   onDeleteFolder?: (folderId: string) => void;
   onRenameProject?: (projectId: string, newName: string) => void;
   onRenameFolder?: (folderId: string, newName: string) => void;
-  onMoveFolderToParent?: (folderId: string, parentId: string | null, position: number) => void;
+  onMoveFolderToParent?: (
+    folderId: string,
+    parentId: string | null,
+    position: number,
+  ) => void;
   onSignIn: () => void;
   onRefresh?: () => void;
-  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string; exerciseDetails?: ExerciseDetails; sessionPlanDetails?: SessionPlanDetails }) => void;
+  onUpdateCurrentProjectMetadata?: (updates: {
+    projectType?: ProjectType;
+    description?: string;
+    exerciseDetails?: ExerciseDetails;
+    sessionPlanDetails?: SessionPlanDetails;
+  }) => void;
   onAttachGraphicToExercise?: (sourceGraphicProjectId: string) => void;
 }
 
@@ -226,37 +257,50 @@ export function ProjectsDrawer({
   const { t } = useTranslation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('recent');
-  const [typeFilter, setTypeFilter] = useState<'all' | ProjectType>('all');
-  const [descriptionDraft, setDescriptionDraft] = useState('');
-  const [selectedGraphicId, setSelectedGraphicId] = useState('');
-  const [selectedExerciseId, setSelectedExerciseId] = useState('');
-  const [libraryTutorialStep, setLibraryTutorialStep] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const [typeFilter, setTypeFilter] = useState<"all" | ProjectType>("all");
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [selectedGraphicId, setSelectedGraphicId] = useState("");
+  const [selectedExerciseId, setSelectedExerciseId] = useState("");
+  const [creatingType, setCreatingType] = useState<ProjectType | null>(null);
+  const [libraryTutorialStep, setLibraryTutorialStep] = useState<number | null>(
+    null,
+  );
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
-  
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+  } | null>(null);
+
   // Inline rename states (activated from L1 — double-click to rename)
-  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
-  const [_renamingFolderId, _setRenamingFolderId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(
+    null,
+  );
+  const [_renamingFolderId, _setRenamingFolderId] = useState<string | null>(
+    null,
+  );
+  const [renameValue, setRenameValue] = useState("");
+
   // Collapse/expand state for folder tree
-  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(new Set());
-  
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(
+    new Set(),
+  );
+
   // Search auto-expand: snapshot of user's collapse state before search
   const preSearchCollapsedRef = useRef<Set<string> | null>(null);
-  
+
   // Drag & drop states
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
   const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null);
-  
+
   // Drop indicator: position-aware (above / below / inside)
   const [dropIndicator, setDropIndicator] = useState<{
     /** Target folder id, or '__all_projects__' for root zone */
     targetId: string;
     /** 'above' | 'below' = sibling reorder line; 'inside' = nest into folder */
-    position: 'above' | 'below' | 'inside';
+    position: "above" | "below" | "inside";
   } | null>(null);
 
   // Auto-expand collapsed folders on sustained drag hover (600ms)
@@ -273,37 +317,44 @@ export function ProjectsDrawer({
   }, []);
 
   /** Start auto-expand timer for a collapsed folder */
-  const scheduleAutoExpand = useCallback((folderId: string) => {
-    // Don't restart if already scheduled for the same folder
-    if (autoExpandTargetRef.current === folderId) return;
-    cancelAutoExpand();
-    autoExpandTargetRef.current = folderId;
-    autoExpandTimerRef.current = setTimeout(() => {
-      setCollapsedFolderIds(prev => {
-        if (!prev.has(folderId)) return prev;
-        const next = new Set(prev);
-        next.delete(folderId);
-        return next;
-      });
-      autoExpandTargetRef.current = null;
-      autoExpandTimerRef.current = null;
-    }, 600);
-  }, [cancelAutoExpand]);
+  const scheduleAutoExpand = useCallback(
+    (folderId: string) => {
+      // Don't restart if already scheduled for the same folder
+      if (autoExpandTargetRef.current === folderId) return;
+      cancelAutoExpand();
+      autoExpandTargetRef.current = folderId;
+      autoExpandTimerRef.current = setTimeout(() => {
+        setCollapsedFolderIds((prev) => {
+          if (!prev.has(folderId)) return prev;
+          const next = new Set(prev);
+          next.delete(folderId);
+          return next;
+        });
+        autoExpandTargetRef.current = null;
+        autoExpandTimerRef.current = null;
+      }, 600);
+    },
+    [cancelAutoExpand],
+  );
 
   // Cleanup auto-expand timer on unmount
   useEffect(() => cancelAutoExpand, [cancelAutoExpand]);
 
   // Search-filtered projects
   const searchFilteredProjects = useMemo(() => {
-    const typeFiltered = typeFilter === 'all'
-      ? projects
-      : projects.filter((project) => (project.projectType ?? 'graphic') === typeFilter);
+    const typeFiltered =
+      typeFilter === "all"
+        ? projects
+        : projects.filter(
+            (project) => (project.projectType ?? "graphic") === typeFilter,
+          );
     if (!searchQuery.trim()) return typeFiltered;
     const query = searchQuery.toLowerCase();
-    return typeFiltered.filter(p =>
-      p.name.toLowerCase().includes(query) ||
-      p.description?.toLowerCase().includes(query) ||
-      p.tags?.some(t => t.toLowerCase().includes(query))
+    return typeFiltered.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query) ||
+        p.tags?.some((t) => t.toLowerCase().includes(query)),
     );
   }, [projects, searchQuery, typeFilter]);
 
@@ -311,53 +362,107 @@ export function ProjectsDrawer({
     () => projects.find((project) => project.id === currentProjectId),
     [currentProjectId, projects],
   );
+  // Exercise and session editing now live in dedicated workspaces.
+  const showLegacyComposer = false;
 
   useEffect(() => {
-    setDescriptionDraft(currentProject?.description ?? '');
+    setDescriptionDraft(currentProject?.description ?? "");
   }, [currentProject?.description, currentProjectId]);
 
   const graphicProjects = useMemo(
-    () => projects.filter((project) => (project.projectType ?? 'graphic') === 'graphic'),
+    () =>
+      projects.filter(
+        (project) => (project.projectType ?? "graphic") === "graphic",
+      ),
     [projects],
   );
   const exerciseProjects = useMemo(
-    () => projects.filter((project) => project.projectType === 'exercise'),
+    () => projects.filter((project) => project.projectType === "exercise"),
+    [projects],
+  );
+  const recentProjects = useMemo(
+    () =>
+      [...projects]
+        .sort((a, b) => {
+          const aTime = new Date(a.lastOpenedAt ?? a.updatedAt).getTime();
+          const bTime = new Date(b.lastOpenedAt ?? b.updatedAt).getTime();
+          return bTime - aTime;
+        })
+        .slice(0, 6),
     [projects],
   );
 
-  useEffect(() => {
-    setSelectedGraphicId(currentProject?.exerciseDetails?.sourceGraphicProjectId ?? graphicProjects[0]?.id ?? '');
-  }, [currentProjectId, currentProject?.exerciseDetails?.sourceGraphicProjectId, graphicProjects]);
+  const createLibraryProject = async (
+    type: ProjectType,
+    sourceGraphicProjectId?: string,
+  ) => {
+    if (creatingType) return;
+    setCreatingType(type);
+    try {
+      await onCreateProject(type, sourceGraphicProjectId);
+    } finally {
+      setCreatingType(null);
+    }
+  };
 
   useEffect(() => {
-    setSelectedExerciseId(exerciseProjects[0]?.id ?? '');
+    setSelectedGraphicId(
+      currentProject?.exerciseDetails?.sourceGraphicProjectId ??
+        graphicProjects[0]?.id ??
+        "",
+    );
+  }, [
+    currentProjectId,
+    currentProject?.exerciseDetails?.sourceGraphicProjectId,
+    graphicProjects,
+  ]);
+
+  useEffect(() => {
+    setSelectedExerciseId(exerciseProjects[0]?.id ?? "");
   }, [currentProjectId, exerciseProjects]);
 
   const updateExercise = (patch: Partial<ExerciseDetails>) => {
     if (!currentProject || !onUpdateCurrentProjectMetadata) return;
     onUpdateCurrentProjectMetadata({
-      exerciseDetails: { ...DEFAULT_EXERCISE_DETAILS, ...currentProject.exerciseDetails, ...patch },
+      exerciseDetails: {
+        ...DEFAULT_EXERCISE_DETAILS,
+        ...currentProject.exerciseDetails,
+        ...patch,
+      },
     });
   };
 
-  const updateSession = (details: SessionPlanDetails) => {
-    onUpdateCurrentProjectMetadata?.({ sessionPlanDetails: details });
+  const updateSession = (patch: Partial<SessionPlanDetails>) => {
+    onUpdateCurrentProjectMetadata?.({
+      sessionPlanDetails: {
+        ...DEFAULT_SESSION_PLAN_DETAILS,
+        ...currentProject?.sessionPlanDetails,
+        ...patch,
+      },
+    });
   };
 
   const addExerciseToSession = () => {
     if (!currentProject || !selectedExerciseId) return;
-    const exercise = exerciseProjects.find((project) => project.id === selectedExerciseId);
+    const exercise = exerciseProjects.find(
+      (project) => project.id === selectedExerciseId,
+    );
     if (!exercise) return;
-    const current = currentProject.sessionPlanDetails ?? DEFAULT_SESSION_PLAN_DETAILS;
-    if (current.exercises.some((item) => item.projectId === exercise.id)) return;
+    const current =
+      currentProject.sessionPlanDetails ?? DEFAULT_SESSION_PLAN_DETAILS;
+    if (current.exercises.some((item) => item.projectId === exercise.id))
+      return;
     updateSession({
-      exercises: [...current.exercises, {
-        id: globalThis.crypto?.randomUUID?.() ?? `session-item-${Date.now()}`,
-        projectId: exercise.id,
-        name: exercise.name,
-        durationMinutes: exercise.exerciseDetails?.durationMinutes ?? 15,
-        notes: '',
-      }],
+      exercises: [
+        ...current.exercises,
+        {
+          id: globalThis.crypto?.randomUUID?.() ?? `session-item-${Date.now()}`,
+          projectId: exercise.id,
+          name: exercise.name,
+          durationMinutes: exercise.exerciseDetails?.durationMinutes ?? 15,
+          notes: "",
+        },
+      ],
     });
   };
 
@@ -379,15 +484,15 @@ export function ProjectsDrawer({
 
   // Root projects (no folder)
   const rootProjects = projectsByFolder.get(null) ?? [];
-  
+
   // Folders with project count
   const foldersWithCount = useMemo(() => {
-    return folders.map(f => ({
+    return folders.map((f) => ({
       ...f,
-      projectCount: projects.filter(p => p.folderId === f.id).length,
+      projectCount: projects.filter((p) => p.folderId === f.id).length,
     }));
   }, [folders, projects]);
-  
+
   // Parent ID map for O(1) ancestor lookups — built once per folder list change
   const parentIdMap = useMemo(() => {
     const map = new Map<string, string | null>();
@@ -412,8 +517,8 @@ export function ProjectsDrawer({
       }
     }
     // Also expand '__all_projects__' if there are root matches
-    if (searchFilteredProjects.some(p => !p.folderId)) {
-      ancestors.add('__all_projects__');
+    if (searchFilteredProjects.some((p) => !p.folderId)) {
+      ancestors.add("__all_projects__");
     }
     return ancestors;
   }, [searchQuery, searchFilteredProjects, parentIdMap]);
@@ -421,22 +526,22 @@ export function ProjectsDrawer({
   // Search auto-expand effect: snapshot → expand → restore
   useEffect(() => {
     const isSearching = searchQuery.trim().length > 0;
-    
+
     if (isSearching) {
       // Snapshot current collapse state (only on first search keystroke)
       if (preSearchCollapsedRef.current === null) {
         preSearchCollapsedRef.current = new Set(collapsedFolderIds);
       }
       // Expand all ancestor folders (remove them from collapsed set)
-      setCollapsedFolderIds(prev => {
+      setCollapsedFolderIds((prev) => {
         if (searchAncestorFolderIds.size === 0) return prev;
         const next = new Set(prev);
         for (const id of searchAncestorFolderIds) {
           next.delete(id);
         }
         // Also expand '__all_projects__' when root projects match
-        if (searchAncestorFolderIds.has('__all_projects__')) {
-          next.delete('__all_projects__');
+        if (searchAncestorFolderIds.has("__all_projects__")) {
+          next.delete("__all_projects__");
         }
         return next;
       });
@@ -450,16 +555,19 @@ export function ProjectsDrawer({
   }, [searchQuery, searchAncestorFolderIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Separate pinned and unpinned folders (from tree roots only)
-  const folderTree = useMemo(() => buildFolderTree(foldersWithCount), [foldersWithCount]);
-  const pinnedFolders = folderTree.filter(f => f.isPinned);
-  const unpinnedFolders = folderTree.filter(f => !f.isPinned);
-  
+  const folderTree = useMemo(
+    () => buildFolderTree(foldersWithCount),
+    [foldersWithCount],
+  );
+  const pinnedFolders = folderTree.filter((f) => f.isPinned);
+  const unpinnedFolders = folderTree.filter((f) => !f.isPinned);
+
   // Whether we're in search mode (tree always shows, but some chrome is hidden)
   const isSearching = searchQuery.trim().length > 0;
 
   // Toggle collapse/expand for a folder
   const toggleFolderCollapse = (folderId: string) => {
-    setCollapsedFolderIds(prev => {
+    setCollapsedFolderIds((prev) => {
       const next = new Set(prev);
       if (next.has(folderId)) {
         next.delete(folderId);
@@ -471,76 +579,84 @@ export function ProjectsDrawer({
   };
 
   // Context menu handlers
-  const handleProjectContextMenu = (e: React.MouseEvent, project: ProjectItem) => {
+  const handleProjectContextMenu = (
+    e: React.MouseEvent,
+    project: ProjectItem,
+  ) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const items: ContextMenuItem[] = [
       {
-        label: project.isPinned ? t('projects.unpin') : t('projects.pinTop'),
-        icon: '📌',
+        label: project.isPinned ? t("projects.unpin") : t("projects.pinTop"),
+        icon: "📌",
         onClick: () => onTogglePinProject?.(project.id),
       },
       {
-        label: project.isFavorite ? t('projects.removeFavorite') : t('projects.addFavorite'),
-        icon: '⭐',
+        label: project.isFavorite
+          ? t("projects.removeFavorite")
+          : t("projects.addFavorite"),
+        icon: "⭐",
         onClick: () => onToggleFavorite?.(project.id),
       },
       {
-        label: t('projects.duplicate'),
-        icon: '📋',
+        label: t("projects.duplicate"),
+        icon: "📋",
         onClick: () => onDuplicateProject(project.id),
       },
       {
-        label: t('projects.delete'),
-        icon: '🗑️',
+        label: t("projects.delete"),
+        icon: "🗑️",
         onClick: () => setDeleteConfirmId(project.id),
-        variant: 'danger' as const,
+        variant: "danger" as const,
         divider: true,
       },
     ];
-    
+
     setContextMenu({ x: e.clientX, y: e.clientY, items });
   };
 
   const handleFolderContextMenu = (e: React.MouseEvent, folder: FolderItem) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const items: ContextMenuItem[] = [
       {
-        label: folder.isPinned ? t('projects.unpin') : t('projects.pinTop'),
-        icon: '📌',
+        label: folder.isPinned ? t("projects.unpin") : t("projects.pinTop"),
+        icon: "📌",
         onClick: () => onTogglePinFolder?.(folder.id),
       },
       {
-        label: t('projects.editFolder'),
-        icon: '✏️',
+        label: t("projects.editFolder"),
+        icon: "✏️",
         onClick: () => _onEditFolder?.(folder.id),
       },
     ];
-    
+
     // "Move to root" for nested folders
     if (folder.parentId && onMoveFolderToParent) {
       items.push({
-        label: t('projects.moveRoot'),
-        icon: '⬆️',
+        label: t("projects.moveRoot"),
+        icon: "⬆️",
         onClick: () => {
-          const rootSiblings = foldersWithCount.filter(f => !f.parentId);
-          const newPosition = computeSortOrder(rootSiblings, rootSiblings.length);
+          const rootSiblings = foldersWithCount.filter((f) => !f.parentId);
+          const newPosition = computeSortOrder(
+            rootSiblings,
+            rootSiblings.length,
+          );
           onMoveFolderToParent(folder.id, null, newPosition);
         },
       });
     }
-    
+
     items.push({
-      label: t('projects.deleteFolder'),
-      icon: '🗑️',
+      label: t("projects.deleteFolder"),
+      icon: "🗑️",
       onClick: () => _onDeleteFolder?.(folder.id),
-      variant: 'danger' as const,
+      variant: "danger" as const,
       divider: true,
     });
-    
+
     setContextMenu({ x: e.clientX, y: e.clientY, items });
   };
 
@@ -556,8 +672,8 @@ export function ProjectsDrawer({
   const handleProjectDragStart = (e: React.DragEvent, projectId: string) => {
     e.stopPropagation();
     setDraggedProjectId(projectId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', projectId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", projectId);
   };
 
   const handleProjectDragEnd = () => {
@@ -568,8 +684,8 @@ export function ProjectsDrawer({
   const handleFolderDragStart = (e: React.DragEvent, folderId: string) => {
     e.stopPropagation();
     setDraggedFolderId(folderId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/x-folder-id', folderId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("application/x-folder-id", folderId);
   };
 
   const handleFolderDragEnd = () => {
@@ -584,37 +700,37 @@ export function ProjectsDrawer({
   const computeDropPosition = (
     e: React.DragEvent,
     _targetId: string,
-  ): 'above' | 'below' | 'inside' => {
+  ): "above" | "below" | "inside" => {
     // Projects always drop "inside" a folder
-    if (draggedProjectId) return 'inside';
-    
+    if (draggedProjectId) return "inside";
+
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const y = e.clientY - rect.top;
     const ratio = y / rect.height;
-    
-    if (ratio < 0.25) return 'above';
-    if (ratio > 0.75) return 'below';
-    return 'inside';
+
+    if (ratio < 0.25) return "above";
+    if (ratio > 0.75) return "below";
+    return "inside";
   };
 
   const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
     if (!draggedProjectId && !draggedFolderId) return;
-    
+
     // Prevent dropping folder into itself or its own subtree
     if (draggedFolderId) {
       if (draggedFolderId === folderId) return;
       if (isDescendantOf(foldersWithCount, folderId, draggedFolderId)) return;
     }
-    
+
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-    
+    e.dataTransfer.dropEffect = "move";
+
     const position = computeDropPosition(e, folderId);
     setDropIndicator({ targetId: folderId, position });
-    
+
     // Auto-expand collapsed folder when hovering "inside" zone
-    if (position === 'inside' && collapsedFolderIds.has(folderId)) {
+    if (position === "inside" && collapsedFolderIds.has(folderId)) {
       scheduleAutoExpand(folderId);
     } else {
       cancelAutoExpand();
@@ -626,7 +742,7 @@ export function ProjectsDrawer({
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
-    
+
     // Only clear if actually leaving the element
     if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
       setDropIndicator(null);
@@ -639,17 +755,17 @@ export function ProjectsDrawer({
     if (!draggedProjectId && !draggedFolderId) return;
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-    setDropIndicator({ targetId: '__all_projects__', position: 'inside' });
+    e.dataTransfer.dropEffect = "move";
+    setDropIndicator({ targetId: "__all_projects__", position: "inside" });
     cancelAutoExpand();
   };
 
   const handleFolderDrop = (e: React.DragEvent, folderId: string | null) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const indicator = dropIndicator;
-    
+
     // Folder-to-folder drop
     if (draggedFolderId && onMoveFolderToParent) {
       if (draggedFolderId === folderId) {
@@ -657,36 +773,47 @@ export function ProjectsDrawer({
         return;
       }
       // Cycle check
-      if (folderId && isDescendantOf(foldersWithCount, folderId, draggedFolderId)) {
+      if (
+        folderId &&
+        isDescendantOf(foldersWithCount, folderId, draggedFolderId)
+      ) {
         resetDndState();
         return;
       }
-      
+
       // If dropping "inside" a folder, reparent as child
       // If dropping "above" or "below", reparent as sibling of target
-      if (indicator && folderId && (indicator.position === 'above' || indicator.position === 'below')) {
+      if (
+        indicator &&
+        folderId &&
+        (indicator.position === "above" || indicator.position === "below")
+      ) {
         // Find the target folder's parent
-        const targetFolder = foldersWithCount.find(f => f.id === folderId);
+        const targetFolder = foldersWithCount.find((f) => f.id === folderId);
         const parentId = targetFolder?.parentId ?? null;
-        const siblings = foldersWithCount.filter(f =>
-          parentId ? f.parentId === parentId : !f.parentId
+        const siblings = foldersWithCount.filter((f) =>
+          parentId ? f.parentId === parentId : !f.parentId,
         );
-        const targetIndex = siblings.findIndex(f => f.id === folderId);
-        const insertIndex = indicator.position === 'above' ? targetIndex : targetIndex + 1;
+        const targetIndex = siblings.findIndex((f) => f.id === folderId);
+        const insertIndex =
+          indicator.position === "above" ? targetIndex : targetIndex + 1;
         const newPosition = computeSortOrder(siblings, insertIndex);
         onMoveFolderToParent(draggedFolderId, parentId, newPosition);
       } else {
         // "inside" — reparent as child of folderId (or root if null)
-        const targetChildren = foldersWithCount.filter(f => 
-          folderId ? f.parentId === folderId : !f.parentId
+        const targetChildren = foldersWithCount.filter((f) =>
+          folderId ? f.parentId === folderId : !f.parentId,
         );
-        const newPosition = computeSortOrder(targetChildren, targetChildren.length);
+        const newPosition = computeSortOrder(
+          targetChildren,
+          targetChildren.length,
+        );
         onMoveFolderToParent(draggedFolderId, folderId, newPosition);
       }
       resetDndState();
       return;
     }
-    
+
     // Project-to-folder drop
     if (draggedProjectId) {
       onMoveToFolder?.(draggedProjectId, folderId);
@@ -704,10 +831,12 @@ export function ProjectsDrawer({
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return t('projects.time.justNow');
-    if (diffMins < 60) return t('projects.time.minutesAgo', { count: diffMins });
-    if (diffHours < 24) return t('projects.time.hoursAgo', { count: diffHours });
-    if (diffDays < 7) return t('projects.time.daysAgo', { count: diffDays });
+    if (diffMins < 1) return t("projects.time.justNow");
+    if (diffMins < 60)
+      return t("projects.time.minutesAgo", { count: diffMins });
+    if (diffHours < 24)
+      return t("projects.time.hoursAgo", { count: diffHours });
+    if (diffDays < 7) return t("projects.time.daysAgo", { count: diffDays });
     return date.toLocaleDateString();
   };
 
@@ -719,7 +848,10 @@ export function ProjectsDrawer({
   /**
    * Render a compact inline project row inside the tree.
    */
-  const renderInlineProject = (project: ProjectItem, level: number): React.ReactNode => {
+  const renderInlineProject = (
+    project: ProjectItem,
+    level: number,
+  ): React.ReactNode => {
     const padLeft = 16 + level * 12;
     const isCurrent = currentProjectId === project.id;
     const isHovered = hoveredId === project.id;
@@ -740,9 +872,9 @@ export function ProjectsDrawer({
     };
 
     const handleRenameKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         handleRenameSubmit();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         setRenamingProjectId(null);
       }
     };
@@ -754,8 +886,8 @@ export function ProjectsDrawer({
         onDragStart={(e) => handleProjectDragStart(e, project.id)}
         onDragEnd={handleProjectDragEnd}
         className={`group/proj flex items-center gap-2 py-1.5 pr-3 cursor-pointer transition-colors ${
-          isCurrent ? 'bg-accent/15 text-accent' : 'hover:bg-surface2 text-text'
-        } ${isDragged ? 'opacity-50' : ''}`}
+          isCurrent ? "bg-accent/15 text-accent" : "hover:bg-surface2 text-text"
+        } ${isDragged ? "opacity-50" : ""}`}
         style={{ paddingLeft: padLeft }}
         onClick={() => !isRenaming && onSelectProject(project.id)}
         onDoubleClick={handleDoubleClick}
@@ -768,9 +900,15 @@ export function ProjectsDrawer({
         {/* Thumbnail */}
         <div className="w-7 h-7 rounded bg-surface2 flex-shrink-0 overflow-hidden">
           {project.thumbnailUrl ? (
-            <img src={project.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+            <img
+              src={project.thumbnailUrl}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm">⚽</div>
+            <div className="w-full h-full flex items-center justify-center text-sm">
+              ⚽
+            </div>
           )}
         </div>
         {/* Name + meta */}
@@ -785,57 +923,105 @@ export function ProjectsDrawer({
               onKeyDown={handleRenameKeyDown}
               onClick={(e) => e.stopPropagation()}
               className="w-full text-xs font-medium bg-surface2 border border-accent rounded px-1.5 py-0.5 text-text outline-none"
-              placeholder={t('projects.projectName')}
+              placeholder={t("projects.projectName")}
             />
           ) : (
             <div className="flex items-center gap-1">
               {project.isFavorite && <span className="text-[10px]">⭐</span>}
               {project.isPinned && <span className="text-[10px]">📌</span>}
-              <span className="text-xs font-medium truncate">{project.name}</span>
+              <span className="text-xs font-medium truncate">
+                {project.name}
+              </span>
               <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[9px] font-medium uppercase text-muted">
-                {t(`projects.type.${project.projectType ?? 'graphic'}`)}
+                {t(`projects.type.${project.projectType ?? "graphic"}`)}
               </span>
               {/* Save status indicator */}
-              {project.saveStatus === 'saving' && (
-                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" title={t('projects.saving')} />
+              {project.saveStatus === "saving" && (
+                <span
+                  className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse flex-shrink-0"
+                  title={t("projects.saving")}
+                />
               )}
-              {project.saveStatus === 'unsaved' && (
-                <span className="w-2 h-2 rounded-full bg-yellow-600 flex-shrink-0" title={t('projects.unsaved')} />
+              {project.saveStatus === "unsaved" && (
+                <span
+                  className="w-2 h-2 rounded-full bg-yellow-600 flex-shrink-0"
+                  title={t("projects.unsaved")}
+                />
               )}
-              {project.saveStatus === 'error' && (
-                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title={t('projects.saveError')} />
+              {project.saveStatus === "error" && (
+                <span
+                  className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"
+                  title={t("projects.saveError")}
+                />
               )}
-              {project.saveStatus === 'saved' && (
-                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title={t('projects.saved')} />
+              {project.saveStatus === "saved" && (
+                <span
+                  className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"
+                  title={t("projects.saved")}
+                />
               )}
             </div>
           )}
-          {project.description && <p className="truncate text-[10px] text-muted">{project.description}</p>}
-          <span className="text-[10px] text-muted">{formatDate(project.updatedAt)}</span>
+          {project.description && (
+            <p className="truncate text-[10px] text-muted">
+              {project.description}
+            </p>
+          )}
+          <span className="text-[10px] text-muted">
+            {formatDate(project.updatedAt)}
+          </span>
         </div>
         {/* Current badge */}
         {isCurrent && (
-          <span className="text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full flex-shrink-0">{t('projects.current')}</span>
+          <span className="text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full flex-shrink-0">
+            {t("projects.current")}
+          </span>
         )}
         {/* Hover actions */}
         {isHovered && !isCurrent && !isRenaming && (
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
-              onClick={(e) => { e.stopPropagation(); onDuplicateProject(project.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicateProject(project.id);
+              }}
               className="p-1 hover:bg-surface rounded transition-colors"
-              title={t('projects.duplicate')}
+              title={t("projects.duplicate")}
             >
-              <svg className="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <svg
+                className="w-3.5 h-3.5 text-muted"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
               </svg>
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirmId(project.id);
+              }}
               className="p-1 hover:bg-red-500/20 rounded transition-colors"
-              title={t('projects.delete')}
+              title={t("projects.delete")}
             >
-              <svg className="w-3.5 h-3.5 text-muted hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg
+                className="w-3.5 h-3.5 text-muted hover:text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
             </button>
           </div>
@@ -852,11 +1038,17 @@ export function ProjectsDrawer({
     const isSelected = selectedFolderId === folder.id;
     const isDragged = draggedFolderId === folder.id;
     const paddingLeft = 16 + level * 12;
-    
+
     // Drop indicator state for this folder
-    const isDropInside = dropIndicator?.targetId === folder.id && dropIndicator.position === 'inside';
-    const isDropAbove = dropIndicator?.targetId === folder.id && dropIndicator.position === 'above';
-    const isDropBelow = dropIndicator?.targetId === folder.id && dropIndicator.position === 'below';
+    const isDropInside =
+      dropIndicator?.targetId === folder.id &&
+      dropIndicator.position === "inside";
+    const isDropAbove =
+      dropIndicator?.targetId === folder.id &&
+      dropIndicator.position === "above";
+    const isDropBelow =
+      dropIndicator?.targetId === folder.id &&
+      dropIndicator.position === "below";
 
     return (
       <div key={folder.id} className="relative">
@@ -870,9 +1062,9 @@ export function ProjectsDrawer({
         <div
           className={`group/folder w-full flex items-center justify-between py-2 pr-4 transition-colors cursor-pointer ${
             isSelected
-              ? 'bg-accent/10 text-accent'
-              : 'hover:bg-surface2 text-muted'
-          } ${isDropInside ? 'bg-accent/20 ring-2 ring-accent ring-inset' : ''} ${isDragged ? 'opacity-50' : ''}`}
+              ? "bg-accent/10 text-accent"
+              : "hover:bg-surface2 text-muted"
+          } ${isDropInside ? "bg-accent/20 ring-2 ring-accent ring-inset" : ""} ${isDragged ? "opacity-50" : ""}`}
           style={{ paddingLeft }}
           onContextMenu={(e) => handleFolderContextMenu(e, folder)}
           onDragOver={(e) => handleFolderDragOver(e, folder.id)}
@@ -889,12 +1081,19 @@ export function ProjectsDrawer({
                 onDragEnd={handleFolderDragEnd}
                 onClick={(e) => e.stopPropagation()}
                 className="opacity-0 group-hover/folder:opacity-100 cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 hover:bg-surface2 rounded transition-opacity"
-                title={t('projects.dragReorder')}
+                title={t("projects.dragReorder")}
               >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="9" cy="5" r="1.5" /><circle cx="15" cy="5" r="1.5" />
-                  <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-                  <circle cx="9" cy="19" r="1.5" /><circle cx="15" cy="19" r="1.5" />
+                <svg
+                  className="w-3 h-3"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <circle cx="9" cy="5" r="1.5" />
+                  <circle cx="15" cy="5" r="1.5" />
+                  <circle cx="9" cy="12" r="1.5" />
+                  <circle cx="15" cy="12" r="1.5" />
+                  <circle cx="9" cy="19" r="1.5" />
+                  <circle cx="15" cy="19" r="1.5" />
                 </svg>
               </span>
             )}
@@ -904,26 +1103,54 @@ export function ProjectsDrawer({
                 e.stopPropagation();
                 toggleFolderCollapse(folder.id);
               }}
-              className={`p-0.5 hover:bg-surface2 rounded transition-transform flex-shrink-0 ${!hasContent ? 'invisible' : ''}`}
-              title={isCollapsed ? t('projects.expand') : t('projects.collapse')}
+              className={`p-0.5 hover:bg-surface2 rounded transition-transform flex-shrink-0 ${!hasContent ? "invisible" : ""}`}
+              title={
+                isCollapsed ? t("projects.expand") : t("projects.collapse")
+              }
             >
               <svg
-                className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                className={`w-3 h-3 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
-            <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: folder.color }} />
-            <span className="text-sm font-medium truncate max-w-[140px]">{folder.name}</span>
+            <div
+              className="w-3 h-3 rounded-sm flex-shrink-0"
+              style={{ backgroundColor: folder.color }}
+            />
+            <span className="text-sm font-medium truncate max-w-[140px]">
+              {folder.name}
+            </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {folder.projectCount! > 0 && (
-              <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{folder.projectCount}</span>
+              <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">
+                {folder.projectCount}
+              </span>
             )}
-            {isDropInside && <span className="text-xs text-accent">{t('projects.dropInside')}</span>}
-            {isDropAbove && <span className="text-xs text-accent">{t('projects.dropAbove')}</span>}
-            {isDropBelow && <span className="text-xs text-accent">{t('projects.dropBelow')}</span>}
+            {isDropInside && (
+              <span className="text-xs text-accent">
+                {t("projects.dropInside")}
+              </span>
+            )}
+            {isDropAbove && (
+              <span className="text-xs text-accent">
+                {t("projects.dropAbove")}
+              </span>
+            )}
+            {isDropBelow && (
+              <span className="text-xs text-accent">
+                {t("projects.dropBelow")}
+              </span>
+            )}
           </div>
         </div>
         {/* Drop indicator line — below */}
@@ -936,22 +1163,28 @@ export function ProjectsDrawer({
         {/* Expanded content: subfolders + inline projects + empty state */}
         {!isCollapsed && (
           <div>
-            {hasSubfolders && folder.children!.map((child) => renderFolder(child, level + 1))}
+            {hasSubfolders &&
+              folder.children!.map((child) => renderFolder(child, level + 1))}
             {folderProjects.map((p) => renderInlineProject(p, level + 1))}
             {!hasSubfolders && folderProjects.length === 0 && (
-              <div className="py-2 text-center" style={{ paddingLeft: paddingLeft + 12 }}>
-                <p className="text-xs text-muted/70">{t('projects.noProjectsYet')}</p>
+              <div
+                className="py-2 text-center"
+                style={{ paddingLeft: paddingLeft + 12 }}
+              >
+                <p className="text-xs text-muted/70">
+                  {t("projects.noProjectsYet")}
+                </p>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     // Create project inside this folder
-                    onCreateProject('graphic');
+                    void createLibraryProject("graphic");
                     // Move to this folder after creation would need backend support;
                     // for now user can drag it in
                   }}
                   className="mt-1 text-xs text-accent hover:underline"
                 >
-                  + {t('projects.createProject')}
+                  + {t("projects.createProject")}
                 </button>
               </div>
             )}
@@ -970,29 +1203,44 @@ export function ProjectsDrawer({
       />
 
       {/* Drawer */}
-      <div data-tour="projects-panel" className="relative w-[420px] max-w-full h-full bg-surface border-r border-border shadow-2xl flex flex-col animate-slide-in-left">
+      <div
+        data-tour="projects-panel"
+        className="relative h-full w-[min(960px,100vw)] bg-surface border-r border-border shadow-2xl flex flex-col animate-slide-in-left"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-text">{t('projects.title')}</h2>
+            <h2 className="text-lg font-semibold text-text">
+              {t("projects.title")}
+            </h2>
             <button
               type="button"
               onClick={() => setLibraryTutorialStep(0)}
               className="px-2 py-1 rounded-md text-xs font-medium text-accent hover:bg-accent/10"
-              title={t('projects.tutorial.open')}
+              title={t("projects.tutorial.open")}
               data-testid="library-tutorial-open"
             >
-              {t('projects.tutorial.help')}
+              {t("projects.tutorial.help")}
             </button>
             {isAuthenticated && onRefresh && (
               <button
                 onClick={onRefresh}
                 disabled={isLoading}
                 className="p-1.5 hover:bg-surface2 rounded-lg transition-colors disabled:opacity-50"
-                title={t('projects.refresh')}
+                title={t("projects.refresh")}
               >
-                <svg className={`w-4 h-4 text-muted ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <svg
+                  className={`w-4 h-4 text-muted ${isLoading ? "animate-spin" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
                 </svg>
               </button>
             )}
@@ -1000,387 +1248,886 @@ export function ProjectsDrawer({
           <button
             onClick={onClose}
             className="p-2 hover:bg-surface2 rounded-lg transition-colors"
-            title={t('projects.close')}
+            title={t("projects.close")}
           >
-            <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5 text-muted"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="grid grid-cols-3 gap-2 p-4 border-b border-border">
-          {(['graphic', 'exercise', 'session'] as ProjectType[]).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => onCreateProject(type)}
-              data-testid={`create-${type}-project`}
-              className={`min-w-0 px-2 py-2.5 bg-surface2 border text-text text-xs font-medium rounded-md hover:border-accent hover:text-accent transition-colors ${libraryTutorialStep === (type === 'graphic' ? 0 : type === 'exercise' ? 1 : 2) ? 'border-accent ring-2 ring-accent/40' : 'border-border'}`}
-            >
-              <span className="block text-base leading-none mb-1" aria-hidden="true">{type === 'graphic' ? '▧' : type === 'exercise' ? '△' : '≡'}</span>
-              {t(`projects.type.${type}`)}
-            </button>
-          ))}
-        </div>
-
-        {libraryTutorialStep !== null && (
-          <div className="mx-4 mt-3 p-3 border border-accent/50 bg-accent/10 rounded-md" data-testid="library-tutorial">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase text-accent">{t('projects.tutorial.step', { current: libraryTutorialStep + 1 })}</p>
-                <p className="mt-1 text-sm font-semibold text-text">{t(`projects.tutorial.items.${libraryTutorialStep}.title`)}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted">{t(`projects.tutorial.items.${libraryTutorialStep}.body`)}</p>
-              </div>
-              <button type="button" onClick={() => setLibraryTutorialStep(null)} className="text-muted hover:text-text" aria-label={t('projects.tutorial.close')}>×</button>
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <button type="button" disabled={libraryTutorialStep === 0} onClick={() => setLibraryTutorialStep((step) => Math.max(0, (step ?? 0) - 1))} className="text-xs text-muted disabled:opacity-30">{t('projects.tutorial.back')}</button>
-              <button type="button" onClick={() => libraryTutorialStep === 2 ? setLibraryTutorialStep(null) : setLibraryTutorialStep(libraryTutorialStep + 1)} className="px-3 py-1.5 rounded-md bg-accent text-white text-xs font-semibold">
-                {libraryTutorialStep === 2 ? t('projects.tutorial.done') : t('projects.tutorial.next')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentProject && onUpdateCurrentProjectMetadata && (
-          <div className="p-4 border-b border-border space-y-3" data-testid="project-composer">
-            <div className="flex items-center gap-2">
-              <label htmlFor="project-type" className="text-xs font-medium text-muted">{t('projects.kind')}</label>
-              <select
-                id="project-type"
-                value={currentProject.projectType ?? 'graphic'}
-                onChange={(event) => onUpdateCurrentProjectMetadata({ projectType: event.target.value as ProjectType })}
-                className="ml-auto bg-surface2 border border-border rounded-md px-2 py-1 text-xs text-text"
-              >
-                {(['graphic', 'exercise', 'session'] as ProjectType[]).map((type) => <option key={type} value={type}>{t(`projects.type.${type}`)}</option>)}
-              </select>
-            </div>
-            <textarea
-              value={descriptionDraft}
-              onChange={(event) => setDescriptionDraft(event.target.value)}
-              onBlur={() => {
-                if (descriptionDraft !== (currentProject.description ?? '')) onUpdateCurrentProjectMetadata({ description: descriptionDraft.trim() });
-              }}
-              rows={3}
-              maxLength={1000}
-              placeholder={t('projects.descriptionPlaceholder')}
-              className="w-full resize-none bg-surface2 border border-border rounded-md px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
-              data-testid="project-description"
-            />
-
-            {(currentProject.projectType ?? 'graphic') === 'graphic' && (
-              <button
-                type="button"
-                onClick={() => onCreateProject('exercise', currentProject.id)}
-                className="w-full px-3 py-2 rounded-md bg-accent text-white text-sm font-semibold hover:bg-accent/90"
-                data-testid="create-exercise-from-graphic"
-              >
-                {t('projects.exercise.createFromThisGraphic')}
-              </button>
-            )}
-
-            {currentProject.projectType === 'exercise' && (() => {
-              const details = { ...DEFAULT_EXERCISE_DETAILS, ...currentProject.exerciseDetails };
-              return (
-                <div className="space-y-3 pt-1" data-testid="exercise-editor">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted">{t('projects.exercise.graphic')}</label>
-                    <div className="flex gap-2">
-                      <select value={selectedGraphicId} onChange={(event) => setSelectedGraphicId(event.target.value)} className="min-w-0 flex-1 bg-surface2 border border-border rounded-md px-2 py-2 text-xs text-text" data-testid="exercise-graphic-select">
-                        {graphicProjects.length === 0 && <option value="">{t('projects.exercise.noGraphics')}</option>}
-                        {graphicProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-                      </select>
-                      <button type="button" disabled={!selectedGraphicId || !onAttachGraphicToExercise} onClick={() => onAttachGraphicToExercise?.(selectedGraphicId)} className="px-3 py-2 rounded-md bg-surface2 border border-border text-xs font-semibold text-text hover:border-accent disabled:opacity-40" data-testid="attach-graphic">
-                        {details.sourceGraphicProjectId === selectedGraphicId ? t('projects.exercise.refreshGraphic') : t('projects.exercise.useGraphic')}
-                      </button>
-                    </div>
-                    {details.sourceGraphicName && <p className="text-[11px] text-accent">{t('projects.exercise.usingGraphic', { name: details.sourceGraphicName })}</p>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="text-xs text-muted">{t('projects.exercise.duration')}<input type="number" min={1} max={240} value={details.durationMinutes} onChange={(event) => updateExercise({ durationMinutes: Math.max(1, Number(event.target.value) || 1) })} className="mt-1 w-full bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-duration" /></label>
-                    <label className="text-xs text-muted">{t('projects.exercise.players')}<input type="text" value={details.players} onChange={(event) => updateExercise({ players: event.target.value })} placeholder={t('projects.exercise.playersPlaceholder')} className="mt-1 w-full bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-players" /></label>
-                  </div>
-                  <label className="block text-xs text-muted">{t('projects.exercise.organization')}<textarea value={details.organization} onChange={(event) => updateExercise({ organization: event.target.value })} rows={2} className="mt-1 w-full resize-none bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-organization" /></label>
-                  <label className="block text-xs text-muted">{t('projects.exercise.coachingPoints')}<textarea value={details.coachingPoints} onChange={(event) => updateExercise({ coachingPoints: event.target.value })} rows={2} className="mt-1 w-full resize-none bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-coaching-points" /></label>
-                </div>
-              );
-            })()}
-
-            {currentProject.projectType === 'session' && (() => {
-              const details = currentProject.sessionPlanDetails ?? DEFAULT_SESSION_PLAN_DETAILS;
-              const totalDuration = details.exercises.reduce((sum, item) => sum + item.durationMinutes, 0);
-              const updateItem = (id: string, patch: Partial<SessionPlanDetails['exercises'][number]>) => updateSession({ exercises: details.exercises.map((item) => item.id === id ? { ...item, ...patch } : item) });
-              const moveItem = (index: number, direction: -1 | 1) => {
-                const target = index + direction;
-                if (target < 0 || target >= details.exercises.length) return;
-                const next = [...details.exercises];
-                [next[index], next[target]] = [next[target], next[index]];
-                updateSession({ exercises: next });
-              };
-              return (
-                <div className="space-y-3 pt-1" data-testid="session-editor">
-                  <div className="flex items-center justify-between"><p className="text-xs font-semibold text-text">{t('projects.session.agenda')}</p><span className="text-xs text-accent">{t('projects.session.total', { minutes: totalDuration })}</span></div>
-                  <div className="flex gap-2">
-                    <select value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)} className="min-w-0 flex-1 bg-surface2 border border-border rounded-md px-2 py-2 text-xs text-text" data-testid="session-exercise-select">
-                      {exerciseProjects.length === 0 && <option value="">{t('projects.session.noExercises')}</option>}
-                      {exerciseProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-                    </select>
-                    <button type="button" disabled={!selectedExerciseId} onClick={addExerciseToSession} className="px-3 py-2 rounded-md bg-accent text-white text-xs font-semibold disabled:opacity-40" data-testid="add-exercise-to-session">{t('projects.session.add')}</button>
-                  </div>
-                  {details.exercises.length === 0 && <p className="py-3 text-center text-xs text-muted">{t('projects.session.empty')}</p>}
-                  <div className="space-y-2">
-                    {details.exercises.map((item, index) => (
-                      <div key={item.id} className="p-2.5 bg-surface2 border border-border rounded-md space-y-2" data-testid="session-exercise-item">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 shrink-0 rounded bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center">{index + 1}</span>
-                          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-text">{item.name}</span>
-                          <button type="button" onClick={() => moveItem(index, -1)} disabled={index === 0} className="text-muted disabled:opacity-25" title={t('projects.session.moveUp')}>↑</button>
-                          <button type="button" onClick={() => moveItem(index, 1)} disabled={index === details.exercises.length - 1} className="text-muted disabled:opacity-25" title={t('projects.session.moveDown')}>↓</button>
-                          <button type="button" onClick={() => updateSession({ exercises: details.exercises.filter((entry) => entry.id !== item.id) })} className="text-danger" title={t('projects.session.remove')}>×</button>
-                        </div>
-                        <div className="flex gap-2">
-                          <input type="number" min={1} max={240} value={item.durationMinutes} onChange={(event) => updateItem(item.id, { durationMinutes: Math.max(1, Number(event.target.value) || 1) })} aria-label={t('projects.session.itemDuration')} className="w-20 bg-surface border border-border rounded px-2 py-1.5 text-xs text-text" />
-                          <input type="text" value={item.notes} onChange={(event) => updateItem(item.id, { notes: event.target.value })} placeholder={t('projects.session.notes')} className="min-w-0 flex-1 bg-surface border border-border rounded px-2 py-1.5 text-xs text-text" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Search and Sort */}
-        {isAuthenticated && projects.length > 0 && (
-          <div className="p-4 border-b border-border space-y-3">
-            <div className="grid grid-cols-4 gap-1" role="tablist" aria-label={t('projects.filterByType')}>
-              {(['all', 'graphic', 'exercise', 'session'] as const).map((type) => (
+          <div className="grid grid-cols-3 gap-2 p-4 border-b border-border">
+            {(["graphic", "exercise", "session"] as ProjectType[]).map(
+              (type) => (
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setTypeFilter(type)}
-                  className={`px-1.5 py-1.5 rounded-md text-[11px] font-medium ${typeFilter === type ? 'bg-accent text-white' : 'bg-surface2 text-muted hover:text-text'}`}
+                  onClick={() =>
+                    void createLibraryProject(
+                      type,
+                      type === "exercise" &&
+                        (currentProject?.projectType ?? "graphic") === "graphic"
+                        ? currentProject?.id
+                        : undefined,
+                    )
+                  }
+                  disabled={creatingType !== null}
+                  aria-busy={creatingType === type}
+                  data-testid={`create-${type}-project`}
+                  className={`min-w-0 px-2 py-2.5 bg-surface2 border text-text text-xs font-medium rounded-md hover:border-accent hover:text-accent transition-colors disabled:cursor-wait disabled:opacity-50 ${libraryTutorialStep === (type === "graphic" ? 0 : type === "exercise" ? 1 : 2) ? "border-accent ring-2 ring-accent/40" : "border-border"}`}
                 >
-                  {type === 'all' ? t('projects.type.all') : t(`projects.type.${type}`)}
+                  <span
+                    className="block text-base leading-none mb-1"
+                    aria-hidden="true"
+                  >
+                    {type === "graphic" ? "▧" : type === "exercise" ? "△" : "≡"}
+                  </span>
+                  {t(`projects.type.${type}`)}
                 </button>
-              ))}
-            </div>
-            {/* Search */}
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('projects.search')}
-                className="w-full pl-9 pr-3 py-2 bg-surface2 border border-border/50 rounded-lg text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-surface rounded transition-colors"
-                  title={t('projects.clearSearch')}
-                >
-                  <svg className="w-3 h-3 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
-              <label htmlFor="sort-select" className="text-xs text-muted">{t('projects.sortBy')}</label>
-              <select
-                id="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="text-xs bg-surface2 border border-border/50 rounded-md px-2 py-1 text-text focus:outline-none focus:ring-1 focus:ring-accent/50"
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {t(`projects.sort.${opt.value === 'name-asc' ? 'nameAsc' : opt.value === 'name-desc' ? 'nameDesc' : opt.value === 'last-opened' ? 'lastOpened' : opt.value}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Results count */}
-            {searchQuery && (
-              <div className="text-xs text-muted">
-                {t('projects.results', { count: searchFilteredProjects.length })}
-              </div>
+              ),
             )}
           </div>
-        )}
 
-        <div>
-        {/* Folders Tree Section — always visible (search auto-expands matching paths) */}
-        {isAuthenticated && (
-          <div className="border-b border-border">
-            {/* Folders Section — recursive tree */}
-            {onCreateFolder && (
-              <div className="py-2">
-                {/* Pinned Folders */}
-                {pinnedFolders.length > 0 && (
-                  <>
-                    {!isSearching && (
-                      <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1">
-                        <span>📌</span>
-                        <span>{t('projects.pinned')}</span>
-                      </div>
-                    )}
-                    {pinnedFolders.map((folder) => renderFolder(folder, 0))}
-                  </>
-                )}
-                
-                {/* Regular Folders */}
-                {unpinnedFolders.length > 0 && (
-                  <>
-                    {!isSearching && pinnedFolders.length > 0 && (
-                      <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider mt-2">
-                        {t('projects.folders')}
-                      </div>
-                    )}
-                    {!isSearching && !pinnedFolders.length && foldersWithCount.length > 0 && (
-                      <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
-                        {t('projects.folders')}
-                      </div>
-                    )}
-                    {unpinnedFolders.map((folder) => renderFolder(folder, 0))}
-                  </>
-                )}
-                
-                {/* New Folder button — hidden during search */}
-                {!isSearching && (
+          {libraryTutorialStep !== null && (
+            <div
+              className="mx-4 mt-3 p-3 border border-accent/50 bg-accent/10 rounded-md"
+              data-testid="library-tutorial"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase text-accent">
+                    {t("projects.tutorial.step", {
+                      current: libraryTutorialStep + 1,
+                    })}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-text">
+                    {t(`projects.tutorial.items.${libraryTutorialStep}.title`)}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted">
+                    {t(`projects.tutorial.items.${libraryTutorialStep}.body`)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLibraryTutorialStep(null)}
+                  className="text-muted hover:text-text"
+                  aria-label={t("projects.tutorial.close")}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  disabled={libraryTutorialStep === 0}
+                  onClick={() =>
+                    setLibraryTutorialStep((step) =>
+                      Math.max(0, (step ?? 0) - 1),
+                    )
+                  }
+                  className="text-xs text-muted disabled:opacity-30"
+                >
+                  {t("projects.tutorial.back")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    libraryTutorialStep === 2
+                      ? setLibraryTutorialStep(null)
+                      : setLibraryTutorialStep(libraryTutorialStep + 1)
+                  }
+                  className="px-3 py-1.5 rounded-md bg-accent text-white text-xs font-semibold"
+                >
+                  {libraryTutorialStep === 2
+                    ? t("projects.tutorial.done")
+                    : t("projects.tutorial.next")}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isAuthenticated && recentProjects.length > 0 && (
+            <section
+              className="border-b border-border p-4"
+              data-testid="recent-projects"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-text">
+                    {t("projects.recentProjects")}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {t("projects.recentHint")}
+                  </p>
+                </div>
+                <span className="text-xs text-muted">
+                  {recentProjects.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                {recentProjects.map((project) => (
                   <button
-                    onClick={() => onCreateFolder(selectedFolderId)}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-muted hover:text-text hover:bg-surface2 transition-colors"
+                    key={project.id}
+                    type="button"
+                    onClick={() => onSelectProject(project.id)}
+                    className={`min-w-0 overflow-hidden rounded-md border bg-bg text-left transition-colors hover:border-accent ${currentProjectId === project.id ? "border-accent ring-1 ring-accent" : "border-border"}`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span className="font-medium">
-                      {selectedFolderId ? t('projects.newSubfolder') : t('projects.newFolder')}
-                    </span>
+                    <div className="flex aspect-[16/10] items-center justify-center overflow-hidden bg-surface2 text-xl text-muted">
+                      {project.thumbnailUrl ? (
+                        <img
+                          src={project.thumbnailUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : project.projectType === "session" ? (
+                        "≡"
+                      ) : project.projectType === "exercise" ? (
+                        "△"
+                      ) : (
+                        "▧"
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="truncate text-xs font-semibold text-text">
+                        {project.name}
+                      </p>
+                      <div className="mt-1 flex items-center justify-between gap-1 text-[10px] text-muted">
+                        <span className="truncate">
+                          {t(
+                            `projects.type.${project.projectType ?? "graphic"}`,
+                          )}
+                        </span>
+                        <span className="shrink-0">
+                          {formatDate(project.updatedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {showLegacyComposer &&
+            currentProject &&
+            onUpdateCurrentProjectMetadata && (
+              <div className="hidden" data-testid="project-composer">
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="project-type"
+                    className="text-xs font-medium text-muted"
+                  >
+                    {t("projects.kind")}
+                  </label>
+                  <select
+                    id="project-type"
+                    value={currentProject.projectType ?? "graphic"}
+                    onChange={(event) =>
+                      onUpdateCurrentProjectMetadata({
+                        projectType: event.target.value as ProjectType,
+                      })
+                    }
+                    className="ml-auto bg-surface2 border border-border rounded-md px-2 py-1 text-xs text-text"
+                  >
+                    {(["graphic", "exercise", "session"] as ProjectType[]).map(
+                      (type) => (
+                        <option key={type} value={type}>
+                          {t(`projects.type.${type}`)}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+                <textarea
+                  value={descriptionDraft}
+                  onChange={(event) => setDescriptionDraft(event.target.value)}
+                  onBlur={() => {
+                    if (descriptionDraft !== (currentProject.description ?? ""))
+                      onUpdateCurrentProjectMetadata({
+                        description: descriptionDraft.trim(),
+                      });
+                  }}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder={t("projects.descriptionPlaceholder")}
+                  className="w-full resize-none bg-surface2 border border-border rounded-md px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  data-testid="project-description"
+                />
+
+                {(currentProject.projectType ?? "graphic") === "graphic" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCreateProject("exercise", currentProject.id)
+                    }
+                    className="w-full px-3 py-2 rounded-md bg-accent text-white text-sm font-semibold hover:bg-accent/90"
+                    data-testid="create-exercise-from-graphic"
+                  >
+                    {t("projects.exercise.createFromThisGraphic")}
                   </button>
                 )}
+
+                {currentProject.projectType === "exercise" &&
+                  (() => {
+                    const details = {
+                      ...DEFAULT_EXERCISE_DETAILS,
+                      ...currentProject.exerciseDetails,
+                    };
+                    return (
+                      <div
+                        className="space-y-3 pt-1"
+                        data-testid="exercise-editor"
+                      >
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted">
+                            {t("projects.exercise.graphic")}
+                          </label>
+                          <div className="flex gap-2">
+                            <select
+                              value={selectedGraphicId}
+                              onChange={(event) =>
+                                setSelectedGraphicId(event.target.value)
+                              }
+                              className="min-w-0 flex-1 bg-surface2 border border-border rounded-md px-2 py-2 text-xs text-text"
+                              data-testid="exercise-graphic-select"
+                            >
+                              {graphicProjects.length === 0 && (
+                                <option value="">
+                                  {t("projects.exercise.noGraphics")}
+                                </option>
+                              )}
+                              {graphicProjects.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                  {project.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              disabled={
+                                !selectedGraphicId || !onAttachGraphicToExercise
+                              }
+                              onClick={() =>
+                                onAttachGraphicToExercise?.(selectedGraphicId)
+                              }
+                              className="px-3 py-2 rounded-md bg-surface2 border border-border text-xs font-semibold text-text hover:border-accent disabled:opacity-40"
+                              data-testid="attach-graphic"
+                            >
+                              {details.sourceGraphicProjectId ===
+                              selectedGraphicId
+                                ? t("projects.exercise.refreshGraphic")
+                                : t("projects.exercise.useGraphic")}
+                            </button>
+                          </div>
+                          {details.sourceGraphicName && (
+                            <p className="text-[11px] text-accent">
+                              {t("projects.exercise.usingGraphic", {
+                                name: details.sourceGraphicName,
+                              })}
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="text-xs text-muted">
+                            {t("projects.exercise.duration")}
+                            <input
+                              type="number"
+                              min={1}
+                              max={240}
+                              value={details.durationMinutes}
+                              onChange={(event) =>
+                                updateExercise({
+                                  durationMinutes: Math.max(
+                                    1,
+                                    Number(event.target.value) || 1,
+                                  ),
+                                })
+                              }
+                              className="mt-1 w-full bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text"
+                              data-testid="exercise-duration"
+                            />
+                          </label>
+                          <label className="text-xs text-muted">
+                            {t("projects.exercise.players")}
+                            <input
+                              type="text"
+                              value={details.players}
+                              onChange={(event) =>
+                                updateExercise({ players: event.target.value })
+                              }
+                              placeholder={t(
+                                "projects.exercise.playersPlaceholder",
+                              )}
+                              className="mt-1 w-full bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text"
+                              data-testid="exercise-players"
+                            />
+                          </label>
+                        </div>
+                        <label className="block text-xs text-muted">
+                          {t("projects.exercise.organization")}
+                          <textarea
+                            value={details.organization}
+                            onChange={(event) =>
+                              updateExercise({
+                                organization: event.target.value,
+                              })
+                            }
+                            rows={2}
+                            className="mt-1 w-full resize-none bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text"
+                            data-testid="exercise-organization"
+                          />
+                        </label>
+                        <label className="block text-xs text-muted">
+                          {t("projects.exercise.coachingPoints")}
+                          <textarea
+                            value={details.coachingPoints}
+                            onChange={(event) =>
+                              updateExercise({
+                                coachingPoints: event.target.value,
+                              })
+                            }
+                            rows={2}
+                            className="mt-1 w-full resize-none bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text"
+                            data-testid="exercise-coaching-points"
+                          />
+                        </label>
+                      </div>
+                    );
+                  })()}
+
+                {currentProject.projectType === "session" &&
+                  (() => {
+                    const details =
+                      currentProject.sessionPlanDetails ??
+                      DEFAULT_SESSION_PLAN_DETAILS;
+                    const totalDuration = details.exercises.reduce(
+                      (sum, item) => sum + item.durationMinutes,
+                      0,
+                    );
+                    const updateItem = (
+                      id: string,
+                      patch: Partial<SessionPlanDetails["exercises"][number]>,
+                    ) =>
+                      updateSession({
+                        exercises: details.exercises.map((item) =>
+                          item.id === id ? { ...item, ...patch } : item,
+                        ),
+                      });
+                    const moveItem = (index: number, direction: -1 | 1) => {
+                      const target = index + direction;
+                      if (target < 0 || target >= details.exercises.length)
+                        return;
+                      const next = [...details.exercises];
+                      [next[index], next[target]] = [next[target], next[index]];
+                      updateSession({ exercises: next });
+                    };
+                    return (
+                      <div
+                        className="space-y-3 pt-1"
+                        data-testid="session-editor"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-text">
+                            {t("projects.session.agenda")}
+                          </p>
+                          <span className="text-xs text-accent">
+                            {t("projects.session.total", {
+                              minutes: totalDuration,
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <select
+                            value={selectedExerciseId}
+                            onChange={(event) =>
+                              setSelectedExerciseId(event.target.value)
+                            }
+                            className="min-w-0 flex-1 bg-surface2 border border-border rounded-md px-2 py-2 text-xs text-text"
+                            data-testid="session-exercise-select"
+                          >
+                            {exerciseProjects.length === 0 && (
+                              <option value="">
+                                {t("projects.session.noExercises")}
+                              </option>
+                            )}
+                            {exerciseProjects.map((project) => (
+                              <option key={project.id} value={project.id}>
+                                {project.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={!selectedExerciseId}
+                            onClick={addExerciseToSession}
+                            className="px-3 py-2 rounded-md bg-accent text-white text-xs font-semibold disabled:opacity-40"
+                            data-testid="add-exercise-to-session"
+                          >
+                            {t("projects.session.add")}
+                          </button>
+                        </div>
+                        {details.exercises.length === 0 && (
+                          <p className="py-3 text-center text-xs text-muted">
+                            {t("projects.session.empty")}
+                          </p>
+                        )}
+                        <div className="space-y-2">
+                          {details.exercises.map((item, index) => (
+                            <div
+                              key={item.id}
+                              className="p-2.5 bg-surface2 border border-border rounded-md space-y-2"
+                              data-testid="session-exercise-item"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="w-5 h-5 shrink-0 rounded bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center">
+                                  {index + 1}
+                                </span>
+                                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-text">
+                                  {item.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => moveItem(index, -1)}
+                                  disabled={index === 0}
+                                  className="text-muted disabled:opacity-25"
+                                  title={t("projects.session.moveUp")}
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveItem(index, 1)}
+                                  disabled={
+                                    index === details.exercises.length - 1
+                                  }
+                                  className="text-muted disabled:opacity-25"
+                                  title={t("projects.session.moveDown")}
+                                >
+                                  ↓
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateSession({
+                                      exercises: details.exercises.filter(
+                                        (entry) => entry.id !== item.id,
+                                      ),
+                                    })
+                                  }
+                                  className="text-danger"
+                                  title={t("projects.session.remove")}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={240}
+                                  value={item.durationMinutes}
+                                  onChange={(event) =>
+                                    updateItem(item.id, {
+                                      durationMinutes: Math.max(
+                                        1,
+                                        Number(event.target.value) || 1,
+                                      ),
+                                    })
+                                  }
+                                  aria-label={t(
+                                    "projects.session.itemDuration",
+                                  )}
+                                  className="w-20 bg-surface border border-border rounded px-2 py-1.5 text-xs text-text"
+                                />
+                                <input
+                                  type="text"
+                                  value={item.notes}
+                                  onChange={(event) =>
+                                    updateItem(item.id, {
+                                      notes: event.target.value,
+                                    })
+                                  }
+                                  placeholder={t("projects.session.notes")}
+                                  className="min-w-0 flex-1 bg-surface border border-border rounded px-2 py-1.5 text-xs text-text"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
               </div>
             )}
 
-            {/* All Projects — expandable virtual root for unassigned projects + drop zone */}
-            <div>
+          {/* Search and Sort */}
+          {isAuthenticated && projects.length > 0 && (
+            <div className="p-4 border-b border-border space-y-3">
               <div
-                onClick={() => setSelectedFolderId(null)}
-                onDragOver={handleAllProjectsDragOver}
-                onDragLeave={handleFolderDragLeave}
-                onDrop={(e) => handleFolderDrop(e, null)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer ${
-                  !selectedFolderId
-                    ? 'bg-accent/10 text-accent'
-                    : 'hover:bg-surface2 text-muted'
-                } ${dropIndicator?.targetId === '__all_projects__' ? 'bg-accent/20 ring-2 ring-accent ring-inset' : ''}`}
+                className="grid grid-cols-4 gap-1"
+                role="tablist"
+                aria-label={t("projects.filterByType")}
               >
-                <div className="flex items-center gap-2">
-                  {/* Expand/collapse arrow for All Projects */}
+                {(["all", "graphic", "exercise", "session"] as const).map(
+                  (type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTypeFilter(type)}
+                      className={`px-1.5 py-1.5 rounded-md text-[11px] font-medium ${typeFilter === type ? "bg-accent text-white" : "bg-surface2 text-muted hover:text-text"}`}
+                    >
+                      {type === "all"
+                        ? t("projects.type.all")
+                        : t(`projects.type.${type}`)}
+                    </button>
+                  ),
+                )}
+              </div>
+              {/* Search */}
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("projects.search")}
+                  className="w-full pl-9 pr-3 py-2 bg-surface2 border border-border/50 rounded-lg text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+                {searchQuery && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFolderCollapse('__all_projects__');
-                    }}
-                    className={`p-0.5 hover:bg-surface2 rounded transition-transform flex-shrink-0 ${rootProjects.length === 0 ? 'invisible' : ''}`}
-                    title={collapsedFolderIds.has('__all_projects__') ? t('projects.expand') : t('projects.collapse')}
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-surface rounded transition-colors"
+                    title={t("projects.clearSearch")}
                   >
                     <svg
-                      className={`w-3 h-3 transition-transform ${collapsedFolderIds.has('__all_projects__') ? '' : 'rotate-90'}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      className="w-3 h-3 text-muted"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
-                  <span className="text-sm">📋</span>
-                  <span className="text-sm font-medium">{t('projects.allProjects')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">{rootProjects.length}</span>
-                  {dropIndicator?.targetId === '__all_projects__' && (
-                    <span className="text-xs text-accent">{t('projects.moveToRoot')}</span>
-                  )}
-                </div>
+                )}
               </div>
-              {/* Inline root projects when expanded */}
-              {!collapsedFolderIds.has('__all_projects__') && rootProjects.length > 0 && (
-                <div>
-                  {rootProjects.map((p) => renderInlineProject(p, 1))}
+
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2">
+                <label htmlFor="sort-select" className="text-xs text-muted">
+                  {t("projects.sortBy")}
+                </label>
+                <select
+                  id="sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="text-xs bg-surface2 border border-border/50 rounded-md px-2 py-1 text-text focus:outline-none focus:ring-1 focus:ring-accent/50"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {t(
+                        `projects.sort.${opt.value === "name-asc" ? "nameAsc" : opt.value === "name-desc" ? "nameDesc" : opt.value === "last-opened" ? "lastOpened" : opt.value}`,
+                      )}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Results count */}
+              {searchQuery && (
+                <div className="text-xs text-muted">
+                  {t("projects.results", {
+                    count: searchFilteredProjects.length,
+                  })}
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Empty / Loading / Unauth states */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <svg className="w-6 h-6 animate-spin text-accent" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          </div>
-        )}
-        {!isLoading && !isAuthenticated && (
-          <div className="p-4 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface2 flex items-center justify-center">
-              <svg className="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-              </svg>
-            </div>
-            <p className="text-muted text-sm">{t('projects.signInSync')}</p>
-            <p className="text-muted/70 text-xs mt-1">{t('projects.authRequired')}</p>
-            <button
-              onClick={onSignIn}
-              className="mt-4 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {t('projects.signIn')}
-            </button>
-          </div>
-        )}
-        {!isLoading && isAuthenticated && projects.length === 0 && (
-          <div className="p-4 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface2 flex items-center justify-center">
-              <svg className="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-            </div>
-            <p className="text-muted text-sm">{t('projects.noProjectsYet')}</p>
-            <p className="text-muted/70 text-xs mt-1">{t('projects.createFirst')}</p>
-          </div>
-        )}
+          <div>
+            {/* Folders Tree Section — always visible (search auto-expands matching paths) */}
+            {isAuthenticated && (
+              <div className="border-b border-border">
+                {/* Folders Section — recursive tree */}
+                {onCreateFolder && (
+                  <div className="py-2">
+                    {/* Pinned Folders */}
+                    {pinnedFolders.length > 0 && (
+                      <>
+                        {!isSearching && (
+                          <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1">
+                            <span>📌</span>
+                            <span>{t("projects.pinned")}</span>
+                          </div>
+                        )}
+                        {pinnedFolders.map((folder) => renderFolder(folder, 0))}
+                      </>
+                    )}
 
-        </div>
+                    {/* Regular Folders */}
+                    {unpinnedFolders.length > 0 && (
+                      <>
+                        {!isSearching && pinnedFolders.length > 0 && (
+                          <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider mt-2">
+                            {t("projects.folders")}
+                          </div>
+                        )}
+                        {!isSearching &&
+                          !pinnedFolders.length &&
+                          foldersWithCount.length > 0 && (
+                            <div className="px-4 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
+                              {t("projects.folders")}
+                            </div>
+                          )}
+                        {unpinnedFolders.map((folder) =>
+                          renderFolder(folder, 0),
+                        )}
+                      </>
+                    )}
+
+                    {/* New Folder button — hidden during search */}
+                    {!isSearching && (
+                      <button
+                        onClick={() => onCreateFolder(selectedFolderId)}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-muted hover:text-text hover:bg-surface2 transition-colors"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        <span className="font-medium">
+                          {selectedFolderId
+                            ? t("projects.newSubfolder")
+                            : t("projects.newFolder")}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* All Projects — expandable virtual root for unassigned projects + drop zone */}
+                <div>
+                  <div
+                    onClick={() => setSelectedFolderId(null)}
+                    onDragOver={handleAllProjectsDragOver}
+                    onDragLeave={handleFolderDragLeave}
+                    onDrop={(e) => handleFolderDrop(e, null)}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer ${
+                      !selectedFolderId
+                        ? "bg-accent/10 text-accent"
+                        : "hover:bg-surface2 text-muted"
+                    } ${dropIndicator?.targetId === "__all_projects__" ? "bg-accent/20 ring-2 ring-accent ring-inset" : ""}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {/* Expand/collapse arrow for All Projects */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFolderCollapse("__all_projects__");
+                        }}
+                        className={`p-0.5 hover:bg-surface2 rounded transition-transform flex-shrink-0 ${rootProjects.length === 0 ? "invisible" : ""}`}
+                        title={
+                          collapsedFolderIds.has("__all_projects__")
+                            ? t("projects.expand")
+                            : t("projects.collapse")
+                        }
+                      >
+                        <svg
+                          className={`w-3 h-3 transition-transform ${collapsedFolderIds.has("__all_projects__") ? "" : "rotate-90"}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                      <span className="text-sm">📋</span>
+                      <span className="text-sm font-medium">
+                        {t("projects.allProjects")}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-surface2 px-2 py-0.5 rounded-full">
+                        {rootProjects.length}
+                      </span>
+                      {dropIndicator?.targetId === "__all_projects__" && (
+                        <span className="text-xs text-accent">
+                          {t("projects.moveToRoot")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Inline root projects when expanded */}
+                  {!collapsedFolderIds.has("__all_projects__") &&
+                    rootProjects.length > 0 && (
+                      <div>
+                        {rootProjects.map((p) => renderInlineProject(p, 1))}
+                      </div>
+                    )}
+                </div>
+              </div>
+            )}
+
+            {/* Empty / Loading / Unauth states */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <svg
+                  className="w-6 h-6 animate-spin text-accent"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+              </div>
+            )}
+            {!isLoading && !isAuthenticated && (
+              <div className="p-4 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface2 flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-muted"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-muted text-sm">{t("projects.signInSync")}</p>
+                <p className="text-muted/70 text-xs mt-1">
+                  {t("projects.authRequired")}
+                </p>
+                <button
+                  onClick={onSignIn}
+                  className="mt-4 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {t("projects.signIn")}
+                </button>
+              </div>
+            )}
+            {!isLoading && isAuthenticated && projects.length === 0 && (
+              <div className="p-4 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface2 flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-muted"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-muted text-sm">
+                  {t("projects.noProjectsYet")}
+                </p>
+                <p className="text-muted/70 text-xs mt-1">
+                  {t("projects.createFirst")}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer - Cloud sync status */}
         <div className="shrink-0 p-4 border-t border-border">
           {isAuthenticated ? (
             <div className="flex items-center gap-2 text-xs text-muted">
-              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-4 h-4 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
-              <span>{t('projects.cloudSync')}</span>
+              <span>{t("projects.cloudSync")}</span>
             </div>
           ) : (
             <button
               onClick={onSignIn}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface2 hover:bg-surface text-text text-sm rounded-lg transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                />
               </svg>
-              {t('projects.signInCloud')}
+              {t("projects.signInCloud")}
             </button>
           )}
         </div>
@@ -1397,24 +2144,33 @@ export function ProjectsDrawer({
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirmId && (() => {
-        const projectToDelete = projects.find(p => p.id === deleteConfirmId);
-        return (
-          <ConfirmModal
-            isOpen={true}
-            title={t('projects.deleteTitle')}
-            description={projectToDelete ? t('projects.deleteDescription', { name: projectToDelete.name }) : t('projects.deleteFallback')}
-            confirmLabel={t('projects.delete')}
-            cancelLabel={t('confirm.cancel')}
-            danger={true}
-            onConfirm={() => {
-              onDeleteProject(deleteConfirmId);
-              setDeleteConfirmId(null);
-            }}
-            onCancel={() => setDeleteConfirmId(null)}
-          />
-        );
-      })()}
+      {deleteConfirmId &&
+        (() => {
+          const projectToDelete = projects.find(
+            (p) => p.id === deleteConfirmId,
+          );
+          return (
+            <ConfirmModal
+              isOpen={true}
+              title={t("projects.deleteTitle")}
+              description={
+                projectToDelete
+                  ? t("projects.deleteDescription", {
+                      name: projectToDelete.name,
+                    })
+                  : t("projects.deleteFallback")
+              }
+              confirmLabel={t("projects.delete")}
+              cancelLabel={t("confirm.cancel")}
+              danger={true}
+              onConfirm={() => {
+                onDeleteProject(deleteConfirmId);
+                setDeleteConfirmId(null);
+              }}
+              onCancel={() => setDeleteConfirmId(null)}
+            />
+          );
+        })()}
 
       {/* Animation + DnD indicator styles */}
       <style>{`

@@ -19,6 +19,7 @@ import { startBoardSession, track, EVENTS } from '../lib/analytics';
 import { useBillingController, useProjectsController, useSettingsController, usePaymentReturn, useOrganization } from '../hooks';
 import { createOrganization as createOrganizationApi } from '../lib/organizations';
 import { BoardPage } from './board/BoardPage';
+import { ExerciseWorkspace, SessionWorkspace } from './coaching/CoachingWorkspace';
 import { ModalOrchestrator } from './orchestrators/ModalOrchestrator';
 import { getFormationIds } from '@tmc/presets';
 
@@ -89,6 +90,7 @@ export function AppShell() {
   const [folderOptionsModalOpen, setFolderOptionsModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [clubWelcomeModalOpen, setClubWelcomeModalOpen] = useState(false);
+  const [boardEditorOverride, setBoardEditorOverride] = useState(false);
 
   // Auth store
   const authUser = useAuthStore((s) => s.user);
@@ -309,8 +311,16 @@ export function AppShell() {
     setProjectsDrawerOpen(true);
   }, []);
 
-  const handleSelectProject = projectsController.selectProject;
-  const handleCreateProject = projectsController.createProject;
+  const selectProject = projectsController.selectProject;
+  const createProject = projectsController.createProject;
+  const handleSelectProject = useCallback(async (id: string) => {
+    setBoardEditorOverride(false);
+    await selectProject(id);
+  }, [selectProject]);
+  const handleCreateProject = useCallback(async (type?: 'graphic' | 'exercise' | 'session', sourceGraphicProjectId?: string) => {
+    setBoardEditorOverride(false);
+    await createProject(type, sourceGraphicProjectId);
+  }, [createProject]);
   const handleDeleteProject = projectsController.deleteProject;
   const handleDuplicateProject = projectsController.duplicateProject;
   const handleRenameProject = projectsController.renameProject;
@@ -383,6 +393,25 @@ export function AppShell() {
   });
   });
 
+  const activeCloudProject = cloudProjects.find((project) => project.id === cloudProjectId);
+  const activeProject: ProjectItem = {
+    id: cloudProjectId ?? 'local-current-project',
+    name: document.name,
+    updatedAt: document.updatedAt,
+    thumbnailUrl: activeCloudProject?.thumbnail_url ?? undefined,
+    isCloud: Boolean(cloudProjectId),
+    saveStatus: projectSaveStatus,
+    folderId: activeCloudProject?.folder_id ?? undefined,
+    tags: activeCloudProject?.tags ?? undefined,
+    isFavorite: activeCloudProject?.is_favorite ?? false,
+    isPinned: activeCloudProject?.is_pinned ?? false,
+    projectType: document.projectType ?? 'graphic',
+    description: document.description,
+    lastOpenedAt: document.lastOpenedAt,
+    exerciseDetails: document.exerciseDetails,
+    sessionPlanDetails: document.sessionPlanDetails,
+  };
+
   // Club Welcome Modal trigger: show once for first-time Club Premium admins
   // that haven't seen the welcome flow yet AND have a team
   useEffect(() => {
@@ -414,8 +443,35 @@ export function AppShell() {
 
   return (
     <>
-      {/* Main board page */}
-      <BoardPage
+      {(document.projectType ?? 'graphic') === 'exercise' && !boardEditorOverride ? (
+        <ExerciseWorkspace
+          project={activeProject}
+          projects={projectItems}
+          saveStatus={projectSaveStatus}
+          onOpenProjects={handleOpenProjectsDrawer}
+          onRename={handleRenameProject}
+          onUpdate={(exerciseDetails, description) => {
+            void projectsController.updateCurrentProjectMetadata({ exerciseDetails, description });
+          }}
+          onAttachGraphic={(projectId) => {
+            void projectsController.attachGraphicToExercise(projectId);
+          }}
+          onEditBoard={() => setBoardEditorOverride(true)}
+        />
+      ) : document.projectType === 'session' && !boardEditorOverride ? (
+        <SessionWorkspace
+          project={activeProject}
+          projects={projectItems}
+          saveStatus={projectSaveStatus}
+          onOpenProjects={handleOpenProjectsDrawer}
+          onRename={handleRenameProject}
+          onUpdate={(sessionPlanDetails, description) => {
+            void projectsController.updateCurrentProjectMetadata({ sessionPlanDetails, description });
+          }}
+        />
+      ) : (
+      <>
+        <BoardPage
         onOpenProjectsDrawer={handleOpenProjectsDrawer}
         onCloseProjectsDrawer={() => setProjectsDrawerOpen(false)}
         onOpenAuthModal={() => setAuthModalOpen(true)}
@@ -438,6 +494,17 @@ export function AppShell() {
         appVersion={appPkg.version}
         onNavigateFooter={(path: string) => navigate(path)}
       />
+        {document.projectType === 'exercise' && boardEditorOverride && (
+          <button
+            type="button"
+            onClick={() => setBoardEditorOverride(false)}
+            className="fixed left-1/2 top-14 z-40 -translate-x-1/2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-semibold text-text shadow-lg hover:border-accent"
+          >
+            {t('coaching.exercise.backToExercise')}
+          </button>
+        )}
+      </>
+      )}
 
       {/* Global Modals */}
       <ModalOrchestrator
@@ -526,7 +593,7 @@ export function AppShell() {
           parentId: f.parent_id ?? null,
           sortOrder: f.position ?? 0,
         }))}
-        currentProjectId={useBoardStore.getState().cloudProjectId}
+        currentProjectId={cloudProjectId}
         projectsIsLoading={projectsController.isLoading}
         onSelectProject={handleSelectProject}
         onCreateProject={handleCreateProject}

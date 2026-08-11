@@ -603,8 +603,12 @@ export interface ExerciseDetails {
   sourceGraphicName?: string;
   durationMinutes: number;
   players: string;
+  category: string;
+  objective: string;
   organization: string;
   coachingPoints: string;
+  progression: string;
+  equipment: string;
 }
 
 export interface SessionExerciseItem {
@@ -615,19 +619,70 @@ export interface SessionExerciseItem {
   notes: string;
 }
 
+export interface SessionSquadGroup {
+  id: string;
+  label: string;
+  players: string;
+}
+
+export interface SessionStaffAssignment {
+  id: string;
+  staffName: string;
+  beforeTraining: string;
+  exerciseResponsibilities: string[];
+}
+
 export interface SessionPlanDetails {
+  date: string;
+  microcycleDay: string;
+  venue: string;
+  startTime: string;
+  staff: string;
+  objectives: string;
+  totalDistance: string;
+  highSpeedDistance: string;
+  sprintDistance: string;
+  microcycle: string;
+  mesocycle: string;
+  playerCount: string;
+  squadGroups: SessionSquadGroup[];
   exercises: SessionExerciseItem[];
+  staffAssignments: SessionStaffAssignment[];
+  organizationNotes: string;
+  equipmentNotes: string;
+  lineupNotes: string;
 }
 
 export const DEFAULT_EXERCISE_DETAILS: ExerciseDetails = {
   durationMinutes: 15,
   players: '',
+  category: '',
+  objective: '',
   organization: '',
   coachingPoints: '',
+  progression: '',
+  equipment: '',
 };
 
 export const DEFAULT_SESSION_PLAN_DETAILS: SessionPlanDetails = {
+  date: '',
+  microcycleDay: '',
+  venue: '',
+  startTime: '',
+  staff: '',
+  objectives: '',
+  totalDistance: '',
+  highSpeedDistance: '',
+  sprintDistance: '',
+  microcycle: '',
+  mesocycle: '',
+  playerCount: '',
+  squadGroups: [],
   exercises: [],
+  staffAssignments: [],
+  organizationNotes: '',
+  equipmentNotes: '',
+  lineupNotes: '',
 };
 
 export interface LineupPreset {

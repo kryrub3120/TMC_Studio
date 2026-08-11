@@ -1712,20 +1712,31 @@ Dla Pro/Team — wszystkie opcje dostępne.
 - The current Graphic exposes `Create exercise from this graphic` in Projects.
 
 **Exercise**
-- Remains a fully editable board.
+- Opens in a dedicated Exercise Workspace rather than the tactical board.
+- The workspace contains a graphic preview, source-graphic picker and a deliberate `Edit graphic on board` action.
 - Can be created from the current Graphic or attach/refresh from any Graphic in the user's library.
 - Copying a Graphic copies its steps, board, team, pitch and orientation settings, so the Exercise survives deletion or later edits of the source.
-- Stores source graphic id/name, duration, player count, organization and coaching points.
+- Stores source graphic id/name, duration, player count, category/phase, objective, content, organization, coaching points, progression/regressions and equipment.
 
 **Session plan**
+- Opens in a dedicated Session Workspace modelled on a professional training-session document.
+- Stores date, microcycle day, venue, start time, staff, objectives, workload values, microcycle/mesocycle and player count.
 - Stores an ordered list of Exercise references with a stable name snapshot.
-- Each item has an independently editable duration and note.
+- Each item has a graphic preview, independently editable duration and full coaching notes.
 - Exercises can be moved up/down or removed; total duration is calculated from the agenda.
+- The document includes position-based squad groups, a staff-responsibility matrix, equipment/space organization and lineup notes.
+- `Print / PDF` uses a print-specific A4-friendly layout.
 - Changes use the standard debounced cloud autosave and survive reload.
 
 **Guidance**
 - `How it works` in Projects opens a three-step Graphic → Exercise → Session tutorial.
+- Exercise and Session workspaces each provide their own three-step quick-start guide.
 - The global first-run tutorial opens the real Projects drawer and explains the same library workflow.
+
+**Library UX**
+- The project library is a wide responsive workspace (up to 960 px), not a narrow metadata drawer.
+- The six most recently opened/edited projects appear first as visual cards.
+- Type creation, filters, working search/sort controls and the folder tree remain available below the recent section.
 
 ### 13.3 Autosave Rules
 
@@ -1743,6 +1754,8 @@ Dla Pro/Team — wszystkie opcje dostępne.
 - Set to `true` when document changes
 - Set to `false` after successful save
 - Controls whether autosave runs
+- Pending debounce timers are cancelled and flushed before switching projects, preventing an old autosave from writing into the newly opened project.
+- A cloud response never replaces a newer local document snapshot created while that request was in flight.
 
 ### 13.4 Offline Behavior
 

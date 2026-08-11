@@ -56,6 +56,12 @@ test.describe('Board responsive shell', () => {
     await page.addInitScript(() => {
       localStorage.setItem('tmc-cookie-consent', JSON.stringify({ analytics: false, ts: 'e2e' }));
       localStorage.setItem('tmc-studio-dev-cloud-user', 'dev-free-project-limit');
+      if (sessionStorage.getItem('tmc-free-limit-test-initialized') !== '1') {
+        localStorage.removeItem('tmc-studio-dev-cloud-projects-dev-free-project-limit');
+        localStorage.removeItem('tmc-studio-dev-cloud-folders-dev-free-project-limit');
+        localStorage.removeItem('tmc-studio-board');
+        sessionStorage.setItem('tmc-free-limit-test-initialized', '1');
+      }
       localStorage.setItem('tmc-auth', JSON.stringify({
         state: {
           isInitialized: true,
@@ -68,16 +74,24 @@ test.describe('Board responsive shell', () => {
         version: 0,
       }));
       localStorage.setItem('tmc-ui-settings', JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }));
+      localStorage.setItem('tmc-exercise-guide-seen', '1');
+      localStorage.setItem('tmc-session-guide-seen', '1');
     });
     await page.goto('/board');
 
+    const openLibrary = async () => {
+      const workspaceButton = page.getByRole('button', { name: /Library|Biblioteka|Biblioteca/i });
+      if (await workspaceButton.isVisible().catch(() => false)) await workspaceButton.click();
+      else await page.locator('[data-tour="projects"] button').first().click();
+    };
+
     for (let count = 0; count < 3; count += 1) {
-      await page.locator('[data-tour="projects"] button').first().click();
+      await openLibrary();
       await page.getByTestId('create-exercise-project').click();
       await page.waitForTimeout(200);
     }
 
-    await page.locator('[data-tour="projects"] button').first().click();
+    await openLibrary();
     await page.getByTestId('create-exercise-project').click();
     await expect(page.getByRole('heading', { name: /Osiągnięto limit planu Free|Free plan limit reached|Límite del plan Free/i })).toBeVisible();
   });

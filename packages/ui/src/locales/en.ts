@@ -881,6 +881,17 @@ export const en = {
     create: 'Create Folder',
     save: 'Save',
   },
+  coaching: {
+    library: 'Library', projectName: 'Project name', saving: 'Saving…', saved: 'Saved', saveError: 'Save error', help: 'Quick guide', quickStart: 'Quick start', start: 'Start working',
+    exercise: {
+      workspaceTitle: 'Exercise editor', graphic: 'Tactical graphic', editGraphic: 'Edit graphic on board', editGraphicShort: 'Edit', openBoard: 'Open board editor', backToExercise: 'Finish graphic editing', noGraphic: 'Choose a saved graphic or open the board editor to draw one.', chooseGraphic: 'Choose graphic from library', duration: 'Duration (min)', players: 'Players', category: 'Category / phase', categoryPlaceholder: 'e.g. warm-up, pressing, build-up', objective: 'Training objective', objectivePlaceholder: 'What should the players learn?', description: 'Exercise content', descriptionPlaceholder: 'Describe the rules and flow of the exercise.', organization: 'Organization', coachingPoints: 'Coaching points', progression: 'Progression / regressions', equipment: 'Equipment',
+      guide: { title: 'Create a complete exercise', 1: { title: 'Add the graphic', body: 'Choose an existing drawing or enter the board editor and prepare a new setup.' }, 2: { title: 'Describe the work', body: 'Set the objective, organization, duration, number of players and equipment.' }, 3: { title: 'Save and reuse', body: 'The exercise is saved automatically and becomes available in every session plan.' } },
+    },
+    session: {
+      exportPdf: 'Print / PDF', eyebrow: 'Training session plan', totalTime: 'Total duration', date: 'Date', microcycleDay: 'Microcycle day', venue: 'Venue', startTime: 'Start time', staff: 'Staff', objectives: 'Session objectives', microcycle: 'Microcycle', mesocycle: 'Mesocycle', playerCount: 'Players', exerciseLibrary: 'Exercise library', exerciseLibraryHint: 'Add saved exercises directly to the session.', searchExercises: 'Search exercises…', noExercises: 'No matching exercises.', trainingContent: 'Training content', emptyPlan: 'Add the first exercise from the library on the left.', exerciseNotes: 'Content, rules, variants and coaching notes…', squad: 'Squad', newGroup: 'New group', addGroup: 'Add position group', playersPlaceholder: 'One player per line', workOrganization: 'Staff organization', addStaff: 'Add staff member', coach: 'Coach', beforeTraining: 'Before training', exerciseShort: 'Ex.', organizationNotes: 'Organization of equipment / spaces', equipmentNotes: 'Equipment and preparation', lineupNotes: 'Lineups and additional notes',
+      guide: { title: 'Build a training session plan', 1: { title: 'Complete session data', body: 'Set the date, MD, venue, staff, objectives, workload and squad.' }, 2: { title: 'Add exercises', body: 'Use the exercise library, set the order, duration and instructions for every block.' }, 3: { title: 'Organize and export', body: 'Assign staff responsibilities, add equipment notes, then print or save the plan as PDF.' } },
+    },
+  },
   pricing: {
     title: 'Choose how you want to use TMC Studio',
     subtitle: 'Start free. Upgrade only if you need more.',
@@ -929,6 +940,8 @@ export const en = {
   },
   projects: {
     title: 'Projects',
+    recentProjects: 'Recent projects',
+    recentHint: 'Continue where you left off',
     refresh: 'Refresh projects',
     close: 'Close drawer',
     newProject: 'New Project',

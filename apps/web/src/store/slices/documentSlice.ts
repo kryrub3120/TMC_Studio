@@ -2,8 +2,8 @@
  * Document Slice - Document metadata, cloud sync, autosave
  */
 
-import { logger } from '../../lib/logger';
-import type { StateCreator } from 'zustand';
+import { logger } from "../../lib/logger";
+import type { StateCreator } from "zustand";
 import type {
   BoardDocument,
   BoardElement,
@@ -18,7 +18,7 @@ import type {
   SquadPlayer,
   Position,
   PlayerElement,
-} from '@tmc/core';
+} from "@tmc/core";
 import {
   DEFAULT_PITCH_CONFIG,
   DEFAULT_PITCH_SETTINGS,
@@ -34,7 +34,7 @@ import {
   importDocument,
   isArrowElement,
   isPlayerElement,
-} from '@tmc/core';
+} from "@tmc/core";
 import {
   isSupabaseEnabled,
   createProject,
@@ -46,11 +46,12 @@ import {
   uploadThumbnail,
   type Project,
   type ProjectFolder,
-} from '../../lib/supabase';
-import type { AppState } from '../types';
+} from "../../lib/supabase";
+import type { AppState } from "../types";
 
 /** Module-level callback for thumbnail generation — set by BoardPage on mount */
 let thumbnailGenerator: (() => Promise<Blob | null>) | null = null;
+let cloudSaveQueue: Promise<void> = Promise.resolve();
 export function setThumbnailGenerator(fn: (() => Promise<Blob | null>) | null) {
   thumbnailGenerator = fn;
 }
@@ -65,10 +66,10 @@ export interface DocumentSlice {
   autoSaveTimer: NodeJS.Timeout | null;
   isDirty: boolean;
   lastSavedAt: string | null;
-  
+
   // PR-ARROW-NUMBER: Auto-Numbering mode
   isAutoNumbering: boolean;
-  
+
   // Document actions
   saveDocument: () => void;
   loadDocument: () => boolean;
@@ -77,53 +78,71 @@ export interface DocumentSlice {
   /** Load a board from an uploaded .json file. Returns false on invalid file. */
   importBoardFromFile: (file: File) => Promise<boolean>;
   newDocument: () => void;
-  
+
   // Sprint G: manual save (Cmd+S) — always generates thumbnail, returns cloud result
   manualSave: () => Promise<boolean>;
   /** Generate and upload thumbnail from Konva stage. Throttled for autosave. */
   generateThumbnail: () => Promise<void>;
   lastThumbnailTs: number;
-  
+
   // Team settings
   updateTeamSettings: (team: Team, settings: Partial<TeamSetting>) => void;
   getTeamSettings: () => TeamSettings | undefined;
-  
+
   // Pitch settings
   updatePitchSettings: (settings: Partial<PitchSettings>) => void;
   /** Switch the active board preset, RESETTING the drawing (all steps). */
-  applyPitchBoard: (board: { view: PitchView; projection: PitchProjection }) => void;
+  applyPitchBoard: (board: {
+    view: PitchView;
+    projection: PitchProjection;
+  }) => void;
   getPitchSettings: () => PitchSettings | undefined;
-  
+
   // Player orientation settings
-  updatePlayerOrientationSettings: (settings: Partial<PlayerOrientationSettings>) => void;
+  updatePlayerOrientationSettings: (
+    settings: Partial<PlayerOrientationSettings>,
+  ) => void;
   getPlayerOrientationSettings: () => PlayerOrientationSettings;
-  
+
   // Player defaults (creation preferences)
   updatePlayerDefaults: (updates: Partial<PlayerDefaults>) => void;
   getPlayerDefaults: () => PlayerDefaults;
-  
+
   // PR-ARROW-NUMBER: Auto-numbering toggle
   toggleAutoNumbering: () => void;
-  
+
   // Squad bench actions
   getSquad: () => SquadPlayer[];
-  addSquadPlayer: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
-  addSquadPlayers: (players: Array<Omit<SquadPlayer, 'id'>>) => void;
+  addSquadPlayer: (
+    name: string,
+    number: number,
+    team: Team,
+    isGoalkeeper?: boolean,
+  ) => void;
+  addSquadPlayers: (players: Array<Omit<SquadPlayer, "id">>) => void;
   removeSquadPlayer: (id: string) => void;
-  updateSquadPlayer: (id: string, updates: Partial<{ name: string; number: number; team: Team; isGoalkeeper: boolean }>) => void;
+  updateSquadPlayer: (
+    id: string,
+    updates: Partial<{
+      name: string;
+      number: number;
+      team: Team;
+      isGoalkeeper: boolean;
+    }>,
+  ) => void;
   setSquad: (squad: SquadPlayer[]) => void;
   setSquadVisible: (visible: boolean) => void;
   toggleSquadVisible: () => void;
   saveLineupPreset: (slot: number, team: Team, name?: string) => boolean;
   applyLineupPreset: (slot: number) => boolean;
-  
+
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
   loadFromCloud: (projectId: string) => Promise<boolean>;
   fetchCloudProjects: () => Promise<void>;
   fetchCloudFolders: () => Promise<void>;
   createCloudFolder: (name: string, color?: string) => Promise<boolean>;
-  
+
   // Autosave actions
   markDirty: () => void;
   scheduleAutoSave: () => void;
@@ -139,7 +158,7 @@ export const createDocumentSlice: StateCreator<
 > = (set, get) => {
   // Initialize with saved document or new document
   const savedDoc = loadFromLocalStorage();
-  const initialDoc = savedDoc ?? createDocument('Untitled Board');
+  const initialDoc = savedDoc ?? createDocument("Untitled Board");
 
   return {
     document: initialDoc,
@@ -152,7 +171,7 @@ export const createDocumentSlice: StateCreator<
     lastSavedAt: null,
     lastThumbnailTs: 0,
     isAutoNumbering: false,
-    
+
     saveDocument: () => {
       const { document, elements } = get();
       const updatedDoc: BoardDocument = {
@@ -169,11 +188,11 @@ export const createDocumentSlice: StateCreator<
       saveToLocalStorage(updatedDoc);
       set({ document: updatedDoc });
     },
-    
+
     loadDocument: () => {
       const doc = loadFromLocalStorage();
       if (!doc) return false;
-      
+
       const elements = doc.steps[0]?.elements ?? [];
       set({
         document: doc,
@@ -213,9 +232,9 @@ export const createDocumentSlice: StateCreator<
       get().markDirty();
       return true;
     },
-    
+
     newDocument: () => {
-      const doc = createDocument('Untitled Board');
+      const doc = createDocument("Untitled Board");
       const elements = doc.steps[0]?.elements ?? [];
       set({
         document: doc,
@@ -227,17 +246,19 @@ export const createDocumentSlice: StateCreator<
         currentStepIndex: 0,
       });
       // Reset tutorial for new empty board
-      import('../useUIStore').then(({ useUIStore }) => {
-        if (elements.length === 0) {
-          useUIStore.getState().setShowTutorial(true);
-        }
-      }).catch(() => {});
+      import("../useUIStore")
+        .then(({ useUIStore }) => {
+          if (elements.length === 0) {
+            useUIStore.getState().setShowTutorial(true);
+          }
+        })
+        .catch(() => {});
     },
-    
+
     updateTeamSettings: (team, settings) => {
       const { document } = get();
       const currentSettings = document.teamSettings ?? DEFAULT_TEAM_SETTINGS;
-      
+
       const updatedTeamSettings = {
         ...currentSettings,
         [team]: {
@@ -245,7 +266,7 @@ export const createDocumentSlice: StateCreator<
           ...settings,
         },
       };
-      
+
       set({
         document: {
           ...document,
@@ -255,52 +276,59 @@ export const createDocumentSlice: StateCreator<
       });
       get().markDirty();
     },
-    
+
     getTeamSettings: () => get().document.teamSettings,
-    
+
     updatePitchSettings: (settings) => {
       const { document, elements } = get();
       const currentSettings = document.pitchSettings ?? DEFAULT_PITCH_SETTINGS;
-      
+
       const updatedPitchSettings = {
         ...currentSettings,
         ...settings,
       };
-      
+
       // Check if orientation changed - transform element positions
       let transformedElements = elements;
       let newSteps = document.steps;
-      
-      if (settings.orientation && settings.orientation !== currentSettings.orientation) {
+
+      if (
+        settings.orientation &&
+        settings.orientation !== currentSettings.orientation
+      ) {
         const padding = DEFAULT_PITCH_CONFIG.padding;
-        
+
         // FROM dimensions (current orientation)
         // Note: DEFAULT_PITCH_CONFIG.width/height ARE the inner pitch dimensions
         // (the playable field area). Padding is added around them to create canvas.
-        const fromInnerW = currentSettings.orientation === 'portrait'
-          ? DEFAULT_PITCH_CONFIG.height
-          : DEFAULT_PITCH_CONFIG.width;
-        const fromInnerH = currentSettings.orientation === 'portrait'
-          ? DEFAULT_PITCH_CONFIG.width
-          : DEFAULT_PITCH_CONFIG.height;
-        
+        const fromInnerW =
+          currentSettings.orientation === "portrait"
+            ? DEFAULT_PITCH_CONFIG.height
+            : DEFAULT_PITCH_CONFIG.width;
+        const fromInnerH =
+          currentSettings.orientation === "portrait"
+            ? DEFAULT_PITCH_CONFIG.width
+            : DEFAULT_PITCH_CONFIG.height;
+
         // TO dimensions (new orientation)
-        const toInnerW = settings.orientation === 'portrait'
-          ? DEFAULT_PITCH_CONFIG.height
-          : DEFAULT_PITCH_CONFIG.width;
-        const toInnerH = settings.orientation === 'portrait'
-          ? DEFAULT_PITCH_CONFIG.width
-          : DEFAULT_PITCH_CONFIG.height;
-        
+        const toInnerW =
+          settings.orientation === "portrait"
+            ? DEFAULT_PITCH_CONFIG.height
+            : DEFAULT_PITCH_CONFIG.width;
+        const toInnerH =
+          settings.orientation === "portrait"
+            ? DEFAULT_PITCH_CONFIG.width
+            : DEFAULT_PITCH_CONFIG.height;
+
         // Transform point: fromCenter → rotate 90° → toCenter
         const transformInnerPoint = (x: number, y: number) => {
           // 1. Move to fromCenter
           const dx = x - fromInnerW / 2;
           const dy = y - fromInnerH / 2;
-          
+
           // 2. Rotate 90°
           let rx: number, ry: number;
-          if (settings.orientation === 'portrait') {
+          if (settings.orientation === "portrait") {
             // CCW
             rx = -dy;
             ry = dx;
@@ -309,74 +337,85 @@ export const createDocumentSlice: StateCreator<
             rx = dy;
             ry = -dx;
           }
-          
+
           // 3. Move to toCenter
           return {
             x: rx + toInnerW / 2,
             y: ry + toInnerH / 2,
           };
         };
-        
+
         const transformStagePoint = (p: Position): Position => {
           const relX = p.x - padding;
           const relY = p.y - padding;
           const t = transformInnerPoint(relX, relY);
           return { x: t.x + padding, y: t.y + padding };
         };
-        
+
         // Transform single element
         const transformBoardElement = (el: BoardElement): BoardElement => {
           // Compute rotation delta once (used for all rotating elements)
           // Landscape → Portrait: -90° (CCW)
           // Portrait → Landscape: +90° (CW)
-          const rotationDelta = settings.orientation === 'portrait' ? -90 : 90;
-          
+          const rotationDelta = settings.orientation === "portrait" ? -90 : 90;
+
           // A) Position elements (except zone, arrow, drawing)
-          if ('position' in el && el.position && el.type !== 'zone') {
+          if ("position" in el && el.position && el.type !== "zone") {
             const next: any = {
               ...el,
               position: transformStagePoint(el.position as Position),
             };
-            
+
             // Unified rotation rule: rotate ANY element with numeric 'rotation' property
-            if ('rotation' in el && typeof (el as any).rotation === 'number') {
-              next.rotation = ((el as any).rotation + rotationDelta + 360) % 360;
+            if ("rotation" in el && typeof (el as any).rotation === "number") {
+              next.rotation =
+                ((el as any).rotation + rotationDelta + 360) % 360;
             }
-            
+
             // Orientation transform: players always get transformed (even with undefined orientation —
             // createPlayer omits the field, so 'orientation' in el is false, but we must still rotate).
             // Default orientation 0 (north) must be explicitly rotated so cones align after pitch flip.
-            if (el.type === 'player') {
+            if (el.type === "player") {
               const currentOrientation = (el as any).orientation ?? 0;
-              next.orientation = ((currentOrientation + rotationDelta) % 360 + 360) % 360;
-            } else if ('orientation' in el && (el as any).orientation !== undefined) {
+              next.orientation =
+                (((currentOrientation + rotationDelta) % 360) + 360) % 360;
+            } else if (
+              "orientation" in el &&
+              (el as any).orientation !== undefined
+            ) {
               // Other element types with explicit orientation (future extensibility)
-              next.orientation = (((el as any).orientation + rotationDelta) % 360 + 360) % 360;
+              next.orientation =
+                ((((el as any).orientation + rotationDelta) % 360) + 360) % 360;
             }
-            
+
             // Text exception: force rotation to 0 (text must remain readable/upright)
-            if (el.type === 'text') {
-              if ('rotation' in next) {
+            if (el.type === "text") {
+              if ("rotation" in next) {
                 next.rotation = 0;
               }
             }
-            
+
             return next;
           }
 
-          
           // B) Zone - transform center + swap + recalculate top-left
-          if (el.type === 'zone') {
+          if (el.type === "zone") {
             const p = el.position as Position;
             const w = el.width ?? 0;
             const h = el.height ?? 0;
-            
+
             // B2) Polygon zone - transform every vertex, then recompute bbox.
-            if ((el as any).shape === 'polygon' && Array.isArray((el as any).points)) {
+            if (
+              (el as any).shape === "polygon" &&
+              Array.isArray((el as any).points)
+            ) {
               const pts = (el as any).points as number[];
               const absTransformed: number[] = [];
               for (let i = 0; i < pts.length; i += 2) {
-                const t = transformStagePoint({ x: p.x + pts[i], y: p.y + pts[i + 1] });
+                const t = transformStagePoint({
+                  x: p.x + pts[i],
+                  y: p.y + pts[i + 1],
+                });
                 absTransformed.push(t.x, t.y);
               }
               const xs: number[] = [];
@@ -391,7 +430,10 @@ export const createDocumentSlice: StateCreator<
               const maxY = Math.max(...ys);
               const rel: number[] = [];
               for (let i = 0; i < absTransformed.length; i += 2) {
-                rel.push(absTransformed[i] - minX, absTransformed[i + 1] - minY);
+                rel.push(
+                  absTransformed[i] - minX,
+                  absTransformed[i + 1] - minY,
+                );
               }
               return {
                 ...el,
@@ -401,21 +443,24 @@ export const createDocumentSlice: StateCreator<
                 points: rel,
               } as any;
             }
-            
+
             const center = { x: p.x + w / 2, y: p.y + h / 2 };
             const newCenter = transformStagePoint(center);
-            
+
             const newW = h;
             const newH = w;
-            
+
             return {
               ...el,
-              position: { x: newCenter.x - newW / 2, y: newCenter.y - newH / 2 },
+              position: {
+                x: newCenter.x - newW / 2,
+                y: newCenter.y - newH / 2,
+              },
               width: newW,
               height: newH,
             } as any;
           }
-          
+
           // C) Arrow - transform both endpoints
           if (isArrowElement(el)) {
             return {
@@ -424,9 +469,9 @@ export const createDocumentSlice: StateCreator<
               endPoint: transformStagePoint(el.endPoint),
             } as any;
           }
-          
+
           // D) Drawing - transform all points in the flat array [x1, y1, x2, y2, ...]
-          if (el.type === 'drawing') {
+          if (el.type === "drawing") {
             const transformedPoints: number[] = [];
             for (let i = 0; i < el.points.length; i += 2) {
               const x = el.points[i];
@@ -439,20 +484,20 @@ export const createDocumentSlice: StateCreator<
               points: transformedPoints,
             } as any;
           }
-          
+
           return el;
         };
-        
+
         // Transform ALL steps to maintain consistency
         const { currentStepIndex } = get();
         newSteps = document.steps.map((step) => ({
           ...step,
           elements: step.elements.map(transformBoardElement),
         }));
-        
+
         transformedElements = newSteps[currentStepIndex]?.elements ?? [];
       }
-      
+
       set({
         elements: structuredClone(transformedElements),
         document: {
@@ -462,14 +507,14 @@ export const createDocumentSlice: StateCreator<
           updatedAt: new Date().toISOString(),
         },
       });
-      
+
       if (transformedElements !== elements) {
         get().pushHistory();
       } else {
         get().markDirty();
       }
     },
-    
+
     applyPitchBoard: (board) => {
       const { document } = get();
       const currentSettings = document.pitchSettings ?? DEFAULT_PITCH_SETTINGS;
@@ -480,7 +525,10 @@ export const createDocumentSlice: StateCreator<
         // orientation is intentionally preserved — boards react to pion/poziom.
       };
       // Reset the drawing on every step — switching board clears the canvas.
-      const newSteps = document.steps.map((step) => ({ ...step, elements: [] }));
+      const newSteps = document.steps.map((step) => ({
+        ...step,
+        elements: [],
+      }));
       set({
         elements: [],
         selectedIds: [],
@@ -493,18 +541,20 @@ export const createDocumentSlice: StateCreator<
       });
       get().pushHistory();
     },
-    
+
     getPitchSettings: () => get().document.pitchSettings,
-    
+
     updatePlayerOrientationSettings: (settings) => {
       const { document } = get();
-      const currentSettings = document.playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
-      
+      const currentSettings =
+        document.playerOrientationSettings ??
+        DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+
       const updatedSettings = {
         ...currentSettings,
         ...settings,
       };
-      
+
       set({
         document: {
           ...document,
@@ -514,9 +564,11 @@ export const createDocumentSlice: StateCreator<
       });
       get().markDirty();
     },
-    
+
     getPlayerOrientationSettings: () => {
-      const settings = get().document.playerOrientationSettings ?? DEFAULT_PLAYER_ORIENTATION_SETTINGS;
+      const settings =
+        get().document.playerOrientationSettings ??
+        DEFAULT_PLAYER_ORIENTATION_SETTINGS;
       // Normalize: docs saved before showVision field existed have showVision=undefined.
       // Contract: showVision must be an explicit boolean; undefined is treated as false (opt-in).
       return settings.showVision === undefined
@@ -526,7 +578,8 @@ export const createDocumentSlice: StateCreator<
 
     updatePlayerDefaults: (updates) => {
       const { document } = get();
-      const currentDefaults = document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
+      const currentDefaults =
+        document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS;
       set({
         document: {
           ...document,
@@ -544,93 +597,117 @@ export const createDocumentSlice: StateCreator<
     // PR-ARROW-NUMBER: Auto-numbering toggle
     toggleAutoNumbering: () => {
       const wasOff = get().isAutoNumbering === false;
-      
+
       set((state) => ({
         isAutoNumbering: !state.isAutoNumbering,
       }));
-      
+
       // Jeśli włączono numerację — przelicz numery istniejących strzałek
       // renumberAllArrows NIE woła pushHistory — dostępny przez AppState (full store)
       if (wasOff) {
         get().renumberAllArrows();
       }
-      
+
       // JEDEN pushHistory dla toggle
       get().pushHistory();
     },
 
     saveToCloud: async () => {
       if (!isSupabaseEnabled()) return false;
-      
+
       // PR-L5-MINI: Check if online before attempting save
-      const { useUIStore } = await import('../useUIStore');
+      const { useUIStore } = await import("../useUIStore");
       const isOnline = useUIStore.getState().isOnline;
-      
+
       if (!isOnline) {
-        logger.debug('[Cloud save] Skipped - offline');
+        logger.debug("[Cloud save] Skipped - offline");
         return false;
       }
-      
+
       const { document, elements, cloudProjectId, currentStepIndex } = get();
-      set({ isSaving: true });
-      
-      try {
-        const cloneElements = (els: BoardElement[]) => structuredClone(els);
-        
-        const updatedSteps = document.steps.map((step, idx) => ({
-          ...step,
-          elements: idx === currentStepIndex 
-            ? cloneElements(elements)
-            : cloneElements(step.elements),
-        }));
-        
-        const updatedDoc: BoardDocument = {
-          ...document,
-          steps: updatedSteps,
-          updatedAt: new Date().toISOString(),
-        };
-        
-        if (cloudProjectId) {
-          const project = await updateProject(cloudProjectId, {
-            name: document.name,
-            description: updatedDoc.description ?? null,
-            document: updatedDoc,
-          });
-          if (!project) throw new Error('Failed to update project');
-        } else {
-          const project = await createProject({
-            name: document.name,
-            description: updatedDoc.description ?? null,
-            document: updatedDoc,
-          });
-          if (!project) throw new Error('Failed to create project');
-          set({ cloudProjectId: project.id });
+      const saveSnapshot = async () => {
+        set({ isSaving: true });
+
+        try {
+          const cloneElements = (els: BoardElement[]) => structuredClone(els);
+
+          const updatedSteps = document.steps.map((step, idx) => ({
+            ...step,
+            elements:
+              idx === currentStepIndex
+                ? cloneElements(elements)
+                : cloneElements(step.elements),
+          }));
+
+          const updatedDoc: BoardDocument = {
+            ...document,
+            steps: updatedSteps,
+            updatedAt: new Date().toISOString(),
+          };
+
+          if (cloudProjectId) {
+            const project = await updateProject(cloudProjectId, {
+              name: document.name,
+              description: updatedDoc.description ?? null,
+              document: updatedDoc,
+            });
+            if (!project) throw new Error("Failed to update project");
+          } else {
+            const project = await createProject({
+              name: document.name,
+              description: updatedDoc.description ?? null,
+              document: updatedDoc,
+            });
+            if (!project) throw new Error("Failed to create project");
+            set({ cloudProjectId: project.id });
+          }
+
+          // A cloud request may finish after the user has already typed another
+          // change. Never replace that newer local document with the snapshot
+          // captured at the beginning of this save.
+          set((state) => ({
+            isSaving: false,
+            document:
+              state.document.updatedAt === document.updatedAt
+                ? updatedDoc
+                : state.document,
+          }));
+          return true;
+        } catch (error) {
+          logger.error("Cloud save error:", error);
+          set({ isSaving: false });
+
+          // PR-L5-MINI: Show save failure toast (rate-limited)
+          const { useUIStore } = await import("../useUIStore");
+          useUIStore.getState().showSaveFailureToast();
+
+          return false;
         }
-        
-        set({ isSaving: false, document: updatedDoc });
-        return true;
-      } catch (error) {
-        logger.error('Cloud save error:', error);
-        set({ isSaving: false });
-        
-        // PR-L5-MINI: Show save failure toast (rate-limited)
-        const { useUIStore } = await import('../useUIStore');
-        useUIStore.getState().showSaveFailureToast();
-        
-        return false;
-      }
+      };
+
+      // Keep writes ordered. A slow autosave must never arrive after a newer
+      // explicit save and overwrite the latest exercise or session metadata.
+      const queuedSave = cloudSaveQueue.then(saveSnapshot, saveSnapshot);
+      cloudSaveQueue = queuedSave.then(
+        () => undefined,
+        () => undefined,
+      );
+      return queuedSave;
     },
-    
+
     loadFromCloud: async (projectId: string) => {
       if (!isSupabaseEnabled()) return false;
-      
+
       try {
         const project = await getProject(projectId);
         if (!project) return false;
-        
-        const doc = { ...project.document, lastOpenedAt: new Date().toISOString() };
+
+        const doc = {
+          ...project.document,
+          lastOpenedAt: new Date().toISOString(),
+        };
         const elements = doc.steps[0]?.elements ?? [];
-        
+
         set({
           document: doc,
           elements,
@@ -642,39 +719,39 @@ export const createDocumentSlice: StateCreator<
         });
 
         void updateProject(projectId, { document: doc }).catch(() => {});
-        
+
         return true;
       } catch (error) {
-        logger.error('Cloud load error:', error);
+        logger.error("Cloud load error:", error);
         return false;
       }
     },
-    
+
     fetchCloudProjects: async () => {
       if (!isSupabaseEnabled()) return;
-      
+
       try {
         const projects = await getProjects();
         set({ cloudProjects: projects });
       } catch (error) {
-        logger.error('Fetch projects error:', error);
+        logger.error("Fetch projects error:", error);
       }
     },
-    
+
     fetchCloudFolders: async () => {
       if (!isSupabaseEnabled()) return;
-      
+
       try {
         const folders = await getFolders();
         set({ cloudFolders: folders });
       } catch (error) {
-        logger.error('Fetch folders error:', error);
+        logger.error("Fetch folders error:", error);
       }
     },
-    
-    createCloudFolder: async (name: string, color = '#3b82f6') => {
+
+    createCloudFolder: async (name: string, color = "#3b82f6") => {
       if (!isSupabaseEnabled()) return false;
-      
+
       try {
         const folder = await createFolder({ name, color });
         if (folder) {
@@ -683,65 +760,70 @@ export const createDocumentSlice: StateCreator<
         }
         return false;
       } catch (error) {
-        logger.error('Create folder error:', error);
+        logger.error("Create folder error:", error);
         return false;
       }
     },
-    
+
     markDirty: () => {
       set({ isDirty: true });
       // Update project save status to 'unsaved'
-      import('../useUIStore').then(({ useUIStore }) => {
-        useUIStore.getState().setProjectSaveStatus('unsaved');
-      }).catch(() => {});
+      import("../useUIStore")
+        .then(({ useUIStore }) => {
+          useUIStore.getState().setProjectSaveStatus("unsaved");
+        })
+        .catch(() => {});
       get().scheduleAutoSave();
     },
-    
+
     scheduleAutoSave: () => {
       const state = get();
-      
+
       if (state.autoSaveTimer) {
         clearTimeout(state.autoSaveTimer);
       }
-      
+
       const timer = setTimeout(() => {
         get().performAutoSave();
       }, 2000);
-      
+
       set({ autoSaveTimer: timer });
     },
-    
+
     performAutoSave: async () => {
       const state = get();
       if (!state.isDirty) return;
-      
-      logger.debug('[Autosave] Saving...');
-      
+
+      logger.debug("[Autosave] Saving...");
+
       // Update status to 'saving'
-      import('../useUIStore').then(({ useUIStore }) => {
-        useUIStore.getState().setProjectSaveStatus('saving');
-      }).catch(() => {});
-      
+      import("../useUIStore")
+        .then(({ useUIStore }) => {
+          useUIStore.getState().setProjectSaveStatus("saving");
+        })
+        .catch(() => {});
+
       // Always save locally regardless of cloud outcome
       state.saveDocument();
-      
+      const savedDocumentUpdatedAt = get().document.updatedAt;
+
       let cloudSuccess = true;
-      const { useAuthStore } = await import('../useAuthStore');
+      const { useAuthStore } = await import("../useAuthStore");
       if (isSupabaseEnabled() && useAuthStore.getState().isAuthenticated) {
         try {
           const ok = await state.saveToCloud();
           if (!ok) {
-            logger.warn('[Autosave] Cloud save returned false');
+            logger.warn("[Autosave] Cloud save returned false");
             cloudSuccess = false;
           } else {
-            logger.debug('[Autosave] Saved to cloud');
+            logger.debug("[Autosave] Saved to cloud");
           }
         } catch (error) {
-          logger.error('[Autosave] Cloud save failed:', error);
+          logger.error("[Autosave] Cloud save failed:", error);
           cloudSuccess = false;
         }
       }
-      
+
       if (cloudSuccess) {
         // Generate thumbnail if throttled (max once per 30s)
         const THUMBNAIL_THROTTLE_MS = 30000;
@@ -749,86 +831,104 @@ export const createDocumentSlice: StateCreator<
         if (now - state.lastThumbnailTs >= THUMBNAIL_THROTTLE_MS) {
           set({ lastThumbnailTs: now });
           // Fire-and-forget
-          get().generateThumbnail().catch(() => {});
+          get()
+            .generateThumbnail()
+            .catch(() => {});
         }
-        
-        set({ 
-          isDirty: false,
+
+        const hasNewerChanges =
+          get().document.updatedAt !== savedDocumentUpdatedAt;
+        set({
+          isDirty: hasNewerChanges,
           lastSavedAt: new Date().toISOString(),
         });
-        
-        import('../useUIStore').then(({ useUIStore }) => {
-          useUIStore.getState().setProjectSaveStatus('saved');
-        }).catch(() => {});
+
+        import("../useUIStore")
+          .then(({ useUIStore }) => {
+            useUIStore
+              .getState()
+              .setProjectSaveStatus(hasNewerChanges ? "unsaved" : "saved");
+          })
+          .catch(() => {});
       } else {
         // Keep isDirty = true so autosave retries on next timer cycle.
         // Don't regenerate timer here — the existing markDirty/scheduleAutoSave
         // from the original user action will re-trigger via the 2s debounce.
         // Only log and notify.
-        logger.warn('[Autosave] Cloud save failed — will retry');
-        
-        import('../useUIStore').then(({ useUIStore }) => {
-          useUIStore.getState().setProjectSaveStatus('error');
-        }).catch(() => {});
+        logger.warn("[Autosave] Cloud save failed — will retry");
+
+        import("../useUIStore")
+          .then(({ useUIStore }) => {
+            useUIStore.getState().setProjectSaveStatus("error");
+          })
+          .catch(() => {});
       }
     },
-    
+
     /** Manual save (Cmd+S) — saves locally, to cloud, and always generates thumbnail.
-   *  Returns true if cloud save succeeded (or was not attempted), false on failure. */
+     *  Returns true if cloud save succeeded (or was not attempted), false on failure. */
     manualSave: async (): Promise<boolean> => {
       const state = get();
-      
+
       // Update status
-      import('../useUIStore').then(({ useUIStore }) => {
-        useUIStore.getState().setProjectSaveStatus('saving');
-      }).catch(() => {});
-      
+      import("../useUIStore")
+        .then(({ useUIStore }) => {
+          useUIStore.getState().setProjectSaveStatus("saving");
+        })
+        .catch(() => {});
+
       state.saveDocument();
-      
+
       let cloudSuccess = true;
-      const { useAuthStore } = await import('../useAuthStore');
+      const { useAuthStore } = await import("../useAuthStore");
       if (isSupabaseEnabled() && useAuthStore.getState().isAuthenticated) {
         try {
           const ok = await state.saveToCloud();
           if (!ok) {
-            logger.warn('[Manual save] Cloud save returned false');
+            logger.warn("[Manual save] Cloud save returned false");
             cloudSuccess = false;
           } else {
-            logger.debug('[Manual save] Saved to cloud');
+            logger.debug("[Manual save] Saved to cloud");
           }
         } catch (error) {
-          logger.error('[Manual save] Cloud save failed:', error);
+          logger.error("[Manual save] Cloud save failed:", error);
           cloudSuccess = false;
         }
       }
-      
+
       // Always generate thumbnail on manual save (only if cloud success)
       if (cloudSuccess) {
         set({ lastThumbnailTs: Date.now() });
-        await get().generateThumbnail().catch(() => {});
+        await get()
+          .generateThumbnail()
+          .catch(() => {});
       }
-      
-      set({ 
+
+      set({
         isDirty: false,
         lastSavedAt: new Date().toISOString(),
       });
-      
-      import('../useUIStore').then(({ useUIStore }) => {
-        useUIStore.getState().setProjectSaveStatus(cloudSuccess ? 'saved' : 'error');
-      }).catch(() => {});
-      
+
+      import("../useUIStore")
+        .then(({ useUIStore }) => {
+          useUIStore
+            .getState()
+            .setProjectSaveStatus(cloudSuccess ? "saved" : "error");
+        })
+        .catch(() => {});
+
       return cloudSuccess;
     },
-    
+
     /** Generate and upload thumbnail using registered generator */
     generateThumbnail: async () => {
       if (!thumbnailGenerator) return;
       const blob = await thumbnailGenerator();
       if (!blob) return;
-      
+
       const { cloudProjectId } = get();
       if (!cloudProjectId) return;
-      
+
       // Upload then persist the resulting URL onto the project so cards
       // in the drawer actually show a preview (works on Supabase + devCloud).
       const thumbnailUrl = await uploadThumbnail(cloudProjectId, blob);
@@ -836,11 +936,11 @@ export const createDocumentSlice: StateCreator<
         try {
           await updateProject(cloudProjectId, { thumbnail_url: thumbnailUrl });
         } catch (err) {
-          logger.error('Failed to persist thumbnail_url:', err);
+          logger.error("Failed to persist thumbnail_url:", err);
         }
       }
     },
-    
+
     clearAutoSaveTimer: () => {
       const timer = get().autoSaveTimer;
       if (timer) {
@@ -873,7 +973,12 @@ export const createDocumentSlice: StateCreator<
       const { document } = get();
       const currentSquad = document.squad ?? DEFAULT_SQUAD;
       const newPlayers = players.map((player) =>
-        createSquadPlayer(player.name, player.number, player.team, player.isGoalkeeper),
+        createSquadPlayer(
+          player.name,
+          player.number,
+          player.team,
+          player.isGoalkeeper,
+        ),
       );
       set({
         document: {
@@ -904,7 +1009,9 @@ export const createDocumentSlice: StateCreator<
       set({
         document: {
           ...document,
-          squad: currentSquad.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+          squad: currentSquad.map((p) =>
+            p.id === id ? { ...p, ...updates } : p,
+          ),
           updatedAt: new Date().toISOString(),
         },
       });
@@ -914,17 +1021,28 @@ export const createDocumentSlice: StateCreator<
     saveLineupPreset: (slot, team, name) => {
       if (slot < 0 || slot > 2) return false;
       const { document, elements } = get();
-      const players = elements.filter((element): element is PlayerElement => isPlayerElement(element) && element.team === team);
+      const players = elements.filter(
+        (element): element is PlayerElement =>
+          isPlayerElement(element) && element.team === team,
+      );
       if (players.length === 0) return false;
       const presets = [...(document.lineupPresets ?? [null, null, null])];
       while (presets.length < 3) presets.push(null);
       presets[slot] = {
-        name: name?.trim() || `${document.teamSettings?.[team]?.name ?? 'Team'} ${slot + 1}`,
+        name:
+          name?.trim() ||
+          `${document.teamSettings?.[team]?.name ?? "Team"} ${slot + 1}`,
         team,
         players: structuredClone(players),
         updatedAt: new Date().toISOString(),
       };
-      set({ document: { ...document, lineupPresets: presets, updatedAt: new Date().toISOString() } });
+      set({
+        document: {
+          ...document,
+          lineupPresets: presets,
+          updatedAt: new Date().toISOString(),
+        },
+      });
       get().markDirty();
       return true;
     },
@@ -933,10 +1051,18 @@ export const createDocumentSlice: StateCreator<
       const { document, elements } = get();
       const preset = document.lineupPresets?.[slot];
       if (!preset) return false;
-      const retained = elements.filter((element) => !isPlayerElement(element) || element.team !== preset.team);
+      const retained = elements.filter(
+        (element) => !isPlayerElement(element) || element.team !== preset.team,
+      );
       const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const players = preset.players.map((player, index) => ({ ...structuredClone(player), id: `lineup-${nonce}-${index}` }));
-      set({ elements: [...retained, ...players], selectedIds: players.map((player) => player.id) });
+      const players = preset.players.map((player, index) => ({
+        ...structuredClone(player),
+        id: `lineup-${nonce}-${index}`,
+      }));
+      set({
+        elements: [...retained, ...players],
+        selectedIds: players.map((player) => player.id),
+      });
       get().pushHistory();
       get().markDirty();
       return true;

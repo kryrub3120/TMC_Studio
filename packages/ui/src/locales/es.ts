@@ -704,6 +704,17 @@ export const es: Dictionary = {
     create: 'Crear carpeta',
     save: 'Guardar',
   },
+  coaching: {
+    library: 'Biblioteca', projectName: 'Nombre del proyecto', saving: 'Guardando…', saved: 'Guardado', saveError: 'Error al guardar', help: 'Guía rápida', quickStart: 'Inicio rápido', start: 'Empezar',
+    exercise: {
+      workspaceTitle: 'Editor de ejercicio', graphic: 'Gráfico táctico', editGraphic: 'Editar gráfico en la pizarra', editGraphicShort: 'Editar', openBoard: 'Abrir editor de pizarra', backToExercise: 'Terminar edición del gráfico', noGraphic: 'Elige un gráfico guardado o abre la pizarra para crear uno.', chooseGraphic: 'Elegir gráfico de la biblioteca', duration: 'Duración (min)', players: 'Jugadores', category: 'Categoría / fase', categoryPlaceholder: 'p. ej. calentamiento, presión, salida', objective: 'Objetivo', objectivePlaceholder: '¿Qué deben aprender los jugadores?', description: 'Contenido del ejercicio', descriptionPlaceholder: 'Describe las reglas y el desarrollo.', organization: 'Organización', coachingPoints: 'Puntos de entrenamiento', progression: 'Progresión / regresión', equipment: 'Material',
+      guide: { title: 'Crea un ejercicio completo', 1: { title: 'Añade el gráfico', body: 'Elige un dibujo existente o prepara uno nuevo en el editor de pizarra.' }, 2: { title: 'Describe el trabajo', body: 'Define objetivo, organización, duración, jugadores y material.' }, 3: { title: 'Guarda y reutiliza', body: 'El ejercicio se guarda automáticamente y queda disponible en cada sesión.' } },
+    },
+    session: {
+      exportPdf: 'Imprimir / PDF', eyebrow: 'Plan de sesión de entrenamiento', totalTime: 'Duración total', date: 'Fecha', microcycleDay: 'Día del microciclo', venue: 'Lugar', startTime: 'Hora', staff: 'Cuerpo técnico', objectives: 'Objetivos de la sesión', microcycle: 'Microciclo', mesocycle: 'Mesociclo', playerCount: 'Jugadores', exerciseLibrary: 'Biblioteca de ejercicios', exerciseLibraryHint: 'Añade ejercicios guardados directamente a la sesión.', searchExercises: 'Buscar ejercicios…', noExercises: 'No hay ejercicios coincidentes.', trainingContent: 'Contenido del entrenamiento', emptyPlan: 'Añade el primer ejercicio desde la biblioteca.', exerciseNotes: 'Contenido, reglas, variantes y notas…', squad: 'Plantilla', newGroup: 'Nuevo grupo', addGroup: 'Añadir grupo de posición', playersPlaceholder: 'Un jugador por línea', workOrganization: 'Organización del cuerpo técnico', addStaff: 'Añadir técnico', coach: 'Técnico', beforeTraining: 'Antes del entrenamiento', exerciseShort: 'Ej.', organizationNotes: 'Organización de espacios / material', equipmentNotes: 'Material y preparación', lineupNotes: 'Alineaciones y notas adicionales',
+      guide: { title: 'Crea un plan de entrenamiento', 1: { title: 'Completa los datos', body: 'Define fecha, MD, lugar, técnicos, objetivos, cargas y plantilla.' }, 2: { title: 'Añade ejercicios', body: 'Usa la biblioteca y define orden, duración e instrucciones de cada bloque.' }, 3: { title: 'Organiza y exporta', body: 'Asigna responsabilidades, añade material y guarda o imprime el plan en PDF.' } },
+    },
+  },
   pricing: {
     title: 'Elige cómo quieres usar TMC Studio',
     subtitle: 'Empieza gratis. Actualiza solo si necesitas más.',
@@ -752,6 +763,8 @@ export const es: Dictionary = {
   },
   projects: {
     title: 'Proyectos',
+    recentProjects: 'Proyectos recientes',
+    recentHint: 'Continúa donde lo dejaste',
     refresh: 'Actualizar proyectos',
     close: 'Cerrar panel',
     newProject: 'Nuevo proyecto',

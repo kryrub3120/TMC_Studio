@@ -275,7 +275,9 @@ Wszystkie komponenty znajdują się w `packages/ui/src/`. Są eksportowane z `pa
 
 | Komponent | Props | Opis |
 |-----------|-------|------|
-| **ProjectsDrawer** | `projects`, `folders`, `onSelect`, `onCreateProject(type, sourceGraphicId?)`, `onUpdateCurrentProjectMetadata`, `onAttachGraphicToExercise`, `onCreateFolder`, `onMoveToFolder`, `onDelete`, `onRename`, `onPin`, `onDuplicate`, `onColorChange` | Responsywny drawer biblioteki. Obsługuje grafiki, edytor ćwiczenia z podpiętą grafiką, edytor konspektu z uporządkowaną agendą, tutorial workflow, filtrowanie, wyszukiwanie, sortowanie i foldery. |
+| **ProjectsDrawer** | `projects`, `folders`, `onSelect`, `onCreateProject(type, sourceGraphicId?)`, `onCreateFolder`, `onMoveToFolder`, `onDelete`, `onRename`, `onPin`, `onDuplicate`, `onColorChange` | Szeroka (max 960 px), responsywna biblioteka. Najpierw pokazuje wizualne karty ostatnich projektów, potem tworzenie typów, filtry, wyszukiwanie, sortowanie i drzewo folderów. Nie zawiera formularzy edycji projektu. |
+| **ExerciseWorkspace** | `project`, `projects`, `onUpdate`, `onAttachGraphic`, `onEditBoard` | Osobny ekran ćwiczenia: podgląd/wybór grafiki oraz pełne dane trenerskie. Przycisk świadomie przełącza do tablicy w celu edycji rysunku. |
+| **SessionWorkspace** | `project`, `projects`, `onUpdate` | Osobny edytor konspektu: dane jednostki, obciążenia, biblioteka ćwiczeń, środki z grafikami, kadra, organizacja sztabu oraz tryb Print/PDF. |
 | **ContextMenu** | (patrz Core) | Używany w ProjectsDrawer dla prawokliku na projekt/folder |
 | **FolderColorPicker** | `currentColor`, `onSelect` | Wybór koloru dla folderu |
 | **FolderOptionsModal** | `folder`, `onUpdate`, `onDelete` | Opcje folderu (rename, kolor, delete) |

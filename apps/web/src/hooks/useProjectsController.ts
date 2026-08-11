@@ -100,6 +100,8 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   const fetchCloudProjects = useBoardStore((s) => s.fetchCloudProjects);
   const newDocument = useBoardStore((s) => s.newDocument);
   const markDirty = useBoardStore((s) => s.markDirty);
+  const clearAutoSaveTimer = useBoardStore((s) => s.clearAutoSaveTimer);
+  const isDirty = useBoardStore((s) => s.isDirty);
   const showToast = useUIStore((s) => s.showToast);
   
   // Entitlements
@@ -143,6 +145,10 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
    * Load a project from cloud
    */
   const selectProject = useCallback(async (id: string) => {
+    if (cloudProjectId && isDirty) {
+      clearAutoSaveTimer();
+      await saveToCloud();
+    }
     const success = await loadFromCloud(id);
     if (success) {
       onCloseDrawer();
@@ -150,7 +156,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     } else {
       showToast(t('projectToast.loadFailed'));
     }
-  }, [loadFromCloud, onCloseDrawer, showToast, t]);
+  }, [clearAutoSaveTimer, cloudProjectId, isDirty, loadFromCloud, onCloseDrawer, saveToCloud, showToast, t]);
   
   /**
    * Create a new project with entitlement checks
@@ -194,7 +200,10 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
 
     // Flush the current editor before switching documents. This also prevents
     // exercise/session metadata typed immediately before creation from being lost.
-    if (authIsAuthenticated && cloudProjectId) await saveToCloud();
+    if (authIsAuthenticated && cloudProjectId) {
+      clearAutoSaveTimer();
+      await saveToCloud();
+    }
 
     const sourceGraphicRecord = sourceGraphicProjectId
       ? cloudProjects.find((project) => project.id === sourceGraphicProjectId)
@@ -236,7 +245,6 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       historyIndex: sourceGraphic ? 0 : state.historyIndex,
       currentStepIndex: 0,
     }));
-    onCloseDrawer();
     showToast(t('projectToast.created'));
     
     // Auto-save to cloud if authenticated
@@ -254,12 +262,17 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
         showToast(t('projectToast.cloudSaveError'));
       }
     }
+    // Keep the library in front until the new cloud project has its own id.
+    // Otherwise fast typing can race the initial create request and a second
+    // project may accidentally reuse the previous id.
+    onCloseDrawer();
   }, [
     can,
     authIsAuthenticated,
     authIsPro,
     cloudProjects,
     cloudProjectId,
+    clearAutoSaveTimer,
     elements.length,
     boardDoc,
     newDocument,
