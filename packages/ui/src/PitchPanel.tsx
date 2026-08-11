@@ -78,6 +78,8 @@ function BoardButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={isActive}
+      data-board-id={id}
       className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
         isActive ? 'bg-accent/20 ring-2 ring-accent text-text' : 'bg-surface2 hover:bg-surface2/80 text-muted'
       }`}
@@ -108,6 +110,8 @@ function ThemeButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={isActive}
+      data-pitch-theme={theme}
       className={`flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all ${
         isActive 
           ? 'bg-accent/20 ring-2 ring-accent' 
@@ -248,6 +252,9 @@ export function PitchPanel({
         <span className="text-sm text-text">{t('pitchPanel.showStripes')}</span>
         <button
           type="button"
+          role="switch"
+          aria-checked={pitchSettings.showStripes}
+          aria-label={t('pitchPanel.showStripes')}
           onClick={() => onUpdatePitch({ showStripes: !pitchSettings.showStripes })}
           className={`relative w-10 h-5 rounded-full transition-colors ${
             pitchSettings.showStripes ? 'bg-accent' : 'bg-surface2'
@@ -266,6 +273,9 @@ export function PitchPanel({
         <span className="text-sm text-text">{t('pitchPanel.withoutLines')}</span>
         <button
           type="button"
+          role="switch"
+          aria-checked={allLinesHidden}
+          aria-label={t('pitchPanel.withoutLines')}
           onClick={handleWithoutLinesToggle}
           className={`relative w-10 h-5 rounded-full transition-colors ${
             allLinesHidden ? 'bg-accent' : 'bg-surface2'
@@ -379,6 +389,7 @@ export function PitchPanel({
         <div className="flex gap-2">
           <button
             type="button"
+            aria-pressed={pitchSettings.orientation === 'landscape'}
             onClick={() => onUpdatePitch({ orientation: 'landscape' })}
             className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
               pitchSettings.orientation === 'landscape'
@@ -390,6 +401,7 @@ export function PitchPanel({
           </button>
           <button
             type="button"
+            aria-pressed={pitchSettings.orientation === 'portrait'}
             onClick={() => onUpdatePitch({ orientation: 'portrait' })}
             className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
               pitchSettings.orientation === 'portrait'

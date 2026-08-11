@@ -2,6 +2,7 @@
  * TeamsPanel - Team color customization panel
  */
 
+import { useState } from 'react';
 import type { TeamSettings, TeamSetting, Team } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { SHARED_COLORS, TEAM_KIT_PRESETS } from './colors';
@@ -12,12 +13,87 @@ export interface TeamsPanelProps {
   onUpdateTeam: (team: Team, settings: Partial<TeamSetting>) => void;
 }
 
+function ColorField({
+  label,
+  value,
+  onChange,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onChange: (color: string) => void;
+  testId: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div>
+      <label className="block text-xs text-muted mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsOpen((open) => !open)}
+          className="w-9 h-9 rounded border border-border shadow-inner cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
+          style={{ backgroundColor: value }}
+          aria-label={`${label}: ${value}`}
+          aria-expanded={isOpen}
+          data-testid={`${testId}-toggle`}
+        />
+        <input
+          type="text"
+          value={value.toUpperCase()}
+          onChange={(event) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(event.target.value)) onChange(event.target.value);
+          }}
+          className="min-w-0 flex-1 px-2 py-2 text-xs font-mono bg-surface2 border border-border rounded text-text focus:outline-none focus:ring-1 focus:ring-accent"
+          aria-label={`${label} HEX`}
+        />
+        <label className="relative w-9 h-9 rounded border border-border bg-surface2 cursor-pointer overflow-hidden" title={label}>
+          <span className="absolute inset-0 flex items-center justify-center text-sm text-muted">+</span>
+          <input
+            type="color"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            aria-label={`${label} picker`}
+          />
+        </label>
+      </div>
+
+      {isOpen && (
+        <div className="mt-2 grid grid-cols-8 gap-1.5 p-2 bg-surface2 border border-border rounded" data-testid={`${testId}-palette`}>
+          {SHARED_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => {
+                onChange(color);
+                setIsOpen(false);
+              }}
+              className={`w-6 h-6 rounded border-2 transition-transform hover:scale-110 ${
+                value.toLowerCase() === color.toLowerCase()
+                  ? 'border-accent ring-1 ring-accent'
+                  : 'border-white/20'
+              }`}
+              style={{ backgroundColor: color }}
+              title={color}
+              aria-label={`${label} ${color}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Team color section component */
 function TeamSection({
+  teamKey,
   team,
   settings,
   onUpdate,
 }: {
+  teamKey: Team;
   team: string;
   settings: TeamSetting;
   onUpdate: (settings: Partial<TeamSetting>) => void;
@@ -69,94 +145,28 @@ function TeamSection({
           onChange={(e) => onUpdate({ name: e.target.value })}
           className="w-full px-2 py-1.5 text-sm bg-surface2 border border-border rounded text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
           placeholder={team}
+          data-testid={`team-${teamKey}-name`}
         />
       </div>
 
-      {/* Primary Color picker */}
-      <div>
-        <label className="block text-xs text-muted mb-1">{t('teamsPanel.primaryColor')}</label>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            type="color"
-            value={settings.primaryColor}
-            onChange={(e) => onUpdate({ primaryColor: e.target.value })}
-            className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
-          />
-          <input
-            type="text"
-            value={settings.primaryColor.toUpperCase()}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-                onUpdate({ primaryColor: val });
-              }
-            }}
-            className="flex-1 px-2 py-1.5 text-xs font-mono bg-surface2 border border-border rounded text-text focus:outline-none focus:ring-1 focus:ring-accent"
-            placeholder="#FFFFFF"
-          />
-        </div>
-
-        {/* Color presets grid */}
-        <div className="grid grid-cols-8 gap-1">
-          {SHARED_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => onUpdate({ primaryColor: color })}
-              className={`w-5 h-5 rounded border-2 transition-transform hover:scale-110 ${
-                settings.primaryColor.toLowerCase() === color.toLowerCase()
-                  ? 'border-accent ring-1 ring-accent'
-                  : 'border-white/20'
-              }`}
-              style={{ backgroundColor: color }}
-              title={color}
-            />
-          ))}
-        </div>
-      </div>
-      
-      {/* Goalkeeper Color picker */}
-      <div>
-        <label className="block text-xs text-muted mb-1">{t('teamsPanel.goalkeeperColor')}</label>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            type="color"
-            value={settings.goalkeeperColor ?? '#fbbf24'}
-            onChange={(e) => onUpdate({ goalkeeperColor: e.target.value })}
-            className="w-8 h-8 rounded cursor-pointer border border-border bg-transparent"
-          />
-          <input
-            type="text"
-            value={(settings.goalkeeperColor ?? '#fbbf24').toUpperCase()}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-                onUpdate({ goalkeeperColor: val });
-              }
-            }}
-            className="flex-1 px-2 py-1.5 text-xs font-mono bg-surface2 border border-border rounded text-text focus:outline-none focus:ring-1 focus:ring-accent"
-            placeholder="#FBBF24"
-          />
-        </div>
-
-        {/* GK Color presets grid */}
-        <div className="grid grid-cols-8 gap-1">
-          {SHARED_COLORS.map((color) => (
-            <button
-              key={`gk-${color}`}
-              type="button"
-              onClick={() => onUpdate({ goalkeeperColor: color })}
-              className={`w-5 h-5 rounded border-2 transition-transform hover:scale-110 ${
-                (settings.goalkeeperColor ?? '#fbbf24').toLowerCase() === color.toLowerCase()
-                  ? 'border-accent ring-1 ring-accent'
-                  : 'border-white/20'
-              }`}
-              style={{ backgroundColor: color }}
-              title={color}
-            />
-          ))}
-        </div>
-      </div>
+      <ColorField
+        label={t('teamsPanel.primaryColor')}
+        value={settings.primaryColor}
+        onChange={(primaryColor) => onUpdate({ primaryColor })}
+        testId={`team-${teamKey}-primary`}
+      />
+      <ColorField
+        label={t('teamsPanel.secondaryColor')}
+        value={settings.secondaryColor ?? '#ffffff'}
+        onChange={(secondaryColor) => onUpdate({ secondaryColor })}
+        testId={`team-${teamKey}-secondary`}
+      />
+      <ColorField
+        label={t('teamsPanel.goalkeeperColor')}
+        value={settings.goalkeeperColor ?? '#fbbf24'}
+        onChange={(goalkeeperColor) => onUpdate({ goalkeeperColor })}
+        testId={`team-${teamKey}-goalkeeper`}
+      />
     </div>
   );
 }
@@ -173,7 +183,7 @@ const TEAM_ORDER: Array<{ key: Team; label: string }> = [
 export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
   const { t } = useTranslation();
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-6 sm:p-4">
       <div className="text-xs text-muted uppercase tracking-wider">
         {t('teamsPanel.title')}
       </div>
@@ -184,6 +194,7 @@ export function TeamsPanel({ teamSettings, onUpdateTeam }: TeamsPanelProps) {
           <div key={key} className="space-y-6">
             {idx > 0 && <div className="border-t border-border" />}
             <TeamSection
+              teamKey={key}
               team={t(label)}
               settings={settings}
               onUpdate={(patch) => onUpdateTeam(key, patch)}

@@ -600,8 +600,10 @@ export function AppShell() {
         squad={document.squad ?? []}
         squadVisible={squadBenchVisible} // UX-C: use UI preference
         isPro={authIsPro}
-        onAddSquadPlayer={(name, number, team, isGoalkeeper) => addSquadPlayer(name, number, team as any, isGoalkeeper)}
+        onAddSquadPlayer={(name, number, team, isGoalkeeper) => addSquadPlayer(name, number, team, isGoalkeeper)}
+        onAddSquadPlayers={(players) => useBoardStore.getState().addSquadPlayers(players)}
         onRemoveSquadPlayer={(id) => removeSquadPlayer(id)}
+        onUpdateSquadPlayer={(id, updates) => useBoardStore.getState().updateSquadPlayer(id, updates)}
         onSetSquadVisible={(visible) => setSquadBenchVisible(visible)} // UX-C: redirect to UI preference
         // Board settings (Teams / Pitch — moved from inspector)
         teamSettings={document.teamSettings ?? DEFAULT_TEAM_SETTINGS}

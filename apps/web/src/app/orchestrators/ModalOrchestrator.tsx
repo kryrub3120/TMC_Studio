@@ -133,7 +133,9 @@ interface ModalOrchestratorProps {
   squadVisible?: boolean;
   isPro?: boolean;
   onAddSquadPlayer?: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
+  onAddSquadPlayers?: (players: Array<Omit<SquadPlayer, 'id'>>) => void;
   onRemoveSquadPlayer?: (id: string) => void;
+  onUpdateSquadPlayer?: (id: string, updates: Partial<Omit<SquadPlayer, 'id'>>) => void;
   onSetSquadVisible?: (visible: boolean) => void;
   // Board settings (Teams / Pitch — moved from the inspector)
   teamSettings?: TeamSettings;
@@ -301,7 +303,9 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         squadVisible={props.squadVisible}
         isPro={props.isPro}
         onAddSquadPlayer={props.onAddSquadPlayer}
+        onAddSquadPlayers={props.onAddSquadPlayers}
         onRemoveSquadPlayer={props.onRemoveSquadPlayer}
+        onUpdateSquadPlayer={props.onUpdateSquadPlayer}
         onSetSquadVisible={props.onSetSquadVisible}
         teamSettings={props.teamSettings}
         onUpdateTeam={props.onUpdateTeam}

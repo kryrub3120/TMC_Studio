@@ -129,6 +129,7 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
     const local = useUIStore.getState();
     updatePreferences({
       theme: local.theme,
+      themeMode: local.themeMode,
       gridVisible: local.gridVisible,
       snapEnabled: local.snapEnabled,
       gridSize: local.gridSize,
@@ -148,6 +149,8 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
         fillColor: local.zoneDefaults.fillColor,
         opacity: local.zoneDefaults.opacity,
       },
+      squadBenchVisible: local.squadBenchVisible,
+      shortcutOverrides: local.shortcutOverrides,
       bottomBar: { height: local.bottomBarHeight, collapsed: local.bottomBarCollapsed },
       inspector: { width: local.inspectorWidth },
     }).catch(() => {});
@@ -155,14 +158,34 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
   }
 
   // Load all fields from cloud (cloud takes precedence over local)
-  if (cloudPrefs.theme) useUIStore.getState().setTheme(cloudPrefs.theme);
+  if (cloudPrefs.themeMode) {
+    useUIStore.getState().setThemeMode(cloudPrefs.themeMode);
+  } else if (cloudPrefs.theme) {
+    useUIStore.getState().setTheme(cloudPrefs.theme);
+  }
   if (cloudPrefs.gridVisible !== undefined) useUIStore.setState({ gridVisible: cloudPrefs.gridVisible });
   if (cloudPrefs.snapEnabled !== undefined) useUIStore.setState({ snapEnabled: cloudPrefs.snapEnabled });
   if (cloudPrefs.gridSize !== undefined) useUIStore.setState({ gridSize: cloudPrefs.gridSize });
   if (cloudPrefs.defaultArrowType) useUIStore.setState({ defaultArrowType: cloudPrefs.defaultArrowType as any });
   if (cloudPrefs.stepDuration !== undefined) useUIStore.setState({ stepDuration: cloudPrefs.stepDuration });
-  if (cloudPrefs.arrowDefaults) useUIStore.setState({ arrowDefaults: cloudPrefs.arrowDefaults as any });
-  if (cloudPrefs.zoneDefaults) useUIStore.setState({ zoneDefaults: cloudPrefs.zoneDefaults as any });
+  if (cloudPrefs.arrowDefaults) {
+    const current = useUIStore.getState().arrowDefaults;
+    useUIStore.setState({
+      arrowDefaults: {
+        ...current,
+        ...cloudPrefs.arrowDefaults,
+        strokeWidth: { ...current.strokeWidth, ...(cloudPrefs.arrowDefaults.strokeWidth ?? {}) },
+        color: { ...(current.color ?? {}), ...(cloudPrefs.arrowDefaults.color ?? {}) },
+      } as any,
+    });
+  }
+  if (cloudPrefs.zoneDefaults) {
+    useUIStore.setState({
+      zoneDefaults: { ...useUIStore.getState().zoneDefaults, ...cloudPrefs.zoneDefaults } as any,
+    });
+  }
+  if (cloudPrefs.squadBenchVisible !== undefined) useUIStore.setState({ squadBenchVisible: cloudPrefs.squadBenchVisible });
+  if (cloudPrefs.shortcutOverrides) useUIStore.setState({ shortcutOverrides: cloudPrefs.shortcutOverrides });
   if (cloudPrefs.bottomBar) {
     useUIStore.setState({
       bottomBarHeight: cloudPrefs.bottomBar.height,

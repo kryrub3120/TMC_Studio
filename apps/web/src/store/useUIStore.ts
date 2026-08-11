@@ -454,7 +454,7 @@ export const useUIStore = create<UIState>()(
         updateSystemThemeListener(newTheme, () => {});
         set({ theme: newTheme, themeMode: newTheme });
         // Sync to cloud
-        queueSync({ theme: newTheme });
+        queueSync({ theme: newTheme, themeMode: newTheme });
       },
       
       setTheme: (theme) => {
@@ -462,7 +462,7 @@ export const useUIStore = create<UIState>()(
         updateSystemThemeListener(theme, () => {});
         set({ theme, themeMode: theme });
         // Sync to cloud
-        queueSync({ theme });
+        queueSync({ theme, themeMode: theme });
       },
 
       setThemeMode: (mode) => {
@@ -474,7 +474,7 @@ export const useUIStore = create<UIState>()(
         });
         set({ themeMode: mode, theme: resolved });
         // Sync to cloud
-        queueSync({ theme: resolved });
+        queueSync({ theme: resolved, themeMode: mode });
       },
 
       // Focus mode actions
@@ -535,32 +535,34 @@ export const useUIStore = create<UIState>()(
         queueSync({ defaultArrowType: type });
       },
       setArrowDefaults: (patch) => {
-        set((state) => ({
-          arrowDefaults: {
-            ...state.arrowDefaults,
-            ...patch,
-            strokeWidth: { ...state.arrowDefaults.strokeWidth, ...(patch.strokeWidth ?? {}) },
-            color: { ...(state.arrowDefaults.color ?? {}), ...(patch.color ?? {}) },
-          },
-        }));
-        queueSync({ arrowDefaults: patch });
+        const current = get().arrowDefaults;
+        const next = {
+          ...current,
+          ...patch,
+          strokeWidth: { ...current.strokeWidth, ...(patch.strokeWidth ?? {}) },
+          color: { ...(current.color ?? {}), ...(patch.color ?? {}) },
+        };
+        set({ arrowDefaults: next });
+        queueSync({ arrowDefaults: next });
       },
       setZoneDefaults: (patch) => {
-        set((state) => ({ zoneDefaults: { ...state.zoneDefaults, ...patch } }));
-        queueSync({ zoneDefaults: patch });
+        const next = { ...get().zoneDefaults, ...patch };
+        set({ zoneDefaults: next });
+        queueSync({ zoneDefaults: next });
       },
       resetElementDefaults: () => {
         set({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS });
         queueSync({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS });
       },
-      setShortcutOverride: (id, shortcut) =>
-        set((state) => ({
-          shortcutOverrides: {
-            ...state.shortcutOverrides,
-            [id]: shortcut,
-          },
-        })),
-      resetShortcutOverrides: () => set({ shortcutOverrides: {} }),
+      setShortcutOverride: (id, shortcut) => {
+        const next = { ...get().shortcutOverrides, [id]: shortcut };
+        set({ shortcutOverrides: next });
+        queueSync({ shortcutOverrides: next });
+      },
+      resetShortcutOverrides: () => {
+        set({ shortcutOverrides: {} });
+        queueSync({ shortcutOverrides: {} });
+      },
       
       toggleFooter: () => set((s) => ({ footerVisible: !s.footerVisible })),
       setFooterVisible: (visible) => set({ footerVisible: visible }),

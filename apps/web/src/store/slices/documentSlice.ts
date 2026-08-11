@@ -106,6 +106,7 @@ export interface DocumentSlice {
   // Squad bench actions
   getSquad: () => SquadPlayer[];
   addSquadPlayer: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
+  addSquadPlayers: (players: Array<Omit<SquadPlayer, 'id'>>) => void;
   removeSquadPlayer: (id: string) => void;
   updateSquadPlayer: (id: string, updates: Partial<{ name: string; number: number; team: Team; isGoalkeeper: boolean }>) => void;
   setSquad: (squad: SquadPlayer[]) => void;
@@ -205,6 +206,7 @@ export const createDocumentSlice: StateCreator<
         historyIndex: 0,
         currentStepIndex: 0,
       });
+      get().markDirty();
       return true;
     },
     
@@ -247,6 +249,7 @@ export const createDocumentSlice: StateCreator<
           updatedAt: new Date().toISOString(),
         },
       });
+      get().markDirty();
     },
     
     getTeamSettings: () => get().document.teamSettings,
@@ -458,6 +461,8 @@ export const createDocumentSlice: StateCreator<
       
       if (transformedElements !== elements) {
         get().pushHistory();
+      } else {
+        get().markDirty();
       }
     },
     
@@ -503,6 +508,7 @@ export const createDocumentSlice: StateCreator<
           updatedAt: new Date().toISOString(),
         },
       });
+      get().markDirty();
     },
     
     getPlayerOrientationSettings: () => {
@@ -524,6 +530,7 @@ export const createDocumentSlice: StateCreator<
           updatedAt: new Date().toISOString(),
         },
       });
+      get().markDirty();
     },
 
     getPlayerDefaults: () => {
@@ -847,6 +854,23 @@ export const createDocumentSlice: StateCreator<
         document: {
           ...document,
           squad: [...currentSquad, newPlayer],
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      get().markDirty();
+    },
+
+    addSquadPlayers: (players) => {
+      if (players.length === 0) return;
+      const { document } = get();
+      const currentSquad = document.squad ?? DEFAULT_SQUAD;
+      const newPlayers = players.map((player) =>
+        createSquadPlayer(player.name, player.number, player.team, player.isGoalkeeper),
+      );
+      set({
+        document: {
+          ...document,
+          squad: [...currentSquad, ...newPlayers],
           updatedAt: new Date().toISOString(),
         },
       });

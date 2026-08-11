@@ -73,6 +73,7 @@ export type User = {
 
 export type UserPreferences = {
   theme?: 'light' | 'dark';
+  themeMode?: 'light' | 'dark' | 'system';
   gridVisible?: boolean;
   snapEnabled?: boolean;
   cheatSheetVisible?: boolean;
@@ -81,6 +82,8 @@ export type UserPreferences = {
   defaultArrowType?: string;
   stepDuration?: number;
   gridSize?: number;
+  squadBenchVisible?: boolean;
+  shortcutOverrides?: Record<string, string>;
   arrowDefaults?: {
     strokeWidth?: Record<string, number>;
     color?: Record<string, string>;

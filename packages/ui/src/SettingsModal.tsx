@@ -15,6 +15,7 @@ import { FaqSearch } from './FaqSearch.js';
 import { FaqCategory } from './FaqCategory.js';
 import { getFaqForPlan, searchFaq, type FaqCta } from './helpFaqData.js';
 import type { Plan } from './tutorialSteps.js';
+import { parseSquadRoster } from './squadRoster.js';
 
 export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'faq' | 'about' | 'data';
 
@@ -93,9 +94,10 @@ interface SettingsModalProps {
   squadVisible?: boolean;
   isPro?: boolean;
   onAddSquadPlayer?: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
+  onAddSquadPlayers?: (players: Array<Omit<SquadPlayer, 'id'>>) => void;
   onRemoveSquadPlayer?: (id: string) => void;
   /** For future use: inline editing of squad players */
-  onUpdateSquadPlayer?: (id: string, updates: Partial<{ name: string; number: number; team: Team }>) => void;
+  onUpdateSquadPlayer?: (id: string, updates: Partial<Omit<SquadPlayer, 'id'>>) => void;
   onSetSquadVisible?: (visible: boolean) => void;
   // Board document settings (moved here from the inspector)
   teamSettings?: TeamSettings;
@@ -150,7 +152,9 @@ export function SettingsModal({
   squadVisible = false,
   isPro = false,
   onAddSquadPlayer,
+  onAddSquadPlayers,
   onRemoveSquadPlayer,
+  onUpdateSquadPlayer,
   onSetSquadVisible,
   teamSettings,
   onUpdateTeam,
@@ -194,8 +198,47 @@ export function SettingsModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [faqSearch, setFaqSearch] = useState('');
   const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null);
+  const [squadName, setSquadName] = useState('');
+  const [squadNumber, setSquadNumber] = useState('');
+  const [squadTeam, setSquadTeam] = useState<Team>('home');
+  const [squadGoalkeeper, setSquadGoalkeeper] = useState(false);
+  const [showBulkSquad, setShowBulkSquad] = useState(false);
+  const [bulkSquad, setBulkSquad] = useState('');
+  const [bulkSquadError, setBulkSquadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) setFullName(user?.full_name || '');
+  }, [isOpen, user?.full_name]);
 
   if (!isOpen) return null;
+
+  const addSingleSquadPlayer = () => {
+    const name = squadName.trim();
+    const number = Number.parseInt(squadNumber, 10);
+    if (!name || !Number.isInteger(number) || number < 1 || number > 99 || !onAddSquadPlayer) return;
+    onAddSquadPlayer(name, number, squadTeam, squadGoalkeeper || number === 1);
+    setSquadName('');
+    setSquadNumber('');
+    setSquadGoalkeeper(false);
+  };
+
+  const addBulkSquadPlayers = () => {
+    const parsed = parseSquadRoster(bulkSquad, squadTeam, squad);
+    const remaining = Math.max(0, (isPro ? 100 : 5) - squad.length);
+    const accepted = parsed.players.slice(0, remaining);
+    if (accepted.length === 0) {
+      setBulkSquadError(t('settings.bulkNoValidPlayers'));
+      return;
+    }
+    if (onAddSquadPlayers) onAddSquadPlayers(accepted);
+    else accepted.forEach((player) => onAddSquadPlayer?.(player.name, player.number, player.team, player.isGoalkeeper));
+    setBulkSquad('');
+    setBulkSquadError(
+      parsed.invalidLines.length > 0
+        ? t('settings.bulkSkippedLines', { lines: parsed.invalidLines.join(', ') })
+        : null,
+    );
+  };
 
   const currentPlan: Plan = !user
     ? 'guest'
@@ -459,7 +502,7 @@ export function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -472,10 +515,10 @@ export function SettingsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-modal-title"
-        className="relative bg-surface rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[88vh] overflow-hidden border border-border flex flex-col"
+        className="relative bg-surface rounded-xl shadow-2xl w-full max-w-4xl h-[calc(100dvh-1rem)] sm:h-auto sm:mx-4 max-h-[calc(100dvh-1rem)] sm:max-h-[88vh] overflow-hidden border border-border flex flex-col"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <h2 id="settings-modal-title" className="text-xl font-bold text-text">{t('common.settings')}</h2>
           <button
             onClick={onClose}
@@ -489,13 +532,13 @@ export function SettingsModal({
         </div>
 
         {/* Body: sidebar nav + content */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0">
           {/* Sidebar */}
-          <nav className="w-44 flex-shrink-0 border-r border-border p-3 overflow-y-auto space-y-4">
+          <nav className="w-full sm:w-44 max-h-28 sm:max-h-none flex flex-shrink-0 gap-2 sm:block border-b sm:border-b-0 sm:border-r border-border p-2 sm:p-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto sm:space-y-4">
             {navGroups.map((grp) => (
-              <div key={grp.group}>
-                <p className="px-2 mb-1 text-[11px] font-semibold text-muted uppercase tracking-wide">{t(`settings.${grp.group}`)}</p>
-                <div className="space-y-0.5">
+              <div key={grp.group} className="shrink-0">
+                <p className="hidden sm:block px-2 mb-1 text-[11px] font-semibold text-muted uppercase tracking-wide">{t(`settings.${grp.group}`)}</p>
+                <div className="flex gap-1 sm:block sm:space-y-0.5">
                   {grp.items.map((tab) => (
                     <button
                       key={tab.id}
@@ -504,7 +547,7 @@ export function SettingsModal({
                         setError(null);
                         setSuccess(null);
                       }}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors ${
+                      className={`w-auto sm:w-full whitespace-nowrap flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-colors ${
                         activeTab === tab.id
                           ? 'bg-accent/10 text-accent font-medium'
                           : 'text-muted hover:text-text hover:bg-surface2'
@@ -520,7 +563,7 @@ export function SettingsModal({
           </nav>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 min-w-0">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0">
           {/* Error/Success Messages */}
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
@@ -1054,7 +1097,7 @@ export function SettingsModal({
                 </div>
               </div>
 
-              {!isPro ? (
+              {!isPro && (
                 <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
                   <p className="text-sm font-medium text-accent mb-1">⭐ {t('settings.proFeature')}</p>
                   <p className="text-xs text-muted">
@@ -1067,23 +1110,36 @@ export function SettingsModal({
                     {t('settings.upgradeProArrow')}
                   </button>
                 </div>
-              ) : squad.length >= 100 ? (
+              )}
+
+              {squad.length >= (isPro ? 100 : 5) && (
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                   <p className="text-sm text-yellow-600 dark:text-yellow-400">
                     ⭐ {t('settings.squadFull')}
                   </p>
                 </div>
-              ) : (
-                <>
+              )}
+              <>
+                {squad.length < (isPro ? 100 : 5) && (
+                  <>
                   {/* Add player form */}
-                  <div className="flex items-end gap-2">
+                  <form
+                    className="flex flex-wrap items-end gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      addSingleSquadPlayer();
+                    }}
+                  >
                     <div className="flex-1">
                       <label className="block text-xs font-medium text-muted mb-1">{t('settings.name')}</label>
                       <input
                         type="text"
                         placeholder={t('settings.playerName')}
+                        value={squadName}
+                        onChange={(event) => setSquadName(event.target.value)}
                         className="w-full px-3 py-2 bg-surface2 border border-border rounded-lg text-text text-sm placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
                         id="squad-name-input"
+                        data-testid="squad-name-input"
                       />
                     </div>
                     <div className="w-16">
@@ -1093,8 +1149,11 @@ export function SettingsModal({
                         min={1}
                         max={99}
                         placeholder={t('settings.numberPlaceholder')}
+                        value={squadNumber}
+                        onChange={(event) => setSquadNumber(event.target.value)}
                         className="w-full px-2 py-2 bg-surface2 border border-border rounded-lg text-text text-sm placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
                         id="squad-number-input"
+                        data-testid="squad-number-input"
                       />
                     </div>
                     <div className="w-24">
@@ -1102,6 +1161,8 @@ export function SettingsModal({
                       <select
                         className="w-full px-2 py-2 bg-surface2 border border-border rounded-lg text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                         id="squad-team-select"
+                        value={squadTeam}
+                        onChange={(event) => setSquadTeam(event.target.value as Team)}
                       >
                         {(['home', 'away', 'team3', 'team4'] as Team[]).map((team) => {
                           const settings = teamSettings?.[team] ?? DEFAULT_TEAM_SETTINGS[team] ?? DEFAULT_TEAM_SETTINGS.home;
@@ -1114,30 +1175,70 @@ export function SettingsModal({
                       </select>
                     </div>
                     <label className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-surface2 text-sm text-text cursor-pointer shrink-0">
-                      <input id="squad-gk-input" type="checkbox" className="accent-current" />
+                      <input
+                        id="squad-gk-input"
+                        type="checkbox"
+                        className="accent-current"
+                        checked={squadGoalkeeper}
+                        onChange={(event) => setSquadGoalkeeper(event.target.checked)}
+                      />
                       GK
                     </label>
                     <button
-                      onClick={() => {
-                        const nameInput = document.getElementById('squad-name-input') as HTMLInputElement;
-                        const numInput = document.getElementById('squad-number-input') as HTMLInputElement;
-                        const teamSelect = document.getElementById('squad-team-select') as HTMLSelectElement;
-                        const gkInput = document.getElementById('squad-gk-input') as HTMLInputElement;
-                        const name = nameInput?.value?.trim();
-                        const num = parseInt(numInput?.value || '0', 10);
-                        const team = (teamSelect?.value || 'home') as Team;
-                        if (name && num > 0 && onAddSquadPlayer) {
-                          onAddSquadPlayer(name, num, team, (gkInput?.checked ?? false) || num === 1);
-                          nameInput.value = '';
-                          numInput.value = '';
-                          if (gkInput) gkInput.checked = false;
-                        }
-                      }}
+                      type="submit"
+                      disabled={!squadName.trim() || !squadNumber || Number(squadNumber) < 1 || Number(squadNumber) > 99}
                       className="px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+                      data-testid="squad-add-player"
                     >
                       {t('settings.add')}
                     </button>
-                  </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBulkSquad((visible) => !visible);
+                        setBulkSquadError(null);
+                      }}
+                      className="px-3 py-2 bg-surface2 border border-border text-text text-sm font-medium rounded-lg hover:border-accent transition-colors"
+                      aria-expanded={showBulkSquad}
+                    >
+                      {t('settings.addMany')}
+                    </button>
+                  </form>
+
+                  {showBulkSquad && (
+                    <div className="space-y-2 p-3 border border-border rounded-lg bg-surface2/50">
+                      <label className="block text-xs font-medium text-muted" htmlFor="squad-bulk-input">
+                        {t('settings.bulkPlayersLabel')}
+                      </label>
+                      <textarea
+                        id="squad-bulk-input"
+                        value={bulkSquad}
+                        onChange={(event) => {
+                          setBulkSquad(event.target.value);
+                          setBulkSquadError(null);
+                        }}
+                        rows={6}
+                        placeholder={t('settings.bulkPlayersPlaceholder')}
+                        className="w-full resize-y px-3 py-2 bg-surface border border-border rounded-lg text-text text-sm placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
+                        data-testid="squad-bulk-input"
+                      />
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs text-muted">{t('settings.bulkPlayersHint')}</p>
+                        <button
+                          type="button"
+                          onClick={addBulkSquadPlayers}
+                          disabled={!bulkSquad.trim()}
+                          className="px-3 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm font-medium rounded-lg shrink-0"
+                          data-testid="squad-bulk-add"
+                        >
+                          {t('settings.addPlayers')}
+                        </button>
+                      </div>
+                      {bulkSquadError && <p className="text-xs text-yellow-500" role="status">{bulkSquadError}</p>}
+                    </div>
+                  )}
+                  </>
+                )}
 
                   {/* Player list */}
                   <div className="space-y-1 max-h-60 overflow-y-auto border border-border rounded-lg p-2">
@@ -1160,9 +1261,53 @@ export function SettingsModal({
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 text-white" style={{ backgroundColor: playerColor }}>
                               {player.number}
                             </span>
-                            <span className="text-sm text-text flex-1 truncate">{player.name}</span>
-                            {player.isGoalkeeper && <span className="text-[10px] font-semibold text-accent">GK</span>}
-                            <span className="text-[10px] text-muted uppercase">{teamLabel}</span>
+                            {onUpdateSquadPlayer ? (
+                              <>
+                                <input
+                                  type="text"
+                                  value={player.name}
+                                  onChange={(event) => onUpdateSquadPlayer(player.id, { name: event.target.value })}
+                                  className="min-w-0 flex-1 px-2 py-1 bg-surface border border-border rounded text-sm text-text"
+                                  aria-label={t('settings.editPlayerName', { name: player.name })}
+                                />
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={99}
+                                  value={player.number}
+                                  onChange={(event) => {
+                                    const number = Number(event.target.value);
+                                    if (number >= 1 && number <= 99) onUpdateSquadPlayer(player.id, { number });
+                                  }}
+                                  className="w-14 px-2 py-1 bg-surface border border-border rounded text-sm text-text"
+                                  aria-label={t('settings.editPlayerNumber', { name: player.name })}
+                                />
+                                <select
+                                  value={player.team}
+                                  onChange={(event) => onUpdateSquadPlayer(player.id, { team: event.target.value as Team })}
+                                  className="w-24 px-1 py-1 bg-surface border border-border rounded text-xs text-text"
+                                  aria-label={t('settings.editPlayerTeam', { name: player.name })}
+                                >
+                                  {(['home', 'away', 'team3', 'team4'] as Team[]).map((team) => (
+                                    <option key={team} value={team}>{teamSettings?.[team]?.name || team}</option>
+                                  ))}
+                                </select>
+                                <label className="flex items-center gap-1 text-[10px] font-semibold text-accent">
+                                  <input
+                                    type="checkbox"
+                                    checked={player.isGoalkeeper ?? false}
+                                    onChange={(event) => onUpdateSquadPlayer(player.id, { isGoalkeeper: event.target.checked })}
+                                  />
+                                  GK
+                                </label>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-sm text-text flex-1 truncate">{player.name}</span>
+                                {player.isGoalkeeper && <span className="text-[10px] font-semibold text-accent">GK</span>}
+                                <span className="text-[10px] text-muted uppercase">{teamLabel}</span>
+                              </>
+                            )}
                           {/* Delete */}
                           {onRemoveSquadPlayer && (
                             <button
@@ -1185,8 +1330,7 @@ export function SettingsModal({
                   <p className="text-xs text-muted">
                     {t('settings.squadTip')}
                   </p>
-                </>
-              )}
+              </>
             </div>
           )}
 
