@@ -133,6 +133,9 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 5. [x] **Customer Portal**: anulowanie, metoda płatności, dane klienta i pobieranie faktur zweryfikowane LIVE 2026-08-11.
 6. [x] **Zgoda konsumenta**: wymagany checkbox Stripe Checkout w EN/PL/ES obejmuje natychmiastowe rozpoczęcie świadczenia i utratę prawa odstąpienia. Stripe zapisuje akceptację Terms; sesja i subskrypcja zawierają wersję tekstu zgody w metadata.
 7. [x] **Odzyskiwanie płatności**: aktywne maile o nieudanej płatności i wygasającej karcie, hostowany link 3DS oraz anulowanie subskrypcji po wyczerpaniu prób.
+8. [x] **Waluta Checkout**: polska wersja wymusza PLN, a EN/ES USD, dzięki
+   czemu kwota w Stripe jest zgodna z ceną prezentowaną na stronie niezależnie
+   od heurystyki lokalizacyjnej i historii Customer.
 
 ### Krok 6 — Faktury (Invoicing)
 1. [x] Automatyczna faktura dla subskrypcji wygenerowana i dostępna w Portalu.

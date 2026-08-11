@@ -514,6 +514,7 @@ describe('Checkout Security (create-checkout.ts)', () => {
 
     const callArgs = mockCreate.mock.lastCall[0];
     expect(callArgs.locale).toBe('pl');
+    expect(callArgs.currency).toBe('pln');
     expect(callArgs.consent_collection).toEqual({ terms_of_service: 'required' });
     expect(callArgs.custom_text.terms_of_service_acceptance.message).toContain(
       'tracę ustawowe prawo odstąpienia',
@@ -523,6 +524,7 @@ describe('Checkout Security (create-checkout.ts)', () => {
     );
     expect(callArgs.metadata.terms_consent_version).toBe('2026-08-11');
     expect(callArgs.metadata.withdrawal_consent_required).toBe('true');
+    expect(callArgs.metadata.checkout_currency).toBe('pln');
     expect(callArgs.subscription_data.metadata.terms_consent_version).toBe('2026-08-11');
   });
 
@@ -537,6 +539,7 @@ describe('Checkout Security (create-checkout.ts)', () => {
 
     const callArgs = mockCreate.mock.lastCall[0];
     expect(callArgs.locale).toBe('en');
+    expect(callArgs.currency).toBe('usd');
     expect(callArgs.custom_text.terms_of_service_acceptance.message).toContain(
       'right of withdrawal',
     );

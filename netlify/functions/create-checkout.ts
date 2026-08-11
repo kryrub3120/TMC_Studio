@@ -165,10 +165,12 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       priceId?: string;
       successUrl?: string;
       cancelUrl?: string;
+      locale?: string;
     } = JSON.parse(event.body || '{}');
 
     const { priceId, successUrl, cancelUrl } = body;
     const checkoutLocale = getCheckoutLocale(body.locale);
+    const checkoutCurrency = checkoutLocale === 'pl' ? 'pln' : 'usd';
 
     // ── Validate priceId ─────────────────────────────────────────
     if (!priceId) {
@@ -230,6 +232,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       user_id: authUser.id,
       plan: tier,
       billing_cycle: billingCycle,
+      checkout_currency: checkoutCurrency,
       terms_consent_version: TERMS_CONSENT_VERSION,
       withdrawal_consent_required: 'true',
       created_at: new Date().toISOString(),
@@ -238,6 +241,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       locale: checkoutLocale,
+      currency: checkoutCurrency,
       payment_method_types: ['card'],
       line_items: [
         {
