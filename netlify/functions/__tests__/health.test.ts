@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resolveEnvironment } from '../health';
+import appPackage from '../../../package.json';
+import { APP_VERSION, resolveEnvironment } from '../health';
 
 describe('health environment', () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -12,5 +13,9 @@ describe('health environment', () => {
   it('keeps local and preview runtimes outside production', () => {
     vi.stubEnv('URL', 'http://localhost:8888');
     expect(resolveEnvironment()).toBe('development');
+  });
+
+  it('reports the shared monorepo product version', () => {
+    expect(APP_VERSION).toBe(appPackage.version);
   });
 });

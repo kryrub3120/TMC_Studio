@@ -7,6 +7,9 @@
  */
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import appPackage from '../../package.json';
+
+export const APP_VERSION = appPackage.version;
 
 export function resolveEnvironment(): 'production' | 'development' {
   return process.env.URL === 'https://tmcstudio.app'
@@ -18,7 +21,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
   const response = {
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
+    version: APP_VERSION,
     environment: resolveEnvironment(),
     functions: {
       health: true,
