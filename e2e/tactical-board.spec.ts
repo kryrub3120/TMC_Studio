@@ -247,6 +247,11 @@ test.describe('Tactical Board — Guest Golden Path', () => {
     await expect(viewport).toHaveAttribute('data-element-count', '2');
     await expect(page.getByTestId('set-zone-default')).toBeVisible();
     await expect(page.getByTestId('set-zone-default')).toContainText(/Ustaw jako domyślne|Set as default|Fijar como predeterminado/i);
+
+    for (const [key, testId] of [['p', 'set-player-default'], ['b', 'set-ball-default'], ['t', 'set-text-default'], ['k', 'set-equipment-default']] as const) {
+      await page.keyboard.press(key);
+      await expect(page.getByTestId(testId)).toBeVisible();
+    }
   });
 
   test('undo and redo restore board element changes', async ({ page }) => {

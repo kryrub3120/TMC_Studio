@@ -48,7 +48,7 @@ export function PricingPage() {
   const bool = (v: boolean) => (v ? '✓' : '—');
 
   const rows: { label: string; render: (p: Plan) => string }[] = [
-    { label: t('pricingPage.matrix.projects'), render: (p) => num(ENTITLEMENTS_BY_PLAN[p].maxProjects) },
+    { label: t('pricingPage.matrix.projects'), render: (p) => p === 'free' ? t('pricingPage.matrix.threePerType') : num(ENTITLEMENTS_BY_PLAN[p].maxProjects) },
     { label: t('pricingPage.matrix.steps'), render: (p) => num(ENTITLEMENTS_BY_PLAN[p].maxStepsPerProject) },
     { label: t('pricingPage.matrix.folders'), render: (p) => num(ENTITLEMENTS_BY_PLAN[p].maxFolders) },
     { label: t('pricingPage.matrix.cloudSync'), render: (p) => bool(ENTITLEMENTS_BY_PLAN[p].cloudSync) },

@@ -896,13 +896,14 @@ interface SquadPlayer {
 |---------|----------|
 | `Cmd+=` (plus) | Zoom in +25% |
 | `Cmd+-` (minus) | Zoom out -25% |
-| `+` / `=` (plain) | Zoom in +25% (gdy nie zaznaczono sprzętu) |
-| `-` (plain) | Zoom out -25% (gdy nie zaznaczono sprzętu) |
+| `+` / `=` (plain) | Increase selected element size by 10%; zoom in when nothing is selected |
+| `-` (plain) | Decrease selected element size by 10%; zoom out when nothing is selected |
+| `Scroll wheel` over selected element | Increase/decrease the element under the pointer |
 | `Ctrl+Scroll wheel` | Zoom to cursor position |
 | `0` (zero key) | Fit view (reset zoom + pan) |
 | Zoom Widget buttons | +/- 25% or Fit |
 
-**Note:** Plain `+`/`-` zoom shortcuts are disabled when equipment is selected (equipment scaling takes priority) and when viewport is locked.
+**Note:** Physical key codes are used for `+`/`-`, so resizing is reliable across keyboard layouts. Player/ball radius, equipment scale, zone dimensions, text size and arrow thickness are adjusted according to element type.
 
 **Auto-scale on browser resize:**
 - ResizeObserver on the measuring container detects container size changes
@@ -1185,6 +1186,14 @@ When pitch is in portrait mode:
 4. GK moves from left → top
 
 **Result:** Formations work correctly in both orientations
+
+### 6.6 Saved Lineups
+
+- Settings → Squad exposes three lineup slots.
+- A slot stores the selected team and the team's current players, including names, numbers, positions and appearance.
+- The user can save either Home or Away into each slot and apply it from Settings.
+- `Alt+1`, `Alt+2`, `Alt+3` apply slots 1-3 without opening a modal.
+- Applying a saved lineup replaces only players from the stored team and is undoable.
 
 ---
 
@@ -1689,7 +1698,10 @@ Dla Pro/Team — wszystkie opcje dostępne.
 - Rate-limited save failure toasts (5s cooldown)
 
 **Project structure:**
-- Each project has: `id`, `name`, `document`, `folder_id`, `user_id`, `created_at`, `updated_at`
+- Each project has: `id`, `name`, `description`, `document`, `folder_id`, `user_id`, `created_at`, `updated_at`
+- `document.projectType` distinguishes `graphic`, `exercise` and `session`; `document.lastOpenedAt` drives the dedicated last-opened sort.
+- The drawer provides type filters, description search and separate recent-edits / last-opened sorts.
+- Free accounts can store three projects of each type; Pro and Team are unlimited. Creation, duplication and type changes enforce the same limit.
 - Projects can be organized in folders
 - Folders have: `id`, `name`, `color`, `user_id`
 

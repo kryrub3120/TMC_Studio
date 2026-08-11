@@ -17,6 +17,7 @@ import type {
   PlayerDefaults,
   SquadPlayer,
   Position,
+  PlayerElement,
 } from '@tmc/core';
 import {
   DEFAULT_PITCH_CONFIG,
@@ -32,6 +33,7 @@ import {
   exportDocument,
   importDocument,
   isArrowElement,
+  isPlayerElement,
 } from '@tmc/core';
 import {
   isSupabaseEnabled,
@@ -112,6 +114,8 @@ export interface DocumentSlice {
   setSquad: (squad: SquadPlayer[]) => void;
   setSquadVisible: (visible: boolean) => void;
   toggleSquadVisible: () => void;
+  saveLineupPreset: (slot: number, team: Team, name?: string) => boolean;
+  applyLineupPreset: (slot: number) => boolean;
   
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
@@ -589,12 +593,14 @@ export const createDocumentSlice: StateCreator<
         if (cloudProjectId) {
           const project = await updateProject(cloudProjectId, {
             name: document.name,
+            description: updatedDoc.description ?? null,
             document: updatedDoc,
           });
           if (!project) throw new Error('Failed to update project');
         } else {
           const project = await createProject({
             name: document.name,
+            description: updatedDoc.description ?? null,
             document: updatedDoc,
           });
           if (!project) throw new Error('Failed to create project');
@@ -622,7 +628,7 @@ export const createDocumentSlice: StateCreator<
         const project = await getProject(projectId);
         if (!project) return false;
         
-        const doc = project.document;
+        const doc = { ...project.document, lastOpenedAt: new Date().toISOString() };
         const elements = doc.steps[0]?.elements ?? [];
         
         set({
@@ -634,6 +640,8 @@ export const createDocumentSlice: StateCreator<
           historyIndex: 0,
           currentStepIndex: 0,
         });
+
+        void updateProject(projectId, { document: doc }).catch(() => {});
         
         return true;
       } catch (error) {
@@ -901,6 +909,37 @@ export const createDocumentSlice: StateCreator<
         },
       });
       get().markDirty();
+    },
+
+    saveLineupPreset: (slot, team, name) => {
+      if (slot < 0 || slot > 2) return false;
+      const { document, elements } = get();
+      const players = elements.filter((element): element is PlayerElement => isPlayerElement(element) && element.team === team);
+      if (players.length === 0) return false;
+      const presets = [...(document.lineupPresets ?? [null, null, null])];
+      while (presets.length < 3) presets.push(null);
+      presets[slot] = {
+        name: name?.trim() || `${document.teamSettings?.[team]?.name ?? 'Team'} ${slot + 1}`,
+        team,
+        players: structuredClone(players),
+        updatedAt: new Date().toISOString(),
+      };
+      set({ document: { ...document, lineupPresets: presets, updatedAt: new Date().toISOString() } });
+      get().markDirty();
+      return true;
+    },
+
+    applyLineupPreset: (slot) => {
+      const { document, elements } = get();
+      const preset = document.lineupPresets?.[slot];
+      if (!preset) return false;
+      const retained = elements.filter((element) => !isPlayerElement(element) || element.team !== preset.team);
+      const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const players = preset.players.map((player, index) => ({ ...structuredClone(player), id: `lineup-${nonce}-${index}` }));
+      set({ elements: [...retained, ...players], selectedIds: players.map((player) => player.id) });
+      get().pushHistory();
+      get().markDirty();
+      return true;
     },
 
     setSquad: (squad) => {

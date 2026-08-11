@@ -217,6 +217,7 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
   const strokeColor = ball.strokeColor || '#1a1a1a';
   const strokeWidth = ball.strokeWidth ?? 2;
   const isCluster = ball.variant === 'cluster';
+  const visualScale = Math.max(0.45, Math.min(3, (ball.radius ?? BALL_RADIUS) / BALL_RADIUS));
 
   // Cluster layout: 5 balls in a tidy pile (offsets in px)
   const clusterOffsets = [
@@ -227,7 +228,7 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
     { x: 0, y: 0, s: 1.04 },
   ];
 
-  const selectionRadius = isCluster ? BALL_RADIUS + 16 : BALL_RADIUS + 5;
+  const selectionRadius = (isCluster ? BALL_RADIUS + 16 : BALL_RADIUS + 5) * visualScale;
 
   return (
     <Group
@@ -263,25 +264,27 @@ const BallNodeComponent: React.FC<BallNodeProps> = ({
         <Circle x={0} y={0} radius={selectionRadius} fill="rgba(0,0,0,0.001)" />
       )}
 
-      {isCluster ? (
-        clusterOffsets.map((o, i) => (
-          <Group key={i} x={o.x} y={o.y} scaleX={o.s} scaleY={o.s}>
-            <BallGraphic
-              fillColor={fillColor}
-              strokeColor={strokeColor}
-              strokeWidth={strokeWidth}
-              withShadow={!isDragging}
-            />
-          </Group>
-        ))
-      ) : (
-        <BallGraphic
-          fillColor={fillColor}
-          strokeColor={isSelected ? '#ffd60a' : strokeColor}
-          strokeWidth={isSelected ? 2.5 : strokeWidth}
-          withShadow={!isDragging}
-        />
-      )}
+      <Group scaleX={visualScale} scaleY={visualScale}>
+        {isCluster ? (
+          clusterOffsets.map((o, i) => (
+            <Group key={i} x={o.x} y={o.y} scaleX={o.s} scaleY={o.s}>
+              <BallGraphic
+                fillColor={fillColor}
+                strokeColor={strokeColor}
+                strokeWidth={strokeWidth}
+                withShadow={!isDragging}
+              />
+            </Group>
+          ))
+        ) : (
+          <BallGraphic
+            fillColor={fillColor}
+            strokeColor={isSelected ? '#ffd60a' : strokeColor}
+            strokeWidth={isSelected ? 2.5 : strokeWidth}
+            withShadow={!isDragging}
+          />
+        )}
+      </Group>
     </Group>
   );
 };

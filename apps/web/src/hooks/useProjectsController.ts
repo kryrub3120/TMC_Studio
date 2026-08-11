@@ -13,6 +13,7 @@
 import { logger } from '../lib/logger';
 import { useCallback, useState, useEffect } from 'react';
 import { useTranslation } from '@tmc/ui';
+import type { ProjectType } from '@tmc/core';
 import { useBoardStore } from '../store';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -48,11 +49,12 @@ export interface ProjectsController {
   // Project operations
   openDrawer: () => void;
   selectProject: (id: string) => Promise<void>;
-  createProject: () => Promise<void>;
+  createProject: (type?: ProjectType) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   duplicateProject: (id: string) => Promise<void>;
   renameProject: (newName: string) => void;
   renameProjectById: (projectId: string, newName: string) => Promise<void>;
+  updateCurrentProjectMetadata: (updates: { projectType?: ProjectType; description?: string }) => Promise<void>;
   refreshProjects: () => Promise<void>;
   
   // Folder operations
@@ -146,15 +148,14 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   /**
    * Create a new project with entitlement checks
    */
-  const createProject = useCallback(async () => {
+  const createProject = useCallback(async (type: ProjectType = 'graphic') => {
     // Calculate current project count
     let projectCount = 0;
     
     if (authIsAuthenticated) {
-      // For authenticated users: count cloud projects
-      projectCount = cloudProjects.length;
-      // If current project is unsaved (no cloudProjectId), it counts as a project
-      if (!cloudProjectId) {
+      // Free includes three items of each library type, rather than three total.
+      projectCount = cloudProjects.filter((project) => (project.document.projectType ?? 'graphic') === type).length;
+      if (!cloudProjectId && (boardDoc.projectType ?? 'graphic') === type) {
         projectCount += 1;
       }
     } else {
@@ -181,11 +182,19 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     
     // Free: soft-prompt at approaching limit
     if (authIsAuthenticated && !authIsPro && canCreate === 'soft-prompt') {
-      showToast(t('projectToast.limitFree', { count: cloudProjects.length + 1 }));
+      showToast(t('projectToast.limitFree', { count: projectCount + 1 }));
     }
 
     // Create the project
     newDocument();
+    useBoardStore.setState((state) => ({
+      document: {
+        ...state.document,
+        projectType: type,
+        description: '',
+        name: type === 'exercise' ? t('projects.defaultExerciseName') : type === 'session' ? t('projects.defaultSessionName') : state.document.name,
+      },
+    }));
     onCloseDrawer();
     showToast(t('projectToast.created'));
     
@@ -212,6 +221,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     cloudProjectId,
     elements.length,
     boardDoc.steps.length,
+    boardDoc.projectType,
     newDocument,
     showToast,
     saveToCloud,
@@ -220,6 +230,29 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     onOpenLimitModal,
     t,
   ]);
+
+  const updateCurrentProjectMetadata = useCallback(async (updates: { projectType?: ProjectType; description?: string }) => {
+    if (updates.projectType && updates.projectType !== (boardDoc.projectType ?? 'graphic') && authIsAuthenticated && !authIsPro) {
+      const projectCount = cloudProjects.filter((project) =>
+        project.id !== cloudProjectId && (project.document.projectType ?? 'graphic') === updates.projectType
+      ).length;
+      if (can('createProject', { projectCount }) === 'hard-block') {
+        onOpenLimitModal('free-project', projectCount, 3);
+        return;
+      }
+    }
+
+    useBoardStore.setState((state) => ({
+      document: {
+        ...state.document,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+    markDirty();
+    if (authIsAuthenticated) await saveToCloud();
+    await fetchCloudProjects();
+  }, [authIsAuthenticated, authIsPro, boardDoc.projectType, can, cloudProjectId, cloudProjects, fetchCloudProjects, markDirty, onOpenLimitModal, saveToCloud]);
   
   /**
    * Delete a project
@@ -241,6 +274,16 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     // Capture source metadata before we clear the cloud id (createProject only
     // persists name + document, so folder/tags/favorite/pinned must be re-applied).
     const source = cloudProjects.find((p) => p.id === id) ?? null;
+
+    if (source && authIsAuthenticated && !authIsPro) {
+      const sourceType = source.document.projectType ?? 'graphic';
+      const projectCount = cloudProjects.filter((project) => (project.document.projectType ?? 'graphic') === sourceType).length;
+      if (can('createProject', { projectCount }) === 'hard-block') {
+        onCloseDrawer();
+        onOpenLimitModal('free-project', projectCount, 3);
+        return;
+      }
+    }
 
     // Load the project first, then save as new (cloudProjectId will be cleared)
     const success = await loadFromCloud(id);
@@ -265,7 +308,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       await fetchCloudProjects();
       showToast(t('projectToast.duplicated'));
     }
-  }, [cloudProjects, loadFromCloud, saveToCloud, fetchCloudProjects, showToast, t]);
+  }, [authIsAuthenticated, authIsPro, can, cloudProjects, fetchCloudProjects, loadFromCloud, onCloseDrawer, onOpenLimitModal, saveToCloud, showToast, t]);
   
   /**
    * Rename current project
@@ -476,6 +519,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     duplicateProject,
     renameProject,
     renameProjectById,
+    updateCurrentProjectMetadata,
     refreshProjects,
     
     // Folder operations

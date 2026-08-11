@@ -51,6 +51,9 @@ export interface CreatePlayerOptions {
   radius?: number;
   label?: string;
   showLabel?: boolean;
+  fontSize?: number;
+  textColor?: string;
+  opacity?: number;
   gridSize?: number;
 }
 
@@ -67,6 +70,9 @@ export function createPlayer(options: CreatePlayerOptions): PlayerElement {
     radius,
     label,
     showLabel,
+    fontSize,
+    textColor,
+    opacity,
     gridSize = DEFAULT_PITCH_CONFIG.gridSize,
   } = options;
 
@@ -90,6 +96,9 @@ export function createPlayer(options: CreatePlayerOptions): PlayerElement {
   if (radius !== undefined) result.radius = radius;
   if (label !== undefined) result.label = label;
   if (showLabel !== undefined) result.showLabel = showLabel;
+  if (fontSize !== undefined) result.fontSize = fontSize;
+  if (textColor !== undefined) result.textColor = textColor;
+  if (opacity !== undefined) result.opacity = opacity;
   if (orientation === null) result.orientation = undefined;
 
   return result;
@@ -253,8 +262,11 @@ export function createText(
     fontFamily: options?.fontFamily ?? 'Inter',
     color: options?.color ?? '#ffffff',
     backgroundColor: options?.backgroundColor ?? '#ef4444',
+    borderColor: options?.borderColor,
+    borderWidth: options?.borderWidth,
     bold: options?.bold ?? false,
     italic: options?.italic ?? false,
+    textAlign: options?.textAlign ?? 'left',
   };
 }
 

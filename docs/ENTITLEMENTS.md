@@ -39,7 +39,7 @@ Each plan has a specific set of entitlements:
 
 | Entitlement | Guest | Free | Pro | Team |
 |-------------|-------|------|-----|------|
-| **Max Projects** | 1 | 3 | ∞ | ∞ |
+| **Max Projects** | 1 | 3 per type | ∞ | ∞ |
 | **Max Steps/Project** | 5 | 10 | ∞ | ∞ |
 | **Max Folders** | 0 | 3 | ∞ | ∞ |
 | **Cloud Sync** | ❌ | ✅ | ✅ | ✅ |
@@ -137,8 +137,10 @@ These actions check against numeric limits and support soft-prompts:
 **`createProject`**
 - Requires: `{ projectCount: number }`
 - Guest: hard-block at 1 project
-- Free: soft-prompt at 2, hard-block at 3 projects
+- Free: soft-prompt at 2 and hard-block at 3 projects of the requested type (`graphic`, `exercise` or `session`)
 - Pro/Team: always true
+
+The controller passes a per-type count and repeats the check for creation, duplication and project-type changes. The numeric entitlement remains `3`; its product meaning is three items in each library category.
 
 **`addStep`**
 - Requires: `{ stepCount: number }`

@@ -149,6 +149,9 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
         fillColor: local.zoneDefaults.fillColor,
         opacity: local.zoneDefaults.opacity,
       },
+      ballDefaults: local.ballDefaults,
+      textDefaults: local.textDefaults,
+      equipmentDefaults: local.equipmentDefaults,
       squadBenchVisible: local.squadBenchVisible,
       shortcutOverrides: local.shortcutOverrides,
       bottomBar: { height: local.bottomBarHeight, collapsed: local.bottomBarCollapsed },
@@ -184,6 +187,9 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
       zoneDefaults: { ...useUIStore.getState().zoneDefaults, ...cloudPrefs.zoneDefaults } as any,
     });
   }
+  if (cloudPrefs.ballDefaults) useUIStore.setState({ ballDefaults: { ...useUIStore.getState().ballDefaults, ...cloudPrefs.ballDefaults } });
+  if (cloudPrefs.textDefaults) useUIStore.setState({ textDefaults: { ...useUIStore.getState().textDefaults, ...cloudPrefs.textDefaults } });
+  if (cloudPrefs.equipmentDefaults) useUIStore.setState({ equipmentDefaults: { ...useUIStore.getState().equipmentDefaults, ...cloudPrefs.equipmentDefaults } });
   if (cloudPrefs.squadBenchVisible !== undefined) useUIStore.setState({ squadBenchVisible: cloudPrefs.squadBenchVisible });
   if (cloudPrefs.shortcutOverrides) useUIStore.setState({ shortcutOverrides: cloudPrefs.shortcutOverrides });
   if (cloudPrefs.bottomBar) {

@@ -94,8 +94,8 @@ function getNextPlayerNumber(elements: BoardElement[], team: Team, offset: numbe
 function resolvePlayerDefaults(
   team: Team,
   defaults: PlayerDefaults
-): { number?: number | null; shape?: PlayerShape; color?: string } {
-  const result: { number?: number | null; shape?: PlayerShape; color?: string } = {};
+): { number?: number | null; shape?: PlayerShape; color?: string; radius?: number; fontSize?: number; textColor?: string; opacity?: number; showLabel?: boolean } {
+  const result: { number?: number | null; shape?: PlayerShape; color?: string; radius?: number; fontSize?: number; textColor?: string; opacity?: number; showLabel?: boolean } = {};
   
   if (defaults.autoNumber) {
     // number resolved at call site (needs elements array)
@@ -106,6 +106,11 @@ function resolvePlayerDefaults(
   
   result.shape = team === 'home' ? defaults.homeShape : team === 'away' ? defaults.awayShape : undefined;
   result.color = team === 'home' ? defaults.homeColor : team === 'away' ? defaults.awayColor : undefined;
+  result.radius = defaults.radius;
+  result.fontSize = defaults.fontSize;
+  result.textColor = defaults.textColor;
+  result.opacity = defaults.opacity;
+  result.showLabel = defaults.showLabel;
   
   return result;
 }
@@ -279,6 +284,11 @@ export const createElementsSlice: StateCreator<
       number,
       shape: prefs.shape,
       color: prefs.color,
+      radius: prefs.radius,
+      fontSize: prefs.fontSize,
+      textColor: prefs.textColor,
+      opacity: prefs.opacity,
+      showLabel: prefs.showLabel,
       gridSize: getGridSize(),
     });
     get().addElement(player);
@@ -287,6 +297,7 @@ export const createElementsSlice: StateCreator<
   addPlayerFromSquad: (team, name, number, dropPosition, isGoalkeeper) => {
     const { cursorPosition, document } = get();
     const position = dropPosition ?? cursorPosition ?? getBoardCenter(document);
+    const prefs = resolvePlayerDefaults(team, document.playerDefaults ?? DEFAULT_PLAYER_DEFAULTS);
     const player = createPlayer({
       position,
       team,
@@ -294,6 +305,12 @@ export const createElementsSlice: StateCreator<
       label: name,
       showLabel: true,
       isGoalkeeper: isGoalkeeper ?? number === 1,
+      shape: prefs.shape,
+      color: prefs.color,
+      radius: prefs.radius,
+      fontSize: prefs.fontSize,
+      textColor: prefs.textColor,
+      opacity: prefs.opacity,
       gridSize: getGridSize(),
     });
     get().addElement(player);
@@ -303,6 +320,7 @@ export const createElementsSlice: StateCreator<
     const { cursorPosition, document } = get();
     const position = cursorPosition ?? getBoardCenter(document);
     const ball = createBall(position, getGridSize());
+    Object.assign(ball, useUIStore.getState().ballDefaults);
     get().addElement(ball);
   },
   
@@ -310,6 +328,7 @@ export const createElementsSlice: StateCreator<
     const { cursorPosition, document } = get();
     const position = cursorPosition ?? getBoardCenter(document);
     const ball = createBall(position, getGridSize(), 'cluster');
+    Object.assign(ball, useUIStore.getState().ballDefaults);
     get().addElement(ball);
   },
   
@@ -353,7 +372,7 @@ export const createElementsSlice: StateCreator<
   addTextAtCursor: () => {
     const { cursorPosition, document } = get();
     const position = cursorPosition ?? getBoardCenter(document);
-    const text = createText(snapToGrid(position, getGridSize()), 'Text');
+    const text = createText(snapToGrid(position, getGridSize()), 'Text', useUIStore.getState().textDefaults);
     get().addElement(text);
   },
   
@@ -361,6 +380,7 @@ export const createElementsSlice: StateCreator<
     const { cursorPosition, document } = get();
     const position = cursorPosition ?? getBoardCenter(document);
     const equipment = createEquipment(position, equipmentType, variant, getGridSize());
+    Object.assign(equipment, useUIStore.getState().equipmentDefaults[equipmentType] ?? {});
     get().addElement(equipment);
   },
 
@@ -1137,6 +1157,11 @@ export const createElementsSlice: StateCreator<
         number: pos.number,
         shape: prefs.shape,
         color: prefs.color,
+        radius: prefs.radius,
+        fontSize: prefs.fontSize,
+        textColor: prefs.textColor,
+        opacity: prefs.opacity,
+        showLabel: prefs.showLabel,
         isGoalkeeper,
       });
     });

@@ -631,6 +631,7 @@ export function BoardPage(props: BoardPageProps) {
           onUpdateElement={handlers.handleUpdateElement}
           onSetArrowDefault={handlers.handleSetArrowDefault}
           onSetZoneDefault={handlers.handleSetZoneDefault}
+          onSetElementDefault={handlers.handleSetElementDefault}
           onToggleSelectedLock={state.toggleSelectedLock}
           onSelectElement={(id) => state.selectElement(id, false)}
           onToggleLayerVisibility={state.toggleLayerVisibility}

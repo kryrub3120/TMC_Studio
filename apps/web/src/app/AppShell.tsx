@@ -365,7 +365,7 @@ export function AppShell() {
   const projectItems: ProjectItem[] = cloudProjects.map((p) => ({
     id: p.id,
     name: p.name,
-    updatedAt: p.updated_at,
+    updatedAt: p.document.updatedAt ?? p.updated_at,
     thumbnailUrl: p.thumbnail_url ?? undefined,
     isCloud: true,
     saveStatus: cloudProjectId === p.id ? projectSaveStatus : undefined,
@@ -373,6 +373,9 @@ export function AppShell() {
     tags: p.tags ?? undefined,
     isFavorite: p.is_favorite ?? false,
     isPinned: p.is_pinned ?? false,
+    projectType: p.document.projectType ?? 'graphic',
+    description: p.description ?? p.document.description ?? undefined,
+    lastOpenedAt: p.document.lastOpenedAt,
   }));
 
   // Club Welcome Modal trigger: show once for first-time Club Premium admins
@@ -534,6 +537,7 @@ export function AppShell() {
         onRenameFolder={handleRenameFolderById}
         onMoveFolderToParent={projectsController.moveFolderToParent}
         onRefreshProjects={projectsController.refreshProjects}
+        onUpdateCurrentProjectMetadata={projectsController.updateCurrentProjectMetadata}
         onOpenCreateFolderModal={(parentId?: string | null) => {
           setCreateFolderParentId(parentId ?? null);
           setCreateFolderModalOpen(true);
@@ -609,6 +613,15 @@ export function AppShell() {
         onRemoveSquadPlayer={(id) => removeSquadPlayer(id)}
         onUpdateSquadPlayer={(id, updates) => useBoardStore.getState().updateSquadPlayer(id, updates)}
         onSetSquadVisible={(visible) => setSquadBenchVisible(visible)} // UX-C: redirect to UI preference
+        lineupPresets={document.lineupPresets}
+        onSaveLineupPreset={(slot, team) => {
+          const saved = useBoardStore.getState().saveLineupPreset(slot, team);
+          showToast(saved ? t('settings.lineupSaved', { slot: slot + 1 }) : t('settings.lineupNeedsPlayers'));
+        }}
+        onApplyLineupPreset={(slot) => {
+          const applied = useBoardStore.getState().applyLineupPreset(slot);
+          showToast(applied ? t('settings.lineupApplied', { slot: slot + 1 }) : t('settings.lineupEmpty'));
+        }}
         // Board settings (Teams / Pitch — moved from inspector)
         teamSettings={document.teamSettings ?? DEFAULT_TEAM_SETTINGS}
         onUpdateTeam={updateTeamSettings}

@@ -8,7 +8,7 @@ import { Toggle, SettingRow, SegmentedControl, Slider } from './primitives.js';
 import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset, LineupPreset } from '@tmc/core';
 import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
 import { OrganizationPanel, type OrganizationPanelProps } from './OrganizationPanel.js';
 import { FaqSearch } from './FaqSearch.js';
@@ -150,6 +150,9 @@ interface SettingsModalProps {
   /** For future use: inline editing of squad players */
   onUpdateSquadPlayer?: (id: string, updates: Partial<Omit<SquadPlayer, 'id'>>) => void;
   onSetSquadVisible?: (visible: boolean) => void;
+  lineupPresets?: Array<LineupPreset | null>;
+  onSaveLineupPreset?: (slot: number, team: Team) => void;
+  onApplyLineupPreset?: (slot: number) => void;
   // Board document settings (moved here from the inspector)
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
@@ -208,6 +211,9 @@ export function SettingsModal({
   onRemoveSquadPlayer,
   onUpdateSquadPlayer,
   onSetSquadVisible,
+  lineupPresets = [],
+  onSaveLineupPreset,
+  onApplyLineupPreset,
   teamSettings,
   onUpdateTeam,
   pitchSettings,
@@ -1189,6 +1195,30 @@ export function SettingsModal({
                   </p>
                 </div>
               )}
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-text">{t('settings.savedLineups')}</h4>
+                  <p className="text-xs text-muted">{t('settings.savedLineupsHint')}</p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[0, 1, 2].map((slot) => {
+                    const preset = lineupPresets[slot];
+                    return (
+                      <div key={slot} className="rounded-md bg-surface2 p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-text">Alt+{slot + 1}</span>
+                          <span className="truncate text-[10px] text-muted">{preset?.name ?? t('settings.emptySlot')}</span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-1">
+                          <button type="button" onClick={() => onSaveLineupPreset?.(slot, 'home')} className="rounded border border-border px-1.5 py-1 text-[10px] text-text hover:border-accent">{t('settings.saveTeam1')}</button>
+                          <button type="button" onClick={() => onSaveLineupPreset?.(slot, 'away')} className="rounded border border-border px-1.5 py-1 text-[10px] text-text hover:border-accent">{t('settings.saveTeam2')}</button>
+                        </div>
+                        <button type="button" disabled={!preset} onClick={() => onApplyLineupPreset?.(slot)} className="mt-1 w-full rounded bg-accent px-1.5 py-1 text-[10px] font-medium text-white disabled:opacity-40">{t('settings.applyLineup')}</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               <>
                 {squad.length < (isPro ? 100 : 5) && (
                   <>

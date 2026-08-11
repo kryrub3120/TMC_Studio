@@ -5,7 +5,7 @@
 
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, isTextElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, isTextElement, isBallElement, isEquipmentElement, hasPosition } from '@tmc/core';
 import { useTranslation, type InspectorElement, type ElementInList, type SettingsTab } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -318,10 +318,25 @@ export function useBoardPageState(props: BoardPageProps) {
       } satisfies InspectorElement as InspectorElement;
     }
 
+    if (isEquipmentElement(selectedElement)) {
+      return {
+        id: selectedElement.id,
+        type: 'equipment',
+        x: selectedElement.position.x,
+        y: selectedElement.position.y,
+        locked: selectedElement.locked === true,
+        equipmentType: selectedElement.equipmentType,
+        variant: selectedElement.variant,
+        rotation: selectedElement.rotation,
+        color: selectedElement.color,
+        scale: selectedElement.scale,
+      } satisfies InspectorElement;
+    }
+
     if (hasPosition(selectedElement)) {
       return {
         id: selectedElement.id,
-        type: selectedElement.type as 'player' | 'ball',
+        type: selectedElement.type as 'player' | 'ball' | 'text',
         team: isPlayerElement(selectedElement) ? selectedElement.team : undefined,
         number: isPlayerElement(selectedElement) ? selectedElement.number : undefined,
         label: isPlayerElement(selectedElement) ? selectedElement.label : undefined,
@@ -329,6 +344,16 @@ export function useBoardPageState(props: BoardPageProps) {
         fontSize: isPlayerElement(selectedElement) ? selectedElement.fontSize : undefined,
         textColor: isPlayerElement(selectedElement) ? selectedElement.textColor : undefined,
         opacity: isPlayerElement(selectedElement) ? selectedElement.opacity : undefined,
+        radius: isPlayerElement(selectedElement) || isBallElement(selectedElement) ? selectedElement.radius : undefined,
+        shape: isPlayerElement(selectedElement) ? selectedElement.shape : undefined,
+        color: isBallElement(selectedElement) || isTextElement(selectedElement) ? selectedElement.color : isPlayerElement(selectedElement) ? selectedElement.color : undefined,
+        strokeColor: isBallElement(selectedElement) ? selectedElement.strokeColor : undefined,
+        strokeWidth: isBallElement(selectedElement) ? selectedElement.strokeWidth : undefined,
+        fontFamily: isTextElement(selectedElement) ? selectedElement.fontFamily : undefined,
+        backgroundColor: isTextElement(selectedElement) ? selectedElement.backgroundColor : undefined,
+        bold: isTextElement(selectedElement) ? selectedElement.bold : undefined,
+        italic: isTextElement(selectedElement) ? selectedElement.italic : undefined,
+        textAlign: isTextElement(selectedElement) ? selectedElement.textAlign : undefined,
         locked: selectedElement.locked === true,
         x: selectedElement.position.x,
         y: selectedElement.position.y,

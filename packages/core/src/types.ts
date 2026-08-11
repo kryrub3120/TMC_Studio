@@ -54,6 +54,8 @@ export interface PlayerElement extends BoardElementBase {
 /** Ball element on the board */
 export interface BallElement extends BoardElementBase {
   type: 'ball';
+  /** Custom ball size (default: 12). */
+  radius?: number;
   /** Fill color (default: #ffffff) */
   color?: string;
   /** Stroke color (default: #1a1a1a) */
@@ -482,6 +484,12 @@ export interface PlayerDefaults {
   homeColor?: string;
   /** Default fill color override for new away players (undefined = team primaryColor) */
   awayColor?: string;
+  /** Shared appearance defaults for newly created players. */
+  radius?: number;
+  fontSize?: number;
+  textColor?: string;
+  opacity?: number;
+  showLabel?: boolean;
 }
 
 /** User-level default style for newly created arrows. */
@@ -524,6 +532,49 @@ export const DEFAULT_ZONE_DEFAULTS: ZoneDefaults = {
   opacity: 0.25,
 };
 
+/** User-level default style for newly created balls. */
+export interface BallDefaults {
+  color: string;
+  strokeColor: string;
+  strokeWidth: number;
+  radius: number;
+}
+
+export const DEFAULT_BALL_DEFAULTS: BallDefaults = {
+  color: '#ffffff',
+  strokeColor: '#1a1a1a',
+  strokeWidth: 2,
+  radius: 12,
+};
+
+/** User-level default style for newly created text labels. */
+export interface TextDefaults {
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  bold: boolean;
+  italic: boolean;
+  textAlign: TextAlign;
+}
+
+export const DEFAULT_TEXT_DEFAULTS: TextDefaults = {
+  fontSize: 22,
+  fontFamily: 'Inter',
+  color: '#ffffff',
+  backgroundColor: '#ef4444',
+  bold: false,
+  italic: false,
+  textAlign: 'left',
+};
+
+/** Per-equipment-type defaults preserve the user's preferred size and color. */
+export type EquipmentDefaults = Partial<Record<EquipmentType, Pick<EquipmentElement, 'variant' | 'rotation' | 'color' | 'scale'>>>;
+
+export const DEFAULT_EQUIPMENT_DEFAULTS: EquipmentDefaults = {};
+
 /** A predefined player in the squad bench (Pro feature) */
 export interface SquadPlayer {
   id: string;
@@ -544,11 +595,28 @@ export const DEFAULT_PLAYER_DEFAULTS: PlayerDefaults = {
 };
 
 /** Complete board document for save/load */
+export type ProjectType = 'graphic' | 'exercise' | 'session';
+
+export interface LineupPreset {
+  name: string;
+  team: Team;
+  players: PlayerElement[];
+  updatedAt: string;
+}
+
 export interface BoardDocument {
   version: string;
   name: string;
   createdAt: string;
   updatedAt: string;
+  /** Library classification. Older documents are treated as graphic. */
+  projectType?: ProjectType;
+  /** Coach-facing notes shown in the project library. */
+  description?: string;
+  /** Separate from updatedAt so the library can sort by actual usage. */
+  lastOpenedAt?: string;
+  /** Up to three user-defined lineups, applied with Alt+1..3. */
+  lineupPresets?: Array<LineupPreset | null>;
   currentStepIndex: number;
   steps: Step[];
   pitchConfig: PitchConfig;

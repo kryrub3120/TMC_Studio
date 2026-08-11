@@ -39,6 +39,49 @@ test.describe('Board responsive shell', () => {
     expect(await scrollArea.evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
   });
 
+  test('projects drawer exposes graphics, exercises and session plans without horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/board');
+    await page.locator('[data-tour="projects"] button').first().click();
+    const drawer = page.locator('[data-tour="projects-panel"]');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByTestId('create-graphic-project')).toBeVisible();
+    await expect(drawer.getByTestId('create-exercise-project')).toBeVisible();
+    await expect(drawer.getByTestId('create-session-project')).toBeVisible();
+    const dimensions = await drawer.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  });
+
+  test('Free plan enforces three projects per library type', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('tmc-cookie-consent', JSON.stringify({ analytics: false, ts: 'e2e' }));
+      localStorage.setItem('tmc-studio-dev-cloud-user', 'dev-free-project-limit');
+      localStorage.setItem('tmc-auth', JSON.stringify({
+        state: {
+          isInitialized: true,
+          isMockUser: true,
+          isAuthenticated: true,
+          isPro: false,
+          isTeam: false,
+          user: { id: 'dev-free-project-limit', email: 'free-projects@tmcstudio.test', full_name: 'Free Projects', subscription_tier: 'free' },
+        },
+        version: 0,
+      }));
+      localStorage.setItem('tmc-ui-settings', JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }));
+    });
+    await page.goto('/board');
+
+    for (let count = 0; count < 3; count += 1) {
+      await page.locator('[data-tour="projects"] button').first().click();
+      await page.getByTestId('create-exercise-project').click();
+      await page.waitForTimeout(200);
+    }
+
+    await page.locator('[data-tour="projects"] button').first().click();
+    await page.getByTestId('create-exercise-project').click();
+    await expect(page.getByRole('heading', { name: /Osiągnięto limit planu Free|Free plan limit reached|Límite del plan Free/i })).toBeVisible();
+  });
+
   test('settings use full-width content below scrollable tabs on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(() => {

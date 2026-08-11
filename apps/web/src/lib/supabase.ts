@@ -7,7 +7,7 @@
 
 import { logger } from './logger';
 import { createClient, SupabaseClient, type User as SupabaseAuthUser } from '@supabase/supabase-js';
-import type { BoardDocument } from '@tmc/core';
+import type { BoardDocument, BallDefaults, TextDefaults, EquipmentDefaults } from '@tmc/core';
 // DEV-ONLY: see ./devCloud.ts for details. Safe to remove together with
 // devCloud.ts and the isDevCloudActive() guards below.
 import { isDevCloudActive } from './devCloud';
@@ -98,6 +98,9 @@ export type UserPreferences = {
     fillColor?: string;
     opacity?: number;
   };
+  ballDefaults?: BallDefaults;
+  textDefaults?: TextDefaults;
+  equipmentDefaults?: EquipmentDefaults;
 };
 
 const authLocaleSyncs = new Set<string>();

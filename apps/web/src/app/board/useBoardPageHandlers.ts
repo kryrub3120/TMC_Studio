@@ -5,7 +5,7 @@
 
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { ArrowType, Position, PlayerElement as PlayerElementType, Team, ZoneShape, TextAlign } from '@tmc/core';
-import { isPlayerElement, isTextElement, isZoneElement, isArrowElement } from '@tmc/core';
+import { isPlayerElement, isTextElement, isZoneElement, isArrowElement, isBallElement, isEquipmentElement } from '@tmc/core';
 import { useTranslation, type CommandAction } from '@tmc/ui';
 import { createCommandActions } from '../../commands/commandPalette/createCommandActions';
 import { useBoardStore } from '../../store';
@@ -292,6 +292,59 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
       fillColor: z.fillColor,
       opacity: z.opacity,
     });
+    showToast(t('inspector.setAsDefaultDone'));
+  }, [showToast, t]);
+
+  const handleSetElementDefault = useCallback(() => {
+    const store = useBoardStore.getState();
+    if (store.selectedIds.length !== 1) return;
+    const el = store.elements.find((item) => item.id === store.selectedIds[0]);
+    if (!el) return;
+
+    if (isPlayerElement(el)) {
+      const teamPatch = el.team === 'home'
+        ? { homeShape: el.shape, homeColor: el.color }
+        : el.team === 'away'
+          ? { awayShape: el.shape, awayColor: el.color }
+          : {};
+      store.updatePlayerDefaults({
+        ...teamPatch,
+        radius: el.radius,
+        fontSize: el.fontSize,
+        textColor: el.textColor,
+        opacity: el.opacity,
+        showLabel: el.showLabel,
+      });
+    } else if (isBallElement(el)) {
+      useUIStore.getState().setBallDefaults({
+        color: el.color ?? '#ffffff',
+        strokeColor: el.strokeColor ?? '#1a1a1a',
+        strokeWidth: el.strokeWidth ?? 2,
+        radius: el.radius ?? 12,
+      });
+    } else if (isTextElement(el)) {
+      useUIStore.getState().setTextDefaults({
+        fontSize: el.fontSize,
+        fontFamily: el.fontFamily,
+        color: el.color,
+        backgroundColor: el.backgroundColor,
+        borderColor: el.borderColor,
+        borderWidth: el.borderWidth,
+        bold: el.bold,
+        italic: el.italic,
+        textAlign: el.textAlign ?? 'left',
+      });
+    } else if (isEquipmentElement(el)) {
+      useUIStore.getState().setEquipmentDefaults(el.equipmentType, {
+        variant: el.variant,
+        rotation: el.rotation,
+        color: el.color,
+        scale: el.scale,
+      });
+    } else {
+      return;
+    }
+
     showToast(t('inspector.setAsDefaultDone'));
   }, [showToast, t]);
 
@@ -755,5 +808,6 @@ export function useBoardPageHandlers(input: BoardPageHandlersInput) {
     handleOrientationCommit,
     handleSetArrowDefault,
     handleSetZoneDefault,
+    handleSetElementDefault,
   };
 }

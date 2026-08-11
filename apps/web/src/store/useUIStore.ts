@@ -7,8 +7,8 @@ import { logger } from '../lib/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
-import type { ArrowType, ArrowDefaults, ZoneDefaults } from '@tmc/core';
-import { DEFAULT_ARROW_DEFAULTS, DEFAULT_ZONE_DEFAULTS } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, BallDefaults, TextDefaults, EquipmentDefaults, EquipmentType } from '@tmc/core';
+import { DEFAULT_ARROW_DEFAULTS, DEFAULT_ZONE_DEFAULTS, DEFAULT_BALL_DEFAULTS, DEFAULT_TEXT_DEFAULTS, DEFAULT_EQUIPMENT_DEFAULTS } from '@tmc/core';
 import { updatePreferences, isSupabaseEnabled } from '../lib/supabase';
 
 /** Active tool types */
@@ -124,6 +124,9 @@ interface UIState {
   arrowDefaults: ArrowDefaults;
   /** User-level default style for new zones (persisted). */
   zoneDefaults: ZoneDefaults;
+  ballDefaults: BallDefaults;
+  textDefaults: TextDefaults;
+  equipmentDefaults: EquipmentDefaults;
   footerVisible: boolean;
   hasSeenShortcutsHint: boolean;
 
@@ -211,6 +214,9 @@ interface UIState {
   setArrowDefaults: (patch: Partial<ArrowDefaults>) => void;
   /** Patch zone defaults. */
   setZoneDefaults: (patch: Partial<ZoneDefaults>) => void;
+  setBallDefaults: (patch: Partial<BallDefaults>) => void;
+  setTextDefaults: (patch: Partial<TextDefaults>) => void;
+  setEquipmentDefaults: (type: EquipmentType, patch: NonNullable<EquipmentDefaults[EquipmentType]>) => void;
   /** Reset element defaults to built-in values. */
   resetElementDefaults: () => void;
   setShortcutOverride: (id: string, shortcut: string) => void;
@@ -411,6 +417,9 @@ export const useUIStore = create<UIState>()(
       defaultArrowType: 'pass',
       arrowDefaults: DEFAULT_ARROW_DEFAULTS,
       zoneDefaults: DEFAULT_ZONE_DEFAULTS,
+      ballDefaults: DEFAULT_BALL_DEFAULTS,
+      textDefaults: DEFAULT_TEXT_DEFAULTS,
+      equipmentDefaults: DEFAULT_EQUIPMENT_DEFAULTS,
       footerVisible: true,
       hasSeenShortcutsHint: false, // One-time hint tracking
       bottomBarHeight: DEFAULT_BOTTOM_BAR_HEIGHT,
@@ -550,9 +559,36 @@ export const useUIStore = create<UIState>()(
         set({ zoneDefaults: next });
         queueSync({ zoneDefaults: next });
       },
+      setBallDefaults: (patch) => {
+        const next = { ...get().ballDefaults, ...patch };
+        set({ ballDefaults: next });
+        queueSync({ ballDefaults: next });
+      },
+      setTextDefaults: (patch) => {
+        const next = { ...get().textDefaults, ...patch };
+        set({ textDefaults: next });
+        queueSync({ textDefaults: next });
+      },
+      setEquipmentDefaults: (type, patch) => {
+        const next = { ...get().equipmentDefaults, [type]: { ...(get().equipmentDefaults[type] ?? {}), ...patch } };
+        set({ equipmentDefaults: next });
+        queueSync({ equipmentDefaults: next });
+      },
       resetElementDefaults: () => {
-        set({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS });
-        queueSync({ arrowDefaults: DEFAULT_ARROW_DEFAULTS, zoneDefaults: DEFAULT_ZONE_DEFAULTS });
+        set({
+          arrowDefaults: DEFAULT_ARROW_DEFAULTS,
+          zoneDefaults: DEFAULT_ZONE_DEFAULTS,
+          ballDefaults: DEFAULT_BALL_DEFAULTS,
+          textDefaults: DEFAULT_TEXT_DEFAULTS,
+          equipmentDefaults: DEFAULT_EQUIPMENT_DEFAULTS,
+        });
+        queueSync({
+          arrowDefaults: DEFAULT_ARROW_DEFAULTS,
+          zoneDefaults: DEFAULT_ZONE_DEFAULTS,
+          ballDefaults: DEFAULT_BALL_DEFAULTS,
+          textDefaults: DEFAULT_TEXT_DEFAULTS,
+          equipmentDefaults: DEFAULT_EQUIPMENT_DEFAULTS,
+        });
       },
       setShortcutOverride: (id, shortcut) => {
         const next = { ...get().shortcutOverrides, [id]: shortcut };
@@ -762,6 +798,9 @@ export const useUIStore = create<UIState>()(
         defaultArrowType: state.defaultArrowType,
         arrowDefaults: state.arrowDefaults,
         zoneDefaults: state.zoneDefaults,
+        ballDefaults: state.ballDefaults,
+        textDefaults: state.textDefaults,
+        equipmentDefaults: state.equipmentDefaults,
         stepDuration: state.stepDuration,
         footerVisible: state.footerVisible,
         inspectorOpen: state.inspectorOpen,

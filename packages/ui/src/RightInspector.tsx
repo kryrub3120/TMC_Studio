@@ -11,7 +11,7 @@ import { useTranslation } from './i18n.js';
 
 export interface InspectorElement {
   id: string;
-  type: 'player' | 'ball' | 'arrow' | 'zone' | 'text';
+  type: 'player' | 'ball' | 'arrow' | 'zone' | 'text' | 'equipment';
   team?: Team;
   number?: number | null; // Can be null for players without numbers
   label?: string;
@@ -36,6 +36,18 @@ export interface InspectorElement {
   borderColor?: string;
   borderWidth?: number;
   showCorners?: boolean;
+  radius?: number;
+  shape?: 'circle' | 'square' | 'triangle' | 'diamond';
+  strokeColor?: string;
+  fontFamily?: string;
+  backgroundColor?: string;
+  bold?: boolean;
+  italic?: boolean;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  equipmentType?: 'goal' | 'mannequin' | 'cone' | 'ladder' | 'hoop' | 'hurdle' | 'pole';
+  variant?: 'standard' | 'mini' | 'tall' | 'flat' | 'wall_3';
+  rotation?: number;
+  scale?: number;
 }
 
 export interface ElementInList {
@@ -79,6 +91,8 @@ export interface RightInspectorProps {
   onSetArrowDefault?: () => void;
   /** Save the selected zone's current style as the user default. */
   onSetZoneDefault?: () => void;
+  /** Save the selected player, ball, text or equipment style as its default. */
+  onSetElementDefault?: () => void;
   onToggleSelectedLock?: () => void;
   /** Ref forwarded to the player label input for Enter→focus from keyboard */
   labelInputRef?: React.RefObject<HTMLInputElement>;
@@ -308,6 +322,7 @@ const PropsTab: React.FC<{
   onSetArrowDefault?: () => void;
   /** Save the selected zone's current style as the user default. */
   onSetZoneDefault?: () => void;
+  onSetElementDefault?: () => void;
   onToggleSelectedLock?: () => void;
   onQuickAction?: (action: string) => void;
   playerOrientationSettings?: { enabled: boolean; showArms: boolean; showVision: boolean; zoomThreshold: number };
@@ -320,7 +335,7 @@ const PropsTab: React.FC<{
   onUpdateSelectedElements?: (updates: { opacity?: number; showLabel?: boolean }) => void;
   /** Ref for label input (Sprint A — Enter→focus) */
   labelInputRef?: React.RefObject<HTMLInputElement>;
-}> = ({ selectedCount, selectedElement, onUpdateElement, onToggleSelectedLock, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, onUpdateSelectedElements, labelInputRef, onSetArrowDefault, onSetZoneDefault }) => {
+}> = ({ selectedCount, selectedElement, onUpdateElement, onToggleSelectedLock, onQuickAction, playerOrientationSettings, onUpdatePlayerOrientation, onToggleAutoNumbering, isAutoNumbering, onRenumberArrows, onUpdateSelectedElements, labelInputRef, onSetArrowDefault, onSetZoneDefault, onSetElementDefault }) => {
   const [multiOpacity, setMultiOpacity] = useState(100);
   const [showCoordinates, setShowCoordinates] = useState(() => {
     try { return localStorage.getItem('inspector_showCoordinates') !== 'false'; } catch { return true; }
@@ -455,6 +470,9 @@ const PropsTab: React.FC<{
               <div className="mt-3">
                 <Slider label={t('inspector.opacity')} value={Math.round((el.opacity ?? 1) * 100)} min={10} max={100} format={(v) => `${v}%`} onChange={(v) => onUpdateElement?.({ opacity: v / 100 })} />
               </div>
+              {onSetElementDefault && (
+                <SetAsDefaultButton onClick={onSetElementDefault} testId="set-player-default" />
+              )}
             </Section>
 
             <Section title={t('inspector.role')} collapsible={false}>
@@ -701,6 +719,13 @@ const PropsTab: React.FC<{
             {onSetZoneDefault && (
               <SetAsDefaultButton onClick={onSetZoneDefault} testId="set-zone-default" />
             )}
+          </Section>
+        )}
+
+        {(el.type === 'ball' || el.type === 'text' || el.type === 'equipment') && onSetElementDefault && (
+          <Section title={t('inspector.appearance')} collapsible={false}>
+            <p className="text-xs leading-relaxed text-muted">{t('inspector.setAsDefaultHint')}</p>
+            <SetAsDefaultButton onClick={onSetElementDefault} testId={`set-${el.type}-default`} />
           </Section>
         )}
       </div>
@@ -973,6 +998,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onUpdateSelectedElements,
   onSetArrowDefault,
   onSetZoneDefault,
+  onSetElementDefault,
   width = DEFAULT_INSPECTOR_WIDTH,
   minWidth = MIN_INSPECTOR_WIDTH,
   maxWidth = MAX_INSPECTOR_WIDTH,
@@ -1065,6 +1091,7 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
         onUpdateSelectedElements={onUpdateSelectedElements}
         onSetArrowDefault={onSetArrowDefault}
         onSetZoneDefault={onSetZoneDefault}
+        onSetElementDefault={onSetElementDefault}
       />
     ) : activeTab === 'layers' ? (
       <div className="flex flex-col h-full">

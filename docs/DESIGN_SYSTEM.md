@@ -275,7 +275,7 @@ Wszystkie komponenty znajdują się w `packages/ui/src/`. Są eksportowane z `pa
 
 | Komponent | Props | Opis |
 |-----------|-------|------|
-| **ProjectsDrawer** | `projects`, `folders`, `onSelect`, `onCreateFolder`, `onMoveToFolder`, `onDelete`, `onRename`, `onPin`, `onDuplicate`, `onColorChange` | Drawer z listą projektów. Obsługuje: foldery, pinowanie, przeciąganie (FIX-6B) |
+| **ProjectsDrawer** | `projects`, `folders`, `onSelect`, `onCreateProject(type)`, `onUpdateCurrentProjectMetadata`, `onCreateFolder`, `onMoveToFolder`, `onDelete`, `onRename`, `onPin`, `onDuplicate`, `onColorChange` | Responsywny drawer biblioteki. Obsługuje grafiki, ćwiczenia i konspekty, opis bieżącego projektu, filtrowanie typu, wyszukiwanie, sortowanie, foldery, pinowanie i przeciąganie. |
 | **ContextMenu** | (patrz Core) | Używany w ProjectsDrawer dla prawokliku na projekt/folder |
 | **FolderColorPicker** | `currentColor`, `onSelect` | Wybór koloru dla folderu |
 | **FolderOptionsModal** | `folder`, `onUpdate`, `onDelete` | Opcje folderu (rename, kolor, delete) |

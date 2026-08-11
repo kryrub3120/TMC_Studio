@@ -157,6 +157,24 @@ test.describe('Settings persistence', () => {
     expect(zone).toMatchObject({ borderStyle: 'dashed', fillColor: '#ff6b6b' });
   });
 
+  test('saved lineup restores named players with Alt+1', async ({ page }) => {
+    const viewport = page.getByTestId('board-viewport');
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Delete');
+    await page.keyboard.press('p');
+    await page.keyboard.press('p');
+    await expect(viewport).toHaveAttribute('data-element-count', '2');
+
+    await openSettings(page, /Skład|Squad|Plantilla/i);
+    await page.getByRole('button', { name: /Zapisz D1|Save T1|Guardar E1/i }).first().click();
+    await closeSettings(page);
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Delete');
+    await expect(viewport).toHaveAttribute('data-element-count', '0');
+    await page.keyboard.press('Alt+1');
+    await expect(viewport).toHaveAttribute('data-element-count', '2');
+  });
+
   test('plus and minus resize selected equipment on the board', async ({ page }) => {
     await page.keyboard.press('Control+a');
     await page.keyboard.press('Delete');

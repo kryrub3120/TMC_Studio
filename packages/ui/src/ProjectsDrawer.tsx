@@ -7,6 +7,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmModal } from './ConfirmModal';
 import { useTranslation } from './i18n.js';
+import type { ProjectType } from '@tmc/core';
 
 export interface ProjectItem {
   id: string;
@@ -16,6 +17,9 @@ export interface ProjectItem {
   isCloud: boolean;
   isFavorite?: boolean;
   isPinned?: boolean;
+  projectType?: ProjectType;
+  description?: string;
+  lastOpenedAt?: string;
   tags?: string[];
   folderId?: string | null;
   /** Save status: 'saved' | 'saving' | 'unsaved' | 'error' | undefined */
@@ -148,6 +152,7 @@ function sortProjects(list: ProjectItem[], sort: SortOption): ProjectItem[] {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       }
       case 'last-opened':
+        return new Date(b.lastOpenedAt ?? 0).getTime() - new Date(a.lastOpenedAt ?? 0).getTime();
       case 'recent':
       default:
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -164,7 +169,7 @@ interface ProjectsDrawerProps {
   isAuthenticated: boolean;
   isLoading: boolean;
   onSelectProject: (id: string) => void;
-  onCreateProject: () => void;
+  onCreateProject: (type?: ProjectType) => void;
   onDeleteProject: (id: string) => void;
   onDuplicateProject: (id: string) => void;
   onCreateFolder?: (parentFolderId?: string | null) => void;
@@ -179,6 +184,7 @@ interface ProjectsDrawerProps {
   onMoveFolderToParent?: (folderId: string, parentId: string | null, position: number) => void;
   onSignIn: () => void;
   onRefresh?: () => void;
+  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string }) => void;
 }
 
 export function ProjectsDrawer({
@@ -205,12 +211,15 @@ export function ProjectsDrawer({
   onMoveFolderToParent,
   onSignIn,
   onRefresh,
+  onUpdateCurrentProjectMetadata,
 }: ProjectsDrawerProps) {
   const { t } = useTranslation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [typeFilter, setTypeFilter] = useState<'all' | ProjectType>('all');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
   
@@ -273,13 +282,26 @@ export function ProjectsDrawer({
 
   // Search-filtered projects
   const searchFilteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return projects;
+    const typeFiltered = typeFilter === 'all'
+      ? projects
+      : projects.filter((project) => (project.projectType ?? 'graphic') === typeFilter);
+    if (!searchQuery.trim()) return typeFiltered;
     const query = searchQuery.toLowerCase();
-    return projects.filter(p =>
+    return typeFiltered.filter(p =>
       p.name.toLowerCase().includes(query) ||
+      p.description?.toLowerCase().includes(query) ||
       p.tags?.some(t => t.toLowerCase().includes(query))
     );
-  }, [projects, searchQuery]);
+  }, [projects, searchQuery, typeFilter]);
+
+  const currentProject = useMemo(
+    () => projects.find((project) => project.id === currentProjectId),
+    [currentProjectId, projects],
+  );
+
+  useEffect(() => {
+    setDescriptionDraft(currentProject?.description ?? '');
+  }, [currentProject?.description, currentProjectId]);
 
   // Projects grouped by folder (direct children only)
   const projectsByFolder = useMemo(() => {
@@ -712,6 +734,9 @@ export function ProjectsDrawer({
               {project.isFavorite && <span className="text-[10px]">⭐</span>}
               {project.isPinned && <span className="text-[10px]">📌</span>}
               <span className="text-xs font-medium truncate">{project.name}</span>
+              <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[9px] font-medium uppercase text-muted">
+                {t(`projects.type.${project.projectType ?? 'graphic'}`)}
+              </span>
               {/* Save status indicator */}
               {project.saveStatus === 'saving' && (
                 <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse flex-shrink-0" title={t('projects.saving')} />
@@ -727,6 +752,7 @@ export function ProjectsDrawer({
               )}
             </div>
           )}
+          {project.description && <p className="truncate text-[10px] text-muted">{project.description}</p>}
           <span className="text-[10px] text-muted">{formatDate(project.updatedAt)}</span>
         </div>
         {/* Current badge */}
@@ -861,7 +887,7 @@ export function ProjectsDrawer({
                   onClick={(e) => {
                     e.stopPropagation();
                     // Create project inside this folder
-                    onCreateProject();
+                    onCreateProject('graphic');
                     // Move to this folder after creation would need backend support;
                     // for now user can drag it in
                   }}
@@ -886,7 +912,7 @@ export function ProjectsDrawer({
       />
 
       {/* Drawer */}
-      <div data-tour="projects-panel" className="relative w-80 max-w-[90vw] h-full bg-surface border-r border-border shadow-2xl flex flex-col animate-slide-in-left">
+      <div data-tour="projects-panel" className="relative w-[420px] max-w-full h-full bg-surface border-r border-border shadow-2xl flex flex-col animate-slide-in-left">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
@@ -915,22 +941,64 @@ export function ProjectsDrawer({
           </button>
         </div>
 
-        {/* New Project Button */}
-        <div className="p-4 border-b border-border">
-          <button
-            onClick={onCreateProject}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent/90 text-white font-medium rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {t('projects.newProject')}
-          </button>
+        <div className="grid grid-cols-3 gap-2 p-4 border-b border-border">
+          {(['graphic', 'exercise', 'session'] as ProjectType[]).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => onCreateProject(type)}
+              data-testid={`create-${type}-project`}
+              className="min-w-0 px-2 py-2.5 bg-surface2 border border-border text-text text-xs font-medium rounded-md hover:border-accent hover:text-accent transition-colors"
+            >
+              <span className="block text-base leading-none mb-1" aria-hidden="true">{type === 'graphic' ? '▧' : type === 'exercise' ? '△' : '≡'}</span>
+              {t(`projects.type.${type}`)}
+            </button>
+          ))}
         </div>
+
+        {currentProject && onUpdateCurrentProjectMetadata && (
+          <div className="p-4 border-b border-border space-y-2">
+            <div className="flex items-center gap-2">
+              <label htmlFor="project-type" className="text-xs font-medium text-muted">{t('projects.kind')}</label>
+              <select
+                id="project-type"
+                value={currentProject.projectType ?? 'graphic'}
+                onChange={(event) => onUpdateCurrentProjectMetadata({ projectType: event.target.value as ProjectType })}
+                className="ml-auto bg-surface2 border border-border rounded-md px-2 py-1 text-xs text-text"
+              >
+                {(['graphic', 'exercise', 'session'] as ProjectType[]).map((type) => <option key={type} value={type}>{t(`projects.type.${type}`)}</option>)}
+              </select>
+            </div>
+            <textarea
+              value={descriptionDraft}
+              onChange={(event) => setDescriptionDraft(event.target.value)}
+              onBlur={() => {
+                if (descriptionDraft !== (currentProject.description ?? '')) onUpdateCurrentProjectMetadata({ description: descriptionDraft.trim() });
+              }}
+              rows={3}
+              maxLength={1000}
+              placeholder={t('projects.descriptionPlaceholder')}
+              className="w-full resize-none bg-surface2 border border-border rounded-md px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
+              data-testid="project-description"
+            />
+          </div>
+        )}
 
         {/* Search and Sort */}
         {isAuthenticated && projects.length > 0 && (
           <div className="p-4 border-b border-border space-y-3">
+            <div className="grid grid-cols-4 gap-1" role="tablist" aria-label={t('projects.filterByType')}>
+              {(['all', 'graphic', 'exercise', 'session'] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setTypeFilter(type)}
+                  className={`px-1.5 py-1.5 rounded-md text-[11px] font-medium ${typeFilter === type ? 'bg-accent text-white' : 'bg-surface2 text-muted hover:text-text'}`}
+                >
+                  {type === 'all' ? t('projects.type.all') : t(`projects.type.${type}`)}
+                </button>
+              ))}
+            </div>
             {/* Search */}
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">

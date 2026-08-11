@@ -19,7 +19,7 @@ import {
   type SettingsTab,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer, ProjectType, LineupPreset } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -67,7 +67,7 @@ interface ModalOrchestratorProps {
   currentProjectId: string | null;
   projectsIsLoading: boolean;
   onSelectProject: (projectId: string) => void;
-  onCreateProject: () => void;
+  onCreateProject: (type?: ProjectType) => void;
   onDeleteProject: (projectId: string) => void;
   onDuplicateProject: (projectId: string) => void;
   onToggleFavorite: (projectId: string) => void;
@@ -80,6 +80,7 @@ interface ModalOrchestratorProps {
   onRenameFolder?: (folderId: string, newName: string) => void;
   onMoveFolderToParent?: (folderId: string, parentId: string | null, position: number) => void;
   onRefreshProjects: () => void;
+  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string }) => void;
   onOpenCreateFolderModal: (parentFolderId?: string | null) => void;
   
   // Create Folder Modal
@@ -137,6 +138,9 @@ interface ModalOrchestratorProps {
   onRemoveSquadPlayer?: (id: string) => void;
   onUpdateSquadPlayer?: (id: string, updates: Partial<Omit<SquadPlayer, 'id'>>) => void;
   onSetSquadVisible?: (visible: boolean) => void;
+  lineupPresets?: Array<LineupPreset | null>;
+  onSaveLineupPreset?: (slot: number, team: Team) => void;
+  onApplyLineupPreset?: (slot: number) => void;
   // Board settings (Teams / Pitch — moved from the inspector)
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
@@ -245,6 +249,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
           props.onOpenAuthModal();
         }}
         onRefresh={props.onRefreshProjects}
+        onUpdateCurrentProjectMetadata={props.onUpdateCurrentProjectMetadata}
       />
       
       {/* Create Folder Modal */}
@@ -308,6 +313,9 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onRemoveSquadPlayer={props.onRemoveSquadPlayer}
         onUpdateSquadPlayer={props.onUpdateSquadPlayer}
         onSetSquadVisible={props.onSetSquadVisible}
+        lineupPresets={props.lineupPresets}
+        onSaveLineupPreset={props.onSaveLineupPreset}
+        onApplyLineupPreset={props.onApplyLineupPreset}
         teamSettings={props.teamSettings}
         onUpdateTeam={props.onUpdateTeam}
         pitchSettings={props.pitchSettings}
