@@ -87,9 +87,9 @@ type CheckoutLocale = 'en' | 'pl' | 'es';
 
 const TERMS_CONSENT_VERSION = '2026-08-11';
 const TERMS_CONSENT_COPY: Record<CheckoutLocale, string> = {
-  en: 'I request immediate access to the digital service and acknowledge that, once performance begins, I lose my statutory right of withdrawal. I accept the TMC Studio Terms of Service.',
-  pl: 'Żądam natychmiastowego rozpoczęcia świadczenia usługi cyfrowej i przyjmuję do wiadomości, że po rozpoczęciu świadczenia tracę ustawowe prawo odstąpienia. Akceptuję Regulamin TMC Studio.',
-  es: 'Solicito el acceso inmediato al servicio digital y reconozco que, una vez iniciada la prestación, pierdo mi derecho legal de desistimiento. Acepto los Términos de servicio de TMC Studio.',
+  en: 'I request immediate access to the digital service and acknowledge that, once performance begins, I lose my statutory right of withdrawal. I accept the TMC Studio Terms: https://tmcstudio.app/terms/',
+  pl: 'Żądam natychmiastowego rozpoczęcia świadczenia usługi cyfrowej i przyjmuję do wiadomości, że po rozpoczęciu świadczenia tracę ustawowe prawo odstąpienia. Akceptuję Regulamin TMC Studio: https://tmcstudio.app/pl/terms/',
+  es: 'Solicito el acceso inmediato al servicio digital y reconozco que, una vez iniciada la prestación, pierdo mi derecho legal de desistimiento. Acepto los Términos de TMC Studio: https://tmcstudio.app/es/terms/',
 };
 
 function getCheckoutLocale(value: unknown): CheckoutLocale {

@@ -518,6 +518,9 @@ describe('Checkout Security (create-checkout.ts)', () => {
     expect(callArgs.custom_text.terms_of_service_acceptance.message).toContain(
       'tracę ustawowe prawo odstąpienia',
     );
+    expect(callArgs.custom_text.terms_of_service_acceptance.message).toContain(
+      'https://tmcstudio.app/pl/terms/',
+    );
     expect(callArgs.metadata.terms_consent_version).toBe('2026-08-11');
     expect(callArgs.metadata.withdrawal_consent_required).toBe('true');
     expect(callArgs.subscription_data.metadata.terms_consent_version).toBe('2026-08-11');
