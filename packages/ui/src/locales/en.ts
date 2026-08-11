@@ -124,6 +124,18 @@ export const en = {
         "shareTitle": "Ready to share",
         "shareDesc": "Export PNG, GIF, PDF or SVG in one keystroke."
     },
+    "workflow": {
+        "eyebrow": "One coaching library",
+        "title": "From an idea on the pitch to a complete session plan",
+        "desc": "Do more than save an image. Keep the diagram, turn it into a reusable drill and place it in a complete training session with timing, squad, staff and equipment.",
+        "graphicTitle": "1. Diagram",
+        "graphicDesc": "Draw the setup, movement and decisive zones on a keyboard-fast tactics board.",
+        "exerciseTitle": "2. Drill",
+        "exerciseDesc": "Add the objective, organization, duration, player count, coaching points and progression.",
+        "sessionTitle": "3. Session plan",
+        "sessionDesc": "Order the drills, assign staff and squad, then download a PDF or print the plan.",
+        "cta": "Build a training session"
+    },
     "keyboard": {
         "title": "Keyboard-first, mouse-optional",
         "desc": "Every action has a shortcut, so your hands never leave the keys.",
@@ -885,7 +897,7 @@ export const en = {
   coaching: {
     library: 'Library', projectName: 'Project name', saving: 'Saving…', saved: 'Saved', saveError: 'Save error', help: 'Quick guide', quickStart: 'Quick start', start: 'Start working', backToBoard: 'Back to board',
     exercise: {
-      workspaceTitle: 'Exercise editor', nameLabel: 'Exercise name', graphic: 'Tactical graphic', editGraphic: 'Edit graphic on board', editGraphicShort: 'Edit', drawOnBoard: 'Back to board and draw', openBoard: 'Back to board and draw', backToExercise: 'Finish graphic editing', noGraphic: 'Choose a saved graphic or open the board editor to draw one.', chooseGraphic: 'Choose graphic from library', duration: 'Duration (min)', players: 'Players', category: 'Category / phase', categoryPlaceholder: 'e.g. warm-up, pressing, build-up', objective: 'Training objective', objectivePlaceholder: 'What should the players learn?', description: 'Exercise content', descriptionPlaceholder: 'Describe the rules and flow of the exercise.', organization: 'Organization', coachingPoints: 'Coaching points', progression: 'Progression / regressions', equipment: 'Equipment',
+      workspaceTitle: 'Exercise editor', nameLabel: 'Exercise name', graphic: 'Tactical graphic', editGraphic: 'Edit graphic on board', editGraphicShort: 'Edit', drawOnBoard: 'Back to board and draw', openBoard: 'Back to board and draw', backToExercise: 'Finish graphic editing', noGraphic: 'Choose a saved graphic or open the board editor to draw one.', chooseGraphic: 'Choose graphic from library', downloadPdf: 'Download PDF', print: 'Print', pdfError: 'We could not create the PDF. Please try again.', duration: 'Duration (min)', players: 'Players', category: 'Category / phase', categoryPlaceholder: 'e.g. warm-up, pressing, build-up', objective: 'Training objective', objectivePlaceholder: 'What should the players learn?', description: 'Exercise content', descriptionPlaceholder: 'Describe the rules and flow of the exercise.', organization: 'Organization', coachingPoints: 'Coaching points', progression: 'Progression / regressions', equipment: 'Equipment',
       guide: { title: 'Create a complete exercise', 1: { title: 'Add the graphic', body: 'Choose an existing drawing or enter the board editor and prepare a new setup.' }, 2: { title: 'Describe the work', body: 'Set the objective, organization, duration, number of players and equipment.' }, 3: { title: 'Save and reuse', body: 'The exercise is saved automatically and becomes available in every session plan.' } },
     },
     session: {

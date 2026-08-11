@@ -126,6 +126,18 @@ export const es: Dictionary = {
         "shareTitle": "Listo para compartir",
         "shareDesc": "Exporta PNG, GIF, PDF o SVG con una sola tecla."
     },
+    "workflow": {
+        "eyebrow": "Una biblioteca para el entrenador",
+        "title": "De una idea en el campo a una sesión completa",
+        "desc": "No te quedes en una imagen. Guarda el gráfico, conviértelo en un ejercicio reutilizable y añádelo a una sesión completa con tiempos, plantilla, cuerpo técnico y material.",
+        "graphicTitle": "1. Gráfico",
+        "graphicDesc": "Dibuja la organización, los movimientos y las zonas clave en una pizarra táctica rápida.",
+        "exerciseTitle": "2. Ejercicio",
+        "exerciseDesc": "Añade objetivo, organización, duración, jugadores, puntos de entrenamiento y progresión.",
+        "sessionTitle": "3. Sesión",
+        "sessionDesc": "Ordena los ejercicios, asigna cuerpo técnico y plantilla, y descarga el PDF o imprime.",
+        "cta": "Crear una sesión"
+    },
     "keyboard": {
         "title": "Primero el teclado, el ratón es opcional",
         "desc": "Cada acción tiene un atajo, así tus manos no dejan las teclas.",
@@ -707,7 +719,7 @@ export const es: Dictionary = {
   coaching: {
     library: 'Biblioteca', projectName: 'Nombre del proyecto', saving: 'Guardando…', saved: 'Guardado', saveError: 'Error al guardar', help: 'Guía rápida', quickStart: 'Inicio rápido', start: 'Empezar', backToBoard: 'Volver a la pizarra',
     exercise: {
-      workspaceTitle: 'Editor de ejercicio', nameLabel: 'Nombre del ejercicio', graphic: 'Gráfico táctico', editGraphic: 'Editar gráfico en la pizarra', editGraphicShort: 'Editar', drawOnBoard: 'Volver a la pizarra y dibujar', openBoard: 'Volver a la pizarra y dibujar', backToExercise: 'Terminar edición del gráfico', noGraphic: 'Elige un gráfico guardado o abre la pizarra para crear uno.', chooseGraphic: 'Elegir gráfico de la biblioteca', duration: 'Duración (min)', players: 'Jugadores', category: 'Categoría / fase', categoryPlaceholder: 'p. ej. calentamiento, presión, salida', objective: 'Objetivo', objectivePlaceholder: '¿Qué deben aprender los jugadores?', description: 'Contenido del ejercicio', descriptionPlaceholder: 'Describe las reglas y el desarrollo.', organization: 'Organización', coachingPoints: 'Puntos de entrenamiento', progression: 'Progresión / regresión', equipment: 'Material',
+      workspaceTitle: 'Editor de ejercicio', nameLabel: 'Nombre del ejercicio', graphic: 'Gráfico táctico', editGraphic: 'Editar gráfico en la pizarra', editGraphicShort: 'Editar', drawOnBoard: 'Volver a la pizarra y dibujar', openBoard: 'Volver a la pizarra y dibujar', backToExercise: 'Terminar edición del gráfico', noGraphic: 'Elige un gráfico guardado o abre la pizarra para crear uno.', chooseGraphic: 'Elegir gráfico de la biblioteca', downloadPdf: 'Descargar PDF', print: 'Imprimir', pdfError: 'No se pudo crear el PDF. Inténtalo de nuevo.', duration: 'Duración (min)', players: 'Jugadores', category: 'Categoría / fase', categoryPlaceholder: 'p. ej. calentamiento, presión, salida', objective: 'Objetivo', objectivePlaceholder: '¿Qué deben aprender los jugadores?', description: 'Contenido del ejercicio', descriptionPlaceholder: 'Describe las reglas y el desarrollo.', organization: 'Organización', coachingPoints: 'Puntos de entrenamiento', progression: 'Progresión / regresión', equipment: 'Material',
       guide: { title: 'Crea un ejercicio completo', 1: { title: 'Añade el gráfico', body: 'Elige un dibujo existente o prepara uno nuevo en el editor de pizarra.' }, 2: { title: 'Describe el trabajo', body: 'Define objetivo, organización, duración, jugadores y material.' }, 3: { title: 'Guarda y reutiliza', body: 'El ejercicio se guarda automáticamente y queda disponible en cada sesión.' } },
     },
     session: {

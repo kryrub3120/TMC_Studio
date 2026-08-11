@@ -2,7 +2,7 @@
 
 **Version:** 1.1.0 (of this document)  
 **Created:** 2026-06-13  
-**Updated:** 2026-06-13 (sek 8-10: agent instructions + dynamic footer)  
+**Updated:** 2026-08-12 (current version and monorepo alignment)
 **Status:** Active Policy  
 **Applies to:** Web, Mobile (iOS/Android), Desktop (macOS/Windows/Linux)
 
@@ -42,7 +42,7 @@ MAJOR.MINOR.PATCH+PRE_RELEASE
 | `0.2.0` | Feature expansion | Animation system, export |
 | `0.3.0` | New capabilities | Cloud sync, auth |
 | `0.4.0` | Polish + onboarding | Tutorial, help sidebar |
-| `0.6.0` | Current version | Squad Bench redesign, export 100% resolution, 4 teams, i18n PL/EN/ES, UI redesign Fazy 1-4, Settings rozbudowa, tłumaczenia |
+| `0.11.0` | Current version | Coaching library, exercise editor, session planner, dedicated PDF exports, EN/PL/ES marketing and SEO |
 | `0.x.y` | Pre-1.0 development | `0` = breaking changes happen at any minor bump |
 
 **Rule:** In `0.x.y` phase, a `MINOR` bump can include breaking changes if clearly documented.
@@ -145,12 +145,12 @@ All packages in the monorepo **must share the same product version**.
 
 | Package | Current Version | Policy |
 |---------|----------------|--------|
-| `@tmc/web` | `0.5.0` | Leading version — source of truth |
-| `@tmc/core` | `0.5.0` | Locked to web version |
-| `@tmc/ui` | `0.5.0` | Locked to web version |
-| `@tmc/board` | `0.5.0` | Locked to web version |
-| `@tmc/presets` | `0.5.0` | Locked to web version |
-| `tmc-studio` (root) | `0.5.0` | Workspace metadata only |
+| `@tmc/web` | `0.11.0` | Leading version — source of truth |
+| `@tmc/core` | `0.11.0` | Locked to web version |
+| `@tmc/ui` | `0.11.0` | Locked to web version |
+| `@tmc/board` | `0.11.0` | Locked to web version |
+| `@tmc/presets` | `0.11.0` | Locked to web version |
+| `tmc-studio` (root) | `0.11.0` | Workspace metadata only |
 
 **Exception:** If a package is publicly published to npm, it needs independent SemVer. Currently all packages are `"private": true`.
 

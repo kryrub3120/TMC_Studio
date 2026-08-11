@@ -354,6 +354,13 @@ export function LandingPage() {
             priceCurrency: structuredPriceCurrency,
           },
           description: t('seo.landing.description'),
+          featureList: [
+            t('landing.workflow.graphicTitle'),
+            t('landing.workflow.exerciseTitle'),
+            t('landing.workflow.sessionTitle'),
+            t('coaching.exercise.downloadPdf'),
+            t('coaching.session.downloadPdf'),
+          ],
           url: language === 'en' ? 'https://tmcstudio.app/' : `https://tmcstudio.app/${language}/`,
         },
         {
@@ -485,6 +492,48 @@ export function LandingPage() {
               <Pillar icon={ICONS.steps} title={t('landing.pillars.stepsTitle')} desc={t('landing.pillars.stepsDesc')} />
               <Pillar icon={ICONS.browser} title={t('landing.pillars.everywhereTitle')} desc={t('landing.pillars.everywhereDesc')} />
               <Pillar icon={ICONS.share} title={t('landing.pillars.shareTitle')} desc={t('landing.pillars.shareDesc')} />
+            </div>
+          </div>
+        </Section>
+
+        {/* 5b. Complete coaching workflow */}
+        <Section className="border-t border-border">
+          <div className="mx-auto max-w-6xl px-4 md:px-8">
+            <Eyebrow>{t('landing.workflow.eyebrow')}</Eyebrow>
+            <h2 className="mx-auto mt-3 max-w-4xl text-center text-3xl font-bold tracking-tight md:text-4xl">
+              {t('landing.workflow.title')}
+            </h2>
+            <p className="mx-auto mt-5 max-w-3xl text-center text-lg leading-8 text-muted">
+              {t('landing.workflow.desc')}
+            </p>
+            <ol className="mt-12 grid border-y border-border md:grid-cols-3" role="list">
+              {[
+                { icon: ICONS.movement, key: 'graphic' },
+                { icon: ICONS.players, key: 'exercise' },
+                { icon: ICONS.layers, key: 'session' },
+              ].map((item, index) => (
+                <li
+                  key={item.key}
+                  className={`py-7 md:px-7 ${index > 0 ? 'border-t border-border md:border-l md:border-t-0' : ''}`}
+                >
+                  <IconTile d={item.icon} />
+                  <h3 className="mt-5 text-xl font-semibold text-text">
+                    {t(`landing.workflow.${item.key}Title`)}
+                  </h3>
+                  <p className="mt-3 text-base leading-7 text-muted">
+                    {t(`landing.workflow.${item.key}Desc`)}
+                  </p>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-8 text-center">
+              <Link
+                to="/board"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-bg transition-colors hover:bg-accent-hover"
+              >
+                {t('landing.workflow.cta')}
+                <I d={ICONS.arrowRight} className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </Section>

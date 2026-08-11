@@ -5,7 +5,7 @@ export const pl: Dictionary = {
   seo: {
     "landing": {
         "title": "TMC Studio — narysuj dowolną taktykę w 30 sekund",
-        "description": "Błyskawiczna tablica taktyczna dla trenerów, analityków i twórców. Ustawiaj formacje, animuj akcje i eksportuj PNG, GIF, PDF lub SVG — prosto w przeglądarce."
+        "description": "Tablica taktyczna i planer treningów dla trenerów. Rysuj grafiki, twórz ćwiczenia i konspekty, a potem eksportuj PNG, GIF, SVG lub PDF."
     },
     "pricing": {
         "title": "Cennik — TMC Studio",
@@ -126,6 +126,18 @@ export const pl: Dictionary = {
         "shareTitle": "Gotowe do udostępnienia",
         "shareDesc": "Eksport PNG, GIF, PDF lub SVG jednym skrótem."
     },
+    "workflow": {
+        "eyebrow": "Jedna biblioteka trenera",
+        "title": "Od pomysłu na boisku do gotowego konspektu",
+        "desc": "Nie kończ na obrazku. Zachowaj grafikę, opisz z niej ćwiczenie i dodaj je do kompletnej jednostki treningowej z czasem, kadrą, sztabem oraz materiałami.",
+        "graphicTitle": "1. Grafika",
+        "graphicDesc": "Narysuj ustawienie, ruch i kluczowe strefy na szybkiej tablicy taktycznej.",
+        "exerciseTitle": "2. Ćwiczenie",
+        "exerciseDesc": "Dodaj cel, organizację, czas, liczbę zawodników, coaching points i progresję.",
+        "sessionTitle": "3. Konspekt",
+        "sessionDesc": "Ułóż kolejność ćwiczeń, zadania sztabu i kadrę, a potem pobierz PDF lub wydrukuj.",
+        "cta": "Zacznij tworzyć trening"
+    },
     "keyboard": {
         "title": "Najpierw klawiatura, mysz opcjonalnie",
         "desc": "Każda akcja ma skrót, więc ręce nie schodzą z klawiszy.",
@@ -170,7 +182,7 @@ export const pl: Dictionary = {
         "q3": "Czy muszę coś pobierać?",
         "a3": "Nie. TMC Studio działa w każdej nowoczesnej przeglądarce — Chrome, Safari, Firefox, Edge. Otwierasz i rysujesz, bez pobierania.",
         "q4": "Jakie formaty eksportu są dostępne?",
-        "a4": "Gość i Free: PNG i JPG. Pro dodaje animacje GIF i PDF ze wszystkimi krokami. Każdy format jest jedno kliknięcie lub skrót klawiszowy.",
+        "a4": "Gość i Free eksportują PNG i JPG. Pro dodaje GIF, PDF planszy oraz osobne PDF-y ćwiczeń i konspektów treningowych.",
         "q5": "Jak działa rozliczenie Pro?",
         "a5": "Pro kosztuje 9 USD/miesiąc lub 90 USD/rok (oszczędzasz 17%). Anuluj w każdej chwili — dostęp trwa do końca opłaconego okresu. Ceny dla klientów UE zawierają VAT.",
         "q6": "Czy cały sztab może używać Team?",
@@ -707,7 +719,7 @@ export const pl: Dictionary = {
   coaching: {
     library: 'Biblioteka', projectName: 'Nazwa projektu', saving: 'Zapisywanie…', saved: 'Zapisano', saveError: 'Błąd zapisu', help: 'Szybki przewodnik', quickStart: 'Szybki start', start: 'Zaczynamy', backToBoard: 'Wróć do tablicy',
     exercise: {
-      workspaceTitle: 'Edytor ćwiczenia', nameLabel: 'Nazwa ćwiczenia', graphic: 'Grafika taktyczna', editGraphic: 'Edytuj grafikę na tablicy', editGraphicShort: 'Edytuj', drawOnBoard: 'Wróć do tablicy i rysuj', openBoard: 'Wróć do tablicy i rysuj', backToExercise: 'Zakończ edycję grafiki', noGraphic: 'Wybierz zapisaną grafikę albo otwórz tablicę i narysuj nową.', chooseGraphic: 'Wybierz grafikę z biblioteki', duration: 'Czas (min)', players: 'Liczba zawodników', category: 'Kategoria / faza', categoryPlaceholder: 'np. rozgrzewka, pressing, budowanie', objective: 'Cel treningowy', objectivePlaceholder: 'Czego mają nauczyć się zawodnicy?', description: 'Treść ćwiczenia', descriptionPlaceholder: 'Opisz zasady i przebieg ćwiczenia.', organization: 'Organizacja', coachingPoints: 'Kluczowe wskazówki', progression: 'Progresja / regresja', equipment: 'Sprzęt',
+      workspaceTitle: 'Edytor ćwiczenia', nameLabel: 'Nazwa ćwiczenia', graphic: 'Grafika taktyczna', editGraphic: 'Edytuj grafikę na tablicy', editGraphicShort: 'Edytuj', drawOnBoard: 'Wróć do tablicy i rysuj', openBoard: 'Wróć do tablicy i rysuj', backToExercise: 'Zakończ edycję grafiki', noGraphic: 'Wybierz zapisaną grafikę albo otwórz tablicę i narysuj nową.', chooseGraphic: 'Wybierz grafikę z biblioteki', downloadPdf: 'Pobierz PDF', print: 'Drukuj', pdfError: 'Nie udało się utworzyć PDF. Spróbuj ponownie.', duration: 'Czas (min)', players: 'Liczba zawodników', category: 'Kategoria / faza', categoryPlaceholder: 'np. rozgrzewka, pressing, budowanie', objective: 'Cel treningowy', objectivePlaceholder: 'Czego mają nauczyć się zawodnicy?', description: 'Treść ćwiczenia', descriptionPlaceholder: 'Opisz zasady i przebieg ćwiczenia.', organization: 'Organizacja', coachingPoints: 'Kluczowe wskazówki', progression: 'Progresja / regresja', equipment: 'Sprzęt',
       guide: { title: 'Stwórz kompletne ćwiczenie', 1: { title: 'Dodaj grafikę', body: 'Wybierz istniejący rysunek albo wejdź do edytora tablicy i przygotuj nowe ustawienie.' }, 2: { title: 'Opisz pracę', body: 'Ustal cel, organizację, czas, liczbę zawodników i potrzebny sprzęt.' }, 3: { title: 'Zapisz i wykorzystaj', body: 'Ćwiczenie zapisuje się automatycznie i jest dostępne w każdym konspekcie.' } },
     },
     session: {

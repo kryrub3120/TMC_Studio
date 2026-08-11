@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-12
+
 ### Added
-- **Nawigacja workspace i eksport konspektu** — edytory ćwiczeń i konspektów mają stałe przyciski powrotu do tablicy i biblioteki, dostęp do ustawień/konta, wyraźną edycję nazwy sesji oraz osobne akcje pobrania PDF i drukowania.
+- **Nawigacja workspace i eksport materiałów treningowych** — edytory ćwiczeń i konspektów mają stałe przyciski powrotu do tablicy i biblioteki, dostęp do ustawień/konta, wyraźną edycję nazwy oraz osobne akcje pobrania PDF i drukowania.
 - **Profil trenerski** — w Ustawieniach → Drużyny można zapisać nazwę i logo klubu oraz predefiniowany sztab. Dane synchronizują się z preferencjami konta i są używane w konspektach oraz wydruku.
 - **Podglądy projektów** — grafiki i ćwiczenia renderują miniaturę bezpośrednio z dokumentu planszy, a konspekty pokazują mozaikę ćwiczeń lub skróconą agendę.
 - **Statyczna strona popup callback (`/auth/popup-callback.html`)** — zachowana dla eksperymentalnej powierzchni popup. Pobiera kod PKCE, przekazuje go do okna głównego i nie ładuje React SPA.
@@ -19,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mierzalne wejścia z contentu** — eventy `content_view` i `content_open_board`; szablony otwierają tablicę z wybraną jedenastką.
 
 ### Changed
+- **Landing i SEO workflow trenera** — strona główna w EN/PL/ES przedstawia proces Grafika → Ćwiczenie → Konspekt, a schema `SoftwareApplication`, opisy SEO i FAQ uwzględniają bibliotekę treningową oraz dedykowane PDF-y.
 - **Biblioteka z zachowanym topbarem** — pełnoekranowy panel zaczyna się pod głównym nagłówkiem, dzięki czemu nie zasłania nawigacji ani konta; dostał też opisany przycisk `Wróć`.
 - **Biblioteka projektów** — przebudowana na responsywny widok do 1280 px z ostatnimi projektami u góry, kartami z podglądem, uproszczonym panelem folderów i mobilnym paskiem ostatnich elementów.
 - **Tworzenie projektów** — Grafika, Ćwiczenie i Konspekt są teraz zakładkami nawigacji; osobny przycisk `Nowy projekt` tworzy element aktywnego typu.
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bundle landing page** — `jsPDF` i encoder GIF pozostają lazy chunkami edytora i nie są preloadowane na publicznym wejściu.
 
 ### Fixed
+- **PDF ćwiczeń i konspektów** — eksport odwzorowuje widoczną treść, grafikę tablicy i polskie znaki, skaluje szeroki układ do A4 landscape oraz nie generuje pustego pliku.
 - **Healthcheck środowiska Netlify** — `/api/health` rozpoznaje gwarantowany w runtime kanoniczny `URL`, dzięki czemu produkcja nie jest błędnie oznaczana jako development.
 - **Soft 404 i wspólny canonical SPA** — nieznane ścieżki zwracają 404, a każda prerenderowana strona ma własny self-canonical i wzajemny zestaw hreflang.
 - **Google OAuth i COOP** — produkcyjny login nie zależy od `popup.closed` ani komunikacji między oknami, co usuwa zrywanie logowania przez politykę Cross-Origin-Opener-Policy.
@@ -595,7 +599,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Free and Pro tiers with Stripe integration
 - Dark/light theme support
 
-[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/kryrub3120/TMC_Studio/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kryrub3120/TMC_Studio/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/kryrub3120/TMC_Studio/releases/tag/v0.5.0
