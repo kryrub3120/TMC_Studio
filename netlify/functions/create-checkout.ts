@@ -83,6 +83,19 @@ function isMissingStripeCustomer(error: unknown): error is Stripe.errors.StripeE
   );
 }
 
+type CheckoutLocale = 'en' | 'pl' | 'es';
+
+const TERMS_CONSENT_VERSION = '2026-08-11';
+const TERMS_CONSENT_COPY: Record<CheckoutLocale, string> = {
+  en: 'I request immediate access to the digital service and acknowledge that, once performance begins, I lose my statutory right of withdrawal. I accept the TMC Studio Terms of Service.',
+  pl: 'Żądam natychmiastowego rozpoczęcia świadczenia usługi cyfrowej i przyjmuję do wiadomości, że po rozpoczęciu świadczenia tracę ustawowe prawo odstąpienia. Akceptuję Regulamin TMC Studio.',
+  es: 'Solicito el acceso inmediato al servicio digital y reconozco que, una vez iniciada la prestación, pierdo mi derecho legal de desistimiento. Acepto los Términos de servicio de TMC Studio.',
+};
+
+function getCheckoutLocale(value: unknown): CheckoutLocale {
+  return value === 'pl' || value === 'es' ? value : 'en';
+}
+
 const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // ── CORS ──────────────────────────────────────────────────────
   const origin =
@@ -155,6 +168,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     } = JSON.parse(event.body || '{}');
 
     const { priceId, successUrl, cancelUrl } = body;
+    const checkoutLocale = getCheckoutLocale(body.locale);
 
     // ── Validate priceId ─────────────────────────────────────────
     if (!priceId) {
@@ -211,8 +225,19 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     // ── Build session params ─────────────────────────────────────
     // NOTE: client_reference_id is set from AUTH, not from body.
     // customer and customer_email are set from the profile/auth.
+    const checkoutMetadata = {
+      source: 'tmc-studio-web',
+      user_id: authUser.id,
+      plan: tier,
+      billing_cycle: billingCycle,
+      terms_consent_version: TERMS_CONSENT_VERSION,
+      withdrawal_consent_required: 'true',
+      created_at: new Date().toISOString(),
+    };
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
+      locale: checkoutLocale,
       payment_method_types: ['card'],
       line_items: [
         {
@@ -226,6 +251,13 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
       automatic_tax: { enabled: true },
       billing_address_collection: 'required',
       tax_id_collection: { enabled: true },
+      consent_collection: { terms_of_service: 'required' },
+      custom_text: {
+        terms_of_service_acceptance: {
+          message: TERMS_CONSENT_COPY[checkoutLocale],
+        },
+      },
+      metadata: checkoutMetadata,
       // CRITICAL: client_reference_id = auth user ID (for webhook)
       client_reference_id: authUser.id,
       // Use existing Stripe customer if available
@@ -239,13 +271,7 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
           }
         : { customer_email: authUser.email || undefined }),
       subscription_data: {
-        metadata: {
-          source: 'tmc-studio-web',
-          user_id: authUser.id,
-          plan: tier,
-          billing_cycle: billingCycle,
-          created_at: new Date().toISOString(),
-        },
+        metadata: checkoutMetadata,
       },
     };
 

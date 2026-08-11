@@ -503,6 +503,42 @@ describe('Checkout Security (create-checkout.ts)', () => {
     expect(callArgs.tax_id_collection).toEqual({ enabled: true });
   });
 
+  it('requires localized terms and withdrawal consent', async () => {
+    const stripeModule = await import('stripe');
+    const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;
+    mockCreate.mockClear();
+    mockCreate.mockResolvedValue({ id: 'cs_test_consent', url: 'https://checkout.stripe.com/test' });
+
+    const res = await handler(makeEvent({ body: { locale: 'pl' } }), {} as any);
+    expect(res.statusCode).toBe(200);
+
+    const callArgs = mockCreate.mock.lastCall[0];
+    expect(callArgs.locale).toBe('pl');
+    expect(callArgs.consent_collection).toEqual({ terms_of_service: 'required' });
+    expect(callArgs.custom_text.terms_of_service_acceptance.message).toContain(
+      'tracę ustawowe prawo odstąpienia',
+    );
+    expect(callArgs.metadata.terms_consent_version).toBe('2026-08-11');
+    expect(callArgs.metadata.withdrawal_consent_required).toBe('true');
+    expect(callArgs.subscription_data.metadata.terms_consent_version).toBe('2026-08-11');
+  });
+
+  it('falls back to English for an unsupported checkout locale', async () => {
+    const stripeModule = await import('stripe');
+    const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;
+    mockCreate.mockClear();
+    mockCreate.mockResolvedValue({ id: 'cs_test_locale', url: 'https://checkout.stripe.com/test' });
+
+    const res = await handler(makeEvent({ body: { locale: 'xx' } }), {} as any);
+    expect(res.statusCode).toBe(200);
+
+    const callArgs = mockCreate.mock.lastCall[0];
+    expect(callArgs.locale).toBe('en');
+    expect(callArgs.custom_text.terms_of_service_acceptance.message).toContain(
+      'right of withdrawal',
+    );
+  });
+
   it('includes metadata with user_id, plan, billing_cycle', async () => {
     const stripeModule = await import('stripe');
     const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;

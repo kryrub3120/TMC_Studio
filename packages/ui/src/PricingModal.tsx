@@ -83,7 +83,7 @@ export function PricingModal({
   onCheckoutStarted,
   onCheckoutFailed,
 }: PricingModalProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [cycle, setCycle] = useState<Cycle>(initialCycle ?? 'monthly');
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +125,7 @@ export function PricingModal({
       // userId, email, customerId are NOT sent — the server reads them from auth.
       const checkoutBody: any = {
         priceId: plan.priceId,
+        locale: language,
         successUrl: `${window.location.origin}/board?checkout=success`,
         cancelUrl: `${window.location.origin}/board?checkout=cancelled`,
       };
