@@ -628,6 +628,8 @@ export const en = {
     importBoard: 'Import board',
     importSuccess: 'Board imported successfully.',
     importInvalid: 'Invalid board file.',
+    manualSaveSuccess: 'Project saved.',
+    manualSaveError: 'The project could not be saved to the cloud. Try again.',
     importWarning: 'Importing replaces the current board — export first if you want to keep it.',
     errors: {
       nameRequired: 'Name is required',
@@ -672,11 +674,14 @@ export const en = {
       formations: 'Apply home / away formation',
       focus: 'Focus mode',
       fullShortcuts: 'Open full shortcuts',
+      resizeUp: 'Increase selected elements',
+      resizeDown: 'Decrease selected elements',
     },
     shortcutGroups: {
       create: 'Create elements',
       players: 'Players and orientation',
       workflow: 'Workflow',
+      selection: 'Selection',
     },
   },
   emptyState: {
@@ -1021,7 +1026,7 @@ export const en = {
       freePlan: { question: 'What can I do for free?', answer: 'The Free plan includes 3 projects, 10 steps per project, PNG and JPG export, and cloud sync for your projects. Upgrade to Pro for unlimited projects, steps, GIF animations, and PDF export.', cta: 'Compare plans' },
       exportGifPdf: { question: 'How do I export GIF or PDF?', answer: 'GIF and PDF export are Pro features. Click the Export button in the TopBar and select GIF Animation or PDF. If you don\'t see these options, you\'re on the Free plan.', cta: 'Upgrade to Pro' },
       unlimitedProjects: { question: 'Can I create unlimited projects?', answer: 'Unlimited projects and steps are available on the Pro plan. The Free plan allows 3 projects with 10 steps each.', cta: 'See Pro plans' },
-      manageSubscription: { question: 'How do I manage my subscription?', answer: 'Click your avatar in the TopBar and select "Account & Billing". This opens the Stripe Customer Portal where you can update payment methods, view invoices, or change your plan.' },
+      manageSubscription: { question: 'How do I manage my subscription?', answer: 'Click your avatar in the TopBar and select "Account & Billing". This opens the Stripe Customer Portal where you can update payment methods, view invoices, or change your plan.', cta: 'Open billing' },
       squadSlots: { question: 'How many squad players can I have?', answer: 'Free plan allows up to 5 squad players total. Pro and Club Premium unlock up to 25 players per team (100 total across 4 teams). Locked slots show a padlock icon.', cta: 'Upgrade for more slots' },
       addMembers: { question: 'How do I add team members?', answer: 'Open the Team settings, enter the member\'s email, and create an invitation link. Share that link with them; they receive Team access after accepting it with the invited email address.', cta: 'Open Team panel' },
       manageBilling: { question: 'How do I manage Club Premium billing?', answer: 'Click your avatar → "Account & Billing" to open the Stripe Customer Portal. Here you can update payment methods, view invoices, and manage your Club Premium subscription.', cta: 'Open billing' },

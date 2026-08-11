@@ -76,7 +76,7 @@ const shortcuts: { title: string; items: ShortcutItem[]; isAnimation?: boolean }
       { id: 'lock-unlock', key: 'Shift+L', description: 'Lock / Unlock Selection' },
       { id: 'cycle-color', key: '⌥↑↓', description: 'Cycle Color' },
       { id: 'stroke-width', key: '⌥←→', description: 'Stroke Width (text: Alignment)' },
-      { id: 'resize-selected', key: 'Shift+±', description: 'Resize Selected' },
+      { id: 'resize-selected', key: '+ / −', description: 'Resize Selected' },
       { id: 'text-bold-italic', key: 'Ctrl+B / Ctrl+I', description: 'Bold / Italic (text)' },
     ],
   },

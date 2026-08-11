@@ -187,6 +187,10 @@ export function AppShell() {
   const setShortcutOverride = useUIStore((s) => s.setShortcutOverride);
   const resetShortcutOverrides = useUIStore((s) => s.resetShortcutOverrides);
   const projectSaveStatus = useUIStore((s) => s.projectSaveStatus);
+  const theme = useUIStore((s) => s.theme);
+  const gridVisible = useUIStore((s) => s.gridVisible);
+  const snapEnabled = useUIStore((s) => s.snapEnabled);
+  const manualSave = useBoardStore((s) => s.manualSave);
 
   // Controllers
   const billingController = useBillingController();
@@ -567,9 +571,9 @@ export function AppShell() {
           billingController.openPricingModal();
         }}
         organizationPanelProps={organizationPanelProps}
-        theme={useUIStore.getState().theme}
-        gridVisible={useUIStore.getState().gridVisible}
-        snapEnabled={useUIStore.getState().snapEnabled}
+        theme={theme}
+        gridVisible={gridVisible}
+        snapEnabled={snapEnabled}
         gridSize={gridSize}
         defaultArrowType={defaultArrowType}
         stepDuration={stepDuration}
@@ -615,6 +619,7 @@ export function AppShell() {
         onTogglePrintMode={togglePrintMode}
         onExportBoard={exportBoardToFile}
         onImportBoard={importBoardFromFile}
+        onManualSave={manualSave}
 
         // Upgrade Success Modal
         upgradeSuccessModalOpen={billingController.upgradeSuccessModalOpen}

@@ -315,6 +315,23 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         return;
       }
     }
+
+    // Physical-key handling keeps element scaling reliable across keyboard
+    // layouts. For example Shift+Minus reports "_" and Option+Equal may report
+    // a locale-specific character on macOS, while e.code remains stable.
+    const isScaleUpKey = e.code === 'Equal' || e.code === 'NumpadAdd';
+    const isScaleDownKey = e.code === 'Minus' || e.code === 'NumpadSubtract';
+    if (!isCmd && (isScaleUpKey || isScaleDownKey)) {
+      e.preventDefault();
+      if (selectedIds.length > 0) {
+        resizeSelected(isScaleUpKey ? 1.1 : 0.9);
+        showTranslatedToast(isScaleUpKey ? 'resizedUp' : 'resizedDown');
+      } else if (!useUIStore.getState().viewportLocked) {
+        if (isScaleUpKey) zoomIn();
+        else zoomOut();
+      }
+      return;
+    }
     
     switch (key) {
       // ===== ELEMENTS =====
@@ -944,36 +961,19 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
         break;
         
       // ===== ZOOM & RESIZE =====
-      // One unified model: Shift+"+/-" always resizes the current selection
-      // (whatever its type — resizeSelected() dispatches per element type).
-      // Plain +/- always zooms the canvas, with zero exceptions per element
-      // type. This replaces the old three-way split (equipment-only plain
-      // +/-, Cmd+Alt+=/- for everything else, and text's separate ↑/↓).
+      // Cmd/Ctrl +/- always zooms. Plain, Shift and Option +/- are handled
+      // above via e.code: they resize a selection, or zoom when none exists.
       case '=':
       case '+':
-        // ✅ IMPERATIVE guard — lock disables zoom shortcuts
         if (useUIStore.getState().viewportLocked) break;
-        if (e.shiftKey && !isCmd) {
-          e.preventDefault();
-          resizeSelected(1.1);
-          showTranslatedToast('resizedUp');
-        } else {
-          e.preventDefault();
-          zoomIn();
-        }
+        e.preventDefault();
+        zoomIn();
         break;
         
       case '-':
-        // ✅ IMPERATIVE guard — lock disables zoom shortcuts
         if (useUIStore.getState().viewportLocked) break;
-        if (e.shiftKey && !isCmd) {
-          e.preventDefault();
-          resizeSelected(0.9);
-          showTranslatedToast('resizedDown');
-        } else {
-          e.preventDefault();
-          zoomOut();
-        }
+        e.preventDefault();
+        zoomOut();
         break;
         
       // ===== ROTATION =====

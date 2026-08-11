@@ -148,8 +148,8 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
   // MUST be before early return (Rules of Hooks)
   const faqCategories = React.useMemo(() => {
     const cats = getFaqForPlan(plan);
-    return faqSearch ? searchFaq(cats, faqSearch) : cats;
-  }, [plan, faqSearch]);
+    return faqSearch ? searchFaq(cats, faqSearch, t) : cats;
+  }, [plan, faqSearch, t]);
 
   if (!isOpen) return null;
 

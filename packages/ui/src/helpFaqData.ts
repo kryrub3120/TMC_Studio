@@ -204,7 +204,8 @@ export function getFaqForPlan(plan: Plan): FaqCategory[] {
  */
 export function searchFaq(
   categories: FaqCategory[],
-  query: string
+  query: string,
+  translate: (key: string) => string = (key) => key,
 ): FaqCategory[] {
   if (!query.trim()) return categories;
   const q = query.toLowerCase();
@@ -213,8 +214,8 @@ export function searchFaq(
       ...cat,
       items: cat.items.filter(
         (item) =>
-          item.questionKey.toLowerCase().includes(q) ||
-          item.answerKey.toLowerCase().includes(q) ||
+          translate(item.questionKey).toLowerCase().includes(q) ||
+          translate(item.answerKey).toLowerCase().includes(q) ||
           item.id.toLowerCase().includes(q)
       ),
     }))

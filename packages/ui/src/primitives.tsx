@@ -47,7 +47,7 @@ export const Toggle: React.FC<ToggleProps> = ({
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span
-        className={`absolute top-0.5 ${dims.knob} rounded-full bg-white shadow transition-transform ${
+        className={`absolute left-0 top-0.5 ${dims.knob} rounded-full bg-white shadow transition-transform ${
           checked ? dims.on : dims.off
         }`}
       />

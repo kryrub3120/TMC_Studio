@@ -16,6 +16,7 @@ import { FaqCategory } from './FaqCategory.js';
 import { getFaqForPlan, searchFaq, type FaqCta } from './helpFaqData.js';
 import type { Plan } from './tutorialSteps.js';
 import { parseSquadRoster } from './squadRoster.js';
+import { SHARED_COLORS } from './colors.js';
 
 export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'faq' | 'about' | 'data';
 
@@ -49,6 +50,56 @@ function NavIcon({ id }: { id: SettingsTab }) {
     case 'data': return (<svg {...c}><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" /><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" /></svg>);
     default: return null;
   }
+}
+
+function DefaultColorPicker({
+  value,
+  onChange,
+  label,
+  testId,
+}: {
+  value: string;
+  onChange: (color: string) => void;
+  label: string;
+  testId: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        className="block w-6 h-6 rounded border border-border cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
+        style={{ backgroundColor: value }}
+        aria-label={`${label}: ${value}`}
+        aria-expanded={isOpen}
+        data-testid={`${testId}-toggle`}
+      />
+      {isOpen && (
+        <div
+          className="absolute right-0 top-8 z-30 flex w-[136px] flex-wrap gap-1.5 rounded-md border border-border bg-surface p-2 shadow-lg"
+          data-testid={`${testId}-palette`}
+        >
+          {SHARED_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => {
+                onChange(color);
+                setIsOpen(false);
+              }}
+              className={`w-6 h-6 rounded border-2 transition-transform hover:scale-110 ${
+                value.toLowerCase() === color.toLowerCase() ? 'border-accent ring-1 ring-accent' : 'border-white/20'
+              }`}
+              style={{ backgroundColor: color }}
+              aria-label={`${label} ${color}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface SettingsModalProps {
@@ -110,6 +161,7 @@ interface SettingsModalProps {
   /** Data & privacy */
   onExportBoard?: () => void;
   onImportBoard?: (file: File) => Promise<boolean>;
+  onManualSave?: () => Promise<boolean>;
   /** Club / organization management (Team plan). When provided, adds a 'Club' settings tab. */
   organizationPanelProps?: OrganizationPanelProps;
 }
@@ -165,6 +217,7 @@ export function SettingsModal({
   onTogglePrintMode,
   onExportBoard,
   onImportBoard,
+  onManualSave,
   organizationPanelProps,
 }: SettingsModalProps) {
   const { t, language, setLanguage } = useTranslation();
@@ -247,7 +300,7 @@ export function SettingsModal({
       : isPro
         ? 'pro'
         : 'free';
-  const faqCategories = searchFaq(getFaqForPlan(currentPlan), faqSearch);
+  const faqCategories = searchFaq(getFaqForPlan(currentPlan), faqSearch, t);
   const formatShortcutEvent = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     const parts: string[] = [];
     if (event.metaKey || event.ctrlKey) parts.push('Cmd');
@@ -259,7 +312,10 @@ export function SettingsModal({
     parts.push(key);
     return parts.join('+');
   };
-  const shortcutGroups = [
+  const shortcutGroups: Array<{
+    title: string;
+    items: Array<{ id: string; key: string; label: string; customizable?: boolean }>;
+  }> = [
     {
       title: t('settings.shortcutGroups.create'),
       items: [
@@ -284,6 +340,13 @@ export function SettingsModal({
         { id: 'toggle-vision', key: 'V', label: t('settings.shortcutItems.vision') },
         { id: 'orientation-handles', key: 'Shift+V', label: t('settings.shortcutItems.orientationHandles') },
         { id: 'reset-orientation', key: 'Alt+0', label: t('settings.shortcutItems.resetOrientation') },
+      ],
+    },
+    {
+      title: t('settings.shortcutGroups.selection'),
+      items: [
+        { id: 'resize-selected-up', key: '+ / Option+=', label: t('settings.shortcutItems.resizeUp'), customizable: false },
+        { id: 'resize-selected-down', key: '- / Option+-', label: t('settings.shortcutItems.resizeDown'), customizable: false },
       ],
     },
     {
@@ -339,6 +402,15 @@ export function SettingsModal({
         setActiveTab('data');
         break;
       case 'save':
+        if (onManualSave) {
+          setError(null);
+          setSuccess(null);
+          void onManualSave().then((saved) => {
+            if (saved) setSuccess(t('settings.manualSaveSuccess'));
+            else setError(t('settings.manualSaveError'));
+          });
+        }
+        break;
       default:
         break;
     }
@@ -965,14 +1037,14 @@ export function SettingsModal({
                               onChange={(v) => onSetArrowDefaults({ strokeWidth: { ...arrowDefaults.strokeWidth, [tp]: Number(v.target.value) } })}
                               className="flex-1 h-1 accent-accent"
                               aria-label={`${tp} thickness`}
+                              data-testid={`arrow-default-${tp}-width`}
                             />
                             <span className="text-[10px] text-muted w-6 text-right">{arrowDefaults.strokeWidth[tp]}px</span>
-                            <input
-                              type="color"
+                            <DefaultColorPicker
                               value={arrowDefaults.color?.[tp] ?? '#1a1a1a'}
-                              onChange={(e) => onSetArrowDefaults({ color: { ...(arrowDefaults.color ?? {}), [tp]: e.target.value } })}
-                              className="w-5 h-5 rounded border border-border cursor-pointer bg-transparent"
-                              aria-label={`${tp} color`}
+                              onChange={(color) => onSetArrowDefaults({ color: { ...(arrowDefaults.color ?? {}), [tp]: color } })}
+                              label={`${tp} color`}
+                              testId={`arrow-default-${tp}-color`}
                             />
                           </div>
                         ))}
@@ -1038,22 +1110,20 @@ export function SettingsModal({
                           </div>
                           <div className="flex items-center gap-2">
                             <label className="text-xs font-medium text-muted">{t('inspector.zone.borderColor')}</label>
-                            <input
-                              type="color"
+                            <DefaultColorPicker
                               value={zoneDefaults.borderColor || '#ef4444'}
-                              onChange={(e) => onSetZoneDefaults({ borderColor: e.target.value })}
-                              className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent"
-                              aria-label={t('inspector.zone.borderColor')}
+                              onChange={(borderColor) => onSetZoneDefaults({ borderColor })}
+                              label={t('inspector.zone.borderColor')}
+                              testId="zone-default-border-color"
                             />
                           </div>
                           <div className="flex items-center gap-2">
                             <label className="text-xs font-medium text-muted">{t('settings.zoneFill')}</label>
-                            <input
-                              type="color"
+                            <DefaultColorPicker
                               value={zoneDefaults.fillColor}
-                              onChange={(e) => onSetZoneDefaults({ fillColor: e.target.value })}
-                              className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent"
-                              aria-label={t('settings.zoneFill')}
+                              onChange={(fillColor) => onSetZoneDefaults({ fillColor })}
+                              label={t('settings.zoneFill')}
+                              testId="zone-default-fill-color"
                             />
                           </div>
                         </div>
@@ -1395,7 +1465,11 @@ export function SettingsModal({
                       {group.items.map((item) => (
                         <div key={item.id} className="flex items-center justify-between gap-4 px-3 py-2 border-b border-border last:border-b-0">
                           <span className="text-sm text-text">{item.label}</span>
-                          <button
+                          {item.customizable === false ? (
+                            <kbd className="px-1.5 py-0.5 rounded border border-border bg-surface2 text-xs font-mono whitespace-nowrap text-muted">
+                              {item.key}
+                            </kbd>
+                          ) : <button
                             type="button"
                             onClick={() => {
                               if (!isPro || !onSetShortcutOverride) {
@@ -1414,7 +1488,7 @@ export function SettingsModal({
                             aria-label={t('settings.editShortcutAria', { action: item.label })}
                           >
                             {editingShortcutId === item.id ? t('settings.shortcutPressKeys') : getEffectiveShortcut(item.id, item.key)}
-                          </button>
+                          </button>}
                         </div>
                       ))}
                     </div>

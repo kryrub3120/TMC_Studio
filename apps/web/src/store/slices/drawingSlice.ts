@@ -6,6 +6,7 @@ import type { StateCreator } from 'zustand';
 import type { Position, ElementId, ArrowType, ZoneShape, DrawingType, BoardElement } from '@tmc/core';
 import { createArrow, createZone, createPolygonZone, isArrowElement } from '@tmc/core';
 import type { AppState } from '../types';
+import { useUIStore } from '../useUIStore';
 
 export interface DrawingSlice {
   // Drawing state (for click-drag creation of arrows/zones)
@@ -89,6 +90,11 @@ export const createDrawingSlice: StateCreator<
       startPoint: drawingStart,
       endPoint: drawingEnd,
     };
+    const arrowDefaults = useUIStore.getState().arrowDefaults;
+    arrow.strokeWidth = arrowDefaults.strokeWidth[arrowType] ?? arrow.strokeWidth;
+    arrow.color = arrowDefaults.color?.[arrowType] ?? arrow.color;
+    arrow.startHead = arrowDefaults.startHead;
+    arrow.endHead = arrowDefaults.endHead;
     
     // PR-ARROW-NUMBER: Auto-number if flag is set or global mode is on
     if (nextArrowShouldBeNumbered || isAutoNumbering) {
@@ -130,6 +136,13 @@ export const createDrawingSlice: StateCreator<
       width,
       height,
     };
+    const zoneDefaults = useUIStore.getState().zoneDefaults;
+    zone.borderStyle = zoneDefaults.borderStyle;
+    zone.borderWidth = zoneDefaults.borderWidth;
+    zone.borderColor = zoneDefaults.borderColor;
+    zone.showCorners = zoneDefaults.showCorners;
+    zone.fillColor = zoneDefaults.fillColor;
+    zone.opacity = zoneDefaults.opacity;
     
     set((state) => ({
       elements: [...state.elements, zone],
@@ -207,6 +220,13 @@ export const createDrawingSlice: StateCreator<
       return;
     }
     const zone = createPolygonZone(pts);
+    const zoneDefaults = useUIStore.getState().zoneDefaults;
+    zone.borderStyle = zoneDefaults.borderStyle;
+    zone.borderWidth = zoneDefaults.borderWidth;
+    zone.borderColor = zoneDefaults.borderColor;
+    zone.showCorners = zoneDefaults.showCorners;
+    zone.fillColor = zoneDefaults.fillColor;
+    zone.opacity = zoneDefaults.opacity;
     set((state) => ({
       elements: [...state.elements, zone],
       selectedIds: [zone.id],

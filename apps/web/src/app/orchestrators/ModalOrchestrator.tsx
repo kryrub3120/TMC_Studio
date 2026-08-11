@@ -147,6 +147,7 @@ interface ModalOrchestratorProps {
   onTogglePrintMode?: () => void;
   onExportBoard?: () => void;
   onImportBoard?: (file: File) => Promise<boolean>;
+  onManualSave?: () => Promise<boolean>;
   
   // Upgrade Success Modal
   upgradeSuccessModalOpen: boolean;
@@ -316,6 +317,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onTogglePrintMode={props.onTogglePrintMode}
         onExportBoard={props.onExportBoard}
         onImportBoard={props.onImportBoard}
+        onManualSave={props.onManualSave}
         organizationPanelProps={props.organizationPanelProps}
       />
       
