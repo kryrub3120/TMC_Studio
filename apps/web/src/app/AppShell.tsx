@@ -235,17 +235,14 @@ export function AppShell() {
   // Payment return flow
   usePaymentReturn({
     onActivateStart: () => {
-      billingController.setSubscriptionActivating(true);
-      billingController.openUpgradeSuccessModal("pro", true);
+      billingController.openUpgradeActivationModal();
     },
     onActivateSuccess: (tier) => {
       track(EVENTS.UPGRADE, { tier });
-      billingController.setSubscriptionActivating(false);
-      billingController.openUpgradeSuccessModal(tier, true);
+      billingController.openUpgradeSuccessModal(tier);
       showToast(t('appToast.upgradeSuccessful'));
     },
     onActivateDelayed: () => {
-      billingController.setSubscriptionActivating(false);
       billingController.closeUpgradeSuccessModal();
       showToast(t('appToast.subscriptionActivating'));
     },

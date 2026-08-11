@@ -32,9 +32,9 @@ export interface BillingController {
   // Actions
   openPricingModal: (cycle?: 'monthly' | 'yearly') => void;
   closePricingModal: () => void;
-  openUpgradeSuccessModal: (tier: 'pro' | 'team', activating?: boolean) => void;
+  openUpgradeActivationModal: () => void;
+  openUpgradeSuccessModal: (tier: 'pro' | 'team') => void;
   closeUpgradeSuccessModal: () => void;
-  setSubscriptionActivating: (activating: boolean) => void;
   manageBilling: () => Promise<void>;
 }
 
@@ -69,9 +69,15 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
   /**
    * Open upgrade success modal
    */
-  const openUpgradeSuccessModal = useCallback((tier: 'pro' | 'team', activating = false) => {
+  const openUpgradeActivationModal = useCallback(() => {
+    setUpgradedTier('pro');
+    setSubscriptionActivating(true);
+    setUpgradeSuccessModalOpen(true);
+  }, []);
+
+  const openUpgradeSuccessModal = useCallback((tier: 'pro' | 'team') => {
     setUpgradedTier(tier);
-    setSubscriptionActivating(activating);
+    setSubscriptionActivating(false);
     setUpgradeSuccessModalOpen(true);
   }, []);
   
@@ -79,6 +85,7 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
    * Close upgrade success modal
    */
   const closeUpgradeSuccessModal = useCallback(() => {
+    setSubscriptionActivating(false);
     setUpgradeSuccessModalOpen(false);
   }, []);
   
@@ -125,9 +132,9 @@ export function useBillingController(_params?: UseBillingControllerParams): Bill
     // Actions
     openPricingModal,
     closePricingModal,
+    openUpgradeActivationModal,
     openUpgradeSuccessModal,
     closeUpgradeSuccessModal,
-    setSubscriptionActivating,
     manageBilling,
   };
 }
