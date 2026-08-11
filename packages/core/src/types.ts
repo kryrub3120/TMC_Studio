@@ -597,6 +597,39 @@ export const DEFAULT_PLAYER_DEFAULTS: PlayerDefaults = {
 /** Complete board document for save/load */
 export type ProjectType = 'graphic' | 'exercise' | 'session';
 
+export interface ExerciseDetails {
+  /** Optional link back to the graphic copied into this exercise. */
+  sourceGraphicProjectId?: string;
+  sourceGraphicName?: string;
+  durationMinutes: number;
+  players: string;
+  organization: string;
+  coachingPoints: string;
+}
+
+export interface SessionExerciseItem {
+  id: string;
+  projectId: string;
+  name: string;
+  durationMinutes: number;
+  notes: string;
+}
+
+export interface SessionPlanDetails {
+  exercises: SessionExerciseItem[];
+}
+
+export const DEFAULT_EXERCISE_DETAILS: ExerciseDetails = {
+  durationMinutes: 15,
+  players: '',
+  organization: '',
+  coachingPoints: '',
+};
+
+export const DEFAULT_SESSION_PLAN_DETAILS: SessionPlanDetails = {
+  exercises: [],
+};
+
 export interface LineupPreset {
   name: string;
   team: Team;
@@ -613,6 +646,10 @@ export interface BoardDocument {
   projectType?: ProjectType;
   /** Coach-facing notes shown in the project library. */
   description?: string;
+  /** Structured coaching data for exercise projects. */
+  exerciseDetails?: ExerciseDetails;
+  /** Ordered exercise agenda for session-plan projects. */
+  sessionPlanDetails?: SessionPlanDetails;
   /** Separate from updatedAt so the library can sort by actual usage. */
   lastOpenedAt?: string;
   /** Up to three user-defined lineups, applied with Alt+1..3. */

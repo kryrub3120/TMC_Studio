@@ -362,10 +362,12 @@ export function AppShell() {
   }, []);
 
   // Convert cloud projects to ProjectItem format
-  const projectItems: ProjectItem[] = cloudProjects.map((p) => ({
+  const projectItems: ProjectItem[] = cloudProjects.map((p) => {
+    const projectDocument = cloudProjectId === p.id ? document : p.document;
+    return ({
     id: p.id,
     name: p.name,
-    updatedAt: p.document.updatedAt ?? p.updated_at,
+    updatedAt: projectDocument.updatedAt ?? p.updated_at,
     thumbnailUrl: p.thumbnail_url ?? undefined,
     isCloud: true,
     saveStatus: cloudProjectId === p.id ? projectSaveStatus : undefined,
@@ -373,10 +375,13 @@ export function AppShell() {
     tags: p.tags ?? undefined,
     isFavorite: p.is_favorite ?? false,
     isPinned: p.is_pinned ?? false,
-    projectType: p.document.projectType ?? 'graphic',
-    description: p.description ?? p.document.description ?? undefined,
-    lastOpenedAt: p.document.lastOpenedAt,
-  }));
+    projectType: projectDocument.projectType ?? 'graphic',
+    description: projectDocument.description ?? p.description ?? undefined,
+    lastOpenedAt: projectDocument.lastOpenedAt,
+    exerciseDetails: projectDocument.exerciseDetails,
+    sessionPlanDetails: projectDocument.sessionPlanDetails,
+  });
+  });
 
   // Club Welcome Modal trigger: show once for first-time Club Premium admins
   // that haven't seen the welcome flow yet AND have a team
@@ -538,6 +543,7 @@ export function AppShell() {
         onMoveFolderToParent={projectsController.moveFolderToParent}
         onRefreshProjects={projectsController.refreshProjects}
         onUpdateCurrentProjectMetadata={projectsController.updateCurrentProjectMetadata}
+        onAttachGraphicToExercise={projectsController.attachGraphicToExercise}
         onOpenCreateFolderModal={(parentId?: string | null) => {
           setCreateFolderParentId(parentId ?? null);
           setCreateFolderModalOpen(true);

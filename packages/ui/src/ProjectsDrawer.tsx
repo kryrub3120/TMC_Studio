@@ -7,7 +7,13 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { ConfirmModal } from './ConfirmModal';
 import { useTranslation } from './i18n.js';
-import type { ProjectType } from '@tmc/core';
+import {
+  DEFAULT_EXERCISE_DETAILS,
+  DEFAULT_SESSION_PLAN_DETAILS,
+  type ExerciseDetails,
+  type ProjectType,
+  type SessionPlanDetails,
+} from '@tmc/core';
 
 export interface ProjectItem {
   id: string;
@@ -20,6 +26,8 @@ export interface ProjectItem {
   projectType?: ProjectType;
   description?: string;
   lastOpenedAt?: string;
+  exerciseDetails?: ExerciseDetails;
+  sessionPlanDetails?: SessionPlanDetails;
   tags?: string[];
   folderId?: string | null;
   /** Save status: 'saved' | 'saving' | 'unsaved' | 'error' | undefined */
@@ -169,7 +177,7 @@ interface ProjectsDrawerProps {
   isAuthenticated: boolean;
   isLoading: boolean;
   onSelectProject: (id: string) => void;
-  onCreateProject: (type?: ProjectType) => void;
+  onCreateProject: (type?: ProjectType, sourceGraphicProjectId?: string) => void;
   onDeleteProject: (id: string) => void;
   onDuplicateProject: (id: string) => void;
   onCreateFolder?: (parentFolderId?: string | null) => void;
@@ -184,7 +192,8 @@ interface ProjectsDrawerProps {
   onMoveFolderToParent?: (folderId: string, parentId: string | null, position: number) => void;
   onSignIn: () => void;
   onRefresh?: () => void;
-  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string }) => void;
+  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string; exerciseDetails?: ExerciseDetails; sessionPlanDetails?: SessionPlanDetails }) => void;
+  onAttachGraphicToExercise?: (sourceGraphicProjectId: string) => void;
 }
 
 export function ProjectsDrawer({
@@ -212,6 +221,7 @@ export function ProjectsDrawer({
   onSignIn,
   onRefresh,
   onUpdateCurrentProjectMetadata,
+  onAttachGraphicToExercise,
 }: ProjectsDrawerProps) {
   const { t } = useTranslation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -220,6 +230,9 @@ export function ProjectsDrawer({
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [typeFilter, setTypeFilter] = useState<'all' | ProjectType>('all');
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [selectedGraphicId, setSelectedGraphicId] = useState('');
+  const [selectedExerciseId, setSelectedExerciseId] = useState('');
+  const [libraryTutorialStep, setLibraryTutorialStep] = useState<number | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
   
@@ -302,6 +315,51 @@ export function ProjectsDrawer({
   useEffect(() => {
     setDescriptionDraft(currentProject?.description ?? '');
   }, [currentProject?.description, currentProjectId]);
+
+  const graphicProjects = useMemo(
+    () => projects.filter((project) => (project.projectType ?? 'graphic') === 'graphic'),
+    [projects],
+  );
+  const exerciseProjects = useMemo(
+    () => projects.filter((project) => project.projectType === 'exercise'),
+    [projects],
+  );
+
+  useEffect(() => {
+    setSelectedGraphicId(currentProject?.exerciseDetails?.sourceGraphicProjectId ?? graphicProjects[0]?.id ?? '');
+  }, [currentProjectId, currentProject?.exerciseDetails?.sourceGraphicProjectId, graphicProjects]);
+
+  useEffect(() => {
+    setSelectedExerciseId(exerciseProjects[0]?.id ?? '');
+  }, [currentProjectId, exerciseProjects]);
+
+  const updateExercise = (patch: Partial<ExerciseDetails>) => {
+    if (!currentProject || !onUpdateCurrentProjectMetadata) return;
+    onUpdateCurrentProjectMetadata({
+      exerciseDetails: { ...DEFAULT_EXERCISE_DETAILS, ...currentProject.exerciseDetails, ...patch },
+    });
+  };
+
+  const updateSession = (details: SessionPlanDetails) => {
+    onUpdateCurrentProjectMetadata?.({ sessionPlanDetails: details });
+  };
+
+  const addExerciseToSession = () => {
+    if (!currentProject || !selectedExerciseId) return;
+    const exercise = exerciseProjects.find((project) => project.id === selectedExerciseId);
+    if (!exercise) return;
+    const current = currentProject.sessionPlanDetails ?? DEFAULT_SESSION_PLAN_DETAILS;
+    if (current.exercises.some((item) => item.projectId === exercise.id)) return;
+    updateSession({
+      exercises: [...current.exercises, {
+        id: globalThis.crypto?.randomUUID?.() ?? `session-item-${Date.now()}`,
+        projectId: exercise.id,
+        name: exercise.name,
+        durationMinutes: exercise.exerciseDetails?.durationMinutes ?? 15,
+        notes: '',
+      }],
+    });
+  };
 
   // Projects grouped by folder (direct children only)
   const projectsByFolder = useMemo(() => {
@@ -917,6 +975,15 @@ export function ProjectsDrawer({
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-text">{t('projects.title')}</h2>
+            <button
+              type="button"
+              onClick={() => setLibraryTutorialStep(0)}
+              className="px-2 py-1 rounded-md text-xs font-medium text-accent hover:bg-accent/10"
+              title={t('projects.tutorial.open')}
+              data-testid="library-tutorial-open"
+            >
+              {t('projects.tutorial.help')}
+            </button>
             {isAuthenticated && onRefresh && (
               <button
                 onClick={onRefresh}
@@ -941,6 +1008,7 @@ export function ProjectsDrawer({
           </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="grid grid-cols-3 gap-2 p-4 border-b border-border">
           {(['graphic', 'exercise', 'session'] as ProjectType[]).map((type) => (
             <button
@@ -948,7 +1016,7 @@ export function ProjectsDrawer({
               type="button"
               onClick={() => onCreateProject(type)}
               data-testid={`create-${type}-project`}
-              className="min-w-0 px-2 py-2.5 bg-surface2 border border-border text-text text-xs font-medium rounded-md hover:border-accent hover:text-accent transition-colors"
+              className={`min-w-0 px-2 py-2.5 bg-surface2 border text-text text-xs font-medium rounded-md hover:border-accent hover:text-accent transition-colors ${libraryTutorialStep === (type === 'graphic' ? 0 : type === 'exercise' ? 1 : 2) ? 'border-accent ring-2 ring-accent/40' : 'border-border'}`}
             >
               <span className="block text-base leading-none mb-1" aria-hidden="true">{type === 'graphic' ? '▧' : type === 'exercise' ? '△' : '≡'}</span>
               {t(`projects.type.${type}`)}
@@ -956,8 +1024,27 @@ export function ProjectsDrawer({
           ))}
         </div>
 
+        {libraryTutorialStep !== null && (
+          <div className="mx-4 mt-3 p-3 border border-accent/50 bg-accent/10 rounded-md" data-testid="library-tutorial">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase text-accent">{t('projects.tutorial.step', { current: libraryTutorialStep + 1 })}</p>
+                <p className="mt-1 text-sm font-semibold text-text">{t(`projects.tutorial.items.${libraryTutorialStep}.title`)}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">{t(`projects.tutorial.items.${libraryTutorialStep}.body`)}</p>
+              </div>
+              <button type="button" onClick={() => setLibraryTutorialStep(null)} className="text-muted hover:text-text" aria-label={t('projects.tutorial.close')}>×</button>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <button type="button" disabled={libraryTutorialStep === 0} onClick={() => setLibraryTutorialStep((step) => Math.max(0, (step ?? 0) - 1))} className="text-xs text-muted disabled:opacity-30">{t('projects.tutorial.back')}</button>
+              <button type="button" onClick={() => libraryTutorialStep === 2 ? setLibraryTutorialStep(null) : setLibraryTutorialStep(libraryTutorialStep + 1)} className="px-3 py-1.5 rounded-md bg-accent text-white text-xs font-semibold">
+                {libraryTutorialStep === 2 ? t('projects.tutorial.done') : t('projects.tutorial.next')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {currentProject && onUpdateCurrentProjectMetadata && (
-          <div className="p-4 border-b border-border space-y-2">
+          <div className="p-4 border-b border-border space-y-3" data-testid="project-composer">
             <div className="flex items-center gap-2">
               <label htmlFor="project-type" className="text-xs font-medium text-muted">{t('projects.kind')}</label>
               <select
@@ -981,6 +1068,87 @@ export function ProjectsDrawer({
               className="w-full resize-none bg-surface2 border border-border rounded-md px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
               data-testid="project-description"
             />
+
+            {(currentProject.projectType ?? 'graphic') === 'graphic' && (
+              <button
+                type="button"
+                onClick={() => onCreateProject('exercise', currentProject.id)}
+                className="w-full px-3 py-2 rounded-md bg-accent text-white text-sm font-semibold hover:bg-accent/90"
+                data-testid="create-exercise-from-graphic"
+              >
+                {t('projects.exercise.createFromThisGraphic')}
+              </button>
+            )}
+
+            {currentProject.projectType === 'exercise' && (() => {
+              const details = { ...DEFAULT_EXERCISE_DETAILS, ...currentProject.exerciseDetails };
+              return (
+                <div className="space-y-3 pt-1" data-testid="exercise-editor">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted">{t('projects.exercise.graphic')}</label>
+                    <div className="flex gap-2">
+                      <select value={selectedGraphicId} onChange={(event) => setSelectedGraphicId(event.target.value)} className="min-w-0 flex-1 bg-surface2 border border-border rounded-md px-2 py-2 text-xs text-text" data-testid="exercise-graphic-select">
+                        {graphicProjects.length === 0 && <option value="">{t('projects.exercise.noGraphics')}</option>}
+                        {graphicProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                      </select>
+                      <button type="button" disabled={!selectedGraphicId || !onAttachGraphicToExercise} onClick={() => onAttachGraphicToExercise?.(selectedGraphicId)} className="px-3 py-2 rounded-md bg-surface2 border border-border text-xs font-semibold text-text hover:border-accent disabled:opacity-40" data-testid="attach-graphic">
+                        {details.sourceGraphicProjectId === selectedGraphicId ? t('projects.exercise.refreshGraphic') : t('projects.exercise.useGraphic')}
+                      </button>
+                    </div>
+                    {details.sourceGraphicName && <p className="text-[11px] text-accent">{t('projects.exercise.usingGraphic', { name: details.sourceGraphicName })}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-xs text-muted">{t('projects.exercise.duration')}<input type="number" min={1} max={240} value={details.durationMinutes} onChange={(event) => updateExercise({ durationMinutes: Math.max(1, Number(event.target.value) || 1) })} className="mt-1 w-full bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-duration" /></label>
+                    <label className="text-xs text-muted">{t('projects.exercise.players')}<input type="text" value={details.players} onChange={(event) => updateExercise({ players: event.target.value })} placeholder={t('projects.exercise.playersPlaceholder')} className="mt-1 w-full bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-players" /></label>
+                  </div>
+                  <label className="block text-xs text-muted">{t('projects.exercise.organization')}<textarea value={details.organization} onChange={(event) => updateExercise({ organization: event.target.value })} rows={2} className="mt-1 w-full resize-none bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-organization" /></label>
+                  <label className="block text-xs text-muted">{t('projects.exercise.coachingPoints')}<textarea value={details.coachingPoints} onChange={(event) => updateExercise({ coachingPoints: event.target.value })} rows={2} className="mt-1 w-full resize-none bg-surface2 border border-border rounded-md px-2 py-2 text-sm text-text" data-testid="exercise-coaching-points" /></label>
+                </div>
+              );
+            })()}
+
+            {currentProject.projectType === 'session' && (() => {
+              const details = currentProject.sessionPlanDetails ?? DEFAULT_SESSION_PLAN_DETAILS;
+              const totalDuration = details.exercises.reduce((sum, item) => sum + item.durationMinutes, 0);
+              const updateItem = (id: string, patch: Partial<SessionPlanDetails['exercises'][number]>) => updateSession({ exercises: details.exercises.map((item) => item.id === id ? { ...item, ...patch } : item) });
+              const moveItem = (index: number, direction: -1 | 1) => {
+                const target = index + direction;
+                if (target < 0 || target >= details.exercises.length) return;
+                const next = [...details.exercises];
+                [next[index], next[target]] = [next[target], next[index]];
+                updateSession({ exercises: next });
+              };
+              return (
+                <div className="space-y-3 pt-1" data-testid="session-editor">
+                  <div className="flex items-center justify-between"><p className="text-xs font-semibold text-text">{t('projects.session.agenda')}</p><span className="text-xs text-accent">{t('projects.session.total', { minutes: totalDuration })}</span></div>
+                  <div className="flex gap-2">
+                    <select value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)} className="min-w-0 flex-1 bg-surface2 border border-border rounded-md px-2 py-2 text-xs text-text" data-testid="session-exercise-select">
+                      {exerciseProjects.length === 0 && <option value="">{t('projects.session.noExercises')}</option>}
+                      {exerciseProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                    </select>
+                    <button type="button" disabled={!selectedExerciseId} onClick={addExerciseToSession} className="px-3 py-2 rounded-md bg-accent text-white text-xs font-semibold disabled:opacity-40" data-testid="add-exercise-to-session">{t('projects.session.add')}</button>
+                  </div>
+                  {details.exercises.length === 0 && <p className="py-3 text-center text-xs text-muted">{t('projects.session.empty')}</p>}
+                  <div className="space-y-2">
+                    {details.exercises.map((item, index) => (
+                      <div key={item.id} className="p-2.5 bg-surface2 border border-border rounded-md space-y-2" data-testid="session-exercise-item">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 shrink-0 rounded bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center">{index + 1}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-text">{item.name}</span>
+                          <button type="button" onClick={() => moveItem(index, -1)} disabled={index === 0} className="text-muted disabled:opacity-25" title={t('projects.session.moveUp')}>↑</button>
+                          <button type="button" onClick={() => moveItem(index, 1)} disabled={index === details.exercises.length - 1} className="text-muted disabled:opacity-25" title={t('projects.session.moveDown')}>↓</button>
+                          <button type="button" onClick={() => updateSession({ exercises: details.exercises.filter((entry) => entry.id !== item.id) })} className="text-danger" title={t('projects.session.remove')}>×</button>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="number" min={1} max={240} value={item.durationMinutes} onChange={(event) => updateItem(item.id, { durationMinutes: Math.max(1, Number(event.target.value) || 1) })} aria-label={t('projects.session.itemDuration')} className="w-20 bg-surface border border-border rounded px-2 py-1.5 text-xs text-text" />
+                          <input type="text" value={item.notes} onChange={(event) => updateItem(item.id, { notes: event.target.value })} placeholder={t('projects.session.notes')} className="min-w-0 flex-1 bg-surface border border-border rounded px-2 py-1.5 text-xs text-text" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1050,7 +1218,7 @@ export function ProjectsDrawer({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div>
         {/* Folders Tree Section — always visible (search auto-expands matching paths) */}
         {isAuthenticated && (
           <div className="border-b border-border">
@@ -1192,6 +1360,7 @@ export function ProjectsDrawer({
           </div>
         )}
 
+        </div>
         </div>
 
         {/* Footer - Cloud sync status */}

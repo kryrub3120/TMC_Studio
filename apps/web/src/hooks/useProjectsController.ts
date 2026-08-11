@@ -13,7 +13,13 @@
 import { logger } from '../lib/logger';
 import { useCallback, useState, useEffect } from 'react';
 import { useTranslation } from '@tmc/ui';
-import type { ProjectType } from '@tmc/core';
+import {
+  DEFAULT_EXERCISE_DETAILS,
+  DEFAULT_SESSION_PLAN_DETAILS,
+  type ExerciseDetails,
+  type ProjectType,
+  type SessionPlanDetails,
+} from '@tmc/core';
 import { useBoardStore } from '../store';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -49,12 +55,13 @@ export interface ProjectsController {
   // Project operations
   openDrawer: () => void;
   selectProject: (id: string) => Promise<void>;
-  createProject: (type?: ProjectType) => Promise<void>;
+  createProject: (type?: ProjectType, sourceGraphicProjectId?: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   duplicateProject: (id: string) => Promise<void>;
   renameProject: (newName: string) => void;
   renameProjectById: (projectId: string, newName: string) => Promise<void>;
-  updateCurrentProjectMetadata: (updates: { projectType?: ProjectType; description?: string }) => Promise<void>;
+  updateCurrentProjectMetadata: (updates: { projectType?: ProjectType; description?: string; exerciseDetails?: ExerciseDetails; sessionPlanDetails?: SessionPlanDetails }) => Promise<void>;
+  attachGraphicToExercise: (sourceGraphicProjectId: string) => Promise<void>;
   refreshProjects: () => Promise<void>;
   
   // Folder operations
@@ -148,7 +155,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   /**
    * Create a new project with entitlement checks
    */
-  const createProject = useCallback(async (type: ProjectType = 'graphic') => {
+  const createProject = useCallback(async (type: ProjectType = 'graphic', sourceGraphicProjectId?: string) => {
     // Calculate current project count
     let projectCount = 0;
     
@@ -185,15 +192,49 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       showToast(t('projectToast.limitFree', { count: projectCount + 1 }));
     }
 
+    // Flush the current editor before switching documents. This also prevents
+    // exercise/session metadata typed immediately before creation from being lost.
+    if (authIsAuthenticated && cloudProjectId) await saveToCloud();
+
+    const sourceGraphicRecord = sourceGraphicProjectId
+      ? cloudProjects.find((project) => project.id === sourceGraphicProjectId)
+      : undefined;
+    const sourceGraphic = sourceGraphicRecord
+      ? {
+          ...sourceGraphicRecord,
+          document: sourceGraphicRecord.id === cloudProjectId ? structuredClone(boardDoc) : sourceGraphicRecord.document,
+        }
+      : undefined;
+
     // Create the project
     newDocument();
     useBoardStore.setState((state) => ({
       document: {
         ...state.document,
+        ...(sourceGraphic ? {
+          steps: structuredClone(sourceGraphic.document.steps),
+          currentStepIndex: 0,
+          pitchConfig: structuredClone(sourceGraphic.document.pitchConfig),
+          teamSettings: structuredClone(sourceGraphic.document.teamSettings),
+          pitchSettings: structuredClone(sourceGraphic.document.pitchSettings),
+          playerOrientationSettings: structuredClone(sourceGraphic.document.playerOrientationSettings),
+        } : {}),
         projectType: type,
         description: '',
-        name: type === 'exercise' ? t('projects.defaultExerciseName') : type === 'session' ? t('projects.defaultSessionName') : state.document.name,
+        exerciseDetails: type === 'exercise' ? {
+          ...DEFAULT_EXERCISE_DETAILS,
+          ...(sourceGraphic ? { sourceGraphicProjectId: sourceGraphic.id, sourceGraphicName: sourceGraphic.name } : {}),
+        } : undefined,
+        sessionPlanDetails: type === 'session' ? structuredClone(DEFAULT_SESSION_PLAN_DETAILS) : undefined,
+        name: type === 'exercise'
+          ? (sourceGraphic ? t('projects.exerciseFromGraphicName', { name: sourceGraphic.name }) : t('projects.defaultExerciseName'))
+          : type === 'session' ? t('projects.defaultSessionName') : state.document.name,
       },
+      elements: sourceGraphic ? structuredClone(sourceGraphic.document.steps[0]?.elements ?? []) : state.elements,
+      selectedIds: [],
+      history: sourceGraphic ? [{ elements: structuredClone(sourceGraphic.document.steps[0]?.elements ?? []), selectedIds: [] }] : state.history,
+      historyIndex: sourceGraphic ? 0 : state.historyIndex,
+      currentStepIndex: 0,
     }));
     onCloseDrawer();
     showToast(t('projectToast.created'));
@@ -220,8 +261,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     cloudProjects,
     cloudProjectId,
     elements.length,
-    boardDoc.steps.length,
-    boardDoc.projectType,
+    boardDoc,
     newDocument,
     showToast,
     saveToCloud,
@@ -231,7 +271,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     t,
   ]);
 
-  const updateCurrentProjectMetadata = useCallback(async (updates: { projectType?: ProjectType; description?: string }) => {
+  const updateCurrentProjectMetadata = useCallback(async (updates: { projectType?: ProjectType; description?: string; exerciseDetails?: ExerciseDetails; sessionPlanDetails?: SessionPlanDetails }) => {
     if (updates.projectType && updates.projectType !== (boardDoc.projectType ?? 'graphic') && authIsAuthenticated && !authIsPro) {
       const projectCount = cloudProjects.filter((project) =>
         project.id !== cloudProjectId && (project.document.projectType ?? 'graphic') === updates.projectType
@@ -250,9 +290,42 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
       },
     }));
     markDirty();
+  }, [authIsAuthenticated, authIsPro, boardDoc.projectType, can, cloudProjectId, cloudProjects, markDirty, onOpenLimitModal]);
+
+  const attachGraphicToExercise = useCallback(async (sourceGraphicProjectId: string) => {
+    const source = cloudProjects.find((project) => project.id === sourceGraphicProjectId);
+    const current = useBoardStore.getState();
+    if (!source || (current.document.projectType ?? 'graphic') !== 'exercise') return;
+
+    const steps = structuredClone(source.document.steps);
+    const now = new Date().toISOString();
+    useBoardStore.setState({
+      document: {
+        ...current.document,
+        steps,
+        currentStepIndex: 0,
+        pitchConfig: structuredClone(source.document.pitchConfig),
+        teamSettings: structuredClone(source.document.teamSettings),
+        pitchSettings: structuredClone(source.document.pitchSettings),
+        playerOrientationSettings: structuredClone(source.document.playerOrientationSettings),
+        exerciseDetails: {
+          ...(current.document.exerciseDetails ?? DEFAULT_EXERCISE_DETAILS),
+          sourceGraphicProjectId: source.id,
+          sourceGraphicName: source.name,
+        },
+        updatedAt: now,
+      },
+      elements: structuredClone(steps[0]?.elements ?? []),
+      currentStepIndex: 0,
+      selectedIds: [],
+      history: [{ elements: structuredClone(steps[0]?.elements ?? []), selectedIds: [] }],
+      historyIndex: 0,
+    });
+    markDirty();
     if (authIsAuthenticated) await saveToCloud();
     await fetchCloudProjects();
-  }, [authIsAuthenticated, authIsPro, boardDoc.projectType, can, cloudProjectId, cloudProjects, fetchCloudProjects, markDirty, onOpenLimitModal, saveToCloud]);
+    showToast(t('projectToast.graphicAttached', { name: source.name }));
+  }, [authIsAuthenticated, cloudProjects, fetchCloudProjects, markDirty, saveToCloud, showToast, t]);
   
   /**
    * Delete a project
@@ -520,6 +593,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     renameProject,
     renameProjectById,
     updateCurrentProjectMetadata,
+    attachGraphicToExercise,
     refreshProjects,
     
     // Folder operations

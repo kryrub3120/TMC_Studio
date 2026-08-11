@@ -170,24 +170,24 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   // ─── Step 7: Save & Projects ─────────────────────────────────────
   {
     id: 7,
-    eyebrow: '💾 Save',
-    title: 'Never lose your work',
-    description: 'Press ⌘S to save. Your projects are auto-saved to the cloud. Open the Projects panel to rename, organize, or pick up where you left off.',
+    eyebrow: '📚 Library',
+    title: 'Turn drawings into sessions',
+    description: 'Open Projects: save a board as a Graphic, turn it into an Exercise with coaching details, then add exercises to an ordered Session plan.',
     targetSelector: '[data-tour="projects-panel"]',
     position: 'right',
     durationMs: 7000,
-    keycaps: ['⌘S', '⌘O'],
-    targetLabel: 'Save & projects',
+    keycaps: ['Graphic', 'Exercise', 'Session'],
+    targetLabel: 'Coaching library',
     demo: 'save',
     cta: 'Share & export',
     roleVariants: {
       guest: {
-        title: 'Save your work — create a free account',
-        description: 'Press ⌘S to save locally. Create a free account to save to the cloud, access your projects anywhere, and unlock more features.',
+        title: 'Build a coaching library — create a free account',
+        description: 'Draw freely as a guest. Create a free account to save Graphics, build Exercises and assemble Session plans in the cloud.',
         cta: 'Sign up free',
       },
       free: {
-        description: 'Press ⌘S to save. Your projects are auto-saved to the cloud. Upgrade to Pro for unlimited projects and GIF/PDF export.',
+        description: 'Create up to three Graphics, Exercises and Session plans. Use the “How it works” guide in Projects; Pro removes library limits.',
       },
     },
   },

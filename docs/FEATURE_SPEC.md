@@ -1705,6 +1705,28 @@ Dla Pro/Team — wszystkie opcje dostępne.
 - Projects can be organized in folders
 - Folders have: `id`, `name`, `color`, `user_id`
 
+### 13.2.1 Coaching Library Workflow
+
+**Graphic**
+- A regular editable board with elements and animation steps.
+- The current Graphic exposes `Create exercise from this graphic` in Projects.
+
+**Exercise**
+- Remains a fully editable board.
+- Can be created from the current Graphic or attach/refresh from any Graphic in the user's library.
+- Copying a Graphic copies its steps, board, team, pitch and orientation settings, so the Exercise survives deletion or later edits of the source.
+- Stores source graphic id/name, duration, player count, organization and coaching points.
+
+**Session plan**
+- Stores an ordered list of Exercise references with a stable name snapshot.
+- Each item has an independently editable duration and note.
+- Exercises can be moved up/down or removed; total duration is calculated from the agenda.
+- Changes use the standard debounced cloud autosave and survive reload.
+
+**Guidance**
+- `How it works` in Projects opens a three-step Graphic → Exercise → Session tutorial.
+- The global first-run tutorial opens the real Projects drawer and explains the same library workflow.
+
 ### 13.3 Autosave Rules
 
 **Autosave triggered by:**

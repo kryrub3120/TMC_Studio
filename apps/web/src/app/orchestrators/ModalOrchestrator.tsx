@@ -19,7 +19,7 @@ import {
   type SettingsTab,
 } from '@tmc/ui';
 import { type ProjectFolder, type User } from '../../lib/supabase';
-import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer, ProjectType, LineupPreset } from '@tmc/core';
+import type { ArrowType, ArrowDefaults, ZoneDefaults, TeamSettings, TeamSetting, PitchSettings, Team, PitchBoardPreset, SquadPlayer, ProjectType, LineupPreset, ExerciseDetails, SessionPlanDetails } from '@tmc/core';
 import { useUIStore } from '../../store/useUIStore';
 
 interface ModalOrchestratorProps {
@@ -67,7 +67,7 @@ interface ModalOrchestratorProps {
   currentProjectId: string | null;
   projectsIsLoading: boolean;
   onSelectProject: (projectId: string) => void;
-  onCreateProject: (type?: ProjectType) => void;
+  onCreateProject: (type?: ProjectType, sourceGraphicProjectId?: string) => void;
   onDeleteProject: (projectId: string) => void;
   onDuplicateProject: (projectId: string) => void;
   onToggleFavorite: (projectId: string) => void;
@@ -80,7 +80,8 @@ interface ModalOrchestratorProps {
   onRenameFolder?: (folderId: string, newName: string) => void;
   onMoveFolderToParent?: (folderId: string, parentId: string | null, position: number) => void;
   onRefreshProjects: () => void;
-  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string }) => void;
+  onUpdateCurrentProjectMetadata?: (updates: { projectType?: ProjectType; description?: string; exerciseDetails?: ExerciseDetails; sessionPlanDetails?: SessionPlanDetails }) => void;
+  onAttachGraphicToExercise?: (sourceGraphicProjectId: string) => void;
   onOpenCreateFolderModal: (parentFolderId?: string | null) => void;
   
   // Create Folder Modal
@@ -250,6 +251,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         }}
         onRefresh={props.onRefreshProjects}
         onUpdateCurrentProjectMetadata={props.onUpdateCurrentProjectMetadata}
+        onAttachGraphicToExercise={props.onAttachGraphicToExercise}
       />
       
       {/* Create Folder Modal */}
