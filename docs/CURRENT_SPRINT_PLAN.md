@@ -146,18 +146,31 @@ Stan wejsciowy:
 
 1. Produkcja `https://tmcstudio.app` dziala z Google OAuth redirect + PKCE.
 2. Publiczna warstwa SEO obejmuje 60 prerenderowanych stron EN/PL/ES.
-3. Gate lokalny: 139 testow web, 40 billing i 36 E2E przechodzi.
-4. Stripe produkcyjny pozostaje celowo w test mode do czasu potwierdzenia
-   danych prawnych, podatkow, katalogu LIVE i testu webhooka.
+3. Gate lokalny: 142 testy web, 56 testow funkcji i 36 E2E przechodzi.
+4. Stripe produkcyjny dziala w LIVE. Zakup Pro B2C PL za 9 USD zakonczyl sie
+   poprawnie: VAT 23% inclusive, 3D Secure, webhook do Supabase, aktywacja Pro,
+   faktura i Customer Portal zostaly zweryfikowane 2026-08-11.
 5. Sentry error-only jest aktywne w produkcji; kontrolowany test ingestion
    zakonczyl sie HTTP 200 bez naruszen CSP.
 
 Najblizsza kolejnosc:
 
-1. Konfiguracja Stripe LIVE w Dashboard wedlug `docs/STRIPE_TAX_SETUP.md`.
-2. End-to-end zakup LIVE o minimalnej wartosci i refund.
+1. Testy podatkowe B2C DE/ES i B2B VAT-UE bez rzeczywistego obciazenia.
+2. Potwierdzenie z ksiegowym OSS oraz formalnej numeracji/JPK.
 3. Beta 10-20 osob z pomiarem aktywacji, eksportu, bledow i checkoutu.
 4. Naprawa tylko problemow P0/P1 przed publicznym ruchem sprzedazowym.
+
+Weryfikacja LIVE 2026-08-11:
+
+- Pro 9 USD/mies. kupione przez polskiego konsumenta; 1,68 USD VAT w cenie.
+- Konto po webhooku ma plan Pro; naprawiono zawieszony modal aktywacji.
+- Portal pokazuje plan, kolejny termin, metode platnosci, anulowanie i historie faktur.
+- Faktura Stripe jest poprawna kwotowo; do stopki przyszlych dokumentow dodano
+  pelna nazwe SPORTPREDICTOR SP. Z O.O., NIP, REGON, KRS i adres.
+- Checkout wymaga lokalizowanej zgody na natychmiastowe swiadczenie i utrate
+  prawa odstapienia; Stripe zapisuje akceptacje Terms, a metadata wersje tekstu.
+- Zakup pozostaje aktywny jako realne konto Pro, dlatego refund/cancel nie byl
+  wykonywany.
 
 ### Sprint UX-C - Editor Viewport, Pan i Squad Bench
 

@@ -94,12 +94,13 @@ To nie jest sprawa migracji, tylko zmiennej środowiskowej na hostingu
   spójne z modalem in-app.
 - Pliki: `apps/web/src/pages/PricingPage.tsx`, `apps/web/src/app/AppShell.tsx`.
 
-**Do rozważenia (następny krok, nie blocker):** strona `/pricing` reklamuje plan
-roczny ($90/$290 „2 months free"), ale in-app `PricingModal` checkoutuje **tylko
-cykl miesięczny** (hardkodowane `STRIPE_PRICES.*.monthly`). Albo dodaj przełącznik
-roczny do modalu i przekaż cykl z `/pricing`, albo zdejmij roczny toggle z
-publicznej strony do czasu wdrożenia — teraz user wybierający „Yearly" i tak
-zapłaci miesięcznie.
+**Zrealizowane:** strona `/pricing` i modal in-app przekazują wybrany cykl.
+Checkout ma osobne LIVE Price ID dla Pro/Team w wariantach miesiecznych i
+rocznych ($9/$90 oraz $29/$290), a webhook mapuje oba cykle na prawidlowy plan.
+
+**LIVE zweryfikowane 2026-08-11:** zakup Pro B2C PL, VAT inclusive, 3D Secure,
+webhook, aktywacja Pro, Customer Portal i faktura. Dodatkowo naprawiono modal
+aktywacji, dodano wymagana zgode regulaminowa EN/PL/ES i prawna stopke faktury.
 
 ---
 

@@ -130,13 +130,13 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 2. [x] Integracja Checkout wymaga pełnego adresu rozliczeniowego.
 3. [x] Integracja Checkout włącza `tax_id_collection`; dla istniejącego Customer zapisuje nazwę i adres.
 4. [x] Stripe Tax aktywne: origin PL, ceny tax-inclusive, kategoria `Electronically Supplied Services`, rejestracja Poland domestic i stawka 23% (2026-08-09).
-5. Włącz **Customer Portal** (Settings → Billing → Customer portal): anulowanie, zmiana planu, pobieranie faktur — wspiera „łatwe anulowanie" wymagane przez UE.
-6. Dodaj **pole zgody konsumenta na natychmiastowe świadczenie + utratę prawa odstąpienia** (custom field / checkbox w Checkout lub na własnej stronie checkout przed redirectem) — wymóg prawa odstąpienia (patrz `SITE_ARCHITECTURE.md` §4.4). Zapisz zgodę w metadanych transakcji.
+5. [x] **Customer Portal**: anulowanie, metoda płatności, dane klienta i pobieranie faktur zweryfikowane LIVE 2026-08-11.
+6. [x] **Zgoda konsumenta**: wymagany checkbox Stripe Checkout w EN/PL/ES obejmuje natychmiastowe rozpoczęcie świadczenia i utratę prawa odstąpienia. Stripe zapisuje akceptację Terms; sesja i subskrypcja zawierają wersję tekstu zgody w metadata.
 
 ### Krok 6 — Faktury (Invoicing)
-1. Włącz **automatyczne faktury** dla subskrypcji.
-2. Uzupełnij dane sprzedawcy, **kolejną numerację faktur**, stopkę z NIP/VAT-UE.
-3. Włącz wysyłkę faktury e-mailem po płatności.
+1. [x] Automatyczna faktura dla subskrypcji wygenerowana i dostępna w Portalu.
+2. [x] Numeracja konta działa; stopka przyszłych faktur zawiera pełne dane spółki, NIP, REGON, KRS i adres (2026-08-11).
+3. [ ] Potwierdzić na drugim adresie klienta dostarczenie e-maila z fakturą po odnowieniu lub kolejnym kontrolowanym zakupie.
 
 ### Krok 7 — Integracja z aplikacją (Supabase)
 1. Skonfiguruj **webhooki** Stripe → endpoint aplikacji: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`.
@@ -171,10 +171,12 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
 - [ ] Produkty Pro + Team, ceny mies./rok, **tax behavior = inclusive**, waluty EUR/PLN/USD/GBP, tax code SaaS
 - [ ] Checkout: automatic tax, billing address, collect + validate VAT ID (reverse charge)
 - [x] Customer Portal: faktury, dane klienta i VAT ID, płatności, anulowanie na koniec okresu, linki prawne i powrót do aplikacji
-- [ ] Checkbox zgody na świadczenie + utrata prawa odstąpienia, zapis w metadanych
-- [ ] Automatyczne faktury z numeracją i danymi VAT
-- [ ] Webhooki → Supabase `subscriptionTier`, mapowanie price→plan, obsługa payment_failed
-- [ ] Testy: B2C PL/DE/ES, B2B reverse charge, faktura, webhook, anulowanie
+- [x] Checkbox zgody na świadczenie + utrata prawa odstąpienia, zapis w Stripe i metadanych
+- [x] Automatyczna faktura, numeracja i stopka z danymi prawnymi sprzedawcy
+- [x] Webhook zakupowy → Supabase `subscriptionTier`; mapowanie LIVE price→plan
+- [ ] Symulacja `payment_failed` i potwierdzenie downgrade po przejściu subskrypcji do `unpaid`
+- [ ] Testy: B2C DE/ES, B2B reverse charge i anulowanie na koniec okresu
+- [x] Test LIVE B2C PL: VAT, 3D Secure, faktura, webhook, aktywacja Pro i Portal
 
 ---
 
