@@ -454,6 +454,40 @@ describe('Checkout Security (create-checkout.ts)', () => {
     expect(callArgs.customer_update).toBeUndefined();
   });
 
+  it('recovers from a Test Mode customer ID when using LIVE Stripe', async () => {
+    const { __mockSupabase } = await import('@supabase/supabase-js');
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ eq: updateEq });
+    (__mockSupabase.from as any).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { stripe_customer_id: 'cus_test_mode_legacy' },
+        error: null,
+      }),
+      update,
+    });
+
+    const stripeModule = await import('stripe');
+    const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;
+    mockCreate.mockClear();
+    const missingCustomer = new (stripeModule as any).StripeError('No such customer');
+    missingCustomer.code = 'resource_missing';
+    missingCustomer.param = 'customer';
+    mockCreate
+      .mockRejectedValueOnce(missingCustomer)
+      .mockResolvedValueOnce({ id: 'cs_live_123', url: 'https://checkout.stripe.com/live' });
+
+    const res = await handler(makeEvent(), {} as any);
+    expect(res.statusCode).toBe(200);
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockCreate.mock.calls[0][0].customer).toBe('cus_test_mode_legacy');
+    expect(mockCreate.mock.calls[1][0].customer).toBeUndefined();
+    expect(mockCreate.mock.calls[1][0].customer_email).toBe('test@example.com');
+    expect(update).toHaveBeenCalledWith({ stripe_customer_id: null });
+    expect(updateEq).toHaveBeenCalledWith('id', 'user-123');
+  });
+
   it('enables automatic tax, billing address, and tax ID collection', async () => {
     const stripeModule = await import('stripe');
     const mockCreate = (stripeModule as any).__mockCheckoutSessionsCreate;

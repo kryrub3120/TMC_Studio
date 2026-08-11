@@ -75,6 +75,14 @@ function isValidRedirectUrl(url: string): boolean {
   }
 }
 
+function isMissingStripeCustomer(error: unknown): error is Stripe.errors.StripeError {
+  return (
+    error instanceof Stripe.errors.StripeError &&
+    error.code === 'resource_missing' &&
+    (error.param === 'customer' || error.message.includes('No such customer'))
+  );
+}
+
 const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   // ── CORS ──────────────────────────────────────────────────────
   const origin =
@@ -242,7 +250,31 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
     };
 
     // ── Create checkout session ──────────────────────────────────
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    // Accounts used before the LIVE migration can still reference a Test Mode
+    // customer. Recover once by clearing that stale ID and letting Checkout
+    // create a customer in the current Stripe mode.
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    } catch (error) {
+      if (!profile?.stripe_customer_id || !isMissingStripeCustomer(error)) {
+        throw error;
+      }
+
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: null })
+        .eq('id', authUser.id);
+      if (profileUpdateError) throw profileUpdateError;
+
+      const retryParams: Stripe.Checkout.SessionCreateParams = {
+        ...sessionParams,
+        customer_email: authUser.email || undefined,
+      };
+      delete retryParams.customer;
+      delete retryParams.customer_update;
+      session = await stripe.checkout.sessions.create(retryParams);
+    }
 
     return {
       statusCode: 200,
