@@ -1,6 +1,6 @@
 {
   "name": "tmc-studio",
-  "version": "0.11.0",
+  "version": "0.13.1",
   "private": true,
   "description": "TMC Studio — Tactical Board and Animation by Tactics Made Clear",
   "packageManager": "pnpm@9.15.0",
@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:production": "netlify build --context production --filter @tmc/web && pnpm verify:production-build",
+    "verify:production-build": "node scripts/verify-production-build.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
