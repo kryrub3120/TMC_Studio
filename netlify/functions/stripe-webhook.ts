@@ -36,6 +36,180 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+type SubscriptionTier = 'free' | 'pro' | 'team';
+type StripeSubscriptionWithLegacyPeriod = Stripe.Subscription & {
+  current_period_end?: number | null;
+  current_period_start?: number | null;
+};
+type StripeSubscriptionItemWithPeriod = Stripe.SubscriptionItem & {
+  current_period_end?: number | null;
+  current_period_start?: number | null;
+};
+type StripeInvoiceWithSubscription = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null;
+  period_end?: number | null;
+  lines?: Stripe.ApiList<Stripe.InvoiceLineItem>;
+};
+
+function maskId(id: string | null | undefined): string {
+  if (!id) return 'unknown';
+  if (id.length <= 12) return `${id.slice(0, 4)}...`;
+  return `${id.slice(0, 8)}...${id.slice(-4)}`;
+}
+
+function isActivePaidStatus(status: Stripe.Subscription.Status): boolean {
+  return status === 'active' || status === 'trialing';
+}
+
+function getPrimarySubscriptionItem(
+  subscription: Stripe.Subscription
+): StripeSubscriptionItemWithPeriod | null {
+  return (subscription.items.data[0] as StripeSubscriptionItemWithPeriod | undefined) ?? null;
+}
+
+function getSubscriptionPriceId(subscription: Stripe.Subscription): string | null {
+  return getPrimarySubscriptionItem(subscription)?.price?.id ?? null;
+}
+
+function getKnownPaidTier(subscription: Stripe.Subscription): Exclude<SubscriptionTier, 'free'> | null {
+  const priceId = getSubscriptionPriceId(subscription);
+  if (!priceId) return null;
+  const tier = getTierFromPriceId(priceId);
+  return tier === 'free' ? null : tier;
+}
+
+function calculatePeriodEndFromStartAndPrice(subscription: Stripe.Subscription): number | null {
+  const startedAt = subscription.start_date;
+  const price = getPrimarySubscriptionItem(subscription)?.price;
+  const interval = price?.recurring?.interval;
+  const intervalCount = price?.recurring?.interval_count ?? 1;
+
+  if (!startedAt || !interval) return null;
+
+  const end = new Date(startedAt * 1000);
+  if (interval === 'month') {
+    end.setMonth(end.getMonth() + intervalCount);
+  } else if (interval === 'year') {
+    end.setFullYear(end.getFullYear() + intervalCount);
+  } else if (interval === 'week') {
+    end.setDate(end.getDate() + (7 * intervalCount));
+  } else if (interval === 'day') {
+    end.setDate(end.getDate() + intervalCount);
+  } else {
+    return null;
+  }
+
+  return Math.floor(end.getTime() / 1000);
+}
+
+function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): Date {
+  const subscriptionWithLegacyPeriod = subscription as StripeSubscriptionWithLegacyPeriod;
+  const primaryItem = getPrimarySubscriptionItem(subscription);
+  const expandedInvoice = typeof subscription.latest_invoice === 'object'
+    ? subscription.latest_invoice as StripeInvoiceWithSubscription
+    : null;
+
+  const periodEnd =
+    primaryItem?.current_period_end ??
+    subscriptionWithLegacyPeriod.current_period_end ??
+    expandedInvoice?.period_end ??
+    calculatePeriodEndFromStartAndPrice(subscription);
+
+  if (!periodEnd || typeof periodEnd !== 'number') {
+    throw new Error(`Could not determine subscription period end. Status: ${subscription.status}`);
+  }
+
+  const expiresAt = new Date(periodEnd * 1000);
+  if (Number.isNaN(expiresAt.getTime())) {
+    throw new Error(`Invalid subscription period end: ${periodEnd}`);
+  }
+
+  return expiresAt;
+}
+
+function getSubscriptionIdFromInvoice(invoice: StripeInvoiceWithSubscription): string | null {
+  const invoiceSubscription = invoice.subscription;
+  if (typeof invoiceSubscription === 'string') return invoiceSubscription;
+  if (invoiceSubscription && typeof invoiceSubscription === 'object') return invoiceSubscription.id;
+
+  for (const line of invoice.lines?.data ?? []) {
+    const lineParent = line.parent as unknown as {
+      subscription_item_details?: { subscription?: string | null };
+    } | null;
+    const subscriptionId = lineParent?.subscription_item_details?.subscription;
+    if (subscriptionId) return subscriptionId;
+  }
+
+  return null;
+}
+
+async function retrieveSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+  return stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ['items.data.price', 'latest_invoice'],
+  });
+}
+
+async function findActiveSubscriptionForCustomer(customerId: string): Promise<Stripe.Subscription | null> {
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 20,
+    expand: ['data.items.data.price'],
+  });
+
+  return subscriptions.data.find((subscription) =>
+    isActivePaidStatus(subscription.status) && getKnownPaidTier(subscription) !== null
+  ) ?? null;
+}
+
+async function syncSubscriptionToProfile(
+  subscription: Stripe.Subscription,
+  preferredUserId?: string | null
+): Promise<void> {
+  const customerId = subscription.customer as string;
+  if (!getSubscriptionPriceId(subscription)) {
+    throw new Error(`No price ID found in subscription ${subscription.id}`);
+  }
+
+  const tier = getKnownPaidTier(subscription);
+  if (!tier) {
+    throw new Error(`Unknown paid Stripe price ID for subscription ${maskId(subscription.id)}`);
+  }
+
+  if (!isActivePaidStatus(subscription.status)) {
+    console.log(`Subscription ${maskId(subscription.id)} is ${subscription.status}; skipping paid sync`);
+    return;
+  }
+
+  const expiresAt = getSubscriptionPeriodEnd(subscription);
+
+  if (preferredUserId) {
+    await updateUserById(preferredUserId, customerId, tier, expiresAt);
+    if (tier === 'team') {
+      await ensureTeamForUser(preferredUserId, customerId);
+    }
+    return;
+  }
+
+  const profile = await updateUserByCustomerId(customerId, tier, expiresAt);
+  if (tier === 'team') {
+    await ensureTeamForUser(profile.id, customerId);
+  }
+}
+
+async function downgradeCustomerToFreeIfNoActiveSubscription(customerId: string): Promise<void> {
+  const activeSubscription = await findActiveSubscriptionForCustomer(customerId);
+  if (activeSubscription) {
+    console.log(
+      `Skipping downgrade for customer ${maskId(customerId)}; active known subscription ${maskId(activeSubscription.id)} still exists`
+    );
+    await syncSubscriptionToProfile(activeSubscription);
+    return;
+  }
+
+  await updateUserByCustomerId(customerId, 'free', null);
+}
+
 /**
  * Claim event for processing (INSERT-first idempotency pattern)
  * 
@@ -152,7 +326,7 @@ async function markEventError(eventId: string, errorMessage: string): Promise<vo
 async function updateUserById(
   userId: string,
   customerId: string,
-  tier: 'free' | 'pro' | 'team',
+  tier: SubscriptionTier,
   expiresAt: Date | null
 ): Promise<void> {
   const { error } = await supabase
@@ -168,7 +342,7 @@ async function updateUserById(
     throw error;
   }
 
-  console.log(`✅ Updated user ${userId} to ${tier} (expires: ${expiresAt?.toISOString() ?? 'never'})`);
+  console.log(`Updated user ${maskId(userId)} to ${tier} (expires: ${expiresAt?.toISOString() ?? 'never'})`);
 }
 
 /**
@@ -176,9 +350,9 @@ async function updateUserById(
  */
 async function updateUserByCustomerId(
   customerId: string,
-  tier: 'free' | 'pro' | 'team',
+  tier: SubscriptionTier,
   expiresAt: Date | null
-): Promise<void> {
+): Promise<{ id: string }> {
   // Try customer ID lookup first
   const { data: profile, error: selectError } = await supabase
     .from('profiles')
@@ -187,7 +361,7 @@ async function updateUserByCustomerId(
     .single();
 
   if (profile) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('profiles')
       .update({
         subscription_tier: tier,
@@ -195,12 +369,16 @@ async function updateUserByCustomerId(
       })
       .eq('id', profile.id);
 
-    console.log(`✅ Updated user ${profile.id} to ${tier} (via customer ID)`);
-    return;
+    if (updateError) {
+      throw updateError;
+    }
+
+    console.log(`Updated user ${maskId(profile.id)} to ${tier} (via customer ID)`);
+    return profile;
   }
 
   // Fallback: lookup by email from Stripe
-  console.warn(`User not found for customer ${customerId}, trying email lookup...`);
+  console.warn(`User not found for customer ${maskId(customerId)}, trying email lookup...`);
   
   const customer = await stripe.customers.retrieve(customerId);
   if (customer.deleted) {
@@ -223,7 +401,7 @@ async function updateUserByCustomerId(
   }
   
   // Update with customer ID for future lookups
-  await supabase
+  const { error: updateError } = await supabase
     .from('profiles')
     .update({
       subscription_tier: tier,
@@ -231,8 +409,13 @@ async function updateUserByCustomerId(
       stripe_customer_id: customerId,
     })
     .eq('id', profileByEmail.id);
+
+  if (updateError) {
+    throw updateError;
+  }
   
-  console.log(`✅ Updated user ${profileByEmail.id} to ${tier} (via email fallback)`);
+  console.log(`Updated user ${maskId(profileByEmail.id)} to ${tier} (via email fallback)`);
+  return profileByEmail;
 }
 
 /**
@@ -240,9 +423,8 @@ async function updateUserByCustomerId(
  * Uses client_reference_id as PRIMARY lookup method
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  console.log('Processing checkout session:', session.id);
+  console.log('Processing checkout session:', maskId(session.id));
 
-  const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
   const userId = session.client_reference_id; // Supabase user ID (from PR-PAY-2)
 
@@ -251,85 +433,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     return;
   }
 
-  // Get subscription details with full expansion
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-    expand: ['items.data.price', 'latest_invoice']
-  });
-  const priceId = subscription.items.data[0]?.price.id;
-  
-  if (!priceId) {
-    throw new Error('No price ID found in subscription');
-  }
-
-  const tier = getTierFromPriceId(priceId);
-  
-  // Get expiration date - try multiple sources
-  // @ts-expect-error - current_period_end may exist but type definition incomplete
-  let periodEnd = subscription.current_period_end;
-  
-  // Fallback 1: Get from expanded latest_invoice
-  if (!periodEnd && subscription.latest_invoice) {
-    const invoice = subscription.latest_invoice;
-    // @ts-expect-error - period_end exists on invoice
-    periodEnd = typeof invoice === 'object' ? invoice.period_end : null;
-    console.log(`Using period_end from latest_invoice: ${periodEnd}`);
-  }
-  
-  // Fallback 2: Calculate from start_date + interval
-  if (!periodEnd && subscription.start_date) {
-    const plan = subscription.items.data[0]?.price;
-    // @ts-expect-error - interval exists on price/plan
-    const interval = plan?.recurring?.interval || plan?.interval;
-    // @ts-expect-error - interval_count exists
-    const intervalCount = plan?.recurring?.interval_count || plan?.interval_count || 1;
-    
-    if (interval === 'month') {
-      const startDate = new Date(subscription.start_date * 1000);
-      startDate.setMonth(startDate.getMonth() + intervalCount);
-      periodEnd = Math.floor(startDate.getTime() / 1000);
-      console.log(`Calculated period_end from start_date + ${intervalCount} month(s): ${periodEnd}`);
-    } else if (interval === 'year') {
-      const startDate = new Date(subscription.start_date * 1000);
-      startDate.setFullYear(startDate.getFullYear() + intervalCount);
-      periodEnd = Math.floor(startDate.getTime() / 1000);
-      console.log(`Calculated period_end from start_date + ${intervalCount} year(s): ${periodEnd}`);
-    }
-  }
-  
-  if (!periodEnd || typeof periodEnd !== 'number') {
-    console.error('Subscription object:', JSON.stringify(subscription, null, 2));
-    throw new Error(`Could not determine subscription period end. Status: ${subscription.status}`);
-  }
-  
-  const expiresAt = new Date(periodEnd * 1000);
+  const subscription = await retrieveSubscription(subscriptionId);
 
   // PRIMARY: Direct user ID lookup (most reliable)
   if (userId) {
-    console.log(`Using client_reference_id for user lookup: ${userId}`);
-    await updateUserById(userId, customerId, tier, expiresAt);
-
-    // If team tier, create team + team_members row (idempotent)
-    if (tier === 'team') {
-      await ensureTeamForUser(userId, customerId);
-    }
+    console.log(`Using client_reference_id for user lookup: ${maskId(userId)}`);
+    await syncSubscriptionToProfile(subscription, userId);
     return;
   }
 
   // FALLBACK: Customer ID or email lookup (for older sessions without client_reference_id)
   console.log('No client_reference_id, falling back to customer lookup');
-  await updateUserByCustomerId(customerId, tier, expiresAt);
-
-  // If team tier, find user and create team
-  if (tier === 'team') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('stripe_customer_id', customerId)
-      .single();
-    if (profile) {
-      await ensureTeamForUser(profile.id, customerId);
-    }
-  }
+  await syncSubscriptionToProfile(subscription);
 }
 
 /**
@@ -345,7 +460,7 @@ async function ensureTeamForUser(userId: string, customerId: string): Promise<vo
     .single();
 
   if (existingTeam) {
-    console.log(`Team already exists for customer ${customerId}, skipping creation`);
+    console.log(`Team already exists for customer ${maskId(customerId)}, skipping creation`);
     return;
   }
 
@@ -366,7 +481,7 @@ async function ensureTeamForUser(userId: string, customerId: string): Promise<vo
     throw teamError;
   }
 
-  console.log(`✅ Created team ${team.id} for user ${userId}`);
+  console.log(`Created team ${maskId(team.id)} for user ${maskId(userId)}`);
 
   // Add owner as admin member
   const { error: memberError } = await supabase
@@ -382,7 +497,7 @@ async function ensureTeamForUser(userId: string, customerId: string): Promise<vo
     throw memberError;
   }
 
-  console.log(`✅ Added user ${userId} as admin of team ${team.id}`);
+  console.log(`Added user ${maskId(userId)} as admin of team ${maskId(team.id)}`);
 
   // Update user's team_id in profiles
   const { error: profileError } = await supabase
@@ -395,61 +510,22 @@ async function ensureTeamForUser(userId: string, customerId: string): Promise<vo
     throw profileError;
   }
 
-  console.log(`✅ Updated profile team_id for user ${userId}`);
+  console.log(`Updated profile team_id for user ${maskId(userId)}`);
 }
 
 /**
  * Handle subscription updates
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-  console.log('Processing subscription update:', subscription.id);
+  console.log('Processing subscription update:', maskId(subscription.id));
 
   const customerId = subscription.customer as string;
-  const priceId = subscription.items.data[0]?.price.id;
-  
-  if (!priceId) {
-    console.warn('No price ID in subscription, skipping');
-    return;
-  }
-
-  const tier = getTierFromPriceId(priceId);
   
   // Check subscription status
-  if (subscription.status === 'active' || subscription.status === 'trialing') {
-    // Get expiration date with fallback logic (same as checkout handler)
-    // @ts-expect-error - current_period_end may exist but type definition incomplete
-    let periodEnd = subscription.current_period_end;
-    
-    // Fallback: Calculate from start_date + interval if needed
-    if (!periodEnd && subscription.start_date) {
-      const plan = subscription.items.data[0]?.price;
-      // @ts-expect-error - interval exists on price/plan
-      const interval = plan?.recurring?.interval || plan?.interval;
-      // @ts-expect-error - interval_count exists
-      const intervalCount = plan?.recurring?.interval_count || plan?.interval_count || 1;
-      
-      if (interval === 'month') {
-        const startDate = new Date(subscription.start_date * 1000);
-        startDate.setMonth(startDate.getMonth() + intervalCount);
-        periodEnd = Math.floor(startDate.getTime() / 1000);
-        console.log(`[subscription.updated] Calculated period_end: ${periodEnd}`);
-      } else if (interval === 'year') {
-        const startDate = new Date(subscription.start_date * 1000);
-        startDate.setFullYear(startDate.getFullYear() + intervalCount);
-        periodEnd = Math.floor(startDate.getTime() / 1000);
-        console.log(`[subscription.updated] Calculated period_end: ${periodEnd}`);
-      }
-    }
-    
-    if (!periodEnd || typeof periodEnd !== 'number') {
-      throw new Error(`Could not determine subscription period end`);
-    }
-    
-    const expiresAt = new Date(periodEnd * 1000);
-    await updateUserByCustomerId(customerId, tier, expiresAt);
+  if (isActivePaidStatus(subscription.status)) {
+    await syncSubscriptionToProfile(subscription);
   } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-    // Downgrade to free
-    await updateUserByCustomerId(customerId, 'free', null);
+    await downgradeCustomerToFreeIfNoActiveSubscription(customerId);
   }
 }
 
@@ -457,35 +533,45 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
  * Handle subscription deletion (cancellation)
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
-  console.log('Processing subscription deletion:', subscription.id);
+  console.log('Processing subscription deletion:', maskId(subscription.id));
 
   const customerId = subscription.customer as string;
-  await updateUserByCustomerId(customerId, 'free', null);
+  await downgradeCustomerToFreeIfNoActiveSubscription(customerId);
 }
 
 /**
  * Handle successful invoice payment
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-  console.log('Processing paid invoice:', invoice.id);
+  console.log('Processing paid invoice:', maskId(invoice.id));
 
-  // Subscription renewals are handled by subscription.updated
-  // This is mainly for logging/analytics
   const customerId = invoice.customer as string;
   const amount = invoice.amount_paid / 100;
   
-  console.log(`💰 Invoice paid: ${amount} ${invoice.currency?.toUpperCase()} from customer ${customerId}`);
+  console.log(`Invoice paid: ${amount} ${invoice.currency?.toUpperCase()} from customer ${maskId(customerId)}`);
+
+  const subscriptionId = getSubscriptionIdFromInvoice(invoice as StripeInvoiceWithSubscription);
+  const subscription = subscriptionId
+    ? await retrieveSubscription(subscriptionId)
+    : await findActiveSubscriptionForCustomer(customerId);
+
+  if (!subscription) {
+    console.log(`No active known subscription found for paid invoice ${maskId(invoice.id)}; skipping entitlement sync`);
+    return;
+  }
+
+  await syncSubscriptionToProfile(subscription);
 }
 
 /**
  * Handle failed invoice payment
  */
 async function handleInvoiceFailed(invoice: Stripe.Invoice): Promise<void> {
-  console.log('Processing failed invoice:', invoice.id);
+  console.log('Processing failed invoice:', maskId(invoice.id));
 
   // Log the failure - Stripe will retry automatically
   const customerId = invoice.customer as string;
-  console.warn(`⚠️ Payment failed for customer ${customerId}, attempt ${invoice.attempt_count}`);
+  console.warn(`Payment failed for customer ${maskId(customerId)}, attempt ${invoice.attempt_count}`);
   
   // Optional: Send notification email via Postmark/Resend
   // await sendPaymentFailedEmail(customerId, invoice);
@@ -627,4 +713,11 @@ const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) =
   }
 };
 
-export { claimEvent, handler };
+export {
+  claimEvent,
+  getSubscriptionIdFromInvoice,
+  getSubscriptionPeriodEnd,
+  getSubscriptionPriceId,
+  handler,
+  isActivePaidStatus,
+};

@@ -467,7 +467,7 @@ export function AppShell() {
           projects={projectItems}
           saveStatus={projectSaveStatus}
           onOpenProjects={handleOpenProjectsDrawer}
-          onBackToBoard={() => setBoardEditorOverride(true)}
+          onBackToBoard={() => void handleOpenDrawingBoard()}
           onOpenSettings={() => {
             setSettingsInitialTab('preferences');
             setSettingsModalOpen(true);

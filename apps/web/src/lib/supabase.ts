@@ -191,6 +191,7 @@ export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promis
     avatar_url: profile.avatar_url ?? undefined,
     subscription_tier: profile.subscription_tier ?? 'free',
     stripe_customer_id: profile.stripe_customer_id ?? null,
+    team_id: profile.team_id ?? null,
   };
 }
 
