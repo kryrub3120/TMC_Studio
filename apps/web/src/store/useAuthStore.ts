@@ -193,7 +193,27 @@ async function applyCloudPreferences(cloudPrefs?: any): Promise<void> {
   if (cloudPrefs.equipmentDefaults) useUIStore.setState({ equipmentDefaults: { ...useUIStore.getState().equipmentDefaults, ...cloudPrefs.equipmentDefaults } });
   if (cloudPrefs.squadBenchVisible !== undefined) useUIStore.setState({ squadBenchVisible: cloudPrefs.squadBenchVisible });
   if (cloudPrefs.shortcutOverrides) useUIStore.setState({ shortcutOverrides: cloudPrefs.shortcutOverrides });
-  if (cloudPrefs.coachingProfile) useUIStore.setState({ coachingProfile: cloudPrefs.coachingProfile });
+  if (cloudPrefs.coachingProfile) {
+    const currentProfile = useUIStore.getState().coachingProfile;
+    useUIStore.setState({
+      coachingProfile: {
+        ...currentProfile,
+        ...cloudPrefs.coachingProfile,
+        staff: cloudPrefs.coachingProfile.staff ?? currentProfile.staff,
+        squad: cloudPrefs.coachingProfile.squad ?? currentProfile.squad ?? [],
+        positionGroups: cloudPrefs.coachingProfile.positionGroups ?? currentProfile.positionGroups ?? [],
+        sessionDefaults: {
+          dateOffsetDays: 1,
+          nameTemplate: '',
+          venue: '',
+          startTime: '',
+          microcycleDay: '',
+          ...currentProfile.sessionDefaults,
+          ...cloudPrefs.coachingProfile.sessionDefaults,
+        },
+      },
+    });
+  }
   if (cloudPrefs.bottomBar) {
     useUIStore.setState({
       bottomBarHeight: cloudPrefs.bottomBar.height,

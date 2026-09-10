@@ -89,7 +89,11 @@ test.describe("Coaching library workflow", () => {
     });
     expect(copiedElementTypes).toContain("ball");
 
-    await page.getByLabel("Czas (min)").fill("20");
+    await page.getByLabel("Czas łącznie (min)").fill("20");
+    await page.getByLabel("Serie").fill("2");
+    await page.getByLabel("Praca (min)").fill("7");
+    await page.getByLabel("Przerwa (min)").fill("1");
+    await expect(page.getByText("2 × 7 min + 1 min · 15 min", { exact: true })).toBeVisible();
     await page.getByLabel("Liczba zawodników").fill("8 + 2 neutralnych");
     await page.getByLabel("Kategoria / faza").fill("Gra pozycyjna");
     await page.getByLabel("Cel treningowy").fill("Skanowanie i zmiana centrum gry");
@@ -129,13 +133,19 @@ test.describe("Coaching library workflow", () => {
     await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
     await expect(page.getByTestId("exercise-workspace")).toBeVisible();
     await expect(page.getByTestId("exercise-workspace")).not.toHaveAttribute("data-project-id", firstExerciseId ?? "");
-    await page.getByLabel("Czas (min)").fill("10");
+    await page.getByLabel("Czas łącznie (min)").fill("10");
 
     await openLibrary();
     await page.getByTestId("library-type-session").click();
     await page.getByTestId("create-session-project").click();
     await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
     await expect(page.getByTestId("session-workspace")).toBeVisible();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const expectedDate = [tomorrow.getFullYear(), String(tomorrow.getMonth() + 1).padStart(2, "0"), String(tomorrow.getDate()).padStart(2, "0")].join("-");
+    const expectedNameDate = [String(tomorrow.getDate()).padStart(2, "0"), String(tomorrow.getMonth() + 1).padStart(2, "0"), tomorrow.getFullYear()].join(".");
+    await expect(page.getByLabel("Data")).toHaveValue(expectedDate);
+    await expect(page.getByLabel("Nazwa konspektu").first()).toHaveValue(`Trening - ${expectedNameDate}`);
     await page.getByRole("button", { name: "Szybki przewodnik" }).click();
     await expect(page.getByRole("heading", { name: "Zbuduj konspekt treningowy" })).toBeVisible();
     await page.getByRole("button", { name: "Zaczynamy" }).click();
@@ -158,7 +168,7 @@ test.describe("Coaching library workflow", () => {
     await exerciseButtons.first().click();
     await exerciseButtons.nth(1).click();
     await expect(page.locator("article")).toHaveCount(2);
-    await expect(page.getByText("30 min", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("25 min", { exact: true }).first()).toBeVisible();
     await page.getByPlaceholder("Treść, zasady, warianty i wskazówki…").first().fill("Rozgrzewka z piłką.");
 
     await page.getByRole("button", { name: /Dodaj grupę pozycyjną/ }).click();
@@ -218,5 +228,18 @@ test.describe("Coaching library workflow", () => {
     await expect(page.getByTestId("recent-projects")).toBeVisible();
     await page.getByRole("button", { name: "Wróć", exact: true }).click();
     await expect(page.locator('[data-tour="projects-panel"]')).toBeHidden();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openLibrary();
+    await page.getByTestId("library-type-all").click();
+    await page.getByRole("button", { name: /Nieposegregowane/ }).click();
+    const projectCards = page.locator('[data-tour="projects-panel"] main article');
+    const beforeBulkDelete = await projectCards.count();
+    await projectCards.nth(0).getByRole("button", { name: /Zaznacz / }).click();
+    await projectCards.nth(1).getByRole("button", { name: /Zaznacz / }).click();
+    await expect(page.getByTestId("bulk-project-actions")).toContainText("Zaznaczono: 2");
+    await page.getByRole("button", { name: "Usuń zaznaczone" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Usuń zaznaczone" }).click();
+    await expect(projectCards).toHaveCount(beforeBulkDelete - 2);
   });
 });

@@ -5,6 +5,7 @@ import {
   type ExerciseDetails,
   type SessionPlanDetails,
   type CoachingProfile,
+  type SquadPlayer,
 } from "@tmc/core";
 import { ProjectPreview, useTranslation, type ProjectItem } from "@tmc/ui";
 
@@ -31,6 +32,7 @@ interface ExerciseWorkspaceProps extends WorkspaceBaseProps {
 interface SessionWorkspaceProps extends WorkspaceBaseProps {
   onUpdate: (details: SessionPlanDetails, description?: string) => void;
   coachingProfile?: CoachingProfile;
+  squad?: SquadPlayer[];
 }
 
 function WorkspaceHeader({
@@ -683,6 +685,18 @@ export function ExerciseWorkspace({
                   placeholder="10-20"
                 />
               </div>
+              <div className="rounded-md border border-border bg-surface p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div><p className="text-sm font-semibold text-text">{t("coaching.exercise.intervals")}</p><p className="mt-0.5 text-xs text-muted">{t("coaching.exercise.intervalsHint")}</p></div>
+                  {(details.intervalSets ?? 0) > 0 && <button type="button" onClick={() => update({ intervalSets: undefined, intervalWorkMinutes: undefined, intervalRestMinutes: undefined })} className="text-xs font-medium text-muted hover:text-text">{t("coaching.exercise.clearIntervals")}</button>}
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Field label={t("coaching.exercise.sets")} type="number" value={details.intervalSets ?? ''} onChange={(value) => { const sets = Math.max(1, Number(value) || 1); const work = detailsRef.current.intervalWorkMinutes ?? detailsRef.current.durationMinutes; const rest = detailsRef.current.intervalRestMinutes ?? 0; update({ intervalSets: sets, intervalWorkMinutes: work, intervalRestMinutes: rest, durationMinutes: sets * work + Math.max(0, sets - 1) * rest }); }} />
+                  <Field label={t("coaching.exercise.workMinutes")} type="number" value={details.intervalWorkMinutes ?? ''} onChange={(value) => { const work = Math.max(1, Number(value) || 1); const sets = detailsRef.current.intervalSets ?? 1; const rest = detailsRef.current.intervalRestMinutes ?? 0; update({ intervalSets: sets, intervalWorkMinutes: work, intervalRestMinutes: rest, durationMinutes: sets * work + Math.max(0, sets - 1) * rest }); }} />
+                  <Field label={t("coaching.exercise.restMinutes")} type="number" value={details.intervalRestMinutes ?? ''} onChange={(value) => { const rest = Math.max(0, Number(value) || 0); const sets = detailsRef.current.intervalSets ?? 1; const work = detailsRef.current.intervalWorkMinutes ?? detailsRef.current.durationMinutes; update({ intervalSets: sets, intervalWorkMinutes: work, intervalRestMinutes: rest, durationMinutes: sets * work + Math.max(0, sets - 1) * rest }); }} />
+                </div>
+                {(details.intervalSets ?? 0) > 0 && <p className="mt-2 text-xs font-medium text-accent">{details.intervalSets} × {details.intervalWorkMinutes} min + {details.intervalRestMinutes ?? 0} min · {details.durationMinutes} min</p>}
+              </div>
               <Field
                 label={t("coaching.exercise.category")}
                 value={details.category}
@@ -744,6 +758,7 @@ export function SessionWorkspace({
   onRename,
   onUpdate,
   coachingProfile,
+  squad = [],
   userInitials,
 }: SessionWorkspaceProps) {
   const { t } = useTranslation();
@@ -792,7 +807,11 @@ export function SessionWorkspace({
           projectId: exercise.id,
           name: exercise.name,
           durationMinutes: exercise.exerciseDetails?.durationMinutes ?? 15,
+          intervalSets: exercise.exerciseDetails?.intervalSets,
+          intervalWorkMinutes: exercise.exerciseDetails?.intervalWorkMinutes,
+          intervalRestMinutes: exercise.exerciseDetails?.intervalRestMinutes,
           notes: "",
+          previewDocument: exercise.document ? structuredClone(exercise.document) : undefined,
         },
       ],
     });
@@ -1061,7 +1080,18 @@ export function SessionWorkspace({
               ) : (
                 <div className="grid gap-3 lg:grid-cols-2 print:grid-cols-2">
                   {details.exercises.map((item, index) => {
-                    const source = projects.find((candidate) => candidate.id === item.projectId);
+                    const source = projects.find((candidate) => candidate.id === item.projectId) ?? (
+                      item.previewDocument
+                        ? {
+                            id: `snapshot-${item.id}`,
+                            name: item.name,
+                            updatedAt: project.updatedAt,
+                            isCloud: false,
+                            projectType: "graphic" as const,
+                            document: item.previewDocument,
+                          }
+                        : undefined
+                    );
                     return (
                       <article
                         key={item.id}
@@ -1152,6 +1182,8 @@ export function SessionWorkspace({
           <section data-pdf-keep className="mt-6 border-t border-border pt-5 print:mt-4 print:border-black">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-semibold print:text-black">{t("coaching.session.squad")}</h2>
+              <div className="flex gap-2 print:hidden">
+              {(coachingProfile?.positionGroups?.length ?? 0) > 0 && <button type="button" onClick={() => update({ squadGroups: (coachingProfile?.positionGroups ?? []).map((preset) => ({ id: crypto.randomUUID(), label: preset.label, playerIds: [...preset.playerIds], players: squad.filter((player) => preset.playerIds.includes(player.id)).map((player) => `${player.number}. ${player.name}`).join(', ') })) })} className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-bg">{t("coaching.session.loadPresetGroups")}</button>}
               <button
                 type="button"
                 onClick={() =>
@@ -1170,6 +1202,7 @@ export function SessionWorkspace({
               >
                 + {t("coaching.session.addGroup")}
               </button>
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
               {details.squadGroups.map((group) => (
@@ -1211,6 +1244,15 @@ export function SessionWorkspace({
                     className="mt-2 w-full resize-y bg-transparent text-sm leading-5 outline-none print:text-black"
                     placeholder={t("coaching.session.playersPlaceholder")}
                   />
+                  {squad.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2 print:hidden">
+                    {squad.map((player) => {
+                      const selected = group.playerIds?.includes(player.id) ?? false;
+                      return <button key={player.id} type="button" aria-pressed={selected} onClick={() => {
+                        const playerIds = selected ? (group.playerIds ?? []).filter((id) => id !== player.id) : [...(group.playerIds ?? []), player.id];
+                        update({ squadGroups: details.squadGroups.map((candidate) => candidate.id === group.id ? { ...candidate, playerIds, players: squad.filter((candidatePlayer) => playerIds.includes(candidatePlayer.id)).map((candidatePlayer) => `${candidatePlayer.number}. ${candidatePlayer.name}`).join(', ') } : candidate) });
+                      }} className={`rounded-full border px-2 py-1 text-[11px] ${selected ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:border-accent hover:text-text'}`}>{player.number}. {player.name}</button>;
+                    })}
+                  </div>}
                 </div>
               ))}
             </div>

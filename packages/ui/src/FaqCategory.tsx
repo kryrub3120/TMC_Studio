@@ -3,7 +3,7 @@
  * Shows category icon, title, and item count
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { FaqCategory as FaqCategoryData, FaqCta } from './helpFaqData.js';
 import { FaqItem } from './FaqItem.js';
 import { useTranslation } from './i18n.js';
@@ -33,6 +33,10 @@ export const FaqCategory: React.FC<FaqCategoryProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (defaultOpen) setIsOpen(true);
+  }, [defaultOpen]);
 
   return (
     <div>

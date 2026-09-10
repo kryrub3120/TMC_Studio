@@ -39,5 +39,8 @@ const tree = (
 );
 
 const root = document.getElementById("root")!;
-if (root.hasChildNodes()) hydrateRoot(root, tree);
-else createRoot(root).render(tree);
+if (publicRoute && root.hasChildNodes()) {
+  hydrateRoot(root, tree);
+} else {
+  createRoot(root).render(tree);
+}

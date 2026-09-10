@@ -12,16 +12,47 @@ describe('parseSquadRoster', () => {
     ]);
   });
 
-  it('rejects occupied and duplicate numbers without discarding valid rows', () => {
+  it('preserves occupied and duplicate jersey numbers', () => {
     const result = parseSquadRoster(
       '7 New Seven\n8 Valid Player\n8 Duplicate Eight',
       'away',
       [{ id: 'existing', name: 'Existing', number: 7, team: 'away' }],
     );
-    expect(result.players).toEqual([
-      { name: 'Valid Player', number: 8, team: 'away', isGoalkeeper: false },
+    expect(result.players.map(({ name, number }) => ({ name, number }))).toEqual([
+      { name: 'New Seven', number: 7 },
+      { name: 'Valid Player', number: 8 },
+      { name: 'Duplicate Eight', number: 8 },
     ]);
-    expect(result.invalidLines).toEqual(['7 New Seven', '8 Duplicate Eight']);
+    expect(result.invalidLines).toEqual([]);
+  });
+
+  it('parses tab-separated pasted rows and assigns only missing numbers', () => {
+    const result = parseSquadRoster(
+      'GRACJAN KORYTKOWSKI\t12\nDOMINIK KLINT\t1\nHUBERT ŚLICZNIAK\t1\nMATEUSZ BOROWIEC\t',
+      'home',
+    );
+    expect(result.players.map(({ name, number }) => ({ name, number }))).toEqual([
+      { name: 'GRACJAN KORYTKOWSKI', number: 12 },
+      { name: 'DOMINIK KLINT', number: 1 },
+      { name: 'HUBERT ŚLICZNIAK', number: 1 },
+      { name: 'MATEUSZ BOROWIEC', number: 2 },
+    ]);
+  });
+
+  it('parses Unicode line separators pasted from rich text', () => {
+    const result = parseSquadRoster(
+      'KORYTKOWSKI, 12\u2028KLINT, 1\u2028ŚLICZNIAK, 1\u2028MUSZYŃSKI, 5\u2029WOŁOSOWSKI, 70',
+      'home',
+    );
+
+    expect(result.invalidLines).toEqual([]);
+    expect(result.players.map(({ name, number }) => ({ name, number }))).toEqual([
+      { name: 'KORYTKOWSKI', number: 12 },
+      { name: 'KLINT', number: 1 },
+      { name: 'ŚLICZNIAK', number: 1 },
+      { name: 'MUSZYŃSKI', number: 5 },
+      { name: 'WOŁOSOWSKI', number: 70 },
+    ]);
   });
 
   it('recognizes goalkeeper markers', () => {

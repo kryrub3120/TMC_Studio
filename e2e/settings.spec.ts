@@ -113,10 +113,11 @@ test.describe('Settings persistence', () => {
     await page.getByTestId('squad-number-input').fill('1');
     await page.getByTestId('squad-add-player').click();
     await page.getByRole('button', { name: /Dodaj wielu|Add many|Añadir varios/i }).click();
-    await page.getByTestId('squad-bulk-input').fill('7 Piotr Nowak\nAdam Zielinski');
+    await page.getByTestId('squad-bulk-input').fill('7 Piotr Nowak\n7 Pawel Kowalczyk\nAdam Zielinski');
     await page.getByTestId('squad-bulk-add').click();
     await expect(page.getByLabel(/Zmień nazwę zawodnika Jan Kowalski|Edit Jan Kowalski name/i)).toBeVisible();
     await expect(page.getByLabel(/Zmień nazwę zawodnika Piotr Nowak|Edit Piotr Nowak name/i)).toBeVisible();
+    await expect(page.getByLabel(/Zmień nazwę zawodnika Pawel Kowalczyk|Edit Pawel Kowalczyk name/i)).toBeVisible();
     await closeSettings(page);
     await page.waitForTimeout(2300);
 
@@ -125,6 +126,7 @@ test.describe('Settings persistence', () => {
     await openSettings(page, /Skład|Squad|Plantilla/i);
     await expect(page.getByLabel(/Zmień nazwę zawodnika Jan Kowalski|Edit Jan Kowalski name/i)).toHaveValue('Jan Kowalski');
     await expect(page.getByLabel(/Zmień nazwę zawodnika Piotr Nowak|Edit Piotr Nowak name/i)).toHaveValue('Piotr Nowak');
+    await expect(page.getByLabel(/Zmień nazwę zawodnika Pawel Kowalczyk|Edit Pawel Kowalczyk name/i)).toHaveValue('Pawel Kowalczyk');
     await expect(page.getByLabel(/Zmień nazwę zawodnika Adam Zielinski|Edit Adam Zielinski name/i)).toHaveValue('Adam Zielinski');
   });
 
@@ -191,13 +193,50 @@ test.describe('Settings persistence', () => {
     await expect(viewport).toHaveAttribute('data-element-count', '2');
 
     await openSettings(page, /Skład|Squad|Plantilla/i);
-    await page.getByRole('button', { name: /Zapisz D1|Save T1|Guardar E1/i }).first().click();
+    await page.getByTestId('lineup-name-input').fill('Low block');
+    await page.getByTestId('lineup-save-new').click();
+    await expect(page.getByTestId('lineup-preset-0')).toContainText('Low block');
+    await expect(page.getByTestId('lineup-preset-0')).toContainText('⌥1');
     await closeSettings(page);
     await page.keyboard.press('Control+a');
     await page.keyboard.press('Delete');
     await expect(viewport).toHaveAttribute('data-element-count', '0');
     await page.keyboard.press('Alt+1');
     await expect(viewport).toHaveAttribute('data-element-count', '2');
+
+    await openSettings(page, /Skład|Squad|Plantilla/i);
+    await page.getByTestId('lineup-preset-0').getByRole('button', { name: /Edytuj na boisku|Edit on pitch|Editar en el campo/i }).click();
+    const editBar = page.getByTestId('lineup-edit-bar');
+    await expect(editBar).toContainText('Low block');
+    await editBar.getByRole('button', { name: /Zapisz zmiany|Save changes|Guardar cambios/i }).click();
+    await expect(editBar).toBeHidden();
+    const settingsAfterSave = page.locator('[data-tour="settings-modal"]');
+    await expect(settingsAfterSave).toBeVisible();
+    await expect(settingsAfterSave.getByTestId('lineup-preset-0')).toContainText('Low block');
+    await closeSettings(page);
+
+    await openSettings(page, /Skład|Squad|Plantilla/i);
+    await page.getByTestId('lineup-preset-0').getByRole('button', { name: /Edytuj na boisku|Edit on pitch|Editar en el campo/i }).click();
+    await expect(editBar).toBeVisible();
+    await editBar.getByRole('button', { name: /Anuluj|Cancel|Cancelar/i }).click();
+    await expect(editBar).toBeHidden();
+    await expect(viewport).toHaveAttribute('data-element-count', '2');
+    await closeSettings(page);
+
+    await page.getByRole('button', { name: /Pokaż ławkę składu|Show squad bench/i }).click();
+    await page.getByTestId('squad-lineup-select').selectOption('0');
+    await expect(page.getByTestId('squad-lineup-select')).toHaveValue('0');
+    await page.getByTestId('squad-lineup-edit').click();
+    await expect(page.getByTestId('squad-lineup-actions')).toContainText('Low block');
+    await page.getByTestId('squad-lineup-actions').getByRole('button', { name: /Edytuj na boisku|Edit on pitch|Editar en el campo/i }).click();
+    await expect(editBar).toContainText('Low block');
+    await editBar.getByRole('button', { name: /Zapisz zmiany|Save changes|Guardar cambios/i }).click();
+    await expect(editBar).toBeHidden();
+    await expect(page.locator('[data-tour="settings-modal"]')).toBeHidden();
+    await page.getByTestId('squad-team-switcher').getByRole('button').first().click();
+    await expect(page.getByTestId('squad-team-menu')).toContainText('Low block');
+    await expect(page.getByTestId('squad-team-menu')).toContainText('⌥1');
+    await page.getByTestId('squad-team-menu').getByRole('button', { name: /Low block/i }).click();
   });
 
   test('plus and minus resize selected equipment on the board', async ({ page }) => {
@@ -247,8 +286,8 @@ test.describe('Settings persistence', () => {
   test('FAQ actions are translated and manual save executes', async ({ page }) => {
     await openSettings(page, /Pomoc|Help|Ayuda/i);
     const search = page.getByRole('textbox', { name: /Search help|Szukaj w pomocy|Buscar ayuda/i });
-    await search.fill('subscription');
-    await expect(page.getByRole('button', { name: /How do I manage my subscription/i })).toBeVisible();
+    await search.fill('manage-subscription');
+    await expect(page.getByRole('button', { name: /How do I manage my subscription|Jak zarządzać subskrypcją|Cómo gestiono mi suscripción/i })).toBeVisible();
     await search.fill('');
     await page.getByRole('button', { name: /How do I manage my subscription|Jak zarządzać subskrypcją|Cómo gestiono mi suscripción/i }).click();
     const billingCta = page.getByRole('button', { name: /Open billing|Otwórz płatności|Abrir facturación/i });

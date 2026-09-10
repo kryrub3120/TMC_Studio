@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { createDocument, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
+import { createDocument, DEFAULT_PITCH_SETTINGS, PREMIUM_SQUAD_PER_TEAM_LIMIT } from '@tmc/core';
 import type { AppState } from '../../types';
 import {
   createDocumentSlice,
@@ -87,6 +87,24 @@ describe('settings document persistence', () => {
     expect(persisted.squad[1]).toMatchObject({ name: 'Piotr Zielinski', number: 8, team: 'home' });
   });
 
+  it('allows duplicate jersey numbers but enforces 35 players per team', () => {
+    const store = createTestStore();
+    store.setState({ document: createDocument('Squad limit test'), isDirty: false });
+    store.getState().addSquadPlayers(Array.from({ length: PREMIUM_SQUAD_PER_TEAM_LIMIT + 3 }, (_, index) => ({
+      name: `Player ${index + 1}`,
+      number: index < 2 ? 1 : (index % 99) + 1,
+      team: 'home' as const,
+      isGoalkeeper: index < 2,
+    })));
+
+    const homePlayers = store.getState().document.squad?.filter((player) => player.team === 'home') ?? [];
+    expect(homePlayers).toHaveLength(PREMIUM_SQUAD_PER_TEAM_LIMIT);
+    expect(homePlayers.slice(0, 2).map((player) => player.number)).toEqual([1, 1]);
+
+    store.getState().addSquadPlayer('One too many', 99, 'home');
+    expect(store.getState().document.squad?.filter((player) => player.team === 'home')).toHaveLength(PREMIUM_SQUAD_PER_TEAM_LIMIT);
+  });
+
   it('applies saved defaults to balls, text and each equipment type', () => {
     const store = createTestStore();
     useUIStore.setState({
@@ -145,5 +163,26 @@ describe('settings document persistence', () => {
     expect(players).toHaveLength(2);
     expect(players.map((player) => player.type === 'player' ? player.label : '')).toEqual(['Jan Kowalski', 'Piotr Nowak']);
     expect(store.getState().document.lineupPresets?.[0]?.name).toBe('Pressing XI');
+
+    expect(store.getState().renameLineupPreset(0, 'Low block')).toBe(true);
+    expect(store.getState().document.lineupPresets?.[0]?.name).toBe('Low block');
+    expect(store.getState().removeLineupPreset(0)).toBe(true);
+    expect(store.getState().document.lineupPresets).toHaveLength(0);
+  });
+
+  it('stores a larger tactical lineup library', () => {
+    const store = createTestStore();
+    store.setState({ elements: [] });
+    store.getState().addPlayerFromSquad('home', 'Jan Kowalski', 7, { x: 220, y: 180 });
+
+    for (let slot = 0; slot < 12; slot += 1) {
+      expect(store.getState().saveLineupPreset(slot, 'home', `Setup ${slot + 1}`)).toBe(true);
+    }
+
+    expect(store.getState().document.lineupPresets).toHaveLength(12);
+    expect(store.getState().document.lineupPresets?.[11]?.name).toBe('Setup 12');
+    expect(store.getState().setLineupPresetShortcut(11, 2)).toBe(true);
+    expect(store.getState().document.lineupPresets?.[11]?.shortcut).toBe(2);
+    expect(store.getState().document.lineupPresets?.[1]?.shortcut).toBeNull();
   });
 });

@@ -69,6 +69,7 @@ interface ModalOrchestratorProps {
   onSelectProject: (projectId: string) => void;
   onCreateProject: (type?: ProjectType, sourceGraphicProjectId?: string) => void;
   onDeleteProject: (projectId: string) => void;
+  onDeleteProjects?: (projectIds: string[]) => void;
   onDuplicateProject: (projectId: string) => void;
   onToggleFavorite: (projectId: string) => void;
   onTogglePinProject?: (projectId: string) => void;
@@ -140,8 +141,12 @@ interface ModalOrchestratorProps {
   onUpdateSquadPlayer?: (id: string, updates: Partial<Omit<SquadPlayer, 'id'>>) => void;
   onSetSquadVisible?: (visible: boolean) => void;
   lineupPresets?: Array<LineupPreset | null>;
-  onSaveLineupPreset?: (slot: number, team: Team) => void;
-  onApplyLineupPreset?: (slot: number) => void;
+  onSaveLineupPreset?: (slot: number, team: Team, name?: string) => boolean;
+  onApplyLineupPreset?: (slot: number) => boolean;
+  onEditLineupPreset?: (slot: number) => boolean;
+  onRenameLineupPreset?: (slot: number, name: string) => void;
+  onRemoveLineupPreset?: (slot: number) => void;
+  onSetLineupPresetShortcut?: (slot: number, shortcut: number | null) => void;
   // Board settings (Teams / Pitch — moved from the inspector)
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
@@ -236,6 +241,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onSelectProject={props.onSelectProject}
         onCreateProject={props.onCreateProject}
         onDeleteProject={props.onDeleteProject}
+        onDeleteProjects={props.onDeleteProjects}
         onDuplicateProject={props.onDuplicateProject}
         onCreateFolder={props.onOpenCreateFolderModal}
         onToggleFavorite={props.onToggleFavorite}
@@ -320,6 +326,10 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         lineupPresets={props.lineupPresets}
         onSaveLineupPreset={props.onSaveLineupPreset}
         onApplyLineupPreset={props.onApplyLineupPreset}
+        onEditLineupPreset={props.onEditLineupPreset}
+        onRenameLineupPreset={props.onRenameLineupPreset}
+        onRemoveLineupPreset={props.onRemoveLineupPreset}
+        onSetLineupPresetShortcut={props.onSetLineupPresetShortcut}
         teamSettings={props.teamSettings}
         onUpdateTeam={props.onUpdateTeam}
         coachingProfile={props.coachingProfile}

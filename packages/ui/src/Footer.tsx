@@ -51,7 +51,7 @@ export function Footer({ className = '', version, onNavigate, isVisible = true, 
           <div className="flex items-center gap-2">
             <span className="font-semibold text-text">TMC Studio</span>
             <span>© {currentYear}</span>
-            {version && <span className="opacity-70">v{version}</span>}
+            {version && <a href="/changelog" onClick={(e) => handleLinkClick(e, '/changelog')} className="opacity-70 hover:text-accent">v{version}</a>}
           </div>
 
           {/* Center - Compact legal links */}
@@ -83,6 +83,7 @@ export function Footer({ className = '', version, onNavigate, isVisible = true, 
             >
               {t('footer.contact')}
             </a>
+            <a href="/report-bug" onClick={(e) => handleLinkClick(e, '/report-bug')} className="hover:text-text transition-colors cursor-pointer">{t('footer.reportBug')}</a>
             <a
               href="https://x.com/tmcstudio"
               target="_blank"

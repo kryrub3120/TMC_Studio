@@ -62,6 +62,17 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
     ],
   },
 
+  {
+    id: 'coaching-workflow',
+    titleKey: 'faq.categories.coachingWorkflow',
+    icon: '📋',
+    items: [
+      { id: 'lineup-presets', questionKey: 'faq.items.lineupPresets.question', answerKey: 'faq.items.lineupPresets.answer' },
+      { id: 'exercises-sessions', questionKey: 'faq.items.exercisesSessions.question', answerKey: 'faq.items.exercisesSessions.answer' },
+      { id: 'return-from-lineup-edit', questionKey: 'faq.items.returnFromLineupEdit.question', answerKey: 'faq.items.returnFromLineupEdit.answer' },
+    ],
+  },
+
   // ─── Pro Features ────────────────────────────────────────────────
   {
     id: 'pro-features',

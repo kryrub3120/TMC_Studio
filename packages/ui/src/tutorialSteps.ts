@@ -133,21 +133,21 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 5,
     eyebrow: '📋 Squad',
-    title: 'Your full roster at hand',
-    description: 'The Squad Bench holds your players. Drag them onto the pitch to substitute or add new roles. Click the eye icon to toggle visibility.',
+    title: 'Your squad and tactical presets',
+    description: 'Drag squad players onto the pitch, save named setups in Settings, then load Low block, Mid block or pressing directly under the team name. Use the pencil to edit on the pitch.',
     targetSelector: '[data-tour="squad"]',
     position: 'top',
     durationMs: 7000,
-    keycaps: ['Drag & drop'],
+    keycaps: ['Drag & drop', 'Option/Alt+1–9'],
     targetLabel: 'Squad Bench',
     demo: 'squad',
     cta: 'Animate tactic',
     roleVariants: {
       guest: {
-        description: 'The Squad Bench holds your players. Drag them onto the pitch. Sign up for free to save your squad between sessions.',
+        description: 'Drag players from the Squad Bench onto the pitch. Create a free account to save your roster and named tactical setups between sessions.',
       },
       free: {
-        description: 'The Squad Bench holds up to 5 players on Free. Drag them onto the pitch. Upgrade to Pro for unlimited squad slots.',
+        description: 'Free stores up to 5 squad players. Save named tactical setups and load them under the team name; Pro expands the roster to 35 per team.',
       },
     },
   },

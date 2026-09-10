@@ -26,6 +26,7 @@ import {
   DEFAULT_PLAYER_ORIENTATION_SETTINGS,
   DEFAULT_PLAYER_DEFAULTS,
   DEFAULT_SQUAD,
+  PREMIUM_SQUAD_PER_TEAM_LIMIT,
   createDocument,
   createSquadPlayer,
   saveToLocalStorage,
@@ -135,6 +136,9 @@ export interface DocumentSlice {
   toggleSquadVisible: () => void;
   saveLineupPreset: (slot: number, team: Team, name?: string) => boolean;
   applyLineupPreset: (slot: number) => boolean;
+  renameLineupPreset: (slot: number, name: string) => boolean;
+  removeLineupPreset: (slot: number) => boolean;
+  setLineupPresetShortcut: (slot: number, shortcut: number | null) => boolean;
 
   // Cloud actions
   saveToCloud: () => Promise<boolean>;
@@ -957,6 +961,7 @@ export const createDocumentSlice: StateCreator<
     addSquadPlayer: (name, number, team, isGoalkeeper) => {
       const { document } = get();
       const currentSquad = document.squad ?? DEFAULT_SQUAD;
+      if (currentSquad.filter((player) => player.team === team).length >= PREMIUM_SQUAD_PER_TEAM_LIMIT) return;
       const newPlayer = createSquadPlayer(name, number, team, isGoalkeeper);
       set({
         document: {
@@ -972,14 +977,21 @@ export const createDocumentSlice: StateCreator<
       if (players.length === 0) return;
       const { document } = get();
       const currentSquad = document.squad ?? DEFAULT_SQUAD;
-      const newPlayers = players.map((player) =>
-        createSquadPlayer(
-          player.name,
-          player.number,
-          player.team,
-          player.isGoalkeeper,
-        ),
-      );
+      const teamCounts = new Map<Team, number>();
+      currentSquad.forEach((player) => teamCounts.set(player.team, (teamCounts.get(player.team) ?? 0) + 1));
+      const acceptedPlayers = players.filter((player) => {
+        const count = teamCounts.get(player.team) ?? 0;
+        if (count >= PREMIUM_SQUAD_PER_TEAM_LIMIT) return false;
+        teamCounts.set(player.team, count + 1);
+        return true;
+      });
+      if (acceptedPlayers.length === 0) return;
+      const newPlayers = acceptedPlayers.map((player) => createSquadPlayer(
+        player.name,
+        player.number,
+        player.team,
+        player.isGoalkeeper,
+      ));
       set({
         document: {
           ...document,
@@ -1006,6 +1018,13 @@ export const createDocumentSlice: StateCreator<
     updateSquadPlayer: (id, updates) => {
       const { document } = get();
       const currentSquad = document.squad ?? DEFAULT_SQUAD;
+      const currentPlayer = currentSquad.find((player) => player.id === id);
+      if (!currentPlayer) return;
+      if (
+        updates.team
+        && updates.team !== currentPlayer.team
+        && currentSquad.filter((player) => player.team === updates.team).length >= PREMIUM_SQUAD_PER_TEAM_LIMIT
+      ) return;
       set({
         document: {
           ...document,
@@ -1019,15 +1038,15 @@ export const createDocumentSlice: StateCreator<
     },
 
     saveLineupPreset: (slot, team, name) => {
-      if (slot < 0 || slot > 2) return false;
+      if (slot < 0 || slot >= 50) return false;
       const { document, elements } = get();
       const players = elements.filter(
         (element): element is PlayerElement =>
           isPlayerElement(element) && element.team === team,
       );
       if (players.length === 0) return false;
-      const presets = [...(document.lineupPresets ?? [null, null, null])];
-      while (presets.length < 3) presets.push(null);
+      const presets = [...(document.lineupPresets ?? [])];
+      while (presets.length <= slot) presets.push(null);
       presets[slot] = {
         name:
           name?.trim() ||
@@ -1035,6 +1054,7 @@ export const createDocumentSlice: StateCreator<
         team,
         players: structuredClone(players),
         updatedAt: new Date().toISOString(),
+        shortcut: presets[slot]?.shortcut ?? (slot < 9 ? slot + 1 : null),
       };
       set({
         document: {
@@ -1068,12 +1088,61 @@ export const createDocumentSlice: StateCreator<
       return true;
     },
 
+    renameLineupPreset: (slot, name) => {
+      const trimmedName = name.trim();
+      const { document } = get();
+      const preset = document.lineupPresets?.[slot];
+      if (!preset || !trimmedName) return false;
+      const presets = [...(document.lineupPresets ?? [])];
+      presets[slot] = { ...preset, name: trimmedName, updatedAt: new Date().toISOString() };
+      set({ document: { ...document, lineupPresets: presets, updatedAt: new Date().toISOString() } });
+      get().markDirty();
+      return true;
+    },
+
+    removeLineupPreset: (slot) => {
+      const { document } = get();
+      if (!document.lineupPresets?.[slot]) return false;
+      const presets = document.lineupPresets
+        .map((preset, index) => {
+          if (!preset || preset.shortcut !== undefined) return preset;
+          return { ...preset, shortcut: index < 9 ? index + 1 : null };
+        })
+        .filter((_, index) => index !== slot);
+      set({ document: { ...document, lineupPresets: presets, updatedAt: new Date().toISOString() } });
+      get().markDirty();
+      return true;
+    },
+
+    setLineupPresetShortcut: (slot, shortcut) => {
+      const { document } = get();
+      const target = document.lineupPresets?.[slot];
+      if (!target || (shortcut !== null && (shortcut < 1 || shortcut > 9))) return false;
+      const presets = (document.lineupPresets ?? []).map((preset, index) => {
+        if (!preset) return preset;
+        const effectiveShortcut = preset.shortcut === undefined && index < 9 ? index + 1 : preset.shortcut;
+        if (index === slot) return { ...preset, shortcut, updatedAt: new Date().toISOString() };
+        if (shortcut !== null && effectiveShortcut === shortcut) return { ...preset, shortcut: null };
+        return preset;
+      });
+      set({ document: { ...document, lineupPresets: presets, updatedAt: new Date().toISOString() } });
+      get().markDirty();
+      return true;
+    },
+
     setSquad: (squad) => {
       const { document } = get();
+      const teamCounts = new Map<Team, number>();
+      const limitedSquad = squad.filter((player) => {
+        const count = teamCounts.get(player.team) ?? 0;
+        if (count >= PREMIUM_SQUAD_PER_TEAM_LIMIT) return false;
+        teamCounts.set(player.team, count + 1);
+        return true;
+      });
       set({
         document: {
           ...document,
-          squad,
+          squad: limitedSquad,
           updatedAt: new Date().toISOString(),
         },
       });

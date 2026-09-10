@@ -39,6 +39,54 @@ test.describe('Board responsive shell', () => {
     expect(await scrollArea.evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
   });
 
+  test('wheel over the squad team selector changes the active team', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('tmc-cookie-consent', JSON.stringify({ analytics: false, ts: 'e2e' }));
+      localStorage.setItem('tmc-ui-settings', JSON.stringify({
+        state: { tutorialCompleted: true, clubWelcomeSeen: true },
+        version: 0,
+      }));
+    });
+    await page.goto('/board');
+    await page.getByRole('button', { name: /Dodaj pierwszego zawodnika|Add first player/i }).click();
+    await page.getByPlaceholder(/Zawodnik|Player/i).fill('Wheel Test');
+    await page.getByPlaceholder('#', { exact: true }).fill('8');
+    await page.getByTestId('squad-bench').getByRole('button', { name: /Dodaj zawodnika|Add player/i, exact: true }).click();
+
+    const switcher = page.getByTestId('squad-team-switcher');
+    await expect(switcher).toContainText(/Drużyna 1|Team 1|Equipo 1/i);
+    await switcher.dispatchEvent('wheel', { deltaY: 100 });
+    await expect(switcher).toContainText(/Drużyna 2|Team 2|Equipo 2/i);
+  });
+
+  test('squad lineup actions stay inside a mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      localStorage.setItem('tmc-cookie-consent', JSON.stringify({ analytics: false, ts: 'e2e' }));
+      localStorage.setItem('tmc-ui-settings', JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }));
+    });
+    await page.goto('/board');
+    await page.getByRole('button', { name: /Dodaj pierwszego zawodnika|Add first player/i }).click();
+    await page.getByPlaceholder(/Zawodnik|Player/i).fill('Mobile Player');
+    await page.getByPlaceholder('#', { exact: true }).fill('9');
+    await page.getByTestId('squad-bench').getByRole('button', { name: /Dodaj zawodnika|Add player/i, exact: true }).click();
+    await page.getByRole('button', { name: /^Mobile Player, number 9/i }).click();
+    await page.getByRole('button', { name: /Edytuj skład|Edit squad roster/i, exact: true }).click();
+    const squadTab = page.getByRole('button', { name: /Squad|Skład|Plantilla/i });
+    if (await squadTab.isVisible().catch(() => false)) await squadTab.click();
+    await page.getByTestId('lineup-name-input').fill('Mobile low block');
+    await page.getByTestId('lineup-save-new').click();
+    await page.getByRole('button', { name: /Close settings|Zamknij ustawienia|Cerrar ajustes/i }).click();
+    const showBench = page.getByRole('button', { name: /Pokaż ławkę składu|Show squad bench/i });
+    if (await showBench.isVisible().catch(() => false)) await showBench.click();
+    await page.getByTestId('squad-lineup-select').selectOption('0');
+    await page.getByTestId('squad-lineup-edit').click();
+    const box = await page.getByTestId('squad-lineup-actions').boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  });
+
   test('projects drawer exposes graphics, exercises and session plans without horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/board');

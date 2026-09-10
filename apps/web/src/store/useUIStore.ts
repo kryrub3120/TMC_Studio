@@ -824,6 +824,19 @@ export const useUIStore = create<UIState>()(
         inspectorWidth: state.inspectorWidth,
       }),
       onRehydrateStorage: () => (state) => {
+        if (state?.coachingProfile) {
+          state.coachingProfile = {
+            ...DEFAULT_COACHING_PROFILE,
+            ...state.coachingProfile,
+            staff: state.coachingProfile.staff ?? [],
+            squad: state.coachingProfile.squad ?? [],
+            positionGroups: state.coachingProfile.positionGroups ?? [],
+            sessionDefaults: {
+              ...DEFAULT_COACHING_PROFILE.sessionDefaults!,
+              ...state.coachingProfile.sessionDefaults,
+            },
+          };
+        }
         // Apply theme on rehydration
         if (state?.theme) {
           applyThemeToDocument(state.theme);

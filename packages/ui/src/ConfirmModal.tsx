@@ -151,7 +151,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       />
       
       {/* Modal */}
-      <div className="relative bg-[#1a1a2e] rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-white/10">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        className="relative bg-[#1a1a2e] rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-white/10"
+      >
         {/* Content */}
         <div className="p-6">
           {/* Icon + Title */}
@@ -164,7 +169,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               </div>
             )}
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-white">
+              <h2 id="confirm-modal-title" className="text-lg font-semibold text-white">
                 {title}
               </h2>
               {description && (

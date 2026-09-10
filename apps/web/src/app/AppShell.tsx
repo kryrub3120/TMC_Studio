@@ -8,7 +8,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, type ProjectItem, type SettingsTab, ClubWelcomeModal } from '@tmc/ui';
 import { DEFAULT_TEAM_SETTINGS, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
-import type { PitchBoardPreset } from '@tmc/core';
+import type { BoardElement, PitchBoardPreset, Team } from '@tmc/core';
 import { type ProjectFolder } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
 import appPkg from '../../package.json';
@@ -28,6 +28,16 @@ const PENDING_UPGRADE_KEY = 'tmc-pending-upgrade';
 type PendingUpgrade = {
   plan: 'pro' | 'team';
   cycle: 'monthly' | 'yearly';
+};
+
+type LineupEditSession = {
+  slot: number;
+  name: string;
+  team: Team;
+  origin: 'settings' | 'bench';
+  originalElements: BoardElement[];
+  originalSelectedIds: string[];
+  originalIsDirty: boolean;
 };
 
 function savePendingUpgrade(pending: PendingUpgrade): void {
@@ -91,6 +101,7 @@ export function AppShell() {
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [clubWelcomeModalOpen, setClubWelcomeModalOpen] = useState(false);
   const [boardEditorOverride, setBoardEditorOverride] = useState(false);
+  const [lineupEditSession, setLineupEditSession] = useState<LineupEditSession | null>(null);
 
   // Auth store
   const authUser = useAuthStore((s) => s.user);
@@ -430,6 +441,27 @@ export function AppShell() {
     else await handleCreateProject('graphic');
   };
 
+  const handleEditLineupPreset = (slot: number, origin: 'settings' | 'bench' = 'settings') => {
+    const store = useBoardStore.getState();
+    const preset = store.document.lineupPresets?.[slot];
+    if (!preset) return false;
+    const snapshot: LineupEditSession = {
+      slot,
+      name: preset.name,
+      team: preset.team,
+      origin,
+      originalElements: structuredClone(store.elements),
+      originalSelectedIds: [...store.selectedIds],
+      originalIsDirty: store.isDirty,
+    };
+    const applied = store.applyLineupPreset(slot);
+    if (applied) {
+      setSettingsModalOpen(false);
+      setLineupEditSession(snapshot);
+    }
+    return applied;
+  };
+
   // Club Welcome Modal trigger: show once for first-time Club Premium admins
   // that haven't seen the welcome flow yet AND have a team
   useEffect(() => {
@@ -513,6 +545,7 @@ export function AppShell() {
             void projectsController.updateCurrentProjectMetadata({ sessionPlanDetails, description });
           }}
           coachingProfile={coachingProfile}
+          squad={coachingProfile.squad?.length ? coachingProfile.squad : (document.squad ?? [])}
         />
       ) : (
       <>
@@ -534,6 +567,47 @@ export function AppShell() {
           setLimitReachedModalOpen(true);
         }}
         onRenameProject={handleRenameProject}
+        onEditLineupPreset={handleEditLineupPreset}
+        lineupEdit={lineupEditSession ? {
+          name: lineupEditSession.name,
+          onSave: () => {
+            const saved = useBoardStore.getState().saveLineupPreset(
+              lineupEditSession.slot,
+              lineupEditSession.team,
+              lineupEditSession.name,
+            );
+            if (saved) {
+              const shouldReturnToSettings = lineupEditSession.origin === 'settings';
+              setLineupEditSession(null);
+              showToast(t('settings.lineupChangesSaved', { name: lineupEditSession.name }));
+              if (shouldReturnToSettings) {
+                setSettingsInitialTab('squad');
+                setSettingsModalOpen(true);
+              }
+            } else {
+              showToast(t('settings.lineupNeedsPlayers'));
+            }
+          },
+          onCancel: () => {
+            useBoardStore.setState({
+              elements: structuredClone(lineupEditSession.originalElements),
+              selectedIds: [...lineupEditSession.originalSelectedIds],
+              history: [{
+                elements: structuredClone(lineupEditSession.originalElements),
+                selectedIds: [...lineupEditSession.originalSelectedIds],
+              }],
+              historyIndex: 0,
+              isDirty: lineupEditSession.originalIsDirty,
+            });
+            const shouldReturnToSettings = lineupEditSession.origin === 'settings';
+            setLineupEditSession(null);
+            showToast(t('settings.lineupEditCancelled'));
+            if (shouldReturnToSettings) {
+              setSettingsInitialTab('squad');
+              setSettingsModalOpen(true);
+            }
+          },
+        } : undefined}
 
         // Footer (merged into bottom bar) — version from package.json (source of truth, see VERSIONING.md)
         appVersion={appPkg.version}
@@ -643,6 +717,7 @@ export function AppShell() {
         onSelectProject={handleSelectProject}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
+        onDeleteProjects={projectsController.deleteProjects}
         onDuplicateProject={handleDuplicateProject}
         onToggleFavorite={handleToggleFavorite}
         onTogglePinProject={handleTogglePinProject}
@@ -723,22 +798,46 @@ export function AppShell() {
         onResetShortcutOverrides={resetShortcutOverrides}
 
         // Squad Bench
-        squad={document.squad ?? []}
+        squad={coachingProfile.squad?.length ? coachingProfile.squad : (document.squad ?? [])}
         squadVisible={squadBenchVisible} // UX-C: use UI preference
         isPro={authIsPro}
-        onAddSquadPlayer={(name, number, team, isGoalkeeper) => addSquadPlayer(name, number, team, isGoalkeeper)}
-        onAddSquadPlayers={(players) => useBoardStore.getState().addSquadPlayers(players)}
-        onRemoveSquadPlayer={(id) => removeSquadPlayer(id)}
-        onUpdateSquadPlayer={(id, updates) => useBoardStore.getState().updateSquadPlayer(id, updates)}
+        onAddSquadPlayer={(name, number, team, isGoalkeeper) => {
+          addSquadPlayer(name, number, team, isGoalkeeper);
+          setCoachingProfile({ ...coachingProfile, squad: structuredClone(useBoardStore.getState().document.squad ?? []) });
+        }}
+        onAddSquadPlayers={(players) => {
+          useBoardStore.getState().addSquadPlayers(players);
+          setCoachingProfile({ ...coachingProfile, squad: structuredClone(useBoardStore.getState().document.squad ?? []) });
+        }}
+        onRemoveSquadPlayer={(id) => {
+          removeSquadPlayer(id);
+          setCoachingProfile({ ...coachingProfile, squad: structuredClone(useBoardStore.getState().document.squad ?? []) });
+        }}
+        onUpdateSquadPlayer={(id, updates) => {
+          useBoardStore.getState().updateSquadPlayer(id, updates);
+          setCoachingProfile({ ...coachingProfile, squad: structuredClone(useBoardStore.getState().document.squad ?? []) });
+        }}
         onSetSquadVisible={(visible) => setSquadBenchVisible(visible)} // UX-C: redirect to UI preference
         lineupPresets={document.lineupPresets}
-        onSaveLineupPreset={(slot, team) => {
-          const saved = useBoardStore.getState().saveLineupPreset(slot, team);
+        onSaveLineupPreset={(slot, team, name) => {
+          const saved = useBoardStore.getState().saveLineupPreset(slot, team, name);
           showToast(saved ? t('settings.lineupSaved', { slot: slot + 1 }) : t('settings.lineupNeedsPlayers'));
+          return saved;
         }}
         onApplyLineupPreset={(slot) => {
           const applied = useBoardStore.getState().applyLineupPreset(slot);
           showToast(applied ? t('settings.lineupApplied', { slot: slot + 1 }) : t('settings.lineupEmpty'));
+          return applied;
+        }}
+        onEditLineupPreset={(slot) => handleEditLineupPreset(slot, 'settings')}
+        onRenameLineupPreset={(slot, name) => {
+          useBoardStore.getState().renameLineupPreset(slot, name);
+        }}
+        onRemoveLineupPreset={(slot) => {
+          useBoardStore.getState().removeLineupPreset(slot);
+        }}
+        onSetLineupPresetShortcut={(slot, shortcut) => {
+          useBoardStore.getState().setLineupPresetShortcut(slot, shortcut);
         }}
         // Board settings (Teams / Pitch — moved from inspector)
         teamSettings={document.teamSettings ?? DEFAULT_TEAM_SETTINGS}

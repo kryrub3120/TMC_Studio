@@ -33,6 +33,7 @@ import {
   toggleProjectFavorite,
   toggleProjectPinned,
   updateProjectTags,
+  updateProject as updateProjectApi,
   toggleFolderPinned,
   moveProjectToFolder,
   updateFolderPosition,
@@ -57,6 +58,7 @@ export interface ProjectsController {
   selectProject: (id: string) => Promise<void>;
   createProject: (type?: ProjectType, sourceGraphicProjectId?: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+  deleteProjects: (ids: string[]) => Promise<void>;
   duplicateProject: (id: string) => Promise<void>;
   renameProject: (newName: string) => void;
   renameProjectById: (projectId: string, newName: string) => Promise<void>;
@@ -103,6 +105,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   const clearAutoSaveTimer = useBoardStore((s) => s.clearAutoSaveTimer);
   const isDirty = useBoardStore((s) => s.isDirty);
   const showToast = useUIStore((s) => s.showToast);
+  const coachingProfile = useUIStore((s) => s.coachingProfile);
   
   // Entitlements
   const { can } = useEntitlements();
@@ -215,6 +218,39 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
         }
       : undefined;
 
+    const sessionDate = new Date();
+    const sessionDefaults = coachingProfile.sessionDefaults;
+    sessionDate.setDate(sessionDate.getDate() + (sessionDefaults?.dateOffsetDays ?? 1));
+    const sessionDateValue = [
+      sessionDate.getFullYear(),
+      String(sessionDate.getMonth() + 1).padStart(2, '0'),
+      String(sessionDate.getDate()).padStart(2, '0'),
+    ].join('-');
+    const sessionDateLabel = [
+      String(sessionDate.getDate()).padStart(2, '0'),
+      String(sessionDate.getMonth() + 1).padStart(2, '0'),
+      sessionDate.getFullYear(),
+    ].join('.');
+    const sessionNameTemplate = sessionDefaults?.nameTemplate.trim() || t('projects.defaultSessionNameWithDate');
+    const sessionName = sessionNameTemplate.replaceAll('{date}', sessionDateLabel);
+    const profileSquad = coachingProfile.squad?.length ? coachingProfile.squad : (boardDoc.squad ?? []);
+    const sessionPlanDetails: SessionPlanDetails = {
+      ...structuredClone(DEFAULT_SESSION_PLAN_DETAILS),
+      date: sessionDateValue,
+      venue: sessionDefaults?.venue ?? '',
+      startTime: sessionDefaults?.startTime ?? '',
+      microcycleDay: sessionDefaults?.microcycleDay ?? '',
+      squadGroups: (coachingProfile.positionGroups ?? []).map((group) => ({
+        id: crypto.randomUUID(),
+        label: group.label,
+        playerIds: [...group.playerIds],
+        players: profileSquad
+          .filter((player) => group.playerIds.includes(player.id))
+          .map((player) => `${player.number}. ${player.name}`)
+          .join(', '),
+      })),
+    };
+
     // Create the project
     newDocument();
     useBoardStore.setState((state) => ({
@@ -234,10 +270,11 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
           ...DEFAULT_EXERCISE_DETAILS,
           ...(sourceGraphic ? { sourceGraphicProjectId: sourceGraphic.id, sourceGraphicName: sourceGraphic.name } : {}),
         } : undefined,
-        sessionPlanDetails: type === 'session' ? structuredClone(DEFAULT_SESSION_PLAN_DETAILS) : undefined,
+        sessionPlanDetails: type === 'session' ? sessionPlanDetails : undefined,
+        squad: type === 'session' ? structuredClone(profileSquad) : state.document.squad,
         name: type === 'exercise'
           ? (sourceGraphic ? t('projects.exerciseFromGraphicName', { name: sourceGraphic.name }) : t('projects.defaultExerciseName'))
-          : type === 'session' ? t('projects.defaultSessionName') : state.document.name,
+          : type === 'session' ? sessionName : state.document.name,
       },
       elements: sourceGraphic ? structuredClone(sourceGraphic.document.steps[0]?.elements ?? []) : state.elements,
       selectedIds: [],
@@ -275,6 +312,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     clearAutoSaveTimer,
     elements.length,
     boardDoc,
+    coachingProfile,
     newDocument,
     showToast,
     saveToCloud,
@@ -343,7 +381,34 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
   /**
    * Delete a project
    */
+  const preserveSessionPreviews = useCallback(async (ids: string[]) => {
+    const deletedById = new Map(
+      cloudProjects
+        .filter((project) => ids.includes(project.id))
+        .map((project) => [project.id, project]),
+    );
+    await Promise.all(cloudProjects.map(async (project) => {
+      if (ids.includes(project.id) || project.document.projectType !== 'session') return;
+      const session = project.document.sessionPlanDetails;
+      if (!session?.exercises.some((item) => ids.includes(item.projectId) && !item.previewDocument)) return;
+      const exercises = session.exercises.map((item) => {
+        const source = deletedById.get(item.projectId);
+        return source && !item.previewDocument
+          ? { ...item, previewDocument: structuredClone(source.document) }
+          : item;
+      });
+      await updateProjectApi(project.id, {
+        document: {
+          ...project.document,
+          sessionPlanDetails: { ...session, exercises },
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    }));
+  }, [cloudProjects]);
+
   const deleteProject = useCallback(async (id: string) => {
+    await preserveSessionPreviews([id]);
     const success = await deleteProjectApi(id);
     if (success) {
       await fetchCloudProjects();
@@ -351,7 +416,21 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     } else {
       showToast(t('projectToast.deleteFailed'));
     }
-  }, [fetchCloudProjects, showToast, t]);
+  }, [fetchCloudProjects, preserveSessionPreviews, showToast, t]);
+
+  const deleteProjects = useCallback(async (ids: string[]) => {
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) return;
+    await preserveSessionPreviews(uniqueIds);
+    const results = await Promise.all(uniqueIds.map((id) => deleteProjectApi(id)));
+    await fetchCloudProjects();
+    const deletedCount = results.filter(Boolean).length;
+    showToast(
+      deletedCount === uniqueIds.length
+        ? t('projectToast.deletedMany', { count: deletedCount })
+        : t('projectToast.deletedManyPartial', { count: deletedCount, total: uniqueIds.length }),
+    );
+  }, [fetchCloudProjects, preserveSessionPreviews, showToast, t]);
   
   /**
    * Duplicate a project
@@ -602,6 +681,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     selectProject,
     createProject,
     deleteProject,
+    deleteProjects,
     duplicateProject,
     renameProject,
     renameProjectById,

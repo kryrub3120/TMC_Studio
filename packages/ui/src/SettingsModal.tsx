@@ -9,7 +9,7 @@ import { TeamsPanel } from './TeamsPanel.js';
 import { useTranslation, LANGUAGES } from './i18n.js';
 import { PitchPanel } from './PitchPanel.js';
 import type { ArrowType, ArrowDefaults, ZoneDefaults, ArrowHead, TeamSettings, TeamSetting, PitchSettings, Team, SquadPlayer, PitchBoardPreset, LineupPreset, CoachingProfile } from '@tmc/core';
-import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
+import { DEFAULT_TEAM_SETTINGS, FREE_SQUAD_LIMIT, PREMIUM_SQUAD_PER_TEAM_LIMIT, PREMIUM_SQUAD_TOTAL_LIMIT } from '@tmc/core';
 import { OrganizationPanel, type OrganizationPanelProps } from './OrganizationPanel.js';
 import { FaqSearch } from './FaqSearch.js';
 import { FaqCategory } from './FaqCategory.js';
@@ -17,6 +17,8 @@ import { getFaqForPlan, searchFaq, type FaqCta } from './helpFaqData.js';
 import type { Plan } from './tutorialSteps.js';
 import { parseSquadRoster } from './squadRoster.js';
 import { SHARED_COLORS } from './colors.js';
+import { scrollHorizontalStrip } from './horizontalWheel.js';
+import { formatOptionShortcut, formatOptionShortcutRange, isApplePlatform } from './keyboardPlatform.js';
 
 export type SettingsTab = 'profile' | 'security' | 'billing' | 'preferences' | 'squad' | 'teams' | 'pitch' | 'club' | 'language' | 'shortcuts' | 'faq' | 'about' | 'data';
 
@@ -151,8 +153,12 @@ interface SettingsModalProps {
   onUpdateSquadPlayer?: (id: string, updates: Partial<Omit<SquadPlayer, 'id'>>) => void;
   onSetSquadVisible?: (visible: boolean) => void;
   lineupPresets?: Array<LineupPreset | null>;
-  onSaveLineupPreset?: (slot: number, team: Team) => void;
-  onApplyLineupPreset?: (slot: number) => void;
+  onSaveLineupPreset?: (slot: number, team: Team, name?: string) => boolean;
+  onApplyLineupPreset?: (slot: number) => boolean;
+  onEditLineupPreset?: (slot: number) => boolean;
+  onRenameLineupPreset?: (slot: number, name: string) => void;
+  onRemoveLineupPreset?: (slot: number) => void;
+  onSetLineupPresetShortcut?: (slot: number, shortcut: number | null) => void;
   // Board document settings (moved here from the inspector)
   teamSettings?: TeamSettings;
   onUpdateTeam?: (team: Team, settings: Partial<TeamSetting>) => void;
@@ -216,6 +222,10 @@ export function SettingsModal({
   lineupPresets = [],
   onSaveLineupPreset,
   onApplyLineupPreset,
+  onEditLineupPreset,
+  onRenameLineupPreset,
+  onRemoveLineupPreset,
+  onSetLineupPresetShortcut,
   teamSettings,
   onUpdateTeam,
   coachingProfile,
@@ -267,9 +277,14 @@ export function SettingsModal({
   const [squadGoalkeeper, setSquadGoalkeeper] = useState(false);
   const [staffName, setStaffName] = useState('');
   const [staffRole, setStaffRole] = useState('');
+  const [positionGroupName, setPositionGroupName] = useState('');
   const [showBulkSquad, setShowBulkSquad] = useState(false);
   const [bulkSquad, setBulkSquad] = useState('');
   const [bulkSquadError, setBulkSquadError] = useState<string | null>(null);
+  const [lineupName, setLineupName] = useState('');
+  const [lineupTeam, setLineupTeam] = useState<Team>('home');
+  const [editingLineupSlot, setEditingLineupSlot] = useState<number | null>(null);
+  const [editingLineupName, setEditingLineupName] = useState('');
 
   useEffect(() => {
     if (isOpen) setFullName(user?.full_name || '');
@@ -277,10 +292,26 @@ export function SettingsModal({
 
   if (!isOpen) return null;
 
+  const squadLimit = isPro ? PREMIUM_SQUAD_TOTAL_LIMIT : FREE_SQUAD_LIMIT;
+  const selectedTeamCount = squad.filter((player) => player.team === squadTeam).length;
+  const selectedTeamLimit = isPro ? PREMIUM_SQUAD_PER_TEAM_LIMIT : FREE_SQUAD_LIMIT;
+  const canAddToSelectedTeam = squad.length < squadLimit && selectedTeamCount < selectedTeamLimit;
+  const savedLineups = lineupPresets
+    .map((preset, slot) => ({ preset, slot }))
+    .filter((entry): entry is { preset: LineupPreset; slot: number } => entry.preset !== null);
+
+  const saveNewLineup = () => {
+    const name = lineupName.trim();
+    if (!name || savedLineups.length >= 50) return;
+    const emptySlot = lineupPresets.findIndex((preset) => preset === null);
+    const slot = emptySlot >= 0 ? emptySlot : lineupPresets.length;
+    if (onSaveLineupPreset?.(slot, lineupTeam, name)) setLineupName('');
+  };
+
   const addSingleSquadPlayer = () => {
     const name = squadName.trim();
     const number = Number.parseInt(squadNumber, 10);
-    if (!name || !Number.isInteger(number) || number < 1 || number > 99 || !onAddSquadPlayer) return;
+    if (!name || !Number.isInteger(number) || number < 1 || number > 99 || !onAddSquadPlayer || !canAddToSelectedTeam) return;
     onAddSquadPlayer(name, number, squadTeam, squadGoalkeeper || number === 1);
     setSquadName('');
     setSquadNumber('');
@@ -289,7 +320,10 @@ export function SettingsModal({
 
   const addBulkSquadPlayers = () => {
     const parsed = parseSquadRoster(bulkSquad, squadTeam, squad);
-    const remaining = Math.max(0, (isPro ? 100 : 5) - squad.length);
+    const remaining = Math.max(0, Math.min(
+      squadLimit - squad.length,
+      selectedTeamLimit - selectedTeamCount,
+    ));
     const accepted = parsed.players.slice(0, remaining);
     if (accepted.length === 0) {
       setBulkSquadError(t('settings.bulkNoValidPlayers'));
@@ -324,6 +358,34 @@ export function SettingsModal({
     setStaffRole('');
   };
 
+  const updateSessionDefaults = (patch: Partial<NonNullable<CoachingProfile['sessionDefaults']>>) => {
+    if (!coachingProfile) return;
+    updateCoachingProfile({
+      sessionDefaults: {
+        dateOffsetDays: 1,
+        nameTemplate: '',
+        venue: '',
+        startTime: '',
+        microcycleDay: '',
+        ...coachingProfile.sessionDefaults,
+        ...patch,
+      },
+    });
+  };
+
+  const addPositionGroup = () => {
+    const label = positionGroupName.trim();
+    if (!label || !coachingProfile) return;
+    updateCoachingProfile({
+      positionGroups: [...(coachingProfile.positionGroups ?? []), {
+        id: globalThis.crypto?.randomUUID?.() ?? `group-${Date.now()}`,
+        label,
+        playerIds: [],
+      }],
+    });
+    setPositionGroupName('');
+  };
+
   const loadClubLogo = (file?: File) => {
     if (!file || !file.type.startsWith('image/') || file.size > 1024 * 1024) return;
     const reader = new FileReader();
@@ -342,7 +404,7 @@ export function SettingsModal({
   const formatShortcutEvent = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     const parts: string[] = [];
     if (event.metaKey || event.ctrlKey) parts.push('Cmd');
-    if (event.altKey) parts.push('Alt');
+    if (event.altKey) parts.push(isApplePlatform() ? '⌥' : 'Alt');
     if (event.shiftKey) parts.push('Shift');
     const rawKey = event.key === ' ' ? 'Space' : event.key;
     if (['Control', 'Meta', 'Alt', 'Shift'].includes(rawKey)) return null;
@@ -644,7 +706,7 @@ export function SettingsModal({
         {/* Body: sidebar nav + content */}
         <div className="flex flex-col sm:flex-row flex-1 min-h-0">
           {/* Sidebar */}
-          <nav className="w-full sm:w-44 max-h-28 sm:max-h-none flex flex-shrink-0 gap-2 sm:block border-b sm:border-b-0 sm:border-r border-border p-2 sm:p-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto sm:space-y-4">
+          <nav className="w-full sm:w-44 max-h-28 sm:max-h-none flex flex-shrink-0 gap-2 sm:block border-b sm:border-b-0 sm:border-r border-border p-2 sm:p-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto sm:space-y-4" onWheel={scrollHorizontalStrip}>
             {navGroups.map((grp) => (
               <div key={grp.group} className="shrink-0">
                 <p className="hidden sm:block px-2 mb-1 text-[11px] font-semibold text-muted uppercase tracking-wide">{t(`settings.${grp.group}`)}</p>
@@ -1195,7 +1257,7 @@ export function SettingsModal({
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-text">{t('settings.squadRoster')}</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted/60">{t('settings.playersCount', { count: squad.length, max: isPro ? 100 : 5 })}</span>
+                  <span className="text-xs text-muted/60">{t('settings.playersCount', { count: squad.length, max: squadLimit })}</span>
                   {onSetSquadVisible && (
                     <label className="flex items-center gap-2 cursor-pointer">
                       <span className="text-sm text-muted">{t('settings.showOnBoard')}</span>
@@ -1220,39 +1282,114 @@ export function SettingsModal({
                 </div>
               )}
 
-              {squad.length >= (isPro ? 100 : 5) && (
+              {!canAddToSelectedTeam && (
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                   <p className="text-sm text-yellow-600 dark:text-yellow-400">
                     ⭐ {t('settings.squadFull')}
                   </p>
                 </div>
               )}
-              <div className="space-y-2 rounded-md border border-border p-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-text">{t('settings.savedLineups')}</h4>
-                  <p className="text-xs text-muted">{t('settings.savedLineupsHint')}</p>
+              <div className="space-y-3 rounded-md border border-border p-3" data-testid="lineup-library">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-text">{t('settings.savedLineups')}</h4>
+                    <p className="text-xs text-muted">{t('settings.savedLineupsHint', { shortcuts: formatOptionShortcutRange(1, 9) })}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted">{savedLineups.length}/50</span>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {[0, 1, 2].map((slot) => {
-                    const preset = lineupPresets[slot];
-                    return (
-                      <div key={slot} className="rounded-md bg-surface2 p-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-text">Alt+{slot + 1}</span>
-                          <span className="truncate text-[10px] text-muted">{preset?.name ?? t('settings.emptySlot')}</span>
+
+                <form
+                  className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_140px_auto]"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    saveNewLineup();
+                  }}
+                >
+                  <input
+                    value={lineupName}
+                    onChange={(event) => setLineupName(event.target.value)}
+                    placeholder={t('settings.lineupNamePlaceholder')}
+                    className="min-w-0 rounded-md border border-border bg-surface2 px-3 py-2 text-sm text-text placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
+                    data-testid="lineup-name-input"
+                  />
+                  <select
+                    value={lineupTeam}
+                    onChange={(event) => setLineupTeam(event.target.value as Team)}
+                    className="rounded-md border border-border bg-surface2 px-2 py-2 text-sm text-text"
+                    aria-label={t('settings.lineupTeam')}
+                  >
+                    {(['home', 'away', 'team3', 'team4'] as Team[]).map((team) => (
+                      <option key={team} value={team}>
+                        {teamSettings?.[team]?.name || t(`teamsPanel.${team === 'home' ? 'team1' : team === 'away' ? 'team2' : team}`)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    disabled={!lineupName.trim() || savedLineups.length >= 50}
+                    className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-[#062016] disabled:opacity-40"
+                    data-testid="lineup-save-new"
+                  >
+                    {t('settings.saveCurrentLineup')}
+                  </button>
+                </form>
+
+                {savedLineups.length === 0 ? (
+                  <p className="rounded-md bg-surface2 px-3 py-4 text-center text-xs text-muted">{t('settings.noSavedLineups')}</p>
+                ) : (
+                  <div className="max-h-64 space-y-2 overflow-y-auto">
+                    {savedLineups.map(({ preset, slot }) => {
+                      const teamName = teamSettings?.[preset.team]?.name || t(`teamsPanel.${preset.team === 'home' ? 'team1' : preset.team === 'away' ? 'team2' : preset.team}`);
+                      const shortcut = preset.shortcut === undefined && slot < 9 ? slot + 1 : preset.shortcut;
+                      return (
+                        <div key={`${preset.updatedAt}-${slot}`} className="rounded-md border border-border bg-surface2 p-2" data-testid={`lineup-preset-${slot}`}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {editingLineupSlot === slot ? (
+                              <form
+                                className="flex min-w-[220px] flex-1 gap-1"
+                                onSubmit={(event) => {
+                                  event.preventDefault();
+                                  if (editingLineupName.trim()) onRenameLineupPreset?.(slot, editingLineupName);
+                                  setEditingLineupSlot(null);
+                                }}
+                              >
+                                <input autoFocus value={editingLineupName} onChange={(event) => setEditingLineupName(event.target.value)} className="min-w-0 flex-1 rounded border border-accent bg-surface px-2 py-1 text-sm text-text" />
+                                <button type="submit" className="rounded bg-accent px-2 text-xs font-semibold text-[#062016]">{t('settings.saveName')}</button>
+                              </form>
+                            ) : (
+                              <div className="min-w-[180px] flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate text-sm font-semibold text-text">{preset.name}</span>
+                                  {shortcut && <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-muted">{formatOptionShortcut(shortcut)}</kbd>}
+                                </div>
+                                <p className="text-[11px] text-muted">{teamName} · {t('settings.lineupPlayersCount', { count: preset.players.length })}</p>
+                              </div>
+                            )}
+                            <div className="flex flex-wrap gap-1">
+                              <select
+                                value={shortcut ?? ''}
+                                onChange={(event) => onSetLineupPresetShortcut?.(slot, event.target.value ? Number(event.target.value) : null)}
+                                className="rounded border border-border bg-surface px-2 py-1.5 text-xs text-text"
+                                aria-label={t('settings.lineupShortcut', { name: preset.name })}
+                              >
+                                <option value="">{t('settings.noLineupShortcut')}</option>
+                                {Array.from({ length: 9 }, (_, index) => <option key={index + 1} value={index + 1}>{formatOptionShortcut(index + 1)}</option>)}
+                              </select>
+                              <button type="button" onClick={() => onApplyLineupPreset?.(slot)} className="rounded bg-accent px-2.5 py-1.5 text-xs font-semibold text-[#062016]">{t('settings.applyLineup')}</button>
+                              <button type="button" onClick={() => { if (onEditLineupPreset?.(slot)) onClose(); }} className="rounded border border-border px-2.5 py-1.5 text-xs text-text hover:border-accent">{t('settings.editOnBoard')}</button>
+                              <button type="button" onClick={() => onSaveLineupPreset?.(slot, preset.team, preset.name)} className="rounded border border-border px-2.5 py-1.5 text-xs text-text hover:border-accent">{t('settings.overwriteLineup')}</button>
+                              <button type="button" onClick={() => { setEditingLineupSlot(slot); setEditingLineupName(preset.name); }} className="rounded border border-border px-2.5 py-1.5 text-xs text-text hover:border-accent">{t('settings.renameLineup')}</button>
+                              <button type="button" onClick={() => onRemoveLineupPreset?.(slot)} className="rounded border border-red-500/30 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/10">{t('settings.removeLineup')}</button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="mt-2 grid grid-cols-2 gap-1">
-                          <button type="button" onClick={() => onSaveLineupPreset?.(slot, 'home')} className="rounded border border-border px-1.5 py-1 text-[10px] text-text hover:border-accent">{t('settings.saveTeam1')}</button>
-                          <button type="button" onClick={() => onSaveLineupPreset?.(slot, 'away')} className="rounded border border-border px-1.5 py-1 text-[10px] text-text hover:border-accent">{t('settings.saveTeam2')}</button>
-                        </div>
-                        <button type="button" disabled={!preset} onClick={() => onApplyLineupPreset?.(slot)} className="mt-1 w-full rounded bg-accent px-1.5 py-1 text-[10px] font-medium text-white disabled:opacity-40">{t('settings.applyLineup')}</button>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <>
-                {squad.length < (isPro ? 100 : 5) && (
+                {squad.length < squadLimit && (
                   <>
                   {/* Add player form */}
                   <form
@@ -1318,7 +1455,7 @@ export function SettingsModal({
                     </label>
                     <button
                       type="submit"
-                      disabled={!squadName.trim() || !squadNumber || Number(squadNumber) < 1 || Number(squadNumber) > 99}
+                      disabled={!canAddToSelectedTeam || !squadName.trim() || !squadNumber || Number(squadNumber) < 1 || Number(squadNumber) > 99}
                       className="px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-colors shrink-0"
                       data-testid="squad-add-player"
                     >
@@ -1359,7 +1496,7 @@ export function SettingsModal({
                         <button
                           type="button"
                           onClick={addBulkSquadPlayers}
-                          disabled={!bulkSquad.trim()}
+                          disabled={!canAddToSelectedTeam || !bulkSquad.trim()}
                           className="px-3 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm font-medium rounded-lg shrink-0"
                           data-testid="squad-bulk-add"
                         >
@@ -1416,12 +1553,24 @@ export function SettingsModal({
                                 />
                                 <select
                                   value={player.team}
-                                  onChange={(event) => onUpdateSquadPlayer(player.id, { team: event.target.value as Team })}
+                                  onChange={(event) => {
+                                    const nextTeam = event.target.value as Team;
+                                    const nextTeamCount = squad.filter((candidate) => candidate.team === nextTeam).length;
+                                    if (nextTeam === player.team || !isPro || nextTeamCount < PREMIUM_SQUAD_PER_TEAM_LIMIT) {
+                                      onUpdateSquadPlayer(player.id, { team: nextTeam });
+                                    }
+                                  }}
                                   className="w-24 px-1 py-1 bg-surface border border-border rounded text-xs text-text"
                                   aria-label={t('settings.editPlayerTeam', { name: player.name })}
                                 >
                                   {(['home', 'away', 'team3', 'team4'] as Team[]).map((team) => (
-                                    <option key={team} value={team}>{teamSettings?.[team]?.name || team}</option>
+                                    <option
+                                      key={team}
+                                      value={team}
+                                      disabled={isPro && team !== player.team && squad.filter((candidate) => candidate.team === team).length >= PREMIUM_SQUAD_PER_TEAM_LIMIT}
+                                    >
+                                      {teamSettings?.[team]?.name || team}
+                                    </option>
                                   ))}
                                 </select>
                                 <label className="flex items-center gap-1 text-[10px] font-semibold text-accent">
@@ -1536,6 +1685,61 @@ export function SettingsModal({
                       <input data-testid="coaching-staff-name" value={staffName} onChange={(event) => setStaffName(event.target.value)} placeholder={t('settings.staffName')} className="h-10 rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
                       <input data-testid="coaching-staff-role" value={staffRole} onChange={(event) => setStaffRole(event.target.value)} placeholder={t('settings.staffRole')} className="h-10 rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
                       <button type="button" data-testid="coaching-staff-add" onClick={addStaffPreset} disabled={!staffName.trim()} className="h-10 rounded-md bg-accent px-4 text-sm font-semibold text-bg disabled:opacity-40">{t('settings.addStaff')}</button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-5">
+                    <h4 className="text-sm font-semibold text-text">{t('settings.sessionDefaults')}</h4>
+                    <p className="mt-1 text-xs text-muted">{t('settings.sessionDefaultsHint')}</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-medium text-muted">{t('settings.sessionDateOffset')}</span>
+                        <input type="number" min={0} max={30} value={coachingProfile.sessionDefaults?.dateOffsetDays ?? 1} onChange={(event) => updateSessionDefaults({ dateOffsetDays: Math.max(0, Math.min(30, Number(event.target.value) || 0)) })} className="h-10 w-full rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      </label>
+                      <label className="block sm:col-span-2">
+                        <span className="mb-1 block text-xs font-medium text-muted">{t('settings.sessionNameTemplate')}</span>
+                        <input value={coachingProfile.sessionDefaults?.nameTemplate ?? ''} onChange={(event) => updateSessionDefaults({ nameTemplate: event.target.value })} placeholder={t('settings.sessionNameTemplatePlaceholder')} className="h-10 w-full rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-medium text-muted">{t('settings.sessionVenue')}</span>
+                        <input value={coachingProfile.sessionDefaults?.venue ?? ''} onChange={(event) => updateSessionDefaults({ venue: event.target.value })} className="h-10 w-full rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-medium text-muted">{t('settings.sessionStartTime')}</span>
+                        <input type="time" value={coachingProfile.sessionDefaults?.startTime ?? ''} onChange={(event) => updateSessionDefaults({ startTime: event.target.value })} className="h-10 w-full rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-medium text-muted">{t('settings.sessionMicrocycleDay')}</span>
+                        <input value={coachingProfile.sessionDefaults?.microcycleDay ?? ''} onChange={(event) => updateSessionDefaults({ microcycleDay: event.target.value })} placeholder="MD +2" className="h-10 w-full rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div><h4 className="text-sm font-semibold text-text">{t('settings.positionGroups')}</h4><p className="mt-1 text-xs text-muted">{t('settings.positionGroupsHint')}</p></div>
+                      <span className="text-xs text-muted">{coachingProfile.positionGroups?.length ?? 0}</span>
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      {(coachingProfile.positionGroups ?? []).map((group) => (
+                        <div key={group.id} className="rounded-md border border-border bg-surface2 p-3">
+                          <div className="flex items-center gap-2">
+                            <input value={group.label} onChange={(event) => updateCoachingProfile({ positionGroups: (coachingProfile.positionGroups ?? []).map((item) => item.id === group.id ? { ...item, label: event.target.value } : item) })} className="h-9 min-w-0 flex-1 bg-transparent text-sm font-semibold text-text outline-none" />
+                            <button type="button" onClick={() => updateCoachingProfile({ positionGroups: (coachingProfile.positionGroups ?? []).filter((item) => item.id !== group.id) })} className="h-8 w-8 text-lg text-muted hover:text-red-400" aria-label={t('settings.removePositionGroup', { name: group.label })}>×</button>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {squad.map((player) => {
+                              const selected = group.playerIds.includes(player.id);
+                              return <button key={player.id} type="button" aria-pressed={selected} onClick={() => updateCoachingProfile({ positionGroups: (coachingProfile.positionGroups ?? []).map((item) => item.id === group.id ? { ...item, playerIds: selected ? item.playerIds.filter((id) => id !== player.id) : [...item.playerIds, player.id] } : item) })} className={`rounded-full border px-2.5 py-1 text-xs ${selected ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:border-accent hover:text-text'}`}>{player.number}. {player.name}</button>;
+                            })}
+                            {squad.length === 0 && <span className="text-xs text-muted">{t('settings.positionGroupsEmptySquad')}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <input value={positionGroupName} onChange={(event) => setPositionGroupName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addPositionGroup(); }} placeholder={t('settings.positionGroupPlaceholder')} className="h-10 min-w-0 flex-1 rounded-md border border-border bg-surface2 px-3 text-sm text-text outline-none focus:border-accent" />
+                      <button type="button" onClick={addPositionGroup} disabled={!positionGroupName.trim()} className="h-10 rounded-md bg-accent px-4 text-sm font-semibold text-bg disabled:opacity-40">{t('settings.addPositionGroup')}</button>
                     </div>
                   </div>
                 </div>
@@ -1677,7 +1881,7 @@ export function SettingsModal({
                   { label: 'X', href: 'https://x.com/tacticsmadeclear' },
                   { label: 'TikTok', href: 'https://www.tiktok.com/@tacticsmadeclear' },
                   { label: 'LinkedIn', href: 'https://www.linkedin.com/company/tactics-made-clear' },
-                  { label: t('settings.reportBug'), href: 'mailto:support@tacticsmadeclear.store?subject=TMC%20Studio%20bug%20report' },
+                  { label: t('settings.reportBug'), href: '/report-bug' },
                   { label: t('settings.sendFeedback'), href: 'mailto:support@tacticsmadeclear.store?subject=TMC%20Studio%20feedback' },
                 ].map((link) => (
                   <a

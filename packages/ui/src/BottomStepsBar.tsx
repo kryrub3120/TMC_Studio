@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from './i18n.js';
+import { scrollHorizontalStrip } from './horizontalWheel.js';
 
 export type Duration = 0.6 | 0.8 | 1.2;
 
@@ -235,7 +236,7 @@ export const BottomStepsBar: React.FC<BottomStepsBarProps> = ({
       </div>
 
       {/* Center: Step Chips */}
-      <div className="flex items-center gap-2 flex-1 justify-center overflow-x-auto px-4">
+      <div className="flex items-center gap-2 flex-1 justify-center overflow-x-auto px-4" onWheel={scrollHorizontalStrip}>
         {steps.map((step, index) => (
           <div 
             key={step.id}

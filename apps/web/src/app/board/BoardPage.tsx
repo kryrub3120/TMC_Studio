@@ -22,7 +22,7 @@ import {
 } from '@tmc/ui';
 import type { TutorialStep } from '@tmc/ui';
 import type { PitchBoardPreset, TextElement } from '@tmc/core';
-import { getPitchBoardId, DEFAULT_PITCH_SETTINGS, isTextElement } from '@tmc/core';
+import { getPitchBoardId, DEFAULT_PITCH_SETTINGS, FREE_SQUAD_LIMIT, PREMIUM_SQUAD_PER_TEAM_LIMIT, isTextElement } from '@tmc/core';
 import { getCanvasContextMenuItems, getContextMenuHeader } from '../../utils/canvasContextMenu';
 import { ANIMATION_ENABLED } from '../../config/featureFlags';
 import { useBoardStore } from '../../store';
@@ -163,10 +163,10 @@ export function BoardPage(props: BoardPageProps) {
       const stage = state.stageRef.current;
       if (!stage) return null;
       try {
-        const dataUrl = stage.toDataURL({ mimeType: 'image/png', pixelRatio: 0.25 });
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        return blob;
+        const canvas = stage.toCanvas({ pixelRatio: 0.25 });
+        return await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, 'image/png');
+        });
       } catch {
         return null;
       }
@@ -370,6 +370,21 @@ export function BoardPage(props: BoardPageProps) {
         // Remove this prop (and useAuthStore.devClearData) once done testing.
         onClearDevData={import.meta.env.DEV ? state.devClearData : undefined}
       />
+      {props.lineupEdit && (
+        <div className="z-30 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-accent/30 bg-surface px-3 py-2 shadow-sm sm:px-5" data-testid="lineup-edit-bar">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
+              <p className="truncate text-sm font-semibold text-text">{t('settings.editingLineup')}: {props.lineupEdit.name}</p>
+            </div>
+            <p className="mt-0.5 pl-[18px] text-xs text-muted">{t('settings.editingLineupHint')}</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button type="button" onClick={props.lineupEdit.onCancel} className="rounded-md border border-border px-3 py-1.5 text-sm text-text hover:border-accent">{t('settings.cancelLineupEdit')}</button>
+            <button type="button" onClick={props.lineupEdit.onSave} className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-[#062016]">{t('settings.saveLineupChanges')}</button>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex min-h-0 overflow-hidden"
@@ -656,19 +671,22 @@ export function BoardPage(props: BoardPageProps) {
           Bierze tylko tyle wysokości, ile ma treści (cienki gdy zwinięty), więc
           obszar roboczy (wiersz flex-1) automatycznie się do niego dokleja —
           brak rezerwowanej pustej przestrzeni. */}
-      <div className="w-full shrink-0 overflow-hidden border-t border-border bg-surface">
+      <div className="relative z-40 w-full shrink-0 overflow-visible border-t border-border bg-surface">
         <SquadBench
           squad={state.squad}
           visible={state.squadVisible}
           canAccess={state.authIsPro}
-          freeLimit={5}
-          premiumPerTeamLimit={25}
+          freeLimit={FREE_SQUAD_LIMIT}
+          premiumPerTeamLimit={PREMIUM_SQUAD_PER_TEAM_LIMIT}
           onToggle={state.toggleSquadVisible}
           onOpenSettings={() => onOpenSettingsModal('squad')}
           onDragStart={() => {}}
           teamSettings={state.teamSettings}
           onQuickAddPlayer={(name, number, team, isGoalkeeper) => state.addSquadPlayer(name, number, team, isGoalkeeper)}
           onRemovePlayer={(id) => state.removeSquadPlayer(id)}
+          lineupPresets={state.boardDoc.lineupPresets}
+          onApplyLineupPreset={(slot) => useBoardStore.getState().applyLineupPreset(slot)}
+          onEditLineupPreset={(slot) => { props.onEditLineupPreset(slot, 'bench'); }}
         />
       </div>
       <SmartBottomBar

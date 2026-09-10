@@ -7,6 +7,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { ConfirmModal } from "./ConfirmModal";
 import { useTranslation } from "./i18n.js";
+import { scrollHorizontalStrip } from "./horizontalWheel.js";
 import {
   DEFAULT_EXERCISE_DETAILS,
   DEFAULT_SESSION_PLAN_DETAILS,
@@ -48,7 +49,18 @@ export function ProjectPreview({ project, projects = [], className = "" }: { pro
 
   if (project.projectType === "session") {
     const sessionSources = (project.sessionPlanDetails?.exercises ?? [])
-      .map((item) => projects.find((candidate) => candidate.id === item.projectId))
+      .map((item) => projects.find((candidate) => candidate.id === item.projectId) ?? (
+        item.previewDocument
+          ? {
+              id: `snapshot-${item.id}`,
+              name: item.name,
+              updatedAt: project.updatedAt,
+              isCloud: false,
+              projectType: "graphic" as const,
+              document: item.previewDocument,
+            }
+          : undefined
+      ))
       .filter((item): item is ProjectItem => Boolean(item))
       .slice(0, 4);
     if (sessionSources.length === 0) {
@@ -284,6 +296,7 @@ interface ProjectsDrawerProps {
     sourceGraphicProjectId?: string,
   ) => void;
   onDeleteProject: (id: string) => void;
+  onDeleteProjects?: (ids: string[]) => void;
   onDuplicateProject: (id: string) => void;
   onCreateFolder?: (parentFolderId?: string | null) => void;
   onToggleFavorite?: (projectId: string) => void;
@@ -321,6 +334,7 @@ export function ProjectsDrawer({
   onSelectProject,
   onCreateProject,
   onDeleteProject,
+  onDeleteProjects,
   onDuplicateProject,
   onCreateFolder,
   onToggleFavorite,
@@ -339,6 +353,9 @@ export function ProjectsDrawer({
 }: ProjectsDrawerProps) {
   const { t } = useTranslation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [smartCollection, setSmartCollection] = useState<"all" | "recent" | "unsorted">("all");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
@@ -2295,7 +2312,11 @@ export function ProjectsDrawer({
     typeFilter === "all" ? "graphic" : typeFilter;
   const visibleProjects = selectedFolderId
     ? projectsByFolder.get(selectedFolderId) ?? []
-    : sortProjects(searchFilteredProjects, sortBy);
+    : smartCollection === "recent"
+      ? sortProjects(searchFilteredProjects, "last-opened")
+      : smartCollection === "unsorted"
+        ? sortProjects(searchFilteredProjects.filter((project) => !project.folderId), sortBy)
+        : sortProjects(searchFilteredProjects, sortBy);
   const visibleRecentProjects = recentProjects.filter((project) =>
     typeFilter === "all"
       ? true
@@ -2314,6 +2335,14 @@ export function ProjectsDrawer({
             )
           : undefined;
 
+    const isSelected = selectedProjectIds.has(project.id);
+    const toggleSelection = () => setSelectedProjectIds((current) => {
+      const next = new Set(current);
+      if (next.has(project.id)) next.delete(project.id);
+      else next.add(project.id);
+      return next;
+    });
+
     return (
       <article
         key={`${compact ? "recent" : "library"}-${project.id}`}
@@ -2321,11 +2350,23 @@ export function ProjectsDrawer({
         onDragStart={(event) => handleProjectDragStart(event, project.id)}
         onDragEnd={handleProjectDragEnd}
         onContextMenu={(event) => handleProjectContextMenu(event, project)}
-        className={`group relative min-w-0 overflow-hidden rounded-md border bg-surface transition-colors hover:border-accent ${compact ? "w-[240px] shrink-0 sm:w-auto" : ""} ${currentProjectId === project.id ? "border-accent" : "border-border"}`}
+        className={`group relative min-w-0 overflow-hidden rounded-md border bg-surface transition-colors hover:border-accent ${compact ? "w-[240px] shrink-0 sm:w-auto" : ""} ${isSelected || currentProjectId === project.id ? "border-accent ring-1 ring-accent" : "border-border"}`}
       >
         <button
           type="button"
-          onClick={() => onSelectProject(project.id)}
+          onClick={(event) => { event.stopPropagation(); toggleSelection(); }}
+          className={`absolute left-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-md border text-sm shadow ${isSelected ? "border-accent bg-accent font-bold text-bg" : "border-border bg-bg/90 text-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100"}`}
+          aria-label={isSelected ? t("projects.unselectProject", { name: project.name }) : t("projects.selectProject", { name: project.name })}
+          aria-pressed={isSelected}
+        >
+          ✓
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || selectedProjectIds.size > 0) toggleSelection();
+            else onSelectProject(project.id);
+          }}
           className="block w-full text-left"
         >
           <span className={`block overflow-hidden border-b border-border bg-bg ${compact ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
@@ -2407,7 +2448,7 @@ export function ProjectsDrawer({
 
         <div className="shrink-0 border-b border-border bg-surface px-3 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-bg p-1" aria-label={t("projects.filterByType")}>
+            <div className="flex min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-bg p-1" aria-label={t("projects.filterByType")} onWheel={scrollHorizontalStrip}>
               {(["all", "graphic", "exercise", "session"] as const).map((type) => (
                 <button
                   key={type}
@@ -2463,6 +2504,14 @@ export function ProjectsDrawer({
               ))}
             </select>
           </div>
+          {selectedProjectIds.size > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent/10 px-3 py-2" data-testid="bulk-project-actions">
+              <span className="mr-auto text-sm font-semibold text-text">{t("projects.selectedCount", { count: selectedProjectIds.size })}</span>
+              <button type="button" onClick={() => setSelectedProjectIds(new Set(visibleProjects.map((project) => project.id)))} className="h-8 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text hover:border-accent">{t("projects.selectAll")}</button>
+              <button type="button" onClick={() => setSelectedProjectIds(new Set())} className="h-8 px-3 text-xs font-medium text-muted hover:text-text">{t("projects.clearSelection")}</button>
+              <button type="button" onClick={() => setBulkDeleteIds([...selectedProjectIds])} className="h-8 rounded-md bg-red-500 px-3 text-xs font-semibold text-white hover:bg-red-400">{t("projects.deleteSelected")}</button>
+            </div>
+          )}
         </div>
 
         <div className="grid min-h-0 flex-1 md:grid-cols-[210px_minmax(0,1fr)]">
@@ -2470,13 +2519,19 @@ export function ProjectsDrawer({
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               <button
                 type="button"
-                onClick={() => setSelectedFolderId(null)}
+                onClick={() => { setSelectedFolderId(null); setSmartCollection("all"); }}
                 onDragOver={handleAllProjectsDragOver}
                 onDrop={(event) => handleFolderDrop(event, null)}
-                className={`flex h-10 w-full items-center justify-between rounded-md px-3 text-left text-sm ${selectedFolderId === null ? "bg-accent/15 font-semibold text-accent" : "text-text hover:bg-surface2"}`}
+                className={`flex h-10 w-full items-center justify-between rounded-md px-3 text-left text-sm ${selectedFolderId === null && smartCollection === "all" ? "bg-accent/15 font-semibold text-accent" : "text-text hover:bg-surface2"}`}
               >
                 <span>{t("projects.allProjects")}</span>
                 <span className="text-xs text-muted">{searchFilteredProjects.length}</span>
+              </button>
+              <button type="button" onClick={() => { setSelectedFolderId(null); setSmartCollection("recent"); }} className={`mt-1 flex h-9 w-full items-center justify-between rounded-md px-3 text-left text-sm ${smartCollection === "recent" ? "bg-accent/15 font-semibold text-accent" : "text-muted hover:bg-surface2 hover:text-text"}`}>
+                <span>{t("projects.recentProjects")}</span><span className="text-xs text-muted">{searchFilteredProjects.length}</span>
+              </button>
+              <button type="button" onClick={() => { setSelectedFolderId(null); setSmartCollection("unsorted"); }} className={`mt-1 flex h-9 w-full items-center justify-between rounded-md px-3 text-left text-sm ${smartCollection === "unsorted" ? "bg-accent/15 font-semibold text-accent" : "text-muted hover:bg-surface2 hover:text-text"}`}>
+                <span>{t("projects.unsorted")}</span><span className="text-xs text-muted">{searchFilteredProjects.filter((project) => !project.folderId).length}</span>
               </button>
               <div className="my-3 flex items-center justify-between px-3">
                 <span className="text-[11px] font-semibold uppercase text-muted">{t("projects.folders")}</span>
@@ -2495,7 +2550,7 @@ export function ProjectsDrawer({
                       <button
                         key={folder.id}
                         type="button"
-                        onClick={() => setSelectedFolderId(folder.id)}
+                        onClick={() => { setSelectedFolderId(folder.id); setSmartCollection("all"); }}
                         onContextMenu={(event) => handleFolderContextMenu(event, folder)}
                         onDragOver={(event) => handleFolderDragOver(event, folder.id)}
                         onDragLeave={handleFolderDragLeave}
@@ -2528,13 +2583,13 @@ export function ProjectsDrawer({
               </div>
             ) : (
               <>
-                {!selectedFolderId && !searchQuery && visibleRecentProjects.length > 0 && (
+                {!selectedFolderId && smartCollection === "all" && !searchQuery && visibleRecentProjects.length > 0 && (
                   <section className="mb-7" data-testid="recent-projects">
                     <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-text">{t("projects.recentProjects")}</h3>
                       <span className="text-xs text-muted">{visibleRecentProjects.length}</span>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 xl:grid-cols-4">
+                    <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 xl:grid-cols-4" onWheel={scrollHorizontalStrip}>
                       {visibleRecentProjects.slice(0, 4).map((project) => renderProjectCard(project, true))}
                     </div>
                   </section>
@@ -2542,7 +2597,7 @@ export function ProjectsDrawer({
                 <section>
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h3 className="truncate text-sm font-semibold text-text">
-                      {selectedFolderId ? foldersWithCount.find((folder) => folder.id === selectedFolderId)?.name : t(`projects.type.${typeFilter}`)}
+                      {selectedFolderId ? foldersWithCount.find((folder) => folder.id === selectedFolderId)?.name : smartCollection === "recent" ? t("projects.recentProjects") : smartCollection === "unsorted" ? t("projects.unsorted") : t(`projects.type.${typeFilter}`)}
                     </h3>
                     <span className="shrink-0 text-xs text-muted">{t("projects.results", { count: visibleProjects.length })}</span>
                   </div>
@@ -2593,6 +2648,22 @@ export function ProjectsDrawer({
           danger
           onConfirm={() => { onDeleteProject(deleteConfirmId); setDeleteConfirmId(null); }}
           onCancel={() => setDeleteConfirmId(null)}
+        />
+      )}
+      {bulkDeleteIds.length > 0 && (
+        <ConfirmModal
+          isOpen
+          title={t("projects.deleteSelectedTitle", { count: bulkDeleteIds.length })}
+          description={t("projects.deleteSelectedDescription", { count: bulkDeleteIds.length })}
+          confirmLabel={t("projects.deleteSelected")}
+          cancelLabel={t("confirm.cancel")}
+          danger
+          onConfirm={() => {
+            (onDeleteProjects ?? ((ids: string[]) => ids.forEach(onDeleteProject)))(bulkDeleteIds);
+            setSelectedProjectIds(new Set());
+            setBulkDeleteIds([]);
+          }}
+          onCancel={() => setBulkDeleteIds([])}
         />
       )}
     </div>

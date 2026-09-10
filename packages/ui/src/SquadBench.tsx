@@ -4,16 +4,18 @@
  * Drag onto pitch to place, gear icon opens settings for editing
  *
  * Free: max 5 players total (rest locked)
- * Premium: max 25 per team
+ * Premium: max 35 per team
  *
  * Sprint 1 — Unifikacja typów, realne kolory z DEFAULT_TEAM_SETTINGS,
  * animacje, badge count per team, hover glow.
  */
 
-import React, { useState } from 'react';
-import type { Team, SquadPlayer, TeamSettings } from '@tmc/core';
-import { DEFAULT_TEAM_SETTINGS } from '@tmc/core';
+import React, { useRef, useState } from 'react';
+import type { Team, SquadPlayer, TeamSettings, LineupPreset } from '@tmc/core';
+import { DEFAULT_TEAM_SETTINGS, FREE_SQUAD_LIMIT, PREMIUM_SQUAD_PER_TEAM_LIMIT } from '@tmc/core';
 import { useTranslation } from './i18n.js';
+import { scrollHorizontalStrip } from './horizontalWheel.js';
+import { formatOptionShortcut } from './keyboardPlatform.js';
 
 export type { SquadPlayer } from '@tmc/core';
 
@@ -33,6 +35,9 @@ export interface SquadBenchProps {
   onQuickAddPlayer?: (name: string, number: number, team: Team, isGoalkeeper?: boolean) => void;
   /** Remove a player from squad */
   onRemovePlayer?: (id: string) => void;
+  lineupPresets?: Array<LineupPreset | null>;
+  onApplyLineupPreset?: (slot: number) => void;
+  onEditLineupPreset?: (slot: number) => void;
 }
 
 const TEAM_LABEL_KEYS: Record<Team, string> = {
@@ -120,14 +125,17 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   squad,
   visible,
   canAccess,
-  freeLimit = 5,
-  premiumPerTeamLimit = 25,
+  freeLimit = FREE_SQUAD_LIMIT,
+  premiumPerTeamLimit = PREMIUM_SQUAD_PER_TEAM_LIMIT,
   onToggle,
   onOpenSettings,
   onDragStart,
   teamSettings,
   onQuickAddPlayer,
   onRemovePlayer,
+  lineupPresets = [],
+  onApplyLineupPreset,
+  onEditLineupPreset,
 }) => {
   const { t } = useTranslation();
   const teams: Team[] = ['home', 'away', 'team3', 'team4'];
@@ -136,6 +144,18 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
   const [addName, setAddName] = useState('');
   const [addNum, setAddNum] = useState('');
   const [addIsGoalkeeper, setAddIsGoalkeeper] = useState(false);
+  const [showTeamMenu, setShowTeamMenu] = useState(false);
+  const [selectedLineupSlot, setSelectedLineupSlot] = useState<number | null>(null);
+  const [showLineupActions, setShowLineupActions] = useState(false);
+  const lastTeamWheelAt = useRef(0);
+  React.useEffect(() => {
+    if (!showTeamMenu) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowTeamMenu(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [showTeamMenu]);
   const getTeamSetting = (team: Team) =>
     teamSettings?.[team] ?? DEFAULT_TEAM_SETTINGS[team] ?? DEFAULT_TEAM_SETTINGS.home;
   const getTeamLabel = (team: Team) => {
@@ -149,15 +169,37 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
       : getTeamColor(player.team);
   
   const teamPlayers = squad.filter((p) => p.team === activeTeam);
+  const activeTeamLineups = lineupPresets
+    .map((preset, slot) => ({ preset, slot }))
+    .filter((entry): entry is { preset: LineupPreset; slot: number } => entry.preset !== null && entry.preset.team === activeTeam);
+  const selectedLineup = selectedLineupSlot === null ? null : lineupPresets[selectedLineupSlot] ?? null;
   const isEmpty = squad.length === 0;
   const maxPerTeam = canAccess ? premiumPerTeamLimit : freeLimit;
   const teamLimit = maxPerTeam;
   const visibleCount = teamPlayers.length;
   const remainingSlots = teamLimit - visibleCount;
 
-  const cycleTeam = () => {
+  const cycleTeam = (direction = 1) => {
     const idx = teams.indexOf(activeTeam);
-    setActiveTeam(teams[(idx + 1) % teams.length]);
+    setActiveTeam(teams[(idx + direction + teams.length) % teams.length]);
+    setSelectedLineupSlot(null);
+    setShowLineupActions(false);
+  };
+
+  const applyLineup = (slot: number) => {
+    onApplyLineupPreset?.(slot);
+    setSelectedLineupSlot(slot);
+    setShowLineupActions(false);
+  };
+
+  const handleTeamWheel = (event: React.WheelEvent<HTMLElement>) => {
+    const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    if (delta === 0) return;
+    event.preventDefault();
+    const now = Date.now();
+    if (now - lastTeamWheelAt.current < 180) return;
+    lastTeamWheelAt.current = now;
+    cycleTeam(delta > 0 ? 1 : -1);
   };
 
   const handleQuickAdd = () => {
@@ -254,20 +296,89 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
       {visible ? (
         <div className="flex items-stretch gap-3">
           {/* Team switcher — prominent, on the left of the players */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={cycleTeam}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface2 hover:bg-border text-text font-semibold transition-colors"
-              title={t('squadBench.switchCurrent', { team: getTeamLabel(activeTeam) })}
-              aria-label={t('squadBench.currentTeam', { team: getTeamLabel(activeTeam) })}
-            >
-              <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: getTeamColor(activeTeam) }} />
-              <span className="text-sm">{getTeamLabel(activeTeam)}</span>
-              <span className="text-[11px] text-muted font-mono">{visibleCount}/{teamLimit}{!canAccess ? ' ⭐' : ''}</span>
-              <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
+          <div className="relative flex items-center gap-2 shrink-0" onWheel={handleTeamWheel} data-testid="squad-team-switcher">
+            <div className="flex w-52 flex-col gap-1 rounded-md bg-surface2 p-1">
+              <button
+                onClick={() => setShowTeamMenu((open) => !open)}
+                className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-text font-semibold transition-colors hover:bg-border"
+                title={t('squadBench.switchCurrent', { team: getTeamLabel(activeTeam) })}
+                aria-label={t('squadBench.currentTeam', { team: getTeamLabel(activeTeam) })}
+              >
+                <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: getTeamColor(activeTeam) }} />
+                <span className="min-w-0 flex-1 truncate text-left text-sm">{getTeamLabel(activeTeam)}</span>
+                <span className="shrink-0 font-mono text-[11px] text-muted">{visibleCount}/{teamLimit}{!canAccess ? ' ⭐' : ''}</span>
+                <svg className="h-3.5 w-3.5 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <div className="relative flex min-w-0 gap-1">
+                <select
+                  value={selectedLineupSlot ?? ''}
+                  onChange={(event) => {
+                    if (!event.target.value) return;
+                    applyLineup(Number(event.target.value));
+                  }}
+                  onWheel={(event) => event.stopPropagation()}
+                  disabled={activeTeamLineups.length === 0}
+                  className="h-7 min-w-0 flex-1 rounded border border-border bg-surface px-2 text-[11px] text-text outline-none hover:border-accent/60 focus:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={t('squadBench.chooseTacticalLineup')}
+                  data-testid="squad-lineup-select"
+                >
+                  <option value="">{activeTeamLineups.length ? t('squadBench.chooseTacticalLineup') : t('squadBench.noTacticalLineups')}</option>
+                  {activeTeamLineups.map(({ preset, slot }) => {
+                    const shortcut = preset.shortcut === undefined && slot < 9 ? slot + 1 : preset.shortcut;
+                    return <option key={`${slot}-${preset.name}`} value={slot}>{preset.name}{shortcut ? ` · ${formatOptionShortcut(shortcut)}` : ''}</option>;
+                  })}
+                </select>
+                <button
+                  type="button"
+                  disabled={!selectedLineup}
+                  onClick={() => setShowLineupActions((open) => !open)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-surface text-muted hover:border-accent/60 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+                  title={t('squadBench.editSelectedLineup')}
+                  aria-label={t('squadBench.editSelectedLineup')}
+                  data-testid="squad-lineup-edit"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
+                {showLineupActions && selectedLineup && selectedLineupSlot !== null && (
+                  <div className="absolute bottom-full left-0 z-40 mb-2 w-full min-w-0 rounded-md border border-border bg-surface p-2 shadow-xl" data-testid="squad-lineup-actions">
+                    <div className="border-b border-border px-2 pb-2">
+                      <p className="truncate text-sm font-semibold text-text">{selectedLineup.name}</p>
+                      <p className="mt-0.5 text-[10px] text-muted">{getTeamLabel(selectedLineup.team)}{selectedLineup.shortcut ? ` · ${formatOptionShortcut(selectedLineup.shortcut)}` : ''}</p>
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                      <button type="button" onClick={() => applyLineup(selectedLineupSlot)} className="rounded border border-border px-2 py-2 text-xs font-medium text-text hover:border-accent">{t('squadBench.applySelectedLineup')}</button>
+                      <button type="button" onClick={() => { setShowLineupActions(false); onEditLineupPreset?.(selectedLineupSlot); }} className="rounded bg-accent px-2 py-2 text-xs font-semibold text-[#062016] hover:bg-accent-hover">{t('squadBench.editOnPitch')}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {showTeamMenu && (
+                <div className="absolute bottom-full left-0 z-30 mb-2 w-64 rounded-md border border-border bg-surface p-2 shadow-xl" data-testid="squad-team-menu">
+                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase text-muted">{t('squadBench.teams')}</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {teams.map((team) => (
+                      <button key={team} type="button" onClick={() => { setActiveTeam(team); setSelectedLineupSlot(null); setShowLineupActions(false); setShowTeamMenu(false); }} className={`flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs ${team === activeTeam ? 'bg-accent/10 text-accent' : 'text-text hover:bg-surface2'}`}>
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getTeamColor(team) }} />
+                        <span className="truncate">{getTeamLabel(team)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="my-2 h-px bg-border" />
+                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase text-muted">{t('squadBench.tacticalLineups')}</p>
+                  {activeTeamLineups.length ? activeTeamLineups.map(({ preset, slot }) => {
+                    const shortcut = preset.shortcut === undefined && slot < 9 ? slot + 1 : preset.shortcut;
+                    return (
+                      <button key={`${slot}-${preset.name}`} type="button" onClick={() => { applyLineup(slot); setShowTeamMenu(false); }} className="flex w-full items-center justify-between gap-2 rounded px-2 py-2 text-left text-xs text-text hover:bg-surface2">
+                        <span className="truncate font-medium">{preset.name}</span>
+                        {shortcut && <kbd className="shrink-0 rounded border border-border px-1 py-0.5 text-[9px] text-muted">{formatOptionShortcut(shortcut)}</kbd>}
+                      </button>
+                    );
+                  }) : <p className="px-2 py-2 text-xs text-muted">{t('squadBench.noTacticalLineups')}</p>}
+                </div>
+            )}
             {/* Team dots (vertical to keep the bar narrow) */}
             <div className="flex flex-col gap-1">
               {teams.map((team) => {
@@ -275,7 +386,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
                 return (
                   <button
                     key={team}
-                    onClick={() => setActiveTeam(team)}
+                    onClick={() => { setActiveTeam(team); setSelectedLineupSlot(null); setShowLineupActions(false); }}
                     className={`w-2.5 h-2.5 rounded-full transition-all ${
                       team === activeTeam ? 'ring-1 ring-accent scale-110' : 'opacity-40 hover:opacity-70'
                     }`}
@@ -289,7 +400,7 @@ export const SquadBench: React.FC<SquadBenchProps> = ({
           </div>
 
           {/* Players — single horizontal scrolling row */}
-          <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0 py-0.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0 py-0.5" onWheel={scrollHorizontalStrip} data-testid="squad-player-strip">
             {teamPlayers.map((player, idx) => {
               const globalIdx = squad.indexOf(player);
               const isLocked = isPlayerLocked(globalIdx);

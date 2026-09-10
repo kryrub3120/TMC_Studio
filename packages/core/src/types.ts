@@ -585,6 +585,10 @@ export interface SquadPlayer {
   isGoalkeeper?: boolean;
 }
 
+export const FREE_SQUAD_LIMIT = 5;
+export const PREMIUM_SQUAD_PER_TEAM_LIMIT = 35;
+export const PREMIUM_SQUAD_TOTAL_LIMIT = PREMIUM_SQUAD_PER_TEAM_LIMIT * 4;
+
 /** Default squad bench — empty (user defines their own) */
 export const DEFAULT_SQUAD: SquadPlayer[] = [];
 
@@ -602,6 +606,10 @@ export interface ExerciseDetails {
   sourceGraphicProjectId?: string;
   sourceGraphicName?: string;
   durationMinutes: number;
+  /** Optional interval structure. durationMinutes remains the calculated total. */
+  intervalSets?: number;
+  intervalWorkMinutes?: number;
+  intervalRestMinutes?: number;
   players: string;
   category: string;
   objective: string;
@@ -616,13 +624,19 @@ export interface SessionExerciseItem {
   projectId: string;
   name: string;
   durationMinutes: number;
+  intervalSets?: number;
+  intervalWorkMinutes?: number;
+  intervalRestMinutes?: number;
   notes: string;
+  /** Keeps the session preview printable even if the source exercise is deleted. */
+  previewDocument?: BoardDocument;
 }
 
 export interface SessionSquadGroup {
   id: string;
   label: string;
   players: string;
+  playerIds?: string[];
 }
 
 export interface SessionStaffAssignment {
@@ -638,15 +652,43 @@ export interface StaffPreset {
   role: string;
 }
 
+export interface CoachingPositionGroup {
+  id: string;
+  label: string;
+  playerIds: string[];
+}
+
+export interface SessionDefaults {
+  /** Number of days from today used for a newly created session. */
+  dateOffsetDays: number;
+  /** Supports the {date} placeholder. Empty means the localized default. */
+  nameTemplate: string;
+  venue: string;
+  startTime: string;
+  microcycleDay: string;
+}
+
 export interface CoachingProfile {
   clubName: string;
   logoDataUrl?: string;
   staff: StaffPreset[];
+  squad?: SquadPlayer[];
+  positionGroups?: CoachingPositionGroup[];
+  sessionDefaults?: SessionDefaults;
 }
 
 export const DEFAULT_COACHING_PROFILE: CoachingProfile = {
   clubName: '',
   staff: [],
+  squad: [],
+  positionGroups: [],
+  sessionDefaults: {
+    dateOffsetDays: 1,
+    nameTemplate: '',
+    venue: '',
+    startTime: '',
+    microcycleDay: '',
+  },
 };
 
 export interface SessionPlanDetails {
@@ -707,6 +749,8 @@ export interface LineupPreset {
   team: Team;
   players: PlayerElement[];
   updatedAt: string;
+  /** Optional Alt+1..9 shortcut. null explicitly disables it; undefined keeps legacy slot behavior. */
+  shortcut?: number | null;
 }
 
 export interface BoardDocument {
@@ -724,7 +768,7 @@ export interface BoardDocument {
   sessionPlanDetails?: SessionPlanDetails;
   /** Separate from updatedAt so the library can sort by actual usage. */
   lastOpenedAt?: string;
-  /** Up to three user-defined lineups, applied with Alt+1..3. */
+  /** User-defined tactical lineups. The first nine can be applied with Alt+1..9. */
   lineupPresets?: Array<LineupPreset | null>;
   currentStepIndex: number;
   steps: Step[];

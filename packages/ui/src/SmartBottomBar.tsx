@@ -12,6 +12,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { StepInfo, Duration } from './BottomStepsBar.js';
 import { useTranslation } from './i18n.js';
+import { scrollHorizontalStrip } from './horizontalWheel.js';
 
 export type { StepInfo, Duration };
 
@@ -364,7 +365,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
       </div>
 
       {/* CENTER: Contextual content */}
-      <div className="flex-1 flex items-center justify-center gap-2 overflow-x-auto min-w-0 px-2">
+      <div className="flex-1 flex items-center justify-center gap-2 overflow-x-auto min-w-0 px-2" onWheel={scrollHorizontalStrip}>
         {isEmpty ? (
           /* ─── MODE 1: Empty canvas — quick actions ─── */
           <div className="flex items-center gap-2 animate-fade-in">
@@ -448,7 +449,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
             <div className="w-px h-6 bg-border mx-1 shrink-0" />
 
             {/* Step chips (scrollable) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto flex-1 justify-center min-w-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto flex-1 justify-center min-w-0" onWheel={scrollHorizontalStrip}>
               {steps.map((step, index) => (
                 <div key={step.id} className="group relative flex-shrink-0">
                   {editingIndex === index ? (
@@ -516,7 +517,7 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
       >
         <div className="flex items-center gap-1.5 truncate shrink-0">
           <span className="font-semibold text-text">TMC Studio</span>
-          {version && <span className="opacity-70">v{version}</span>}
+          {version && <a href="/changelog" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/changelog'); } }} className="opacity-70 hover:text-accent">v{version}</a>}
         </div>
         <span className="hidden sm:inline w-px h-3 bg-border shrink-0" />
         <div className="hidden sm:flex items-center gap-3 shrink-0">
@@ -531,6 +532,9 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
           </a>
           <a href="mailto:support@tacticsmadeclear.store" className="hover:text-text transition-colors">
             {t('footer.contact')}
+          </a>
+          <a href="/report-bug" onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/report-bug'); } }} className="hover:text-text transition-colors">
+            {t('footer.reportBug')}
           </a>
           <a href="https://x.com/tmcstudio" target="_blank" rel="noopener noreferrer" className="hover:text-text transition-colors" aria-label={t('footer.social.x')}>
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">

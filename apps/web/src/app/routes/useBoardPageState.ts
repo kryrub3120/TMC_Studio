@@ -26,6 +26,12 @@ export interface BoardPageProps {
   onOpenPricingModal: () => void;
   onOpenLimitModal: (type: 'guest-step' | 'guest-project' | 'free-step' | 'free-project', current: number, max: number) => void;
   onRenameProject: (newName: string) => void;
+  onEditLineupPreset: (slot: number, origin: 'settings' | 'bench') => boolean;
+  lineupEdit?: {
+    name: string;
+    onSave: () => void;
+    onCancel: () => void;
+  };
   /** App version (package.json) shown in the bottom bar's compact footer row */
   appVersion?: string;
   /** Navigate to a legal page (privacy/terms/cookies) from the bottom bar's footer links */

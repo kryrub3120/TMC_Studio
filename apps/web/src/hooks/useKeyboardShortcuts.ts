@@ -119,6 +119,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
   const updateTextProperties = useBoardStore((s) => s.updateTextProperties);
   const applyFormation = useBoardStore((s) => s.applyFormation);
   const applyLineupPreset = useBoardStore((s) => s.applyLineupPreset);
+  const lineupPresets = useBoardStore((s) => s.document.lineupPresets);
   const cycleGoalkeeperColor = useBoardStore((s) => s.cycleGoalkeeperColor);
   const removeStep = useBoardStore((s) => s.removeStep);
   const prevStep = useBoardStore((s) => s.prevStep);
@@ -1047,11 +1048,16 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
       showTranslatedToast('rotatedRight90');
     }
     
-    // ===== SAVED LINEUPS (Alt+1-3) =====
-    if (!isCmd && e.altKey && !e.shiftKey && /^Digit[1-3]$|^Numpad[1-3]$/.test(e.code)) {
+    // ===== SAVED LINEUPS (Alt+1-9) =====
+    if (!isCmd && e.altKey && !e.shiftKey && /^(Digit|Numpad)[1-9]$/.test(e.code)) {
       e.preventDefault();
-      const slot = Number(e.code.slice(-1)) - 1;
-      showTranslatedToast(applyLineupPreset(slot) ? 'lineupApplied' : 'lineupEmpty', { slot: slot + 1 });
+      const shortcut = Number(e.code.slice(-1));
+      const slot = (lineupPresets ?? []).findIndex((preset, index) => {
+        if (!preset) return false;
+        const assigned = preset.shortcut === undefined && index < 9 ? index + 1 : preset.shortcut;
+        return assigned === shortcut;
+      });
+      showTranslatedToast(slot >= 0 && applyLineupPreset(slot) ? 'lineupApplied' : 'lineupEmpty', { slot: shortcut });
     }
 
     // ===== FORMATIONS (1-6, Shift+1-6) =====
@@ -1080,7 +1086,7 @@ export function useKeyboardShortcuts(params: UseKeyboardShortcutsParams): void {
     undo, redo, deleteSelected,
     cycleZoneShape, cyclePlayerShape, cycleTextAlign, saveDocument, manualSave, saveToCloud, fetchCloudProjects,
     updatePitchSettings, getPitchSettings, nudgeSelected, adjustSelectedStrokeWidth,
-    cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation, applyLineupPreset,
+    cycleSelectedColor, rotateSelected, resizeSelected, scaleSelectedEquipmentBy, updateTextProperties, applyFormation, applyLineupPreset, lineupPresets,
     cycleGoalkeeperColor,
     setActiveTool, toggleGrid, toggleInspector, toggleFocusMode, toggleCheatSheet,
     zoomIn, zoomOut, isPlaying, play, pause, toggleLoop, togglePrintMode, isPrintMode,
