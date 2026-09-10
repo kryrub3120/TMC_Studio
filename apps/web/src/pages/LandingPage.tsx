@@ -358,6 +358,7 @@ export function LandingPage() {
             t('landing.workflow.graphicTitle'),
             t('landing.workflow.exerciseTitle'),
             t('landing.workflow.sessionTitle'),
+            t('landing.workflow.presetTitle'),
             t('coaching.exercise.downloadPdf'),
             t('coaching.session.downloadPdf'),
           ],
@@ -365,7 +366,7 @@ export function LandingPage() {
         },
         {
           '@type': 'FAQPage',
-          mainEntity: ['1','2','3','4','5','6'].map((i) => ({
+          mainEntity: ['1','2','3','4','5','6','7','8'].map((i) => ({
             '@type': 'Question',
             name: t(`landing.faq.q${i}`),
             acceptedAnswer: { '@type': 'Answer', text: t(`landing.faq.a${i}`) },
@@ -506,15 +507,16 @@ export function LandingPage() {
             <p className="mx-auto mt-5 max-w-3xl text-center text-lg leading-8 text-muted">
               {t('landing.workflow.desc')}
             </p>
-            <ol className="mt-12 grid border-y border-border md:grid-cols-3" role="list">
+            <ol className="mt-12 grid border-y border-border sm:grid-cols-2 lg:grid-cols-4" role="list">
               {[
                 { icon: ICONS.movement, key: 'graphic' },
                 { icon: ICONS.players, key: 'exercise' },
                 { icon: ICONS.layers, key: 'session' },
+                { icon: ICONS.players, key: 'preset' },
               ].map((item, index) => (
                 <li
                   key={item.key}
-                  className={`py-7 md:px-7 ${index > 0 ? 'border-t border-border md:border-l md:border-t-0' : ''}`}
+                  className={`py-7 sm:px-7 ${index > 0 ? 'border-t border-border sm:border-l' : ''} ${index === 2 ? 'sm:border-l-0 lg:border-l' : ''} ${index > 1 ? 'lg:border-t-0' : ''}`}
                 >
                   <IconTile d={item.icon} />
                   <h3 className="mt-5 text-xl font-semibold text-text">
@@ -673,7 +675,7 @@ export function LandingPage() {
           <div className="mx-auto max-w-3xl px-4 md:px-8">
             <h2 className="text-center text-3xl font-bold tracking-tight md:text-4xl">{t('landing.faq.title')}</h2>
             <dl className="mt-12 space-y-4">
-              {['1','2','3','4','5','6'].map((i) => {
+              {['1','2','3','4','5','6','7','8'].map((i) => {
                 const isOpen = openFaq === i;
                 return (
                   <div key={i} className="rounded-2xl border border-border bg-surface">

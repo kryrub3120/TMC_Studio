@@ -24,6 +24,10 @@ function getAllowedOrigins(): string[] {
     // Local development
     'http://localhost:5173',
     'http://localhost:8888',
+    'http://localhost:3000',
+    'http://localhost:3011',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3011',
     // Extra origins from env (Netlify deploy previews, etc.)
     ...additional,
   ];

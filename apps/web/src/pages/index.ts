@@ -16,3 +16,5 @@ export { AuthCallbackPage } from './AuthCallbackPage';
 export { ResetPasswordPage } from './ResetPasswordPage';
 export { NotFoundPage } from './NotFoundPage';
 export { GrowthPage } from './GrowthPage';
+export { ChangelogPage } from './ChangelogPage';
+export { ReportBugPage } from './ReportBugPage';

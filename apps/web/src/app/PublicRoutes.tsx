@@ -1,6 +1,7 @@
 import { Route } from "react-router-dom";
 import {
   AccessibilityPage,
+  ChangelogPage,
   CookiePolicy,
   GrowthPage,
   LandingPage,
@@ -8,6 +9,7 @@ import {
   PricingPage,
   PrivacyPolicy,
   RefundsPage,
+  ReportBugPage,
   TermsOfService,
 } from "../pages";
 import { isGrowthPagePath } from "../seo/growthContent";
@@ -22,6 +24,8 @@ const COMPONENTS: Partial<Record<PublicBasePath, React.ReactElement>> = {
   "/refunds": <RefundsPage />,
   "/legal": <LegalNoticePage />,
   "/accessibility": <AccessibilityPage />,
+  "/changelog": <ChangelogPage />,
+  "/report-bug": <ReportBugPage />,
 };
 
 export function renderPublicRouteElements(homeOverride?: React.ReactElement) {

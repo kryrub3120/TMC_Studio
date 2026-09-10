@@ -2,6 +2,7 @@ import { useEffect, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LanguageSwitcher, useTranslation } from '@tmc/ui';
 import { LocalizedLink as Link } from '../components/LocalizedLink';
+import appPackage from '../../package.json';
 
 export const LEGAL_UPDATED_AT = 'June 16, 2026';
 
@@ -129,7 +130,7 @@ export function PublicPageShell({ title, description, updatedAt, children }: Pub
         </div>
 
         <div className="space-y-8">
-          <LegalReviewBanner />
+          {updatedAt && <LegalReviewBanner />}
           {children}
         </div>
 
@@ -201,10 +202,12 @@ export function PublicFooter() {
           <Link to="/refunds" className="text-base text-muted hover:text-text">{t('landing.footer.refunds')}</Link>
           <Link to="/legal" className="text-base text-muted hover:text-text">{t('landing.footer.legalNotice')}</Link>
           <Link to="/accessibility" className="text-base text-muted hover:text-text">{t('landing.footer.accessibility')}</Link>
+          <Link to="/changelog" className="text-base text-muted hover:text-text">{t('footer.changelog')}</Link>
+          <Link to="/report-bug" className="text-base text-muted hover:text-text">{t('footer.reportBug')}</Link>
         </nav>
       </div>
       <div className="border-t border-border px-4 py-4 text-center text-sm text-muted">
-        © {new Date().getFullYear()} TMC Studio · {t('landing.footer.rights')}
+        © {new Date().getFullYear()} TMC Studio · <Link to="/changelog" className="hover:text-accent">v{appPackage.version}</Link> · {t('landing.footer.rights')}
       </div>
     </footer>
   );

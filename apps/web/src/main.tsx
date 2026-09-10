@@ -17,8 +17,11 @@ const publicRoute = isTauri ? null : getPublicRoute(window.location.pathname);
 void initializeMonitoring();
 
 function handleLanguageChange(language: Language) {
-  if (!publicRoute) return;
-  const nextPath = localizePublicPath(publicRoute.basePath, language);
+  // The app can navigate from a public page to /board without a reload. Resolve
+  // the route at click time so changing the editor language never returns home.
+  const currentPublicRoute = getPublicRoute(window.location.pathname);
+  if (!currentPublicRoute) return;
+  const nextPath = localizePublicPath(currentPublicRoute.basePath, language);
   if (nextPath !== window.location.pathname) window.location.assign(nextPath);
 }
 
@@ -27,7 +30,7 @@ const tree = (
     <AppErrorBoundary>
       <LanguageProvider
         initialLanguage={publicRoute?.language}
-        onLanguageChange={publicRoute ? handleLanguageChange : undefined}
+        onLanguageChange={isTauri ? undefined : handleLanguageChange}
       >
         <Router>
           <WebApp />

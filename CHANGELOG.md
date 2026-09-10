@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-09-10
+
+### Fixed
+- **Billing sync hotfix** — Stripe webhooks now read subscription period dates from modern item-level API fields, refresh entitlements after paid invoices, and avoid downgrading a customer while another active subscription still exists.
+
+### Docs
+- **Billing recovery runbook** — documented the production diagnosis, safe profile synchronization process, required environment variables, and webhook checks for Stripe/Supabase entitlement drift.
+
+## [0.13.0] - 2026-08-13
+
+### Added
+- **Nazwane ustawienia taktyczne** — do 50 presetów składu z nazwą, drużyną, szybkim wyborem pod ławką, skrótami `Option/Alt+1–9` i edycją na boisku.
+- **Szybkie akcje presetu** — responsywny popover przy ołówku pozwala wczytać lub edytować wybrane ustawienie bez otwierania pełnych Ustawień.
+- **Publiczne „Co nowego”** — wielojęzyczna, indeksowalna historia wydań dostępna po kliknięciu numeru wersji.
+- **Zgłaszanie błędów** — publiczny formularz z kontekstem wersji i systemu, dostarczany przez Postmark do supportu TMC Studio.
+- **Pomoc workflow trenera** — FAQ i onboarding obejmują presety składu, Grafikę → Ćwiczenie → Konspekt, interwały, PDF oraz zasady powrotu po edycji.
+
+### Changed
+- **Powrót do źródła edycji** — zapis lub anulowanie presetu uruchomionego z Ustawień wraca do Składu; edycja uruchomiona z ławki pozostawia trenera na tablicy.
+- **Landing sprzedażowy** — publiczny workflow pokazuje teraz także zapisane ustawienia drużyny obok grafik, ćwiczeń i konspektów.
+- **Stopki** — numer wersji prowadzi do changelogu, a „Zgłoś błąd” do formularza wspieranego komunikatem o społeczności TMC.
+
+### Fixed
+- **Responsywność szybkich akcji składu** — popover mieści się w szerokości kontrolki i układa akcje pionowo na wąskich ekranach.
+
+## [0.12.0] - 2026-08-12
+
+### Added
+- **Operacje zbiorcze w bibliotece** — zaznaczanie kafelków przyciskiem, `Cmd/Ctrl` lub `Shift`, zaznaczanie widocznych projektów i potwierdzane usuwanie wielu projektów jednym działaniem.
+- **Inteligentne kolekcje projektów** — stałe widoki `Ostatnie projekty` i `Nieposegregowane` ponad strukturą folderów.
+- **Domyślna nowa jednostka** — profil trenerski zapisuje przesunięcie daty, wzór nazwy z `{date}`, miejsce, godzinę i dzień mikrocyklu; nowa jednostka domyślnie powstaje na kolejny dzień.
+- **Grupy pozycyjne i globalna kadra** — trener definiuje grupy w Ustawieniach, przypisuje zawodników kliknięciem i wczytuje komplet grup do konspektu.
+- **Interwały ćwiczeń** — serie, czas pracy i przerwy automatycznie wyliczają całkowity czas ćwiczenia i jednostki.
+
+### Changed
+- **Nawigacja ćwiczeń** — powrót z edytora ćwiczenia prowadzi do biblioteki; osobna akcja nadal otwiera tablicę do rysowania.
+- **Profil trenerski w chmurze** — kadra, grupy i ustawienia jednostki są synchronizowane z istniejącymi preferencjami konta i scalane bezpiecznie ze starszymi profilami.
+- **Kadra do 35 zawodników na drużynę** — wspólny limit Pro/Club Premium wynosi 35 osób dla każdego z czterech zespołów (140 łącznie) i jest egzekwowany przy dodawaniu, imporcie oraz przenoszeniu zawodników.
+- **Obsługa kółka myszy na poziomych listach** — ławka składu, kroki animacji, paski narzędzi, zakładki ustawień i poziome kolekcje projektów przewijają się pod kursorem; kółko nad wyborem drużyny przełącza aktywny zespół.
+- **Biblioteka ustawień taktycznych** — do 50 nazwanych wariantów pozycji (`Low block`, `Mid block`, pressing itd.) z wczytywaniem, zmianą nazwy i usuwaniem; `Edytuj na boisku` uruchamia jawny tryb z paskiem `Zapisz zmiany / Anuluj` i kopią poprzedniego układu, po zapisie wraca do składu, a każdy preset może dostać własny skrót `Alt+1…9`. Presety wybranej drużyny są też dostępne bezpośrednio z menu jej nazwy na ławce.
+
+### Fixed
+- **Trwałe podglądy konspektów** — dodanie ćwiczenia zapisuje migawkę dokumentu, a usuwanie starego ćwiczenia najpierw materializuje brakujące migawki w odwołujących się konspektach.
+- **Zmiana języka w aplikacji** — przełącznik na `/board` nie korzysta już z zapamiętanej trasy landingu i nie wyrzuca użytkownika ze środowiska pracy.
+- **Dostępność potwierdzeń** — modal potwierdzenia ma semantykę dialogu, nazwę dostępną i poprawny fokus.
+- **Import kadry z arkusza** — numery koszulek są zachowywane dokładnie, również gdy się powtarzają; tylko wiersze bez numeru dostają pierwszy wolny numer.
+
 ## [0.11.0] - 2026-08-12
 
 ### Added

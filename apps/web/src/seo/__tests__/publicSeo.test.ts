@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  PUBLIC_BASE_PATHS,
   getAlternates,
   getPrerenderRoutes,
   getPublicRoute,
@@ -32,7 +33,9 @@ describe("public SEO routing", () => {
       ["es", "https://tmcstudio.app/es/pricing/"],
       ["x-default", "https://tmcstudio.app/pricing/"],
     ]);
-    expect(getPrerenderRoutes()).toHaveLength(60);
+    expect(getPrerenderRoutes()).toHaveLength(PUBLIC_BASE_PATHS.length * 3);
+    expect(getPublicRoute('/pl/changelog/')).toEqual({ language: 'pl', basePath: '/changelog' });
+    expect(getPublicRoute('/es/report-bug/')).toEqual({ language: 'es', basePath: '/report-bug' });
   });
 
   it("localizes growth and template pages", () => {

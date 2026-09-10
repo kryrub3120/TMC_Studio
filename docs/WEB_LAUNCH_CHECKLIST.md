@@ -5,6 +5,10 @@
 **Board URL:** `https://tmcstudio.app/board`  
 **Legacy redirect:** `https://tmcstudio.app/app` -> `/board`  
 **Supabase production project:** `https://pgacjczecyfnwsaadyvj.supabase.co`  
+
+> Production releases must use `pnpm build:production`. The command loads the
+> Netlify production environment and rejects bundles containing the development
+> Supabase project reference.
 **Hosting:** Netlify  
 
 **Payments:** Stripe LIVE rollout in progress (2026-08-09); Poland domestic VAT 23% active, OSS not enabled without separate confirmation.
@@ -47,6 +51,7 @@ Set in Netlify Dashboard -> Site configuration -> Environment variables:
 - `VITE_SUPABASE_ANON_KEY=<production anon key>`
 - `VITE_AUTH_GOOGLE_SURFACE=redirect`
 - `SUPABASE_URL=https://pgacjczecyfnwsaadyvj.supabase.co`
+- `SUPABASE_ANON_KEY=<production anon key>`
 - `SUPABASE_SERVICE_ROLE_KEY=<production service role key>`
 - `VITE_STRIPE_PUBLISHABLE_KEY=<publishable key>`
 - `STRIPE_SECRET_KEY=<secret key>`

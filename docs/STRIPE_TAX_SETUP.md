@@ -150,6 +150,11 @@ Utwórz produkty zgodne z `ENTITLEMENTS.md`:
    downgrade do Free następuje po statusie `canceled` lub `unpaid`.
 5. [x] Ponowienia webhooka odzyskują zdarzenia oznaczone `error` i osierocone
    `processing`, zachowując blokadę równoległego przetwarzania.
+6. [x] Webhooki czytają okres subskrypcji z aktualnego kształtu API Stripe:
+   najpierw `subscription.items.data[0].current_period_end`, potem starsze
+   top-level/invoice fallbacki. Opłacona faktura subskrypcyjna wywołuje
+   odświeżenie profilu, a downgrade do Free najpierw sprawdza, czy klient nie
+   ma innej aktywnej albo trialowej subskrypcji.
 
 ### Krok 8 — Testy
 1. Tryb **test mode**: zakup jako konsument PL (VAT 23% w cenie), konsument DE (19%), konsument ES (21%).

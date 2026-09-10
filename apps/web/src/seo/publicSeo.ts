@@ -16,6 +16,8 @@ export const PUBLIC_BASE_PATHS = [
   "/refunds",
   "/legal",
   "/accessibility",
+  "/changelog",
+  "/report-bug",
   ...GROWTH_PAGE_PATHS,
 ] as const;
 
@@ -48,6 +50,8 @@ const LEGAL_META: Partial<
     title: "legal.accessibility.title",
     description: "legal.accessibility.commitmentBody",
   },
+  "/changelog": { title: "changelog.title", description: "changelog.description" },
+  "/report-bug": { title: "bugReport.title", description: "bugReport.description" },
 };
 
 function normalizePath(pathname: string): string {

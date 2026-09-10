@@ -743,7 +743,7 @@ interface SquadPlayer {
 | Tier | Max players | Notes |
 |------|-------------|-------|
 | Free | 5 total | Beyond limit: locked slots |
-| Pro / Club Premium | 25 per team (100 total) | Empty slots show `+` |
+| Pro / Club Premium | 35 per team (140 total) | Empty slots show `+` |
 
 #### 1.9.4 Premium Gating
 
@@ -1189,10 +1189,14 @@ When pitch is in portrait mode:
 
 ### 6.6 Saved Lineups
 
-- Settings → Squad exposes three lineup slots.
-- A slot stores the selected team and the team's current players, including names, numbers, positions and appearance.
-- The user can save either Home or Away into each slot and apply it from Settings.
-- `Alt+1`, `Alt+2`, `Alt+3` apply slots 1-3 without opening a modal.
+- Settings → Squad exposes a library of up to 50 named tactical lineups.
+- A lineup stores the selected team and the team's current players, including names, numbers, positions and appearance.
+- A coach can load, edit on the pitch, overwrite, rename or remove each lineup.
+- Each lineup can be assigned one of the unique shortcuts `Alt+1` through `Alt+9`; pressing it applies the lineup without opening a modal.
+- The squad bench team menu lists saved lineups for the active team and applies one with a single click.
+- Saving changes from pitch editing returns the coach directly to Settings → Squad.
+- Editing started from the squad bench returns to the board after Save or Cancel; editing started from Settings returns to Settings → Squad.
+- The squad bench keeps a visible lineup selector below the active team name. Its pencil opens a responsive quick-actions popover with Apply and Edit on pitch.
 - Applying a saved lineup replaces only players from the stored team and is undoable.
 
 ---
