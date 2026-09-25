@@ -64,6 +64,10 @@ jobs:
       - name: Build all packages
         run: pnpm build
 
+      # The published bundle must not contain server secrets (launch checklist P0).
+      - name: Scan web bundle for secrets
+        run: pnpm check:bundle-secrets
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
