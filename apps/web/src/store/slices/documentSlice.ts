@@ -40,6 +40,7 @@ import {
   loadFromLocalStorage,
   exportDocument,
   importDocument,
+  hasLocalStorageDocument,
   isArrowElement,
   isPlayerElement,
   validateBoardDocument,
@@ -238,6 +239,12 @@ export interface DocumentSlice {
 
   // Autosave actions
   markDirty: () => void;
+  /**
+   * Upload the locally kept document to the signed-in account when it is not
+   * a cloud project yet (work done as a guest). Returns true when a save was
+   * scheduled.
+   */
+  adoptLocalDocument: () => boolean;
   scheduleAutoSave: () => void;
   performAutoSave: () => Promise<void>;
   clearAutoSaveTimer: () => void;
@@ -900,6 +907,16 @@ export const createDocumentSlice: StateCreator<
         logger.error("Create folder error:", error);
         return false;
       }
+    },
+
+    adoptLocalDocument: () => {
+      // Only a board that was edited is stored locally; the untouched demo
+      // board is not, so it never turns into a project on its own.
+      if (get().cloudProjectId || !isSupabaseEnabled() || !hasLocalStorageDocument()) {
+        return false;
+      }
+      get().markDirty();
+      return true;
     },
 
     markDirty: () => {

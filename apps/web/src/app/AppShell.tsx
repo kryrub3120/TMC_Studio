@@ -4,7 +4,7 @@
  * Pure composition - no board/canvas logic
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, type ProjectItem, type SettingsTab, ClubWelcomeModal } from '@tmc/ui';
 import { DEFAULT_TEAM_SETTINGS, DEFAULT_PITCH_SETTINGS } from '@tmc/core';
@@ -108,6 +108,19 @@ export function AppShell() {
   const authIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authIsPro = useAuthStore((s) => s.isPro);
   const authIsLoading = useAuthStore((s) => s.isLoading);
+
+  // Work done before signing in (as a guest) is uploaded to the account right
+  // away, not only after the next edit — otherwise it only lives in this browser.
+  const adoptedLocalDocument = useRef(false);
+  useEffect(() => {
+    if (!authIsAuthenticated || authIsLoading) {
+      if (!authIsAuthenticated) adoptedLocalDocument.current = false;
+      return;
+    }
+    if (adoptedLocalDocument.current) return;
+    adoptedLocalDocument.current = true;
+    useBoardStore.getState().adoptLocalDocument();
+  }, [authIsAuthenticated, authIsLoading]);
   const authOAuthInProgress = useAuthStore((s) => s.isOAuthInProgress);
   const authFlow = useAuthStore((s) => s.authFlow);
   const authError = useAuthStore((s) => s.error);
