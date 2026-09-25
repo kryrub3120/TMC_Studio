@@ -152,6 +152,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
   const addStepRaw = useBoardStore((s) => s.addStep);
   const removeStep = useBoardStore((s) => s.removeStep);
+  const duplicateStep = useBoardStore((s) => s.duplicateStep);
+  const moveStep = useBoardStore((s) => s.moveStep);
   const renameStep = useBoardStore((s) => s.renameStep);
   const goToStep = useBoardStore((s) => s.goToStep);
   const nextStep = useBoardStore((s) => s.nextStep);
@@ -543,6 +545,8 @@ export function useBoardPageState(props: BoardPageProps) {
     stepsData,
     addStep,
     removeStep,
+    duplicateStep,
+    moveStep,
     renameStep,
     goToStep,
     nextStep,

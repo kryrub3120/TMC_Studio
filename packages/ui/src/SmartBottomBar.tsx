@@ -136,6 +136,9 @@ export interface SmartBottomBarProps {
   onStepSelect?: (index: number) => void;
   onAddStep?: () => void;
   onDeleteStep?: (index: number) => void;
+  onDuplicateStep?: (index: number) => void;
+  /** Move the step at `from` to position `to` (drag and drop, Alt+←/→). */
+  onMoveStep?: (from: number, to: number) => void;
   onRenameStep?: (index: number, newName: string) => void;
   onPlay?: () => void;
   onPause?: () => void;
@@ -233,6 +236,8 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
   onStepSelect,
   onAddStep,
   onDeleteStep,
+  onDuplicateStep,
+  onMoveStep,
   onRenameStep,
   onPlay,
   onPause,
@@ -257,6 +262,22 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  const endDrag = () => {
+    setDragIndex(null);
+    setDropIndex(null);
+  };
+
+  const handleChipKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (!onMoveStep || !e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    // Keep the board shortcuts (Alt+arrows change stroke width) out of this.
+    e.preventDefault();
+    e.stopPropagation();
+    const target = index + (e.key === 'ArrowLeft' ? -1 : 1);
+    if (target >= 0 && target < steps.length) onMoveStep(index, target);
+  };
 
   const handleDoubleClick = (index: number, currentLabel: string) => {
     if (!onRenameStep) return;
@@ -451,7 +472,31 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
             {/* Step chips (scrollable) */}
             <div className="flex items-center gap-1.5 overflow-x-auto flex-1 justify-center min-w-0" onWheel={scrollHorizontalStrip}>
               {steps.map((step, index) => (
-                <div key={step.id} className="group relative flex-shrink-0">
+                <div
+                  key={step.id}
+                  className={`group relative flex-shrink-0 rounded-full transition-shadow ${
+                    dropIndex === index && dragIndex !== null && dragIndex !== index ? 'ring-2 ring-accent' : ''
+                  } ${dragIndex === index ? 'opacity-50' : ''}`}
+                  draggable={!!onMoveStep && editingIndex === null && steps.length > 1}
+                  onDragStart={(e) => {
+                    setDragIndex(index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(index));
+                  }}
+                  onDragOver={(e) => {
+                    if (dragIndex === null) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    setDropIndex(index);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIndex !== null && dragIndex !== index) onMoveStep?.(dragIndex, index);
+                    endDrag();
+                  }}
+                  onDragEnd={endDrag}
+                  data-testid={`step-chip-${index}`}
+                >
                   {editingIndex === index ? (
                     <input type="text" value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
@@ -461,18 +506,31 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
                   ) : (
                     <button onClick={() => onStepSelect?.(index)}
                       onDoubleClick={() => handleDoubleClick(index, step.label)}
+                      onKeyDown={(e) => handleChipKeyDown(e, index)}
+                      title={onMoveStep && steps.length > 1 ? t('bottomSteps.moveHint') : t('bottomSteps.rename')}
                       className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-fast
                         ${index === currentStepIndex ? 'bg-accent text-white shadow-sm' : 'bg-surface2 text-muted hover:text-text hover:bg-border'}
-                        ${onRenameStep ? 'pr-6 group-hover:pr-7' : ''}`}>
+                        ${onDuplicateStep ? 'pr-10 group-hover:pr-11' : onRenameStep ? 'pr-6 group-hover:pr-7' : ''}`}>
                       {step.label || t('bottomSteps.defaultName', { number: index + 1 })}
                     </button>
                   )}
-                  {steps.length > 1 && editingIndex !== index && (
-                    <button onClick={(e) => { e.stopPropagation(); onDeleteStep?.(index); }}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-fast
-                        text-muted hover:text-red-400 hover:bg-red-500/10">
-                      <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    </button>
+                  {editingIndex !== index && (
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-fast">
+                      {onDuplicateStep && (
+                        <button onClick={(e) => { e.stopPropagation(); onDuplicateStep(index); }}
+                          title={t('bottomSteps.duplicate')} aria-label={t('bottomSteps.duplicate')}
+                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-muted hover:text-accent hover:bg-accent/10">
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+                        </button>
+                      )}
+                      {steps.length > 1 && (
+                        <button onClick={(e) => { e.stopPropagation(); onDeleteStep?.(index); }}
+                          title={t('bottomSteps.delete')} aria-label={t('bottomSteps.delete')}
+                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-muted hover:text-red-400 hover:bg-red-500/10">
+                          <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

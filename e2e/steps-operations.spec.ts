@@ -64,8 +64,8 @@ test.describe('Step operations', () => {
     // Delete the middle step with its chip button.
     await page.keyboard.press('ArrowLeft');
     await expectSteps(page, 3, 1);
-    await page.getByRole('button', { name: 'Krok 2', exact: true }).hover();
-    await page.getByRole('button', { name: 'Krok 2', exact: true }).locator('xpath=following-sibling::button').click();
+    await page.getByTestId('step-chip-1').hover();
+    await page.getByTestId('step-chip-1').getByRole('button', { name: 'Usuń krok (X)' }).click();
     await expectSteps(page, 2, 1);
     await expectSavedAfterEdit(page);
 
@@ -95,6 +95,68 @@ test.describe('Step operations', () => {
 
     await page.reload();
     await expect(page.getByRole('button', { name: 'Pressing', exact: true })).toBeVisible();
+  });
+
+  /** Steps with 1 / 2 / 3 elements (player, + ball, + player); ends on step 3. */
+  async function threeSteps(page: Page, userId: string) {
+    await boardWithOnePlayer(page, userId);
+    await page.keyboard.press('n');
+    await pressAndExpectCount(page, 'b', 2);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('n');
+    await pressAndExpectCount(page, 'p', 3);
+    await page.keyboard.press('Escape');
+    await expectSteps(page, 3, 2);
+    await expectSavedAfterEdit(page);
+  }
+
+  /** Element count of every step, read by walking the step chips. */
+  async function elementCounts(page: Page, total: number) {
+    const counts: string[] = [];
+    for (let i = 0; i < total; i += 1) {
+      await page.getByTestId(`step-chip-${i}`).getByRole('button').first().click();
+      await expect(boardViewport(page)).toHaveAttribute('data-step-index', String(i));
+      counts.push((await boardViewport(page).getAttribute('data-element-count')) ?? '');
+    }
+    return counts;
+  }
+
+  test('duplicating a step copies its content and survives reload', async ({ page }) => {
+    const userId = 'dev-e2e-steps-duplicate';
+    await threeSteps(page, userId);
+
+    await page.getByTestId('step-chip-1').hover();
+    await page.getByTestId('step-chip-1').getByRole('button', { name: 'Powiel krok' }).click();
+    await expectSteps(page, 4, 2);
+    await expect(boardViewport(page)).toHaveAttribute('data-element-count', '2');
+    await expectSavedAfterEdit(page);
+
+    await page.reload();
+    await expectSteps(page, 4, 0);
+    expect(await elementCounts(page, 4)).toEqual(['1', '2', '2', '3']);
+  });
+
+  test('reordering steps with Alt+arrows and drag and drop survives reload', async ({ page }) => {
+    const userId = 'dev-e2e-steps-reorder';
+    await threeSteps(page, userId);
+
+    // Keyboard: move step 3 to the front.
+    const chip3 = page.getByTestId('step-chip-2').getByRole('button').first();
+    await chip3.focus();
+    await page.keyboard.press('Alt+ArrowLeft');
+    await page.getByTestId('step-chip-1').getByRole('button').first().focus();
+    await page.keyboard.press('Alt+ArrowLeft');
+    await expectSteps(page, 3, 0);
+    await expectSavedAfterEdit(page);
+    expect(await elementCounts(page, 3)).toEqual(['3', '1', '2']);
+
+    // Drag and drop: move the first step to the end.
+    await page.getByTestId('step-chip-0').dragTo(page.getByTestId('step-chip-2'));
+    await expect(boardViewport(page)).toHaveAttribute('data-step-count', '3');
+    await expectSavedAfterEdit(page);
+
+    await page.reload();
+    expect(await elementCounts(page, 3)).toEqual(['1', '2', '3']);
   });
 
   test('playback can be paused and loops back to step 1', async ({ page }) => {

@@ -380,3 +380,83 @@ describe('cloud save monitoring', () => {
   });
 });
 
+describe('step list operations', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.clear();
+    cloud.reset();
+    vi.clearAllMocks();
+    useUIStore.setState({ isOnline: true, projectSaveStatus: 'saved' });
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  /** Three steps holding markers a / b / c; the canvas is on step 2 ("b"). */
+  function threeSteps() {
+    const store = createTestStore();
+    store.setState({ elements: [marker('a')] });
+    store.getState().addStep();
+    store.setState({ elements: [marker('b')] });
+    store.getState().addStep();
+    store.setState({ elements: [marker('c')] });
+    store.getState().goToStep(1);
+    return store;
+  }
+
+  const ids = (store: ReturnType<typeof createTestStore>) =>
+    store.getState().document.steps.map((step) => step.elements.map((e) => e.id).join(''));
+
+  it('deleting another step keeps the coach on their step and keeps unsaved canvas edits', () => {
+    const store = threeSteps();
+    store.setState({ elements: [marker('b'), marker('b2')] }); // live edit, not synced yet
+    store.getState().removeStep(0);
+
+    expect(ids(store)).toEqual(['bb2', 'c']);
+    expect(store.getState().currentStepIndex).toBe(0);
+    expect(store.getState().elements.map((e) => e.id)).toEqual(['b', 'b2']);
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('duplicating a step copies its live content right after it and opens the copy', () => {
+    const store = threeSteps();
+    store.setState({ elements: [marker('b'), marker('b2')] });
+    store.getState().duplicateStep(1);
+
+    expect(ids(store)).toEqual(['a', 'bb2', 'bb2', 'c']);
+    expect(store.getState().currentStepIndex).toBe(2);
+    const [original, copy] = store.getState().document.steps.slice(1, 3);
+    expect(copy.id).not.toBe(original.id);
+    expect(copy.name).toBe('');
+    expect(copy.elements).not.toBe(original.elements);
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('moving steps reorders them and keeps the canvas on the same step', () => {
+    const store = threeSteps();
+    store.setState({ elements: [marker('b'), marker('b2')] });
+    store.getState().moveStep(1, 2);
+
+    expect(ids(store)).toEqual(['a', 'c', 'bb2']);
+    expect(store.getState().currentStepIndex).toBe(2);
+    expect(store.getState().elements.map((e) => e.id)).toEqual(['b', 'b2']);
+
+    store.getState().moveStep(0, 2);
+    expect(ids(store)).toEqual(['c', 'bb2', 'a']);
+    expect(store.getState().currentStepIndex).toBe(1);
+    expect(store.getState().isDirty).toBe(true);
+  });
+
+  it('ignores moves out of range', () => {
+    const store = threeSteps();
+    store.setState({ isDirty: false });
+    store.getState().moveStep(0, 5);
+    store.getState().moveStep(-1, 0);
+    store.getState().moveStep(1, 1);
+    expect(ids(store)).toEqual(['a', 'b', 'c']);
+    expect(store.getState().isDirty).toBe(false);
+  });
+});
+

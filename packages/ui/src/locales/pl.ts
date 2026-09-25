@@ -952,6 +952,8 @@ export const pl: Dictionary = {
     loop: 'Pętla (L)',
     rename: 'Kliknij dwa razy, aby zmienić nazwę',
     delete: 'Usuń krok (X)',
+    duplicate: 'Powiel krok',
+    moveHint: 'Przeciągnij, aby zmienić kolejność (Alt+←/→) · dwuklik: zmiana nazwy',
     add: 'Dodaj krok (N)',
     counter: 'Krok {{current}} / {{total}}',
     defaultName: 'Krok {{number}}',
