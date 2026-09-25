@@ -3,6 +3,12 @@
  */
 
 import { logger } from "../../lib/logger";
+import {
+  noteSaveSucceeded,
+  reportSaveFailure,
+  type SaveOp,
+  type SaveTrigger,
+} from "../../lib/saveMonitoring";
 import type { StateCreator } from "zustand";
 import type {
   BoardDocument,
@@ -221,7 +227,8 @@ export interface DocumentSlice {
   setLineupPresetShortcut: (slot: number, shortcut: number | null) => boolean;
 
   // Cloud actions
-  saveToCloud: () => Promise<boolean>;
+  /** `trigger` only labels monitoring events; it does not change the save. */
+  saveToCloud: (trigger?: SaveTrigger) => Promise<boolean>;
   loadFromCloud: (projectId: string) => Promise<boolean>;
   fetchCloudProjects: () => Promise<void>;
   fetchCloudFolders: () => Promise<void>;
@@ -697,7 +704,7 @@ export const createDocumentSlice: StateCreator<
       get().pushHistory();
     },
 
-    saveToCloud: async () => {
+    saveToCloud: async (trigger: SaveTrigger = "other") => {
       if (!isSupabaseEnabled()) return false;
 
       // PR-L5-MINI: Check if online before attempting save
@@ -715,6 +722,8 @@ export const createDocumentSlice: StateCreator<
         // cloudProjectId === null and INSERT two rows.
         const { document, elements, cloudProjectId, currentStepIndex } = get();
         set({ isSaving: true });
+        let op: SaveOp = cloudProjectId ? "update" : "create";
+        let targetProjectId = cloudProjectId;
 
         try {
           const updatedSteps = withCurrentStepElements(
@@ -729,7 +738,6 @@ export const createDocumentSlice: StateCreator<
             updatedAt: new Date().toISOString(),
           };
 
-          let targetProjectId = cloudProjectId;
           if (targetProjectId) {
             try {
               const project = await updateProject(targetProjectId, {
@@ -747,6 +755,7 @@ export const createDocumentSlice: StateCreator<
               }
               logger.warn("[Cloud save] Project not found, saving as new");
               targetProjectId = null;
+              op = "create";
             }
           }
           if (!targetProjectId) {
@@ -770,9 +779,19 @@ export const createDocumentSlice: StateCreator<
                 ? updatedDoc
                 : state.document,
           }));
+          noteSaveSucceeded(trigger, op);
           return true;
         } catch (error) {
-          logger.error("Cloud save error:", error);
+          // Reported through saveMonitoring (tagged, rate-limited), not
+          // logger.error, which would send a second untagged event.
+          logger.warn("Cloud save error:", error);
+          reportSaveFailure(error, {
+            trigger,
+            op,
+            projectId: targetProjectId,
+            stepCount: document.steps.length,
+            elementCount: elements.length,
+          });
           set({ isSaving: false });
 
           // PR-L5-MINI: Show save failure toast (rate-limited)
@@ -913,7 +932,7 @@ export const createDocumentSlice: StateCreator<
       const { useAuthStore } = await import("../useAuthStore");
       if (isSupabaseEnabled() && useAuthStore.getState().isAuthenticated) {
         try {
-          const ok = await state.saveToCloud();
+          const ok = await state.saveToCloud("autosave");
           if (!ok) {
             logger.warn("[Autosave] Cloud save returned false");
             cloudSuccess = false;
@@ -988,7 +1007,7 @@ export const createDocumentSlice: StateCreator<
       const { useAuthStore } = await import("../useAuthStore");
       if (isSupabaseEnabled() && useAuthStore.getState().isAuthenticated) {
         try {
-          const ok = await state.saveToCloud();
+          const ok = await state.saveToCloud("manual");
           if (!ok) {
             logger.warn("[Manual save] Cloud save returned false");
             cloudSuccess = false;

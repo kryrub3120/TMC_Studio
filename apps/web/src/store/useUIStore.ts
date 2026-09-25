@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react';
 import { logger } from '../lib/logger';
+import { trackSaveStatus } from '../lib/saveMonitoring';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { translate as t } from '@tmc/ui';
@@ -781,7 +782,10 @@ export const useUIStore = create<UIState>()(
       },
       
       // Save status actions (Sprint G)
-      setProjectSaveStatus: (status) => set({ projectSaveStatus: status }),
+      setProjectSaveStatus: (status) => {
+        trackSaveStatus(status);
+        set({ projectSaveStatus: status });
+      },
       
       // Help sidebar actions (Sprint E)
       setHelpSidebarOpen: (open) => set({ helpSidebarOpen: open }),
