@@ -34,7 +34,7 @@ Czytaj przed każdą zmianą. Szczegóły procesu: `docs/AGENT_ORCHESTRATION.md`
    Po migracji uruchom advisora Supabase (security).
    Testy RLS/funkcji: pgTAP w `supabase/tests/database`, lokalnie `pnpm db:start` (raz) i `pnpm test:db`
    (resetuje wyłącznie lokalną bazę); w CI job „DB Tests”.
-3. **Produkcja Supabase** = `pgacjczecyfnwsaadyvj`. `pnpm supabase:link` i `.env.local` wskazują projekt dev.
+3. **Produkcja Supabase** = `pgacjczecyfnwsaadyvj`. `pnpm supabase:link-dev` i `.env.local` wskazują projekt dev; produkcja tylko jawnie `pnpm supabase:link-prod`.
 4. **i18n:** każdy nowy tekst w `packages/ui/src/locales/{en,pl,es}.ts`.
 5. **Sekrety:** nigdy `service_role`, kluczy Stripe secret ani tokenów Postmark w kodzie frontendu.
 

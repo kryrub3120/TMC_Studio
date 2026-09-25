@@ -25,12 +25,12 @@
     "@tmc/presets": "workspace:*",
     "@tmc/ui": "workspace:*",
     "gifenc": "^1.0.3",
-    "jspdf": "^4.0.0",
+    "jspdf": "^4.2.1",
     "konva": "^9.3.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-konva": "^18.2.10",
-    "react-router-dom": "^7.12.0",
+    "react-router-dom": "^7.18.4",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

@@ -24,7 +24,19 @@ pnpm e2e
 pnpm build
 ```
 
-Open http://localhost:5173
+Open http://localhost:3000
+
+### Environments and variables
+
+| Where | Supabase | File / place |
+|---|---|---|
+| Local dev (`pnpm dev`) | dev project `euxauavanukyfofhkrqp` | repo-root `.env.local` (Vite `envDir` is the repo root) |
+| Deploy previews and production | production project `pgacjczecyfnwsaadyvj` | Netlify environment variables |
+| Supabase CLI | dev: `pnpm supabase:link-dev`; production only explicitly: `pnpm supabase:link-prod` | `supabase/.temp` (unlink after production work) |
+
+- Browser variables start with `VITE_` and end up in the public bundle: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_APP_RELEASE`, `VITE_PLAUSIBLE_HOST`, `VITE_ANIMATION_ENABLED`.
+- Server-only variables are read by `netlify/functions` and must never get a `VITE_` prefix: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `POSTMARK_SERVER_TOKEN`, `ALLOWED_ORIGINS`. CI fails the build if they leak into the bundle (`pnpm check:bundle-secrets`).
+- `apps/web/.env.local` is not read by Vite (see `envDir`); keep environment variables in the repo-root files.
 
 ---
 
