@@ -282,6 +282,84 @@ function sortProjects(list: ProjectItem[], sort: SortOption): ProjectItem[] {
   });
 }
 
+const MAX_TAGS = 10;
+const MAX_TAG_LENGTH = 30;
+
+/** Tag chips with remove buttons and an input that adds a tag on Enter or comma. */
+function ProjectTagEditor({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState("");
+
+  const addDraft = () => {
+    const tag = draft.trim().replace(/,+$/, "").slice(0, MAX_TAG_LENGTH);
+    setDraft("");
+    if (!tag || tags.length >= MAX_TAGS) return;
+    if (tags.some((existing) => existing.toLowerCase() === tag.toLowerCase())) return;
+    onChange([...tags, tag]);
+  };
+
+  return (
+    <div className="space-y-1" data-testid="project-tags">
+      <label htmlFor="project-tag-input" className="text-xs font-medium text-muted">
+        {t("projects.tags")}
+      </label>
+      <div className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-surface2 px-2 py-1.5">
+        {tags.map((tag) => (
+          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs text-text">
+            {tag}
+            <button
+              type="button"
+              onClick={() => onChange(tags.filter((existing) => existing !== tag))}
+              aria-label={t("projects.removeTag", { tag })}
+              className="text-muted hover:text-red-400"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {tags.length < MAX_TAGS && (
+          <input
+            id="project-tag-input"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === ",") {
+                event.preventDefault();
+                addDraft();
+              } else if (event.key === "Backspace" && !draft && tags.length > 0) {
+                onChange(tags.slice(0, -1));
+              }
+            }}
+            onBlur={addDraft}
+            maxLength={MAX_TAG_LENGTH}
+            placeholder={t("projects.addTag")}
+            className="min-w-[8rem] flex-1 bg-transparent text-xs text-text placeholder:text-muted focus:outline-none"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Folders in tree order with their depth, for a folder picker. */
+function flattenFolders(folders: FolderItem[]): Array<{ folder: FolderItem; depth: number }> {
+  const byParent = new Map<string | null, FolderItem[]>();
+  for (const folder of folders) {
+    const key = folder.parentId ?? null;
+    byParent.set(key, [...(byParent.get(key) ?? []), folder]);
+  }
+  const out: Array<{ folder: FolderItem; depth: number }> = [];
+  const walk = (parentId: string | null, depth: number) => {
+    const children = [...(byParent.get(parentId) ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+    for (const folder of children) {
+      out.push({ folder, depth });
+      walk(folder.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+  return out;
+}
+
 interface ProjectsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -303,6 +381,7 @@ interface ProjectsDrawerProps {
   onTogglePinProject?: (projectId: string) => void;
   onTogglePinFolder?: (folderId: string) => void;
   onMoveToFolder?: (projectId: string, folderId: string | null) => void;
+  onUpdateProjectTags?: (projectId: string, tags: string[]) => void;
   onEditFolder?: (folderId: string) => void;
   onDeleteFolder?: (folderId: string) => void;
   onRenameProject?: (projectId: string, newName: string) => void;
@@ -341,6 +420,7 @@ export function ProjectsDrawer({
   onTogglePinProject,
   onTogglePinFolder,
   onMoveToFolder,
+  onUpdateProjectTags,
   onEditFolder: _onEditFolder,
   onDeleteFolder: _onDeleteFolder,
   onRenameProject: _onRenameProject,
@@ -353,6 +433,7 @@ export function ProjectsDrawer({
 }: ProjectsDrawerProps) {
   const { t } = useTranslation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [organizeProjectId, setOrganizeProjectId] = useState<string | null>(null);
   const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [smartCollection, setSmartCollection] = useState<"all" | "recent" | "unsorted">("all");
@@ -699,6 +780,15 @@ export function ProjectsDrawer({
         icon: "⭐",
         onClick: () => onToggleFavorite?.(project.id),
       },
+      ...(project.isCloud && (onMoveToFolder || onUpdateProjectTags)
+        ? [
+            {
+              label: t("projects.organize"),
+              icon: "🏷️",
+              onClick: () => setOrganizeProjectId(project.id),
+            },
+          ]
+        : []),
       {
         label: t("projects.duplicate"),
         icon: "📋",
@@ -2638,6 +2728,69 @@ export function ProjectsDrawer({
       </div>
 
       {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={() => setContextMenu(null)} />}
+      {organizeProjectId && (() => {
+        const project = projects.find((item) => item.id === organizeProjectId);
+        if (!project) return null;
+        return (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setOrganizeProjectId(null)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="organize-project-title"
+              data-testid="organize-project-dialog"
+              className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-surface p-5 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setOrganizeProjectId(null);
+              }}
+            >
+              <h2 id="organize-project-title" className="truncate text-base font-semibold text-text">
+                {t("projects.organizeTitle", { name: project.name })}
+              </h2>
+              {onMoveToFolder && (
+                <div className="space-y-1">
+                  <label htmlFor="organize-project-folder" className="text-xs font-medium text-muted">
+                    {t("projects.folder")}
+                  </label>
+                  <select
+                    id="organize-project-folder"
+                    value={project.folderId ?? ""}
+                    onChange={(event) => onMoveToFolder(project.id, event.target.value || null)}
+                    className="w-full rounded-md border border-border bg-surface2 px-2 py-1.5 text-sm text-text"
+                  >
+                    <option value="">{t("projects.noFolder")}</option>
+                    {flattenFolders(folders).map(({ folder, depth }) => (
+                      <option key={folder.id} value={folder.id}>
+                        {"\u00a0\u00a0".repeat(depth)}
+                        {folder.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {onUpdateProjectTags && (
+                <ProjectTagEditor
+                  tags={project.tags ?? []}
+                  onChange={(tags) => onUpdateProjectTags(project.id, tags)}
+                />
+              )}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => setOrganizeProjectId(null)}
+                  className="rounded-md bg-accent px-4 py-1.5 text-sm font-semibold text-white hover:bg-accent/90"
+                >
+                  {t("projects.done")}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {deleteConfirmId && (
         <ConfirmModal
           isOpen

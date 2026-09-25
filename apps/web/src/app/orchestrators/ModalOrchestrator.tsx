@@ -75,6 +75,7 @@ interface ModalOrchestratorProps {
   onTogglePinProject?: (projectId: string) => void;
   onTogglePinFolder?: (folderId: string) => void;
   onMoveToFolder: (projectId: string, folderId: string | null) => void;
+  onUpdateProjectTags: (projectId: string, tags: string[]) => void;
   onEditFolder: (folderId: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onRenameProject?: (projectId: string, newName: string) => void;
@@ -248,6 +249,7 @@ export function ModalOrchestrator(props: ModalOrchestratorProps) {
         onTogglePinProject={props.onTogglePinProject}
         onTogglePinFolder={props.onTogglePinFolder}
         onMoveToFolder={props.onMoveToFolder}
+        onUpdateProjectTags={props.onUpdateProjectTags}
         onEditFolder={props.onEditFolder}
         onDeleteFolder={props.onDeleteFolder}
         onRenameProject={props.onRenameProject}
