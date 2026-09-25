@@ -3,8 +3,10 @@
  */
 
 import type { StateCreator } from 'zustand';
+import { generateId, isDefaultStepName } from '@tmc/core';
 import type { BoardElement, Step } from '@tmc/core';
 import type { AppState } from '../types';
+import { withCurrentStepElements } from './documentSlice';
 
 export interface StepsSlice {
   // State
@@ -14,6 +16,8 @@ export interface StepsSlice {
   addStep: () => void;
   removeStep: (index: number) => void;
   duplicateStep: (index: number) => void;
+  /** Move the step at `from` to position `to`; the coach stays on the step they are editing. */
+  moveStep: (from: number, to: number) => void;
   renameStep: (index: number, newName: string) => void;
   goToStep: (index: number) => void;
   nextStep: () => void;
@@ -55,8 +59,9 @@ export const createStepsSlice: StateCreator<
     // Create new step with copy of current elements
     const newStepIndex = currentStepIndex + 1;
     const newStep: Step = {
-      id: `step-${Date.now()}`,
-      name: `Step ${updatedSteps.length + 1}`,
+      id: `step-${generateId()}`,
+      // Empty = automatic name, shown translated ("Krok 3").
+      name: '',
       elements: cloneElements(elements),
       duration: 0.8,
     };
@@ -85,21 +90,24 @@ export const createStepsSlice: StateCreator<
   },
   
   removeStep: (index) => {
-    const { document } = get();
-    if (document.steps.length <= 1) return;
-    
-    const updatedSteps = document.steps.filter((_, i) => i !== index);
-    const newIndex = Math.min(index, updatedSteps.length - 1);
+    const { document, currentStepIndex, elements } = get();
+    if (document.steps.length <= 1 || index < 0 || index >= document.steps.length) return;
+
+    // Keep the live canvas edits of the current step before touching the list.
+    const synced = withCurrentStepElements(document.steps, currentStepIndex, elements);
+    const updatedSteps = synced.filter((_, i) => i !== index);
+
+    // Deleting another step keeps the coach on the step they are editing.
+    const newIndex =
+      index === currentStepIndex
+        ? Math.min(index, updatedSteps.length - 1)
+        : index < currentStepIndex
+          ? currentStepIndex - 1
+          : currentStepIndex;
     const newElements = updatedSteps[newIndex]?.elements ?? [];
-    
-    const newDoc = {
-      ...document,
-      steps: updatedSteps,
-      updatedAt: new Date().toISOString(),
-    };
-    
+
     set({
-      document: newDoc,
+      document: { ...document, steps: updatedSteps, updatedAt: new Date().toISOString() },
       currentStepIndex: newIndex,
       elements: structuredClone(newElements),
       selectedIds: [],
@@ -108,39 +116,52 @@ export const createStepsSlice: StateCreator<
     });
     get().markDirty();
   },
-  
+
   duplicateStep: (index) => {
-    const { document } = get();
-    const stepToDuplicate = document.steps[index];
-    if (!stepToDuplicate) return;
-    
-    const newStep: Step = {
-      ...stepToDuplicate,
-      id: `step-${Date.now()}`,
-      name: `${stepToDuplicate.name} (copy)`,
-      elements: structuredClone(stepToDuplicate.elements),
+    const { document, currentStepIndex, elements } = get();
+    if (index < 0 || index >= document.steps.length) return;
+
+    const synced = withCurrentStepElements(document.steps, currentStepIndex, elements);
+    const source = synced[index];
+    const copy: Step = {
+      ...source,
+      id: `step-${generateId()}`,
+      // Automatic names stay automatic ("Krok 3"); a coach's own name is kept.
+      name: isDefaultStepName(source.name) ? '' : source.name,
+      elements: structuredClone(source.elements),
     };
-    
-    const updatedSteps = [...document.steps];
-    updatedSteps.splice(index + 1, 0, newStep);
-    
-    const newDoc = {
-      ...document,
-      steps: updatedSteps,
-      updatedAt: new Date().toISOString(),
-    };
-    
+    const updatedSteps = [...synced];
+    updatedSteps.splice(index + 1, 0, copy);
+
     set({
-      document: newDoc,
+      document: { ...document, steps: updatedSteps, updatedAt: new Date().toISOString() },
       currentStepIndex: index + 1,
-      elements: structuredClone(newStep.elements),
+      elements: structuredClone(copy.elements),
       selectedIds: [],
-      history: [{ elements: structuredClone(newStep.elements), selectedIds: [] }],
+      history: [{ elements: structuredClone(copy.elements), selectedIds: [] }],
       historyIndex: 0,
     });
     get().markDirty();
   },
-  
+
+  moveStep: (from, to) => {
+    const { document, currentStepIndex, elements } = get();
+    const count = document.steps.length;
+    if (from === to || from < 0 || to < 0 || from >= count || to >= count) return;
+
+    const updatedSteps = withCurrentStepElements(document.steps, currentStepIndex, elements);
+    const currentStepId = updatedSteps[currentStepIndex]?.id;
+    const [moved] = updatedSteps.splice(from, 1);
+    updatedSteps.splice(to, 0, moved);
+
+    // The canvas keeps showing the same step, now at its new position.
+    set({
+      document: { ...document, steps: updatedSteps, updatedAt: new Date().toISOString() },
+      currentStepIndex: Math.max(0, updatedSteps.findIndex((step) => step.id === currentStepId)),
+    });
+    get().markDirty();
+  },
+
   renameStep: (index, newName) => {
     const { document } = get();
     if (index < 0 || index >= document.steps.length) return;

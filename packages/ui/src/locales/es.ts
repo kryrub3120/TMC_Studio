@@ -952,6 +952,8 @@ export const es: Dictionary = {
     loop: 'Bucle (L)',
     rename: 'Doble clic para renombrar',
     delete: 'Eliminar paso (X)',
+    duplicate: 'Duplicar paso',
+    moveHint: 'Arrastra para reordenar (Alt+←/→) · doble clic para renombrar',
     add: 'Añadir paso (N)',
     counter: 'Paso {{current}} / {{total}}',
     defaultName: 'Paso {{number}}',

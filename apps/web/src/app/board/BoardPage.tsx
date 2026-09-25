@@ -708,6 +708,8 @@ export function BoardPage(props: BoardPageProps) {
         onStepSelect={state.goToStep}
         onAddStep={state.addStep}
         onDeleteStep={state.removeStep}
+        onDuplicateStep={state.duplicateStep}
+        onMoveStep={state.moveStep}
         onRenameStep={state.renameStep}
         onPlay={state.play}
         onPause={state.pause}

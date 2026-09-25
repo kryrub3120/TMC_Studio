@@ -1148,6 +1148,8 @@ export const en = {
     loop: 'Loop (L)',
     rename: 'Double-click to rename',
     delete: 'Delete step (X)',
+    duplicate: 'Duplicate step',
+    moveHint: 'Drag to reorder (Alt+←/→) · double-click to rename',
     add: 'Add Step (N)',
     counter: 'Step {{current}} / {{total}}',
     defaultName: 'Step {{number}}',
