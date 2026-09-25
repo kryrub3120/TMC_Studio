@@ -459,10 +459,17 @@ export function getOrgInvitations(): Invitation[] {
   return readOrgValue<Invitation[]>('invitations') ?? [];
 }
 
+/** Team seat limit, as enforced server-side in netlify/functions/_organizationInvitation.ts. */
+const DEV_TEAM_MAX_SEATS = 5;
+
 export function createOrgInvitation(organizationId: string, email: string): Invitation {
   const invitations = readOrgValue<Invitation[]>('invitations') ?? [];
   if (invitations.some((inv) => inv.email === email && inv.status === 'pending')) {
     throw new Error('There is already a pending invitation for this email');
+  }
+  // Same error code the Netlify function returns, so the UI shows the same message.
+  if (getOrgSeatUsage() >= DEV_TEAM_MAX_SEATS) {
+    throw new Error('organizationPanel.errors.seatLimitReached');
   }
   const self = getMockSelf();
   const invitation: Invitation = {

@@ -33,8 +33,12 @@ export interface StoredProject {
  * Sign in as a fresh dev mock user and skip onboarding. Storage is wiped only
  * on the first navigation of the test, so reloads keep the saved state.
  */
-export async function useCloudUser(page: Page, userId: string): Promise<void> {
-  await page.addInitScript((id) => {
+export async function useCloudUser(
+  page: Page,
+  userId: string,
+  plan: 'pro' | 'team' = 'pro',
+): Promise<void> {
+  await page.addInitScript(({ id, plan }) => {
     if (sessionStorage.getItem('tmc-e2e-initialized') !== id) {
       localStorage.clear();
       sessionStorage.setItem('tmc-e2e-initialized', id);
@@ -50,12 +54,12 @@ export async function useCloudUser(page: Page, userId: string): Promise<void> {
           isMockUser: true,
           isAuthenticated: true,
           isPro: true,
-          isTeam: false,
+          isTeam: plan === 'team',
           user: {
             id,
             email: `${id}@tmcstudio.test`,
             full_name: 'E2E Coach',
-            subscription_tier: 'pro',
+            subscription_tier: plan,
           },
         },
         version: 0,
@@ -65,7 +69,7 @@ export async function useCloudUser(page: Page, userId: string): Promise<void> {
       'tmc-ui-settings',
       JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }),
     );
-  }, userId);
+  }, { id: userId, plan });
 }
 
 export function boardViewport(page: Page) {
