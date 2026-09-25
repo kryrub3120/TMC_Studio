@@ -101,3 +101,11 @@ export function findStepById(steps: Step[], id: string): Step | undefined {
 export function findStepIndexById(steps: Step[], id: string): number {
   return steps.findIndex((step) => step.id === id);
 }
+
+/**
+ * Names the app gives steps automatically ("Initial Setup", "Step 2"). They are
+ * stored in English, so the UI shows its translated default for them instead.
+ */
+export function isDefaultStepName(name: string | undefined): boolean {
+  return !name || name === 'Initial Setup' || /^Step \d+$/.test(name);
+}

@@ -308,7 +308,7 @@ export function BoardPage(props: BoardPageProps) {
         projectName={state.boardDoc.name}
         isSaved={state.isSaved}
         isSyncing={state.isSaving}
-        stepInfo={state.boardDoc.steps.length > 1 ? `Step ${state.currentStepIndex + 1}/${state.boardDoc.steps.length}` : undefined}
+        stepInfo={state.boardDoc.steps.length > 1 ? t('bottomSteps.counter', { current: state.currentStepIndex + 1, total: state.boardDoc.steps.length }) : undefined}
         authIsPro={state.authIsPro}
         authIsAuthenticated={state.authIsAuthenticated}
         userInitials={state.authUser?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || (state.authIsAuthenticated ? 'U' : '?')}
@@ -716,7 +716,7 @@ export function BoardPage(props: BoardPageProps) {
         onToggleLoop={state.toggleLoop}
         onDurationChange={state.setStepDuration}
         animationProgress={state.animationProgress}
-        stepInfo={state.boardDoc.steps.length > 1 ? `Step ${state.currentStepIndex + 1}/${state.boardDoc.steps.length}` : undefined}
+        stepInfo={state.boardDoc.steps.length > 1 ? t('bottomSteps.counter', { current: state.currentStepIndex + 1, total: state.boardDoc.steps.length }) : undefined}
         height={state.bottomBarHeight}
         onHeightChange={state.setBottomBarHeight}
         collapsed={state.bottomBarCollapsed}

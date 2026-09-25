@@ -359,4 +359,24 @@ describe('cloud save monitoring', () => {
       expect.objectContaining({ trigger: 'autosave' }),
     );
   });
+
+  it.each([
+    ['adding', (store: ReturnType<typeof createTestStore>) => store.getState().addStep()],
+    ['renaming', (store: ReturnType<typeof createTestStore>) => store.getState().renameStep(0, 'Pressing')],
+    ['deleting', (store: ReturnType<typeof createTestStore>) => {
+      store.getState().addStep();
+      store.setState({ isDirty: false });
+      store.getState().removeStep(1);
+    }],
+  ])('%s a step schedules an autosave on its own', async (_name, change) => {
+    const store = createTestStore();
+    change(store);
+    expect(store.getState().isDirty).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(2100);
+    await flush();
+    expect(store.getState().isDirty).toBe(false);
+    expect(cloud.createProject).toHaveBeenCalledTimes(1);
+  });
 });
+
