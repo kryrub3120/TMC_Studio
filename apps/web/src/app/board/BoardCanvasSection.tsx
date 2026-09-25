@@ -19,6 +19,7 @@ import { CanvasShell } from '../../components/CanvasShell';
 import { BoardCanvas } from '../../components/Canvas/BoardCanvas';
 import { CanvasAdapter } from './canvas/CanvasAdapter';
 import { useUIStore, ZOOM_MIN, ZOOM_MAX } from '../../store/useUIStore';
+import { useBoardStore } from '../../store';
 import { zoomToCursorPan, clampPanOffset, centerPanOffset } from '../../utils/viewportUtils';
 import { useTouchGestures } from '../../hooks/useTouchGestures';
 
@@ -188,6 +189,9 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
 
   // ─── Container measurement ───────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
+  // Exposed as data attributes so E2E tests can follow animation steps.
+  const currentStepIndex = useBoardStore((s) => s.currentStepIndex);
+  const stepCount = useBoardStore((s) => s.document.steps.length);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -595,6 +599,9 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
       data-pan-x={panOffset.x.toFixed(2)}
       data-pan-y={panOffset.y.toFixed(2)}
       data-marquee-active={marqueeStart !== null ? 'true' : 'false'}
+      data-step-index={currentStepIndex}
+      data-step-count={stepCount}
+      data-playing={isPlaying ? 'true' : 'false'}
       className={`absolute inset-0 overflow-hidden flex items-center justify-center shadow-canvas rounded-[20px] border border-border/50 ${isPrintMode ? 'bg-white' : 'bg-surface/50 backdrop-blur-sm'} ${cursorClass}`}
       style={{ touchAction: 'manipulation' }}
       onPointerDown={handleContainerPointerDown}
