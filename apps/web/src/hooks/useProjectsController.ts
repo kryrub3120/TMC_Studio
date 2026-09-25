@@ -77,6 +77,7 @@ export interface ProjectsController {
   togglePinProject: (projectId: string) => Promise<void>;
   togglePinFolder: (folderId: string) => Promise<void>;
   moveToFolder: (projectId: string, folderId: string | null) => Promise<void>;
+  updateTags: (projectId: string, tags: string[]) => Promise<void>;
   moveFolderToParent: (folderId: string, parentId: string | null, position: number) => Promise<void>;
 }
 
@@ -591,6 +592,15 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     }
   }, [fetchCloudProjects, showToast, t]);
   
+  const updateTagsHandler = useCallback(async (projectId: string, tags: string[]) => {
+    const ok = await updateProjectTags(projectId, tags);
+    if (!ok) {
+      showToast(t('projectToast.tagsFailed'));
+      return;
+    }
+    await fetchCloudProjects();
+  }, [fetchCloudProjects, showToast, t]);
+
   /**
    * Toggle project pin status
    */
@@ -700,6 +710,7 @@ export function useProjectsController(params: UseProjectsControllerParams): Proj
     togglePinProject,
     togglePinFolder,
     moveToFolder: moveToFolderHandler,
+    updateTags: updateTagsHandler,
     moveFolderToParent,
   };
 }

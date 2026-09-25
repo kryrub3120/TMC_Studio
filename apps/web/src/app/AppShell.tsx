@@ -353,6 +353,7 @@ export function AppShell() {
   const handleCreateFolder = projectsController.createFolder;
   const handleToggleFavorite = projectsController.toggleFavorite;
   const handleMoveToFolder = projectsController.moveToFolder;
+  const handleUpdateProjectTags = projectsController.updateTags;
   const handleDeleteFolder = projectsController.deleteFolder;
 
   const handleEditFolder = useCallback(async (folderId: string) => {
@@ -736,6 +737,7 @@ export function AppShell() {
         onTogglePinProject={handleTogglePinProject}
         onTogglePinFolder={handleTogglePinFolder}
         onMoveToFolder={handleMoveToFolder}
+        onUpdateProjectTags={handleUpdateProjectTags}
         onEditFolder={handleEditFolder}
         onDeleteFolder={handleDeleteFolder}
         onRenameProject={handleRenameProjectById}

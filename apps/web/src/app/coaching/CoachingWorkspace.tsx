@@ -354,9 +354,30 @@ async function downloadElementAsPdf(source: HTMLElement, filename: string) {
   sourceFields.forEach((field, index) => {
     const clonedField = cloneFields[index];
     if (!clonedField) return;
+    // A placeholder in the PDF reads like content the coach typed.
+    clonedField.removeAttribute("placeholder");
+
+    if (clonedField instanceof HTMLTextAreaElement) {
+      // html2canvas draws a textarea as one unwrapped line, so everything after
+      // the first line was lost. A block with the same look wraps the full text.
+      const text = document.createElement("div");
+      text.className = clonedField.className;
+      text.setAttribute("style", clonedField.getAttribute("style") ?? "");
+      Object.assign(text.style, {
+        whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere",
+        height: "auto",
+        minHeight: "72px",
+        overflow: "visible",
+      });
+      text.textContent = field.value;
+      text.dataset.pdfText = "";
+      clonedField.replaceWith(text);
+      return;
+    }
+
     clonedField.value = field.value;
     clonedField.setAttribute("value", field.value);
-    if (clonedField instanceof HTMLTextAreaElement) clonedField.textContent = field.value;
   });
 
   const sourceCanvases = source.querySelectorAll<HTMLCanvasElement>("canvas");
@@ -427,10 +448,6 @@ async function downloadElementAsPdf(source: HTMLElement, filename: string) {
       if (summary) summary.style.gridColumn = "1 / -1";
     }
 
-    clone.querySelectorAll<HTMLTextAreaElement>("textarea").forEach((textarea) => {
-      textarea.style.height = `${Math.max(textarea.scrollHeight, 72)}px`;
-      textarea.style.overflow = "hidden";
-    });
     await document.fonts?.ready;
     await nextPaint();
     await nextPaint();
