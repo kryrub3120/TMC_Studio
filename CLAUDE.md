@@ -27,6 +27,8 @@ Czytaj przed każdą zmianą. Szczegóły procesu: `docs/AGENT_ORCHESTRATION.md`
    - każdy zapis do chmury idzie przez `enqueueCloudWrite`; stan (`cloudProjectId`, `document`) czytaj wewnątrz zadania w kolejce;
    - każda zmiana `cloudProjectId` idzie w parze z `persistCloudProjectId`;
    - „brudność” dokumentu oceniaj licznikiem `changeSeq`, nie `updatedAt`.
+   - dokument przed zapisem do chmury przechodzi `validateBoardDocument` (`@tmc/core`); błąd = brak zapisu w chmurze
+     + zdarzenie `save.invalid_document` w Sentry (kopia lokalna zostaje).
 2. **Baza danych:** migracje tylko jako pliki w `supabase/migrations` + `supabase db push`. Nigdy ręcznie w dashboardzie ani przez MCP.
    Nowa funkcja `SECURITY DEFINER`: `SET search_path`, sprawdzenie `auth.uid()`, jawne `REVOKE ... FROM PUBLIC, anon`.
    Po migracji uruchom advisora Supabase (security).

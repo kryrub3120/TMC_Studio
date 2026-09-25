@@ -5,6 +5,7 @@
 import { logger } from "../../lib/logger";
 import {
   noteSaveSucceeded,
+  reportDocumentIssues,
   reportSaveFailure,
   type SaveOp,
   type SaveTrigger,
@@ -41,6 +42,7 @@ import {
   importDocument,
   isArrowElement,
   isPlayerElement,
+  validateBoardDocument,
 } from "@tmc/core";
 import {
   isSupabaseEnabled,
@@ -737,6 +739,20 @@ export const createDocumentSlice: StateCreator<
             steps: updatedSteps,
             updatedAt: new Date().toISOString(),
           };
+
+          // A document that would not load back must never reach the database.
+          // The local copy is still saved by saveDocument, so nothing is lost.
+          const validation = validateBoardDocument(updatedDoc);
+          if (!validation.ok || validation.warnings.length > 0) {
+            reportDocumentIssues(validation, { trigger, op, projectId: targetProjectId });
+          }
+          if (!validation.ok) {
+            logger.warn("[Cloud save] Document failed validation:", validation.errors);
+            set({ isSaving: false });
+            const { useUIStore } = await import("../useUIStore");
+            useUIStore.getState().showSaveFailureToast();
+            return false;
+          }
 
           if (targetProjectId) {
             try {

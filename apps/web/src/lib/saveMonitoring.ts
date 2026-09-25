@@ -91,6 +91,36 @@ export function reportSaveFailure(error: unknown, context: SaveFailureContext): 
   });
 }
 
+/**
+ * A document failed validation before a cloud save. Errors blocked the save;
+ * warnings did not. Messages are paths only (no user content).
+ */
+export function reportDocumentIssues(
+  result: { ok: boolean; errors: string[]; warnings: string[] },
+  context: Pick<SaveFailureContext, 'trigger' | 'op' | 'projectId'>,
+): void {
+  const code = result.ok ? 'document_warnings' : 'invalid_document';
+  const fingerprint = ['save', code];
+  if (!takeSlot(fingerprint)) return;
+
+  void captureEvent({
+    message: `save.${code}`,
+    level: result.ok ? 'warning' : 'error',
+    fingerprint,
+    tags: {
+      module: 'save',
+      'save.trigger': context.trigger,
+      'save.op': context.op,
+      'save.code': code,
+    },
+    extras: {
+      'save.project_id': context.projectId,
+      'document.errors': result.errors,
+      'document.warnings': result.warnings,
+    },
+  });
+}
+
 export function noteSaveSucceeded(trigger: SaveTrigger, op: SaveOp): void {
   consecutiveFailures = 0;
   void addBreadcrumb('save', 'Cloud save succeeded', { trigger, op });

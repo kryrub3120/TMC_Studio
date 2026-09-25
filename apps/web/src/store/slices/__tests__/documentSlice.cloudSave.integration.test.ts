@@ -62,12 +62,14 @@ vi.mock('../../useAuthStore', () => ({
 
 const saveMonitoring = vi.hoisted(() => ({
   reportSaveFailure: vi.fn(),
+  reportDocumentIssues: vi.fn(),
   noteSaveSucceeded: vi.fn(),
 }));
 
 vi.mock('../../../lib/saveMonitoring', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../lib/saveMonitoring')>()),
   reportSaveFailure: saveMonitoring.reportSaveFailure,
+  reportDocumentIssues: saveMonitoring.reportDocumentIssues,
   noteSaveSucceeded: saveMonitoring.noteSaveSucceeded,
 }));
 
@@ -324,5 +326,37 @@ describe('cloud save monitoring', () => {
 
     expect(saveMonitoring.reportSaveFailure).not.toHaveBeenCalled();
     expect(saveMonitoring.noteSaveSucceeded).toHaveBeenCalledWith('autosave', 'create');
+  });
+
+  it('does not write a document that fails validation to the cloud', async () => {
+    const store = createTestStore();
+    store.setState({
+      elements: [{ id: 'p1', type: 'player', position: { x: Number.NaN, y: 10 } } as unknown as BoardElement],
+    });
+    store.getState().markDirty();
+    await runAutosave(store);
+
+    expect(cloud.createProject).not.toHaveBeenCalled();
+    expect(saveMonitoring.reportDocumentIssues).toHaveBeenCalledWith(
+      expect.objectContaining({ ok: false, errors: ['steps[0].elements[0].position.x is not a finite number'] }),
+      { trigger: 'autosave', op: 'create', projectId: null },
+    );
+    expect(store.getState().isDirty).toBe(true);
+    expect(useUIStore.getState().projectSaveStatus).toBe('error');
+    // The local copy is still written, so the user loses nothing.
+    expect(localStorage.getItem('tmc-studio-board')).not.toBeNull();
+  });
+
+  it('saves a document with warnings and reports them', async () => {
+    const store = createTestStore();
+    store.setState({ elements: [marker('dup'), marker('dup')] });
+    store.getState().markDirty();
+    await runAutosave(store);
+
+    expect(cloud.createProject).toHaveBeenCalledTimes(1);
+    expect(saveMonitoring.reportDocumentIssues).toHaveBeenCalledWith(
+      expect.objectContaining({ ok: true, warnings: ['steps[0].elements[1].id is duplicated in the step'] }),
+      expect.objectContaining({ trigger: 'autosave' }),
+    );
   });
 });
