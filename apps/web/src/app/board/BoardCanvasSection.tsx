@@ -102,6 +102,10 @@ export interface BoardCanvasSectionProps {
   getInterpolatedPosition: (elementId: string, currentPos: Position) => Position;
   getInterpolatedZone: (elementId: string, currentPos: Position, width: number, height: number) => { position: Position; width: number; height: number };
   getInterpolatedArrowEndpoints: (elementId: string, start: Position, end: Position) => { start: Position; end: Position };
+  /** Fade factor of an element while the animation moves to the next step. */
+  getFadeOpacity: (elementId: string) => number;
+  /** Elements that exist only in the next step (drawn fading in). */
+  appearingElements: BoardElement[];
   
   // Feature flag
   useNewCanvas?: boolean;
@@ -174,6 +178,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
     getInterpolatedPosition,
     getInterpolatedZone,
     getInterpolatedArrowEndpoints,
+    getFadeOpacity,
+    appearingElements,
     useNewCanvas = false,
     activeCanvasInteraction,
     viewportTransformRef,
@@ -714,6 +720,8 @@ export function BoardCanvasSection(props: BoardCanvasSectionProps) {
             getInterpolatedPosition={getInterpolatedPosition}
             getInterpolatedZone={getInterpolatedZone}
             getInterpolatedArrowEndpoints={getInterpolatedArrowEndpoints}
+            getFadeOpacity={getFadeOpacity}
+            appearingElements={appearingElements}
           />
         )}
       </CanvasShell>

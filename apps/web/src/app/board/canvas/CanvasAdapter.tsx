@@ -107,6 +107,10 @@ export interface CanvasAdapterProps {
   getInterpolatedPosition: (elementId: string, currentPos: Position) => Position;
   getInterpolatedZone: (elementId: string, currentPos: Position, width: number, height: number) => { position: Position; width: number; height: number };
   getInterpolatedArrowEndpoints: (elementId: string, start: Position, end: Position) => { start: Position; end: Position };
+  /** Fade factor of an element while the animation moves to the next step. */
+  getFadeOpacity: (elementId: string) => number;
+  /** Elements that exist only in the next step (drawn fading in). */
+  appearingElements: BoardElement[];
 }
 
 export function CanvasAdapter(props: CanvasAdapterProps) {
@@ -164,6 +168,8 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
     getInterpolatedPosition,
     getInterpolatedZone,
     getInterpolatedArrowEndpoints,
+    getFadeOpacity,
+    appearingElements,
   } = props;
 
   // Bundle interpolators into stable object for memoization
@@ -172,8 +178,10 @@ export function CanvasAdapter(props: CanvasAdapterProps) {
       getInterpolatedPosition,
       getInterpolatedZone,
       getInterpolatedArrowEndpoints,
+      getFadeOpacity,
+      appearingElements,
     }),
-    [getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints]
+    [getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints, getFadeOpacity, appearingElements]
   );
 
   return (
