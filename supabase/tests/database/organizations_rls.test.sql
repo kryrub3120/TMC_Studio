@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(30);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as postgres, RLS bypassed)
@@ -28,18 +28,24 @@ insert into public.profiles (id, email)
 insert into public.organizations (id, name, owner_id)
   values ('aaaaaaaa-0000-0000-0000-000000000001', 'Test Club', '11111111-1111-1111-1111-111111111111');
 
+-- Second club, only for the expired invitation: idx_invitations_pending_unique
+-- allows one pending invitation per (organization, email).
+insert into public.organizations (id, name, owner_id)
+  values ('aaaaaaaa-0000-0000-0000-000000000002', 'Other Club', '11111111-1111-1111-1111-111111111111');
+
 insert into public.organization_members (organization_id, user_id, role)
   values ('aaaaaaaa-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'member');
 
 insert into public.projects (id, user_id, name, organization_id) values
   ('bbbbbbbb-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Club drill',        'aaaaaaaa-0000-0000-0000-000000000001'),
   ('bbbbbbbb-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Owner private',     null),
-  ('bbbbbbbb-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', 'Member own board',  null);
+  ('bbbbbbbb-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', 'Member own board',  null),
+  ('bbbbbbbb-0000-0000-0000-000000000004', '44444444-4444-4444-4444-444444444444', 'Invitee club board', 'aaaaaaaa-0000-0000-0000-000000000001');
 
 insert into public.invitations (id, organization_id, email, role, token, status, expires_at) values
   ('cccccccc-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'invitee@test.local', 'member',
    'dddddddd-0000-0000-0000-000000000001', 'pending', now() + interval '14 days'),
-  ('cccccccc-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'invitee@test.local', 'member',
+  ('cccccccc-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000002', 'invitee@test.local', 'member',
    'dddddddd-0000-0000-0000-000000000002', 'pending', now() - interval '1 day');
 
 -- ---------------------------------------------------------------------------
@@ -87,14 +93,18 @@ select is(
   (select count(*)::int from public.projects where id = 'bbbbbbbb-0000-0000-0000-000000000002'), 0,
   'member: does not see the owner''s private project');
 select is(
-  public.get_org_seat_usage('aaaaaaaa-0000-0000-0000-000000000001'), 4,
-  'member: seat usage counts 2 members + 2 pending invitations');
+  public.get_org_seat_usage('aaaaaaaa-0000-0000-0000-000000000001'), 3,
+  'member: seat usage counts 2 members + 1 pending invitation');
 
 update public.projects set name = 'Club drill v2' where id = 'bbbbbbbb-0000-0000-0000-000000000001';
 select throws_ok(
   $$ update public.projects set user_id = '22222222-2222-2222-2222-222222222222'
      where id = 'bbbbbbbb-0000-0000-0000-000000000001' $$,
   '42501', null, 'member: cannot take ownership of a club project');
+select throws_ok(
+  $$ update public.projects set organization_id = null
+     where id = 'bbbbbbbb-0000-0000-0000-000000000001' $$,
+  '42501', null, 'member: cannot detach a club project from the club');
 update public.organizations set name = 'Renamed by member' where id = 'aaaaaaaa-0000-0000-0000-000000000001';
 select throws_ok(
   $$ insert into public.invitations (organization_id, email, role)
@@ -161,6 +171,11 @@ select is(
 select is(
   (select organization_id from public.projects where id = 'bbbbbbbb-0000-0000-0000-000000000001'), null,
   'owner deletes organization: club project stays with its owner, detached');
+select is(
+  (select user_id::text || '/' || coalesce(organization_id::text, 'none')
+   from public.projects where id = 'bbbbbbbb-0000-0000-0000-000000000004'),
+  '44444444-4444-4444-4444-444444444444/none',
+  'owner deletes organization: a member''s club project stays with the member, detached');
 
 select * from finish();
 rollback;

@@ -9,6 +9,9 @@
 --    declined invitation no longer counts toward the seat limit.
 -- 3. Club members can delete thumbnails of club projects, matching the
 --    INSERT/UPDATE policies from 20260925011411.
+-- 4. Only the owner of a project can change its owner or its club. The
+--    projects_update_org_member policy let any club member set user_id to
+--    themselves and take a club project with them when leaving the club.
 
 BEGIN;
 
@@ -94,5 +97,41 @@ CREATE POLICY "Users can delete own thumbnails"
              OR (p.organization_id IS NOT NULL AND public.is_org_member(p.organization_id)))
     )
   );
+
+-- 4. Project owner and club can only be changed by the project owner ------
+
+CREATE OR REPLACE FUNCTION public.guard_project_ownership()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- Deleting a club sets organization_id to NULL on its projects
+  -- (ON DELETE SET NULL). The club row is already gone at that point.
+  IF NEW.user_id IS NOT DISTINCT FROM OLD.user_id
+     AND NEW.organization_id IS NULL
+     AND OLD.organization_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM public.organizations WHERE id = OLD.organization_id) THEN
+    RETURN NEW;
+  END IF;
+
+  -- auth.uid() is NULL for the service role (webhooks, admin scripts).
+  IF auth.uid() IS NOT NULL
+     AND OLD.user_id IS DISTINCT FROM auth.uid()
+     AND (NEW.user_id IS DISTINCT FROM OLD.user_id
+          OR NEW.organization_id IS DISTINCT FROM OLD.organization_id) THEN
+    RAISE EXCEPTION 'Only the project owner can change its owner or club'
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.guard_project_ownership() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS guard_project_ownership ON public.projects;
+CREATE TRIGGER guard_project_ownership
+  BEFORE UPDATE OF user_id, organization_id ON public.projects
+  FOR EACH ROW EXECUTE FUNCTION public.guard_project_ownership();
 
 COMMIT;
