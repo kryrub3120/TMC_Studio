@@ -25,7 +25,7 @@ interface SettingsController {
   updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
   uploadAvatar: (file: File) => Promise<string | null>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  deleteAccount: (password: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 /**
@@ -87,18 +87,23 @@ export function useSettingsController(options: UseSettingsControllerOptions): Se
   /**
    * Delete user account permanently
    * Closes settings modal and shows goodbye message
-   * Requires password for confirmation
+   * The modal asks the user to type DELETE first.
    */
-  const handleDeleteAccount = useCallback(async (password: string) => {
+  const handleDeleteAccount = useCallback(async () => {
     try {
-      await deleteAccount(password);
+      await deleteAccount();
+      // Clears the local board and auth state like a normal sign-out.
+      await useAuthStore.getState().signOut();
       if (onCloseModal) {
         onCloseModal();
       }
       showToast(t('settingsToast.accountDeleted'));
     } catch (error) {
       logger.error('Account deletion error:', error);
-      throw error;
+      const code = (error as { code?: string } | null)?.code;
+      throw new Error(
+        code === 'ownsClubWithMembers' ? t('settings.errors.ownsClubWithMembers') : t('settings.errors.deleteFailed'),
+      );
     }
   }, [showToast, onCloseModal, t]);
 

@@ -105,7 +105,7 @@ interface ModalOrchestratorProps {
   onUpdateProfile: (data: { full_name?: string; avatar_url?: string }) => Promise<void>;
   onUploadAvatar: (file: File) => Promise<string | null>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  onDeleteAccount: (password: string) => Promise<void>;
+  onDeleteAccount: () => Promise<void>;
   onManageBilling: () => Promise<void>;
   onUpgradeFromSettings: () => void;
   organizationPanelProps?: OrganizationPanelProps;

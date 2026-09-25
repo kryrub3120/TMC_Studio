@@ -114,7 +114,7 @@ interface SettingsModalProps {
   onUpdateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
   onUploadAvatar?: (file: File) => Promise<string | null>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  onDeleteAccount: (password: string) => Promise<void>;
+  onDeleteAccount: () => Promise<void>;
   onManageBilling: () => void;
   onUpgrade: () => void;
   isLoading?: boolean;
@@ -265,7 +265,6 @@ export function SettingsModal({
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   // Delete account form
-  const [deletePassword, setDeletePassword] = useState('');
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -621,14 +620,9 @@ export function SettingsModal({
       return;
     }
 
-    if (!deletePassword) {
-      setError(t('settings.errors.passwordRequired'));
-      return;
-    }
-
     setIsDeletingAccount(true);
     try {
-      await onDeleteAccount(deletePassword);
+      await onDeleteAccount();
       // Modal will close automatically after account deletion
     } catch (err) {
       setError(err instanceof Error ? err.message : t('settings.errors.deleteFailed'));
@@ -906,24 +900,12 @@ export function SettingsModal({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-muted mb-1.5">
-                          {t('settings.enterPassword')}
-                        </label>
-                        <input
-                          type="password"
-                          value={deletePassword}
-                          onChange={(e) => setDeletePassword(e.target.value)}
-                          placeholder={t('settings.yourPassword')}
-                          className="w-full px-4 py-2.5 bg-surface2 border border-border rounded-lg text-text placeholder-muted focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                        />
-                      </div>
                     </div>
 
                     <div className="flex gap-2">
                       <button
                         onClick={handleDeleteAccount}
-                        disabled={isDeletingAccount || deleteConfirmText !== 'DELETE' || !deletePassword}
+                        disabled={isDeletingAccount || deleteConfirmText !== 'DELETE'}
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-surface2 disabled:text-muted text-white rounded-lg transition-colors"
                       >
                         {isDeletingAccount ? t('settings.deleting') : t('settings.deleteMyAccount')}
@@ -931,7 +913,6 @@ export function SettingsModal({
                       <button
                         onClick={() => {
                           setShowDeleteConfirm(false);
-                          setDeletePassword('');
                           setDeleteConfirmText('');
                           setError(null);
                         }}

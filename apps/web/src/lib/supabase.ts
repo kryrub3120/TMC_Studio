@@ -385,31 +385,33 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (error) throw error;
 }
 
-/** Delete account */
-export async function deleteAccount(password: string) {
+/**
+ * Delete the signed-in user's account and all their data. Runs server-side
+ * (netlify/functions/delete-account.ts): Stripe billing, files, then the auth
+ * user, which cascades to profile and projects. A user who owns a club with
+ * other members gets the error code `ownsClubWithMembers`.
+ */
+export async function deleteAccount() {
   if (!supabase) throw new Error('Supabase not configured');
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) throw new Error('Not authenticated');
-  
-  // Verify password
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: user.email,
-    password,
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Not authenticated');
+
+  const response = await fetch('/api/delete-account', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ confirm: 'DELETE' }),
   });
-  
-  if (signInError) throw new Error('Incorrect password');
-  
-  // Delete profile (cascade will delete projects)
-  const { error: deleteError } = await supabase
-    .from('profiles')
-    .delete()
-    .eq('id', user.id);
-  
-  if (deleteError) throw deleteError;
-  
-  // Sign out
-  await supabase.auth.signOut();
+  const result = (await response.json().catch(() => ({}))) as { code?: string; error?: string };
+  if (!response.ok) {
+    throw Object.assign(new Error(result.error ?? 'Account deletion failed'), { code: result.code ?? 'deletionFailed' });
+  }
+
+  // The session belongs to a user that no longer exists.
+  await supabase.auth.signOut({ scope: 'local' });
 }
 
 /** Sign in with OAuth (Google) */
