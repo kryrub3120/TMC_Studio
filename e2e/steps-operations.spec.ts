@@ -186,4 +186,40 @@ test.describe('Step operations', () => {
     await page.getByTitle('Pauza (Space)').click();
     await expect(viewport).toHaveAttribute('data-playing', 'false');
   });
+
+  test('step duration sets the playback speed and is remembered', async ({ page }) => {
+    await boardWithOnePlayer(page, 'dev-e2e-steps-speed');
+    await page.keyboard.press('n');
+    await expectSteps(page, 2, 1);
+    await page.keyboard.press('ArrowLeft');
+    await expectSteps(page, 2, 0);
+    const viewport = boardViewport(page);
+
+    /** Milliseconds from Play until the board shows step 2. */
+    const timeToNextStep = async () => {
+      await page.getByTitle('Odtwórz (Space)').click();
+      const start = Date.now();
+      await expect(viewport).toHaveAttribute('data-step-index', '1', { timeout: 5000 });
+      const elapsed = Date.now() - start;
+      await expect(viewport).toHaveAttribute('data-playing', 'false', { timeout: 5000 });
+      await page.keyboard.press('ArrowLeft');
+      await expectSteps(page, 2, 0);
+      return elapsed;
+    };
+
+    const duration = page.getByLabel('Czas kroku (tempo odtwarzania)');
+    await duration.selectOption('0.6');
+    const fast = await timeToNextStep();
+
+    await duration.selectOption('1.2');
+    const slow = await timeToNextStep();
+
+    expect(fast).toBeLessThan(1000);
+    expect(slow).toBeGreaterThanOrEqual(1100);
+    expect(slow - fast).toBeGreaterThan(400);
+
+    await page.reload();
+    await expect(page.getByLabel('Czas kroku (tempo odtwarzania)')).toHaveValue('1.2');
+  });
 });
+
