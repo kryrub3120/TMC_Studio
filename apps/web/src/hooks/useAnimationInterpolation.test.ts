@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  arrivingElements,
   interpolateArrowEndpoints,
   interpolatePosition,
   interpolateZone,
+  transitionOpacity,
 } from './useAnimationInterpolation';
 
 const next = [
@@ -57,3 +59,36 @@ describe('animation interpolation between steps', () => {
     expect(interpolatePosition(null, 'player', here, 0.5)).toBe(here);
   });
 });
+
+describe('elements appearing and disappearing between steps', () => {
+  const current = new Set(['stays', 'leaves']);
+  const nextIds = new Set(['stays', 'arrives']);
+
+  it('fades out an element that is not in the next step', () => {
+    expect(transitionOpacity('leaves', current, nextIds, 0)).toBe(1);
+    expect(transitionOpacity('leaves', current, nextIds, 0.25)).toBe(0.75);
+    expect(transitionOpacity('leaves', current, nextIds, 1)).toBe(0);
+  });
+
+  it('fades in an element that is new in the next step', () => {
+    expect(transitionOpacity('arrives', current, nextIds, 0)).toBe(0);
+    expect(transitionOpacity('arrives', current, nextIds, 0.6)).toBe(0.6);
+    expect(transitionOpacity('arrives', current, nextIds, 1)).toBe(1);
+  });
+
+  it('keeps elements present in both steps fully visible', () => {
+    expect(transitionOpacity('stays', current, nextIds, 0.5)).toBe(1);
+  });
+
+  it('does not fade anything on the last step', () => {
+    expect(transitionOpacity('leaves', current, null, 0.5)).toBe(1);
+  });
+
+  it('lists only the elements that arrive in the next step', () => {
+    const a = { id: 'stays' };
+    const b = { id: 'arrives' };
+    expect(arrivingElements([a, { id: 'leaves' }], [a, b])).toEqual([b]);
+    expect(arrivingElements([a], null)).toEqual([]);
+  });
+});
+

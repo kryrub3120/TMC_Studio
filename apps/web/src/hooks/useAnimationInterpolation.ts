@@ -7,6 +7,7 @@
 
 import { useMemo, useCallback } from 'react';
 import { hasPosition, isZoneElement, isArrowElement } from '@tmc/core';
+import type { BoardElement } from '@tmc/core';
 
 /**
  * Options for animation interpolation
@@ -23,6 +24,12 @@ export interface UseAnimationInterpolationOptions<TStepElements> {
  */
 export interface UseAnimationInterpolationResult {
   nextStepElements: any[] | null;
+
+  /** Elements that exist only in the next step; drawn fading in during the transition. */
+  appearingElements: BoardElement[];
+
+  /** 1 for elements in both steps; fades out elements leaving and fades in elements arriving. */
+  getFadeOpacity: (elementId: string) => number;
 
   getInterpolatedPosition: (elementId: string, currentPos: { x: number; y: number }) => { x: number; y: number };
 
@@ -105,6 +112,29 @@ export function interpolateArrowEndpoints(
 }
 
 /**
+ * Opacity of an element during the transition to the next step: an element
+ * missing from the next step fades out, one new in the next step fades in.
+ */
+export function transitionOpacity(
+  elementId: string,
+  currentIds: ReadonlySet<string>,
+  nextIds: ReadonlySet<string> | null,
+  progress01: number,
+): number {
+  if (!nextIds) return 1;
+  if (!nextIds.has(elementId)) return 1 - progress01;
+  if (!currentIds.has(elementId)) return progress01;
+  return 1;
+}
+
+/** Elements of the next step that the current step does not have. */
+export function arrivingElements<T extends { id: string }>(current: readonly T[], next: readonly T[] | null): T[] {
+  if (!next) return [];
+  const currentIds = new Set(current.map((e) => e.id));
+  return next.filter((e) => !currentIds.has(e.id));
+}
+
+/**
  * Hook for interpolating element positions during animation playback
  */
 export function useAnimationInterpolation(
@@ -120,6 +150,27 @@ export function useAnimationInterpolation(
   }, [currentStepIndex, steps]);
 
   const idle = !isPlaying || progress01 === 0 || !nextStepElements;
+
+  const currentStepElements = steps[currentStepIndex]?.elements as Array<{ id: string }> | undefined;
+  const currentIds = useMemo(
+    () => new Set((currentStepElements ?? []).map((e) => e.id)),
+    [currentStepElements]
+  );
+  const nextIds = useMemo(
+    () => (nextStepElements ? new Set((nextStepElements as Array<{ id: string }>).map((e) => e.id)) : null),
+    [nextStepElements]
+  );
+
+  const appearingElements = useMemo(
+    (): BoardElement[] =>
+      idle ? [] : (arrivingElements(currentStepElements ?? [], nextStepElements) as BoardElement[]),
+    [idle, currentStepElements, nextStepElements]
+  );
+
+  const getFadeOpacity = useCallback(
+    (elementId: string) => (idle ? 1 : transitionOpacity(elementId, currentIds, nextIds, progress01)),
+    [idle, currentIds, nextIds, progress01]
+  );
 
   const getInterpolatedPosition = useCallback(
     (elementId: string, currentPos: Point): Point =>
@@ -145,6 +196,8 @@ export function useAnimationInterpolation(
 
   return {
     nextStepElements,
+    appearingElements,
+    getFadeOpacity,
     getInterpolatedPosition,
     getInterpolatedZone,
     getInterpolatedArrowEndpoints,

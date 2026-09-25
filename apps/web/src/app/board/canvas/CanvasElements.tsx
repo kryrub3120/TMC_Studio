@@ -56,6 +56,8 @@ export interface CanvasElementsProps {
     getInterpolatedPosition: (elementId: string, currentPos: Position) => Position;
     getInterpolatedZone: (elementId: string, currentPos: Position, width: number, height: number) => { position: Position; width: number; height: number };
     getInterpolatedArrowEndpoints: (elementId: string, start: Position, end: Position) => { start: Position; end: Position };
+    getFadeOpacity: (elementId: string) => number;
+    appearingElements: BoardElement[];
   };
   
   // True Virtual Canvas: Group transform applied to Layer
@@ -131,7 +133,19 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
     onOrientationCommit,
   } = props;
 
-  const { getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints } = interpolators;
+  const { getInterpolatedPosition, getInterpolatedZone, getInterpolatedArrowEndpoints, getFadeOpacity, appearingElements } = interpolators;
+
+  // During playback the next step's new elements are drawn too, fading in,
+  // while elements that leave fade out (see useAnimationInterpolation).
+  const renderedElements = isPlaying && appearingElements.length > 0 ? [...elements, ...appearingElements] : elements;
+  const fade = (id: string, node: JSX.Element): JSX.Element =>
+    isPlaying ? (
+      <Group key={id} opacity={getFadeOpacity(id)} listening={false}>
+        {node}
+      </Group>
+    ) : (
+      node
+    );
 
   const transformerRef = useRef<Konva.Transformer>(null);
   const lockedSelectedElements = elements.filter((el) => selectedIds.includes(el.id) && isElementLocked(el.id));
@@ -197,12 +211,12 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
       <Pitch config={pitchConfig} pitchSettings={pitchSettings} gridVisible={gridVisible} />
 
       {/* Zones */}
-      {layerVisibility.zones && elements
+      {layerVisibility.zones && renderedElements
         .filter(isZoneElement)
         .map((zone) => {
           const interpolated = getInterpolatedZone(zone.id, zone.position, zone.width, zone.height);
           const animatedZone = { ...zone, position: interpolated.position, width: interpolated.width, height: interpolated.height };
-          return (
+          return fade(zone.id, (
             <ZoneNode
               key={zone.id}
               zone={animatedZone}
@@ -215,16 +229,16 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onResize={onResizeZone}
               onUpdatePoints={isPlaying ? undefined : onUpdateZonePoints}
             />
-          );
+          ));
         })}
 
       {/* Arrows */}
-      {layerVisibility.arrows && elements
+      {layerVisibility.arrows && renderedElements
         .filter(isArrowElement)
         .map((arrow) => {
           const endpoints = getInterpolatedArrowEndpoints(arrow.id, arrow.startPoint, arrow.endPoint);
           const animatedArrow = { ...arrow, startPoint: endpoints.start, endPoint: endpoints.end };
-          return (
+          return fade(arrow.id, (
             <ArrowNode
               key={arrow.id}
               arrow={animatedArrow}
@@ -240,11 +254,11 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
                 pushHistory();
               }}
             />
-          );
+          ));
         })}
 
       {/* Players */}
-      {elements
+      {renderedElements
         .filter(isPlayerElement)
         .filter((player) => !hiddenByGroup.has(player.id))
         .filter((player) => 
@@ -255,7 +269,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
         )
         .map((player) => {
           const animatedPlayer = { ...player, position: getInterpolatedPosition(player.id, player.position) };
-          return (
+          return fade(player.id, (
             <PlayerNode
               key={player.id}
               player={animatedPlayer}
@@ -274,16 +288,16 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onOrientationPreview={isPlaying ? undefined : onOrientationPreview}
               onOrientationCommit={isPlaying ? undefined : onOrientationCommit}
             />
-          );
+          ));
         })}
 
       {/* Ball */}
-      {layerVisibility.ball && elements
+      {layerVisibility.ball && renderedElements
         .filter(isBallElement)
         .filter((ball) => !hiddenByGroup.has(ball.id))
         .map((ball) => {
           const animatedBall = { ...ball, position: getInterpolatedPosition(ball.id, ball.position) };
-          return (
+          return fade(ball.id, (
             <BallNode
               key={ball.id}
               ball={animatedBall}
@@ -295,15 +309,15 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onDragStart={isPlaying ? () => false : onElementDragStart}
               snapEnabled={snapEnabled}
             />
-          );
+          ));
         })}
 
       {/* Equipment */}
-      {elements
+      {renderedElements
         .filter(isEquipmentElement)
         .map((equipment) => {
           const animatedEquipment = { ...equipment, position: getInterpolatedPosition(equipment.id, equipment.position) };
-          return (
+          return fade(equipment.id, (
             <EquipmentNode
               key={equipment.id}
               element={animatedEquipment as EquipmentElement}
@@ -317,15 +331,15 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               }}
               onResize={isPlaying ? undefined : onResizeEquipment}
             />
-          );
+          ));
         })}
 
       {/* Text elements */}
-      {layerVisibility.labels && elements
+      {layerVisibility.labels && renderedElements
         .filter(isTextElement)
         .map((textEl) => {
           const animatedText = { ...textEl, position: getInterpolatedPosition(textEl.id, textEl.position) };
-          return (
+          return fade(textEl.id, (
             <TextNode
               key={textEl.id}
               text={animatedText}
@@ -342,7 +356,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
               onResizeStateChange={isPlaying ? undefined : onTextResizeStateChange}
               onMeasure={onMeasureText}
             />
-          );
+          ));
         })}
 
       {/* Transformer for selected TextNode — Sprint B POC */}
@@ -394,7 +408,7 @@ export const CanvasElements = React.memo(function CanvasElements(props: CanvasEl
       )}
 
       {/* Freehand drawings */}
-      {elements.filter(isDrawingElement).map((drawing) => (
+      {renderedElements.filter(isDrawingElement).map((drawing) => fade(drawing.id,
         <DrawingNode
           key={drawing.id}
           drawing={drawing}

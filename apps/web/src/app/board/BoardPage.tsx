@@ -475,6 +475,8 @@ export function BoardPage(props: BoardPageProps) {
             getInterpolatedPosition={interpolation.getInterpolatedPosition}
             getInterpolatedZone={interpolation.getInterpolatedZone}
             getInterpolatedArrowEndpoints={interpolation.getInterpolatedArrowEndpoints}
+            getFadeOpacity={interpolation.getFadeOpacity}
+            appearingElements={interpolation.appearingElements}
             useNewCanvas={state.USE_NEW_CANVAS}
             activeCanvasInteraction={state.activeCanvasInteraction}
             viewportTransformRef={viewportTransformRef}
