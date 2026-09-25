@@ -5,7 +5,7 @@
  * - warn  / error → always emitted (these are actionable signals in production)
  */
 
-import { captureException } from './monitoring';
+import { captureException, toReportableError } from './monitoring';
 
 const isDev: boolean =
   import.meta.env.DEV === true ||
@@ -15,7 +15,9 @@ const isDev: boolean =
 type LogArgs = any[];
 
 function reportLoggedError(args: LogArgs): void {
-  const error = args.find((argument) => argument instanceof Error);
+  const error = args
+    .map((argument) => toReportableError(argument))
+    .find((argument) => argument !== null);
   const source = args.find((argument) => typeof argument === 'string');
 
   void captureException(

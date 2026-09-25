@@ -39,6 +39,36 @@ test exception to the application. The SDK loaded once, CSP reported no
 violations, and the Sentry envelope endpoint returned HTTP 200. The production
 CSP permits only the exact ingest host assigned to the TMC Studio project.
 
+## Save Monitoring
+
+Cloud saves report to Sentry through `apps/web/src/lib/saveMonitoring.ts`.
+Every event carries the tag `module=save`. No document content, project names
+or user data are sent.
+
+| Event | When | Grouping (fingerprint) | Level |
+|---|---|---|---|
+| Failed cloud save | `saveToCloud` throws (create or update) | `save`, `create`/`update`, error code | error |
+| `save.stuck_unsaved` | save badge not "saved" for 60 s while online | `save`, `stuck_unsaved` | warning |
+
+Tags: `save.trigger` (`autosave`, `manual`, `other`), `save.op`, `save.code`
+(PostgREST code such as `42501`, `http_<status>`, `network` or the error name)
+and `online`. Extras: consecutive failures, project id, step and element count.
+A save skipped while offline is not reported.
+
+Rate limits: one event per fingerprint per 5 minutes, at most 20 save events
+per browser session. Successful saves add a `save` breadcrumb.
+
+The application logger also keeps `code`, `details` and `hint` of Supabase
+error objects, which are plain objects rather than `Error` instances.
+
+Recommended Sentry alerts (configured in Sentry, not in code):
+
+| Alert | Condition | Action |
+|---|---|---|
+| New save error | new issue with tag `module:save` | e-mail + push |
+| Save error spike | more than 10 events with `module:save` in 1 hour | e-mail + push |
+| Stuck save | any `save.stuck_unsaved` event | e-mail |
+
 ## Follow-up
 
 Source-map upload needs a Sentry auth token plus the organization and project

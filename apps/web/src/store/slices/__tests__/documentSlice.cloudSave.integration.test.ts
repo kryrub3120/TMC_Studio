@@ -60,6 +60,17 @@ vi.mock('../../useAuthStore', () => ({
   },
 }));
 
+const saveMonitoring = vi.hoisted(() => ({
+  reportSaveFailure: vi.fn(),
+  noteSaveSucceeded: vi.fn(),
+}));
+
+vi.mock('../../../lib/saveMonitoring', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/saveMonitoring')>()),
+  reportSaveFailure: saveMonitoring.reportSaveFailure,
+  noteSaveSucceeded: saveMonitoring.noteSaveSucceeded,
+}));
+
 import type { AppState } from '../../types';
 import {
   createDocumentSlice,
@@ -243,5 +254,75 @@ describe('cloud save integrity', () => {
     const saved = cloud.rows.get('project-1') as { steps: { elements: BoardElement[] }[] };
     expect(saved.steps[0].elements.map((e) => e.id)).toEqual(['step-1-element']);
     expect(saved.steps[1].elements.map((e) => e.id)).toEqual(['step-2-element']);
+  });
+});
+
+describe('cloud save monitoring', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.clear();
+    cloud.reset();
+    vi.clearAllMocks();
+    useUIStore.setState({ isOnline: true, projectSaveStatus: 'saved' });
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it('reports a failed autosave update with its context', async () => {
+    const store = createTestStore();
+    store.getState().markDirty();
+    await runAutosave(store);
+    expect(saveMonitoring.noteSaveSucceeded).toHaveBeenCalledWith('autosave', 'create');
+
+    const rlsError = { message: 'new row violates row-level security policy', code: '42501' };
+    cloud.updateProject.mockRejectedValueOnce(rlsError);
+    store.getState().markDirty();
+    await runAutosave(store);
+
+    expect(saveMonitoring.reportSaveFailure).toHaveBeenCalledTimes(1);
+    expect(saveMonitoring.reportSaveFailure).toHaveBeenCalledWith(rlsError, {
+      trigger: 'autosave',
+      op: 'update',
+      projectId: 'project-1',
+      stepCount: 1,
+      elementCount: store.getState().elements.length,
+    });
+  });
+
+  it('labels a failed manual save of a new project as manual/create', async () => {
+    const store = createTestStore();
+    store.getState().markDirty();
+    cloud.createProject.mockRejectedValueOnce(new Error('network'));
+    const done = store.getState().manualSave();
+    await vi.advanceTimersByTimeAsync(50);
+    await done;
+
+    expect(saveMonitoring.reportSaveFailure).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ trigger: 'manual', op: 'create', projectId: null }),
+    );
+  });
+
+  it('does not report a save skipped while offline', async () => {
+    useUIStore.setState({ isOnline: false });
+    const store = createTestStore();
+    store.getState().markDirty();
+    await runAutosave(store);
+
+    expect(cloud.createProject).not.toHaveBeenCalled();
+    expect(saveMonitoring.reportSaveFailure).not.toHaveBeenCalled();
+  });
+
+  it('does not report the missing-row fallback that saves as a new project', async () => {
+    const store = createTestStore();
+    store.setState({ cloudProjectId: 'deleted-elsewhere' });
+    store.getState().markDirty();
+    await runAutosave(store);
+
+    expect(saveMonitoring.reportSaveFailure).not.toHaveBeenCalled();
+    expect(saveMonitoring.noteSaveSucceeded).toHaveBeenCalledWith('autosave', 'create');
   });
 });
