@@ -7,9 +7,14 @@ Czytaj przed każdą zmianą. Szczegóły procesu: `docs/AGENT_ORCHESTRATION.md`
 - Plan i pełna checklista (P0/P1/P2, etapy E1–E4): dokument „TMC Studio — audyt i plan wdrożenia”
   https://claude.ai/code/artifact/42984cc2-d597-4fdf-b590-b30adf0549bf (zakładka „Checklista launchu”).
 - Zasada: nie zaczynaj etapu N+1, dopóki P0 z etapu N nie są zamknięte.
-- Stan na 2026-09-25: E1 zrobione w kodzie na gałęzi `fix/e1-save-integrity` (zapis + migracja
-  `20260925000000_harden_function_privileges.sql`). Czeka na push, deploy i `supabase db push`.
-  Następnie E2: E2E zapisu/animacji, monitoring zapisów (Sentry), scenariusz zespołowy.
+- Stan na 2026-09-25 (wieczór):
+  - E1 zapis: naprawiony w PR #5 (`fix/e1-save-integrity`), E2E zapisu/animacji w PR #6
+    (`test/e2-save-animation-e2e`). Oba NIE są jeszcze zmergowane ani wdrożone na produkcję.
+  - Migracje produkcji zastosowane (20260622×2, 20260811 naprawiona historia, 20260925 uprawnienia funkcji).
+  - Sentry: uptime tmcstudio.app co 1 min + alert e-mail na nowe/eskalujące błędy.
+  - Netlify: dashboard był zablokowany za fakturę; karta zaktualizowana 25.09, odblokowanie do 24 h.
+- Następne kroki: merge #5 → deploy → test na produkcji → merge #6 → poprawka błędu RLS przy uploadzie
+  miniatury (Sentry: "new row violates row-level security policy", bucket `thumbnails`) → reszta E2.
 
 ## Niezmienniki (łamanie = błąd P0)
 
