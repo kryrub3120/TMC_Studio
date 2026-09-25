@@ -20,6 +20,8 @@
     "verify": "pnpm test && pnpm test:functions && pnpm typecheck && pnpm build && pnpm lint && pnpm e2e",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "db:start": "supabase db start",
+    "test:db": "supabase db reset --local --no-seed && supabase test db",
     "supabase:link": "supabase link --project-ref euxauavanukyfofhkrqp",
     "supabase:link-prod": "supabase link --project-ref pgacjczecyfnwsaadyvj",
     "supabase:push": "supabase db push",

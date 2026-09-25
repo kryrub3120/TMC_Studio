@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   updateUser: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.unmock('./supabase');
@@ -37,6 +38,8 @@ describe('getCurrentUser', () => {
     mocks.getUser.mockReset();
     mocks.updateUser.mockReset();
     mocks.from.mockReset();
+    mocks.rpc.mockReset();
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
     mocks.createClient.mockReset();
     mocks.createClient.mockReturnValue({
       auth: {
@@ -44,7 +47,45 @@ describe('getCurrentUser', () => {
         updateUser: mocks.updateUser,
       },
       from: mocks.from,
+      rpc: mocks.rpc,
     });
+  });
+
+  function mockProfile(profile: Record<string, unknown>) {
+    const single = vi.fn().mockResolvedValue({ data: profile, error: null });
+    const eq = vi.fn(() => ({ single }));
+    const select = vi.fn(() => ({ eq }));
+    mocks.from.mockReturnValue({ select });
+  }
+
+  const freeMemberAuthUser = {
+    id: 'user-2',
+    email: 'member@example.com',
+    app_metadata: {},
+    aud: 'authenticated',
+    created_at: '2026-09-10T00:00:00.000Z',
+    user_metadata: { locale: 'en' },
+  };
+
+  it('returns the club that grants Team access to a member', async () => {
+    mockProfile({ id: 'user-2', email: 'member@example.com', subscription_tier: 'free', team_id: null });
+    mocks.rpc.mockResolvedValue({ data: 'org-1', error: null });
+
+    const { getCurrentUser } = await import('./supabase');
+    const user = await getCurrentUser(freeMemberAuthUser as SupabaseAuthUser);
+
+    expect(mocks.rpc).toHaveBeenCalledWith('get_my_club_access');
+    expect(user).toMatchObject({ subscription_tier: 'free', club_organization_id: 'org-1' });
+  });
+
+  it('falls back to the own plan when the club access check fails', async () => {
+    mockProfile({ id: 'user-2', email: 'member@example.com', subscription_tier: 'free', team_id: null });
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: 'function not found', code: 'PGRST202' } });
+
+    const { getCurrentUser } = await import('./supabase');
+    const user = await getCurrentUser(freeMemberAuthUser as SupabaseAuthUser);
+
+    expect(user).toMatchObject({ subscription_tier: 'free', club_organization_id: null });
   });
 
   it('returns team_id from the fresh profile record', async () => {

@@ -34,7 +34,7 @@ export interface InvitationView {
   email: string;
   role: InvitationRole;
   token: string;
-  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  status: 'pending' | 'accepted' | 'revoked' | 'expired' | 'declined';
 }
 
 export interface OrganizationPanelProps {

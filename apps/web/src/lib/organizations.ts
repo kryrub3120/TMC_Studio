@@ -20,7 +20,7 @@ import { getAuthEmailLocale } from '../auth/authEmailLocale';
 export type OrgRole = 'owner' | 'member';
 /** Invitations always create plain members - only owners send invites. */
 export type InvitationRole = 'member';
-export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired' | 'declined';
 
 export type Organization = {
   id: string;
@@ -297,6 +297,17 @@ export async function acceptInvitation(token: string): Promise<{ organizationId:
   if (!row) throw new Error('Invitation could not be accepted');
 
   return { organizationId: row.organization_id as string, role: row.role as OrgRole };
+}
+
+/**
+ * Decline an invitation sent to the current user's email. The invitation is
+ * marked `declined` and no longer counts toward the club's seat limit.
+ */
+export async function declineInvitation(token: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { error } = await supabase.rpc('decline_invitation', { p_token: token });
+  if (error) throw error;
 }
 
 /**

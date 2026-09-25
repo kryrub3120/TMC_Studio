@@ -1770,6 +1770,10 @@ export const pl: Dictionary = {
       title: 'Zaproszenie już nieaktywne',
       description: 'To zaproszenie wygasło lub zostało anulowane. Poproś administratora klubu o nowe.',
     },
+    declined: {
+      title: 'Zaproszenie odrzucone',
+      description: 'Odrzuciłeś zaproszenie do {{club}}. Jeśli zmienisz zdanie, administrator klubu może wysłać nowe.',
+    },
     accepted: {
       title: 'Jesteś w klubie!',
       description: 'Dołączyłeś do klubu {{club}}.',
@@ -1782,9 +1786,12 @@ export const pl: Dictionary = {
       wrongAccount: 'To zaproszenie zostało wysłane na adres {{invited}}, ale jesteś zalogowany jako {{current}}. Zaloguj się na zaproszony adres e-mail.',
       accept: 'Zaakceptuj zaproszenie',
       accepting: 'Dołączanie…',
+      decline: 'Odrzuć zaproszenie',
+      declining: 'Odrzucanie…',
     },
     errors: {
       acceptFailed: 'Nie udało się zaakceptować zaproszenia. Spróbuj ponownie.',
+      declineFailed: 'Nie udało się odrzucić zaproszenia. Spróbuj ponownie.',
     },
   },
   languages: {

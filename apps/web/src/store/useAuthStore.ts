@@ -6,6 +6,7 @@
  */
 
 import { logger } from '../lib/logger';
+import { accessFromUser } from '../lib/entitlements';
 // DEV-ONLY: see ../lib/devCloud.ts
 import { setDevCloudUser, clearDevCloudData, clearAllDevCloudData, isDevCloudActive } from '../lib/devCloud';
 import { create } from 'zustand';
@@ -303,9 +304,7 @@ export const useAuthStore = create<AuthState>()(
               set({
                 user,
                 isAuthenticated: !!user,
-                isPro: user?.subscription_tier === 'pro' || user?.subscription_tier === 'team',
-                isTeam: user?.subscription_tier === 'team',
-                teamId: user?.team_id ?? null,
+                ...accessFromUser(user),
               });
 
               // Load preferences from cloud if user is authenticated
@@ -376,9 +375,7 @@ export const useAuthStore = create<AuthState>()(
                 set({
                   user,
                   isAuthenticated: true,
-                  isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-                  isTeam: user.subscription_tier === 'team',
-                  teamId: user.team_id ?? null,
+                  ...accessFromUser(user),
                   isLoading: false,
                 });
                 logger.debug('[Auth] OAuth fallback: session applied for', user.email);
@@ -431,8 +428,7 @@ export const useAuthStore = create<AuthState>()(
                   set({
                     user,
                     isAuthenticated: true,
-                    isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-                    isTeam: user.subscription_tier === 'team',
+                    ...accessFromUser(user),
                   });
 
                   // Load preferences for existing session
@@ -604,9 +600,7 @@ export const useAuthStore = create<AuthState>()(
             set({
               user,
               isAuthenticated: true,
-              isPro: user.subscription_tier === 'pro' || user.subscription_tier === 'team',
-              isTeam: user.subscription_tier === 'team',
-              teamId: user.team_id ?? null,
+              ...accessFromUser(user),
               isLoading: false,
               isOAuthInProgress: false,
               error: null,
