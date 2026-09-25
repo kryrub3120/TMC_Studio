@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
+/** Option+1 shortcut label on any OS. */
+const OPTION_1 = /^(⌥|Alt\+)1$/;
+
 async function openSettings(page: Page, tab: RegExp) {
   await page.locator('button[title="Ustawienia"], button[title="Settings"], button[title="Ajustes"]').click();
   const dialog = page.locator('[data-tour="settings-modal"]');
@@ -196,7 +199,9 @@ test.describe('Settings persistence', () => {
     await page.getByTestId('lineup-name-input').fill('Low block');
     await page.getByTestId('lineup-save-new').click();
     await expect(page.getByTestId('lineup-preset-0')).toContainText('Low block');
-    await expect(page.getByTestId('lineup-preset-0')).toContainText('⌥1');
+    // The label follows the OS (⌥1 on macOS, Alt+1 elsewhere). Check the <kbd>
+    // badge only: the row also lists Alt+1…Alt+9 in the shortcut picker.
+    await expect(page.getByTestId('lineup-preset-0').locator('kbd')).toHaveText(OPTION_1);
     await closeSettings(page);
     await page.keyboard.press('Control+a');
     await page.keyboard.press('Delete');
@@ -235,7 +240,7 @@ test.describe('Settings persistence', () => {
     await expect(page.locator('[data-tour="settings-modal"]')).toBeHidden();
     await page.getByTestId('squad-team-switcher').getByRole('button').first().click();
     await expect(page.getByTestId('squad-team-menu')).toContainText('Low block');
-    await expect(page.getByTestId('squad-team-menu')).toContainText('⌥1');
+    await expect(page.getByTestId('squad-team-menu').locator('kbd')).toHaveText(OPTION_1);
     await page.getByTestId('squad-team-menu').getByRole('button', { name: /Low block/i }).click();
   });
 
