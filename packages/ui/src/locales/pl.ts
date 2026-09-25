@@ -1440,6 +1440,10 @@ export const pl: Dictionary = {
         stripe: 'do przetwarzania płatności',
         supabase: 'do hostingu danych i uwierzytelniania',
         netlify: 'do hostingu aplikacji',
+        sentry: 'do monitorowania błędów (techniczne raporty błędów, bez treści Twoich plansz)',
+        postmark: 'do wysyłki wiadomości transakcyjnych (zaproszenia do klubu, odpowiedzi na zgłoszenia błędów)',
+        google: 'do logowania kontem Google, jeśli je wybierzesz',
+        plausible: 'do anonimowych statystyk użycia, wyłącznie po wyrażeniu zgody na analitykę',
       },
       rights: {
         title: '6. Twoje prawa',

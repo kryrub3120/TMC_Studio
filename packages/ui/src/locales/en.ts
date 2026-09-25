@@ -1636,6 +1636,10 @@ export const en = {
         stripe: 'for payment processing',
         supabase: 'for data hosting and authentication',
         netlify: 'for application hosting',
+        sentry: 'for error monitoring (technical error reports, without the content of your boards)',
+        postmark: 'for sending transactional e-mails (club invitations, replies to bug reports)',
+        google: 'for signing in with a Google account, if you choose it',
+        plausible: 'for privacy-friendly usage statistics, only after you consent to analytics',
       },
       rights: {
         title: '6. Your Rights',

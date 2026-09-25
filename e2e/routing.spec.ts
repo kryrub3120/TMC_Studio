@@ -61,3 +61,17 @@ test.describe("Public routing", () => {
     );
   });
 });
+
+test.describe('Legal pages', () => {
+  test('privacy policy lists every service that processes user data', async ({ page }) => {
+    // Keep in sync with the services the app actually calls (see PR notes).
+    const processors = ['Supabase', 'Netlify', 'Stripe', 'Sentry', 'Postmark', 'Google', 'Plausible'];
+    for (const lang of ['', '/pl', '/es']) {
+      await page.goto(`${lang}/privacy`);
+      const list = page.locator('main');
+      for (const name of processors) {
+        await expect(list.getByText(name, { exact: true }).first(), `${name} on ${lang || '/'}privacy`).toBeVisible();
+      }
+    }
+  });
+});
