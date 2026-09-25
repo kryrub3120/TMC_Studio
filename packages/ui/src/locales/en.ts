@@ -1146,6 +1146,7 @@ export const en = {
     pause: 'Pause (Space)',
     next: 'Next Step (→)',
     loop: 'Loop (L)',
+    duration: 'Step duration (playback speed)',
     rename: 'Double-click to rename',
     delete: 'Delete step (X)',
     duplicate: 'Duplicate step',

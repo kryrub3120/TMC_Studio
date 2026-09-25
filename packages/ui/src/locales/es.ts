@@ -950,6 +950,7 @@ export const es: Dictionary = {
     pause: 'Pausa (Space)',
     next: 'Paso siguiente (→)',
     loop: 'Bucle (L)',
+    duration: 'Duración del paso (velocidad de reproducción)',
     rename: 'Doble clic para renombrar',
     delete: 'Eliminar paso (X)',
     duplicate: 'Duplicar paso',

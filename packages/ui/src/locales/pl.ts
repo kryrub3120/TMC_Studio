@@ -950,6 +950,7 @@ export const pl: Dictionary = {
     pause: 'Pauza (Space)',
     next: 'Następny krok (→)',
     loop: 'Pętla (L)',
+    duration: 'Czas kroku (tempo odtwarzania)',
     rename: 'Kliknij dwa razy, aby zmienić nazwę',
     delete: 'Usuń krok (X)',
     duplicate: 'Powiel krok',

@@ -259,7 +259,6 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
   const { t } = useTranslation();
   const isEmpty = elementCount === 0;
   const hasAnimation = animationEnabled && steps.length >= 1;
-  const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -443,27 +442,19 @@ export const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
                 title={t('bottomSteps.loop')}>
                 <LoopIcon className="w-3.5 h-3.5" />
               </button>
-              {/* Duration */}
-              <div className="relative ml-1">
-                <button onClick={() => setShowDurationDropdown(!showDurationDropdown)}
-                  className="px-1.5 py-1 rounded-md text-[11px] text-muted hover:text-text hover:bg-surface2 border border-border transition-colors">
-                  {duration}s
-                </button>
-                {showDurationDropdown && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowDurationDropdown(false)} />
-                    <div className="absolute bottom-full left-0 mb-1 py-1 bg-surface rounded-md shadow-lg border border-border z-20 min-w-[60px]">
-                      {DURATION_OPTIONS.map((opt) => (
-                        <button key={opt.value}
-                          onClick={() => { onDurationChange?.(opt.value); setShowDurationDropdown(false); }}
-                          className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${duration === opt.value ? 'text-accent bg-accent/10' : 'text-muted hover:text-text hover:bg-surface2'}`}>
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              {/* Duration — a native select: its list is drawn by the browser, so the
+                  bar's overflow clipping cannot hide it (a custom menu did). */}
+              <select
+                value={duration}
+                onChange={(e) => onDurationChange?.(Number(e.target.value))}
+                aria-label={t('bottomSteps.duration')}
+                title={t('bottomSteps.duration')}
+                className="ml-1 px-1 py-1 rounded-md text-[11px] text-muted hover:text-text bg-surface border border-border transition-colors cursor-pointer"
+              >
+                {DURATION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Divider */}

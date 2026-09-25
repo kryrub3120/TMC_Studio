@@ -65,10 +65,13 @@ export async function useCloudUser(
         version: 0,
       }),
     );
-    localStorage.setItem(
-      'tmc-ui-settings',
-      JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }),
-    );
+    // Only on the first visit: later reloads must keep the settings the test changed.
+    if (!localStorage.getItem('tmc-ui-settings')) {
+      localStorage.setItem(
+        'tmc-ui-settings',
+        JSON.stringify({ state: { tutorialCompleted: true, clubWelcomeSeen: true }, version: 0 }),
+      );
+    }
   }, { id: userId, plan });
 }
 
