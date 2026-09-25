@@ -53,6 +53,84 @@ import type { AppState } from "../types";
 /** Module-level callback for thumbnail generation — set by BoardPage on mount */
 let thumbnailGenerator: (() => Promise<Blob | null>) | null = null;
 let cloudSaveQueue: Promise<void> = Promise.resolve();
+
+/**
+ * The cloud project id must survive a page reload together with the local
+ * document. Without it the first autosave after a reload INSERTs a duplicate
+ * project instead of updating the one the user is editing.
+ */
+export const CLOUD_PROJECT_STORAGE_KEY = "tmc-studio-cloud-project";
+
+interface PersistedCloudProject {
+  projectId: string;
+  /** Fingerprint of the local document the id belongs to. */
+  documentCreatedAt: string;
+}
+
+export function persistCloudProjectId(
+  projectId: string | null,
+  documentCreatedAt: string,
+): void {
+  try {
+    if (!projectId) {
+      localStorage.removeItem(CLOUD_PROJECT_STORAGE_KEY);
+      return;
+    }
+    const value: PersistedCloudProject = { projectId, documentCreatedAt };
+    localStorage.setItem(CLOUD_PROJECT_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // Storage can be unavailable (private mode, quota). Cloud save still works
+    // for this session; only the reload recovery is lost.
+  }
+}
+
+export function restoreCloudProjectId(doc: BoardDocument | null): string | null {
+  if (!doc) return null;
+  try {
+    const raw = localStorage.getItem(CLOUD_PROJECT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PersistedCloudProject>;
+    if (
+      typeof parsed.projectId === "string" &&
+      parsed.documentCreatedAt === doc.createdAt
+    ) {
+      return parsed.projectId;
+    }
+  } catch {
+    // Corrupted entry: treat as a local-only document.
+  }
+  return null;
+}
+
+/**
+ * Write the live canvas elements into the step being edited. Other steps are
+ * copied untouched. Writing into steps[0] regardless of the active step used to
+ * overwrite the first animation frame on every autosave.
+ */
+export function withCurrentStepElements(
+  steps: BoardDocument["steps"],
+  currentStepIndex: number,
+  elements: BoardElement[],
+): BoardDocument["steps"] {
+  const index =
+    currentStepIndex >= 0 && currentStepIndex < steps.length
+      ? currentStepIndex
+      : 0;
+  return steps.map((step, idx) => ({
+    ...step,
+    elements: structuredClone(idx === index ? elements : step.elements),
+  }));
+}
+
+/** Enqueue a cloud write so writes reach the database in the order issued. */
+function enqueueCloudWrite<T>(task: () => Promise<T>): Promise<T> {
+  const queued = cloudSaveQueue.then(task, task);
+  cloudSaveQueue = queued.then(
+    () => undefined,
+    () => undefined,
+  );
+  return queued;
+}
 export function setThumbnailGenerator(fn: (() => Promise<Blob | null>) | null) {
   thumbnailGenerator = fn;
 }
@@ -85,6 +163,8 @@ export interface DocumentSlice {
   /** Generate and upload thumbnail from Konva stage. Throttled for autosave. */
   generateThumbnail: () => Promise<void>;
   lastThumbnailTs: number;
+  /** Incremented on every markDirty(); used to detect edits made during a save. */
+  changeSeq: number;
 
   // Team settings
   updateTeamSettings: (team: Team, settings: Partial<TeamSetting>) => void;
@@ -166,7 +246,7 @@ export const createDocumentSlice: StateCreator<
 
   return {
     document: initialDoc,
-    cloudProjectId: null,
+    cloudProjectId: restoreCloudProjectId(savedDoc),
     isSaving: false,
     cloudProjects: [],
     cloudFolders: [],
@@ -174,19 +254,18 @@ export const createDocumentSlice: StateCreator<
     isDirty: false,
     lastSavedAt: null,
     lastThumbnailTs: 0,
+    changeSeq: 0,
     isAutoNumbering: false,
 
     saveDocument: () => {
-      const { document, elements } = get();
+      const { document, elements, currentStepIndex } = get();
       const updatedDoc: BoardDocument = {
         ...document,
-        steps: [
-          {
-            ...document.steps[0],
-            elements: structuredClone(elements),
-          },
-          ...document.steps.slice(1),
-        ],
+        steps: withCurrentStepElements(
+          document.steps,
+          currentStepIndex,
+          elements,
+        ),
         updatedAt: new Date().toISOString(),
       };
       saveToLocalStorage(updatedDoc);
@@ -209,13 +288,14 @@ export const createDocumentSlice: StateCreator<
     },
 
     exportBoardToFile: () => {
-      const { document, elements } = get();
+      const { document, elements, currentStepIndex } = get();
       const doc = {
         ...document,
-        steps: [
-          { ...document.steps[0], elements: structuredClone(elements) },
-          ...document.steps.slice(1),
-        ],
+        steps: withCurrentStepElements(
+          document.steps,
+          currentStepIndex,
+          elements,
+        ),
         updatedAt: new Date().toISOString(),
       };
       exportDocument(doc, document.name);
@@ -249,6 +329,7 @@ export const createDocumentSlice: StateCreator<
         cloudProjectId: null,
         currentStepIndex: 0,
       });
+      persistCloudProjectId(null, doc.createdAt);
       // Reset tutorial for new empty board
       import("../useUIStore")
         .then(({ useUIStore }) => {
@@ -628,20 +709,19 @@ export const createDocumentSlice: StateCreator<
         return false;
       }
 
-      const { document, elements, cloudProjectId, currentStepIndex } = get();
       const saveSnapshot = async () => {
+        // Read state only once this write is at the head of the queue. Reading
+        // it earlier let two queued saves of a new project both see
+        // cloudProjectId === null and INSERT two rows.
+        const { document, elements, cloudProjectId, currentStepIndex } = get();
         set({ isSaving: true });
 
         try {
-          const cloneElements = (els: BoardElement[]) => structuredClone(els);
-
-          const updatedSteps = document.steps.map((step, idx) => ({
-            ...step,
-            elements:
-              idx === currentStepIndex
-                ? cloneElements(elements)
-                : cloneElements(step.elements),
-          }));
+          const updatedSteps = withCurrentStepElements(
+            document.steps,
+            currentStepIndex,
+            elements,
+          );
 
           const updatedDoc: BoardDocument = {
             ...document,
@@ -649,14 +729,27 @@ export const createDocumentSlice: StateCreator<
             updatedAt: new Date().toISOString(),
           };
 
-          if (cloudProjectId) {
-            const project = await updateProject(cloudProjectId, {
-              name: document.name,
-              description: updatedDoc.description ?? null,
-              document: updatedDoc,
-            });
-            if (!project) throw new Error("Failed to update project");
-          } else {
+          let targetProjectId = cloudProjectId;
+          if (targetProjectId) {
+            try {
+              const project = await updateProject(targetProjectId, {
+                name: document.name,
+                description: updatedDoc.description ?? null,
+                document: updatedDoc,
+              });
+              if (!project) throw new Error("Failed to update project");
+            } catch (error) {
+              // PGRST116 = the row is not visible any more (deleted elsewhere
+              // or restored id from another account). Save as a new project
+              // instead of failing forever.
+              if ((error as { code?: string } | null)?.code !== "PGRST116") {
+                throw error;
+              }
+              logger.warn("[Cloud save] Project not found, saving as new");
+              targetProjectId = null;
+            }
+          }
+          if (!targetProjectId) {
             const project = await createProject({
               name: document.name,
               description: updatedDoc.description ?? null,
@@ -664,6 +757,7 @@ export const createDocumentSlice: StateCreator<
             });
             if (!project) throw new Error("Failed to create project");
             set({ cloudProjectId: project.id });
+            persistCloudProjectId(project.id, updatedDoc.createdAt);
           }
 
           // A cloud request may finish after the user has already typed another
@@ -691,12 +785,7 @@ export const createDocumentSlice: StateCreator<
 
       // Keep writes ordered. A slow autosave must never arrive after a newer
       // explicit save and overwrite the latest exercise or session metadata.
-      const queuedSave = cloudSaveQueue.then(saveSnapshot, saveSnapshot);
-      cloudSaveQueue = queuedSave.then(
-        () => undefined,
-        () => undefined,
-      );
-      return queuedSave;
+      return enqueueCloudWrite(saveSnapshot);
     },
 
     loadFromCloud: async (projectId: string) => {
@@ -720,9 +809,18 @@ export const createDocumentSlice: StateCreator<
           history: [{ elements: structuredClone(elements), selectedIds: [] }],
           historyIndex: 0,
           currentStepIndex: 0,
+          isDirty: false,
         });
+        persistCloudProjectId(projectId, doc.createdAt);
+        // Keep the local copy in sync with the opened project so a reload
+        // restores this project, not the previously edited one.
+        saveToLocalStorage(doc);
 
-        void updateProject(projectId, { document: doc }).catch(() => {});
+        // Record lastOpenedAt through the write queue so it can never land
+        // after (and overwrite) a newer autosave of the same project.
+        void enqueueCloudWrite(() =>
+          updateProject(projectId, { document: doc }),
+        ).catch(() => {});
 
         return true;
       } catch (error) {
@@ -770,7 +868,7 @@ export const createDocumentSlice: StateCreator<
     },
 
     markDirty: () => {
-      set({ isDirty: true });
+      set((state) => ({ isDirty: true, changeSeq: state.changeSeq + 1 }));
       // Update project save status to 'unsaved'
       import("../useUIStore")
         .then(({ useUIStore }) => {
@@ -809,7 +907,7 @@ export const createDocumentSlice: StateCreator<
 
       // Always save locally regardless of cloud outcome
       state.saveDocument();
-      const savedDocumentUpdatedAt = get().document.updatedAt;
+      const seqAtSave = get().changeSeq;
 
       let cloudSuccess = true;
       const { useAuthStore } = await import("../useAuthStore");
@@ -840,8 +938,10 @@ export const createDocumentSlice: StateCreator<
             .catch(() => {});
         }
 
-        const hasNewerChanges =
-          get().document.updatedAt !== savedDocumentUpdatedAt;
+        // Only edits made while the save was in flight keep the doc dirty.
+        // (Comparing updatedAt was always true because saveToCloud stamps a
+        // fresh updatedAt, which left the badge stuck on "Unsaved".)
+        const hasNewerChanges = get().changeSeq !== seqAtSave;
         set({
           isDirty: hasNewerChanges,
           lastSavedAt: new Date().toISOString(),
@@ -882,6 +982,7 @@ export const createDocumentSlice: StateCreator<
         .catch(() => {});
 
       state.saveDocument();
+      const seqAtSave = get().changeSeq;
 
       let cloudSuccess = true;
       const { useAuthStore } = await import("../useAuthStore");
@@ -908,18 +1009,26 @@ export const createDocumentSlice: StateCreator<
           .catch(() => {});
       }
 
+      // A failed cloud save must stay dirty so autosave retries; edits made
+      // during the save also keep the document dirty.
+      const hasNewerChanges = get().changeSeq !== seqAtSave;
+      const stillDirty = !cloudSuccess || hasNewerChanges;
       set({
-        isDirty: false,
-        lastSavedAt: new Date().toISOString(),
+        isDirty: stillDirty,
+        ...(cloudSuccess ? { lastSavedAt: new Date().toISOString() } : {}),
       });
 
       import("../useUIStore")
         .then(({ useUIStore }) => {
           useUIStore
             .getState()
-            .setProjectSaveStatus(cloudSuccess ? "saved" : "error");
+            .setProjectSaveStatus(
+              !cloudSuccess ? "error" : hasNewerChanges ? "unsaved" : "saved",
+            );
         })
         .catch(() => {});
+
+      if (hasNewerChanges) get().scheduleAutoSave();
 
       return cloudSuccess;
     },
