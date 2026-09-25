@@ -23,10 +23,10 @@ Poniższe komendy byłyby potrzebne przy kolejnej partii migracji.
 
 Te miejsca wskazują na **dev** `euxauavanukyfofhkrqp`, nie na produkcję:
 
-- `package.json` → `"supabase:link": "supabase link --project-ref euxauavanukyfofhkrqp"`
+- `package.json` → `"supabase:link-dev": "supabase link --project-ref euxauavanukyfofhkrqp"`
 - `.env.local` → `SUPABASE_PROJECT_ID=euxaua...` oraz oba `SUPABASE_URL`
 
-Do operacji na produkcji linkuj jawnie ref produkcyjny (nie używaj `pnpm supabase:link`).
+Do operacji na produkcji linkuj jawnie ref produkcyjny (`pnpm supabase:link-prod`).
 
 ### Bezpieczna sekwencja
 

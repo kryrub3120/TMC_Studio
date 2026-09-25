@@ -48,3 +48,6 @@ supabase/.temp/
 
 # Local Netlify folder
 .netlify
+
+# Local Claude Code settings and launch configs (per developer)
+.claude/
