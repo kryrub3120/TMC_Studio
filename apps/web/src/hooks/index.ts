@@ -6,7 +6,6 @@ export { useCommandRegistry } from './useCommandRegistry';
 export { useBillingController } from './useBillingController';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { useAnimationPlayback } from './useAnimationPlayback';
-export { useInterpolatedElements } from './useInterpolation';
 export { useCanvasInteraction } from './useCanvasInteraction';
 export { useEntitlements } from './useEntitlements';
 export { useExportController } from './useExportController';
