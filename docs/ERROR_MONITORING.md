@@ -49,6 +49,8 @@ or user data are sent.
 |---|---|---|---|
 | Failed cloud save | `saveToCloud` throws (create or update) | `save`, `create`/`update`, error code | error |
 | `save.stuck_unsaved` | save badge not "saved" for 60 s while online | `save`, `stuck_unsaved` | warning |
+| `save.invalid_document` | document fails `validateBoardDocument` (`@tmc/core`); the cloud save is blocked, the local copy is kept | `save`, `invalid_document` | error |
+| `save.document_warnings` | document is loadable but suspicious (duplicated ids, unknown element type, step index out of range); saved anyway | `save`, `document_warnings` | warning |
 
 Tags: `save.trigger` (`autosave`, `manual`, `other`), `save.op`, `save.code`
 (PostgREST code such as `42501`, `http_<status>`, `network` or the error name)
@@ -68,6 +70,7 @@ Recommended Sentry alerts (configured in Sentry, not in code):
 | New save error | new issue with tag `module:save` | e-mail + push |
 | Save error spike | more than 10 events with `module:save` in 1 hour | e-mail + push |
 | Stuck save | any `save.stuck_unsaved` event | e-mail |
+| Invalid document | any `save.invalid_document` event | e-mail + push |
 
 ## Follow-up
 

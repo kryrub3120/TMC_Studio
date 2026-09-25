@@ -16,6 +16,7 @@ import {
   SESSION_EVENT_LIMIT,
   STUCK_UNSAVED_MS,
   noteSaveSucceeded,
+  reportDocumentIssues,
   reportSaveFailure,
   resetSaveMonitoringForTests,
   saveErrorCode,
@@ -116,6 +117,24 @@ describe('save monitoring', () => {
     reportSaveFailure(postgrestError, context);
     const [event] = monitoring.captureEvent.mock.calls[1] as unknown as [{ extras: Record<string, unknown> }];
     expect(event.extras['save.consecutive_failures']).toBe(1);
+  });
+
+  it('reports an invalid document as an error and warnings as a warning', () => {
+    const where = { trigger: 'manual' as const, op: 'update' as const, projectId: 'project-1' };
+    reportDocumentIssues({ ok: false, errors: ['steps is empty'], warnings: [] }, where);
+    reportDocumentIssues({ ok: true, errors: [], warnings: ['currentStepIndex is out of range'] }, where);
+
+    expect(monitoring.captureEvent).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      message: 'save.invalid_document',
+      level: 'error',
+      fingerprint: ['save', 'invalid_document'],
+      extras: expect.objectContaining({ 'document.errors': ['steps is empty'] }),
+    }));
+    expect(monitoring.captureEvent).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      message: 'save.document_warnings',
+      level: 'warning',
+      fingerprint: ['save', 'document_warnings'],
+    }));
   });
 
   describe('stuck "unsaved" badge', () => {
