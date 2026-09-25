@@ -460,3 +460,37 @@ describe('step list operations', () => {
   });
 });
 
+describe('adopting the local (guest) document after sign-in', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.clear();
+    cloud.reset();
+    vi.clearAllMocks();
+    useUIStore.setState({ isOnline: true, projectSaveStatus: 'saved' });
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it('uploads a locally saved board that is not a cloud project yet', async () => {
+    saveToLocalStorage({ ...createDocument('Guest drill'), steps: [{ id: 's1', name: '', duration: 0.8, elements: [marker('guest')] }] });
+    const store = createTestStore();
+
+    expect(store.getState().adoptLocalDocument()).toBe(true);
+    await vi.advanceTimersByTimeAsync(2100);
+    await flush();
+
+    expect(cloud.createProject).toHaveBeenCalledTimes(1);
+    expect(store.getState().cloudProjectId).toBe('project-1');
+    expect(store.getState().adoptLocalDocument()).toBe(false);
+  });
+
+  it('does nothing without a locally saved board (untouched demo board)', () => {
+    const store = createTestStore();
+    expect(store.getState().adoptLocalDocument()).toBe(false);
+    expect(store.getState().isDirty).toBe(false);
+  });
+});
+
