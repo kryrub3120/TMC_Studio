@@ -5,7 +5,7 @@
 
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type Konva from 'konva';
-import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, isTextElement, isBallElement, isEquipmentElement, hasPosition } from '@tmc/core';
+import { DEFAULT_PITCH_SETTINGS, DEFAULT_PLAYER_ORIENTATION_SETTINGS, getPitchDimensions, isPlayerElement, isArrowElement, isZoneElement, isTextElement, isBallElement, isEquipmentElement, hasPosition, isDefaultStepName } from '@tmc/core';
 import { useTranslation, type InspectorElement, type ElementInList, type SettingsTab } from '@tmc/ui';
 import { useBoardStore } from '../../store';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -276,7 +276,8 @@ export function useBoardPageState(props: BoardPageProps) {
   const stepsData = useMemo(() => {
     return boardDoc.steps.map((step, index) => ({
       id: step.id,
-      label: step.name ?? `Step ${index + 1}`,
+      // Empty label = the bar shows its translated default ("Krok 2").
+      label: isDefaultStepName(step.name) ? '' : step.name,
       index,
     }));
   }, [boardDoc.steps]);

@@ -80,6 +80,8 @@ export const createStepsSlice: StateCreator<
       history: [{ elements: cloneElements(newElements), selectedIds: [] }],
       historyIndex: 0,
     });
+    // Step changes skip pushHistory, so schedule the autosave here.
+    get().markDirty();
   },
   
   removeStep: (index) => {
@@ -104,6 +106,7 @@ export const createStepsSlice: StateCreator<
       history: [{ elements: structuredClone(newElements), selectedIds: [] }],
       historyIndex: 0,
     });
+    get().markDirty();
   },
   
   duplicateStep: (index) => {
@@ -135,6 +138,7 @@ export const createStepsSlice: StateCreator<
       history: [{ elements: structuredClone(newStep.elements), selectedIds: [] }],
       historyIndex: 0,
     });
+    get().markDirty();
   },
   
   renameStep: (index, newName) => {
@@ -154,6 +158,7 @@ export const createStepsSlice: StateCreator<
     };
     
     set({ document: newDoc });
+    get().markDirty();
   },
   
   goToStep: (index) => {

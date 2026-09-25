@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { createDocument } from './serialization.js';
 import { generateId, createInitialBoard } from './board.js';
 import { DEFAULT_PITCH_CONFIG } from './types.js';
+import { isDefaultStepName } from './step.js';
 
 describe('@tmc/core', () => {
   describe('createDocument', () => {
@@ -48,3 +49,18 @@ describe('@tmc/core', () => {
     });
   });
 });
+
+describe('isDefaultStepName', () => {
+  it('recognises names the app gives steps automatically', () => {
+    expect(isDefaultStepName('Initial Setup')).toBe(true);
+    expect(isDefaultStepName('Step 12')).toBe(true);
+    expect(isDefaultStepName('')).toBe(true);
+    expect(isDefaultStepName(undefined)).toBe(true);
+  });
+
+  it('keeps names coaches typed', () => {
+    expect(isDefaultStepName('Pressing')).toBe(false);
+    expect(isDefaultStepName('Step 2 – overload')).toBe(false);
+  });
+});
+
