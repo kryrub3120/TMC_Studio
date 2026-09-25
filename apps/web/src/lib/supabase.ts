@@ -68,6 +68,8 @@ export type User = {
   subscription_tier: 'free' | 'pro' | 'team';
   stripe_customer_id?: string | null;
   team_id?: string | null;
+  /** Club whose Team subscription covers this user as a member, if any. */
+  club_organization_id?: string | null;
   preferences?: UserPreferences;
 };
 
@@ -183,7 +185,9 @@ export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promis
   
   // Log subscription tier for debugging
   logger.debug(`[getCurrentUser] User ${user.email} - tier: ${profile?.subscription_tier ?? 'free'}`);
-  
+
+  const clubOrganizationId = await getMyClubAccess();
+
   return {
     id: profile.id,
     email: profile.email,
@@ -192,7 +196,28 @@ export async function getCurrentUser(authUser?: SupabaseAuthUser | null): Promis
     subscription_tier: profile.subscription_tier ?? 'free',
     stripe_customer_id: profile.stripe_customer_id ?? null,
     team_id: profile.team_id ?? null,
+    club_organization_id: clubOrganizationId,
   };
+}
+
+/**
+ * Club that grants the current user Team access as a member (the club owner
+ * pays for Team). Null when there is none or the check fails: access then
+ * falls back to the user's own plan instead of blocking sign-in.
+ */
+async function getMyClubAccess(): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.rpc('get_my_club_access');
+    if (error) {
+      logger.warn('[getCurrentUser] Club access check failed:', error);
+      return null;
+    }
+    return typeof data === 'string' ? data : null;
+  } catch (error) {
+    logger.warn('[getCurrentUser] Club access check failed:', error);
+    return null;
+  }
 }
 
 /** Sign up with email and password */

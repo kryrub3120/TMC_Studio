@@ -126,6 +126,21 @@ export function derivePlan(
 }
 
 /**
+ * Plan flags for the auth store. A member of a club whose owner pays for Team
+ * gets Team access through `club_organization_id`, even on a Free profile.
+ */
+export function accessFromUser(user: {
+  subscription_tier?: 'free' | 'pro' | 'team';
+  team_id?: string | null;
+  club_organization_id?: string | null;
+} | null): { isPro: boolean; isTeam: boolean; teamId: string | null } {
+  const tier = user?.subscription_tier;
+  const teamId = user?.team_id ?? user?.club_organization_id ?? null;
+  const isTeam = tier === 'team' || teamId !== null;
+  return { isPro: isTeam || tier === 'pro', isTeam, teamId };
+}
+
+/**
  * Check if a plan can perform an action
  * 
  * @param plan - User's plan

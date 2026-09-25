@@ -99,6 +99,27 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  db-tests:
+    name: DB Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.47.2
+
+      # Local Postgres only: applies every migration from scratch, then runs
+      # the pgTAP tests in supabase/tests. Never touches a hosted project.
+      - name: Start local database
+        run: supabase db start
+
+      - name: Run database tests
+        run: supabase test db
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest

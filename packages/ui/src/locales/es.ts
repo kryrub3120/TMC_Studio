@@ -1770,6 +1770,10 @@ export const es: Dictionary = {
       title: 'La invitación ya no es válida',
       description: 'Esta invitación ha caducado o ha sido revocada. Pide al administrador del club que envíe una nueva.',
     },
+    declined: {
+      title: 'Invitación rechazada',
+      description: 'Has rechazado la invitación a {{club}}. El administrador del club puede enviarte una nueva si cambias de opinión.',
+    },
     accepted: {
       title: '¡Ya eres parte del club!',
       description: 'Te has unido a {{club}}.',
@@ -1782,9 +1786,12 @@ export const es: Dictionary = {
       wrongAccount: 'Esta invitación se envió a {{invited}}, pero has iniciado sesión como {{current}}. Inicia sesión con el correo invitado.',
       accept: 'Aceptar invitación',
       accepting: 'Uniéndote…',
+      decline: 'Rechazar invitación',
+      declining: 'Rechazando…',
     },
     errors: {
       acceptFailed: 'No se pudo aceptar la invitación. Inténtalo de nuevo.',
+      declineFailed: 'No se pudo rechazar la invitación. Inténtalo de nuevo.',
     },
   },
   languages: {

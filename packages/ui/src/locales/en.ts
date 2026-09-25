@@ -1966,6 +1966,10 @@ export const en = {
       title: 'Invitation no longer valid',
       description: 'This invitation has expired or was revoked. Please ask the club admin to send a new one.',
     },
+    declined: {
+      title: 'Invitation declined',
+      description: 'You declined the invitation to {{club}}. The club admin can send a new one if you change your mind.',
+    },
     accepted: {
       title: "You're in!",
       description: 'You have joined {{club}}.',
@@ -1978,9 +1982,12 @@ export const en = {
       wrongAccount: 'This invitation was sent to {{invited}}, but you are signed in as {{current}}. Please sign in with the invited email address.',
       accept: 'Accept invitation',
       accepting: 'Joining…',
+      decline: 'Decline invitation',
+      declining: 'Declining…',
     },
     errors: {
       acceptFailed: 'Could not accept the invitation. Please try again.',
+      declineFailed: 'Could not decline the invitation. Please try again.',
     },
   },
   languages: {

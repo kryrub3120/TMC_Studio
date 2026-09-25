@@ -11,9 +11,9 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation, type Language } from '@tmc/ui';
 import { useAuthStore } from '../store/useAuthStore';
-import { getInvitationByToken, acceptInvitation, type InvitationPreview } from '../lib/organizations';
+import { getInvitationByToken, acceptInvitation, declineInvitation, type InvitationPreview } from '../lib/organizations';
 
-type ViewState = 'loading' | 'not-found' | 'expired' | 'ready' | 'wrong-account' | 'accepted' | 'error';
+type ViewState = 'loading' | 'not-found' | 'expired' | 'ready' | 'wrong-account' | 'accepted' | 'declined' | 'error';
 
 export function InvitePage() {
   const { t, setLanguage } = useTranslation();
@@ -32,6 +32,7 @@ export function InvitePage() {
   const [invitation, setInvitation] = useState<InvitationPreview | null>(null);
   const [state, setState] = useState<ViewState>('loading');
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +55,12 @@ export function InvitePage() {
       if (inv.status === 'accepted') {
         setInvitation(inv);
         setState('accepted');
+        return;
+      }
+
+      if (inv.status === 'declined') {
+        setInvitation(inv);
+        setState('declined');
         return;
       }
 
@@ -81,6 +88,19 @@ export function InvitePage() {
       setErrorMessage(err instanceof Error ? err.message : t('invitePage.errors.acceptFailed'));
     } finally {
       setIsAccepting(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setIsDeclining(true);
+    setErrorMessage(null);
+    try {
+      await declineInvitation(token);
+      setState('declined');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : t('invitePage.errors.declineFailed'));
+    } finally {
+      setIsDeclining(false);
     }
   };
 
@@ -130,6 +150,15 @@ export function InvitePage() {
           </>
         )}
 
+        {state === 'declined' && (
+          <>
+            <h1 className="text-2xl font-bold">{t('invitePage.declined.title')}</h1>
+            <p className="text-muted">
+              {t('invitePage.declined.description', { club: invitation?.organization_name ?? '' })}
+            </p>
+          </>
+        )}
+
         {state === 'ready' && invitation && (
           <>
             <h1 className="text-2xl font-bold">{t('invitePage.ready.title')}</h1>
@@ -166,13 +195,22 @@ export function InvitePage() {
             )}
 
             {isAuthenticated && !emailMismatch && (
-              <button
-                onClick={handleAccept}
-                disabled={isAccepting}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {isAccepting ? t('invitePage.ready.accepting') : t('invitePage.ready.accept')}
-              </button>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={handleAccept}
+                  disabled={isAccepting || isDeclining}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isAccepting ? t('invitePage.ready.accepting') : t('invitePage.ready.accept')}
+                </button>
+                <button
+                  onClick={handleDecline}
+                  disabled={isAccepting || isDeclining}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-border text-text text-sm font-medium hover:bg-surface2 transition-colors disabled:opacity-50"
+                >
+                  {isDeclining ? t('invitePage.ready.declining') : t('invitePage.ready.decline')}
+                </button>
+              </div>
             )}
           </>
         )}
