@@ -1431,6 +1431,10 @@ export const es: Dictionary = {
         stripe: 'para el procesamiento de pagos',
         supabase: 'para alojamiento de datos y autenticación',
         netlify: 'para el alojamiento de la aplicación',
+        sentry: 'para la supervisión de errores (informes técnicos de errores, sin el contenido de tus pizarras)',
+        postmark: 'para enviar correos transaccionales (invitaciones al club, respuestas a informes de errores)',
+        google: 'para iniciar sesión con una cuenta de Google, si la eliges',
+        plausible: 'para estadísticas de uso respetuosas con la privacidad, solo con tu consentimiento de analítica',
       },
       rights: {
         title: '6. Tus derechos',

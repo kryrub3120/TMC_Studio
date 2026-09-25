@@ -49,6 +49,10 @@ export function PrivacyPolicy() {
           <li><strong>Stripe</strong> - {t('legal.privacy.sharing.stripe')}</li>
           <li><strong>Supabase</strong> - {t('legal.privacy.sharing.supabase')}</li>
           <li><strong>Netlify</strong> - {t('legal.privacy.sharing.netlify')}</li>
+          <li><strong>Sentry</strong> - {t('legal.privacy.sharing.sentry')}</li>
+          <li><strong>Postmark</strong> - {t('legal.privacy.sharing.postmark')}</li>
+          <li><strong>Google</strong> - {t('legal.privacy.sharing.google')}</li>
+          <li><strong>Plausible</strong> - {t('legal.privacy.sharing.plausible')}</li>
         </LegalList>
       </LegalSection>
 
